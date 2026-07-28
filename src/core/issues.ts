@@ -148,6 +148,36 @@ export function setImperativeIssues(
 	return createIssueStateFromNormalized(nextIssues, nextExposure)
 }
 
+export function replaceServerIssues(
+	state: IssueState,
+	issues: readonly ImperativeFormIssue[],
+	exposure: {
+		readonly all?: boolean
+	} = {},
+): IssueState {
+	const normalized = issues.map((issue) => {
+		const normalizedIssue = normalizeImperativeIssue(issue)
+		if (normalizedIssue.source !== "server") {
+			throw new TypeError("Action results accept only server issues here")
+		}
+
+		return normalizedIssue
+	})
+	const nextIssues = [
+		...state.issues.filter((issue) => issue.source !== "server"),
+		...normalized,
+	]
+	const nextExposure =
+		exposure.all === true
+			? createIssueExposureState({
+					...state.exposure,
+					all: true,
+				})
+			: state.exposure
+
+	return createIssueStateFromNormalized(nextIssues, nextExposure)
+}
+
 export function clearImperativeIssues(
 	state: IssueState,
 	path?: PathInput,

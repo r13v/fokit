@@ -1086,37 +1086,37 @@ CSS or imposing a visual theme.
 - Modify: `src/react19/index.ts`
 - Modify: `src/core/form-result.ts`
 
-- [ ] Write failing tests proving the supplied Action remains directly on the
+- [x] Write failing tests proving the supplied Action remains directly on the
   native form and `ActionForm` does not wrap, prevent, prevalidate, or replay a
   valid submission.
-- [ ] Implement server-first submit behavior while retaining client blur/change
+- [x] Implement server-first submit behavior while retaining client blur/change
   validation feedback.
-- [ ] Record hydrated attempts and typed snapshots, reflect `useFormStatus`
+- [x] Record hydrated attempts and typed snapshots, reflect `useFormStatus`
   pending state into Fokit, and block only disabled or already-pending
   submissions.
-- [ ] Test both hydrated and pre-hydration attempts, including the documented
+- [x] Test both hydrated and pre-hydration attempts, including the documented
   no-snapshot limitation for invalid raw values.
-- [ ] Implement unstyled `ActionSubmit` with native button props, Fokit state,
+- [x] Implement unstyled `ActionSubmit` with native button props, Fokit state,
   and `useFormStatus`.
-- [ ] Guard the subpath with a descriptive React 19 compatibility error;
+- [x] Guard the subpath with a descriptive React 19 compatibility error;
   structure imports so React 18 does not fail first on a missing named export.
-- [ ] Apply error results once, avoid duplicate submit-count increments, expose
+- [x] Apply error results once, avoid duplicate submit-count increments, expose
   errors, and run the documented focus fallback.
-- [ ] Import the shared result contract from `src/core/form-result.ts` with
+- [x] Import the shared result contract from `src/core/form-result.ts` with
   `import type`; do not duplicate it or add a React-to-server source edge.
-- [ ] Filter returned schema/server issues against edits made while pending and
+- [x] Filter returned schema/server issues against edits made while pending and
   schedule current schema validation when a submitted schema result is stale.
-- [ ] Implement success retention, `reset: "defaults"`, and
+- [x] Implement success retention, `reset: "defaults"`, and
   `reset: "submitted"` including pending edits and pre-hydration no-snapshot
   behavior.
-- [ ] Throw a descriptive compatibility error before dispatch for active
+- [x] Throw a descriptive compatibility error before dispatch for active
   `mode: "none"` values or preserved invisible/disabled native controls without
   serializers.
-- [ ] Propagate Action exceptions to React; do not synthesize validation
+- [x] Propagate Action exceptions to React; do not synthesize validation
   issues.
-- [ ] Assert the built React 19 entry has `"use client"` and is the only entry
+- [x] Assert the built React 19 entry has `"use client"` and is the only entry
   importing `useActionState`/`useFormStatus`.
-- [ ] Run
+- [x] Run
   `npm run test -- --project react src/react19/action-form.test.tsx src/react19/result-sync.test.ts`,
   `npm run build`, `npm run test:package`, `npm run check`, and `npm run knip`
   before Task 14A.

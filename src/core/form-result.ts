@@ -15,6 +15,36 @@ export type FormResult =
 			readonly issues: readonly SubmissionIssue[]
 	  }
 
+export function normalizeFormResult(result: unknown): FormResult {
+	if (!isObjectRecord(result)) {
+		throw new TypeError("Form result must be an object")
+	}
+
+	if (result.status === "success") {
+		return Object.freeze({
+			status: "success" as const,
+			...(result.reset === undefined
+				? {}
+				: { reset: normalizeSuccessReset(result.reset) }),
+		})
+	}
+
+	if (result.status === "error") {
+		if (!Array.isArray(result.issues)) {
+			throw new TypeError("Error form result issues must be an array")
+		}
+
+		return Object.freeze({
+			status: "error" as const,
+			issues: normalizeSubmissionIssues(result.issues),
+		})
+	}
+
+	throw new TypeError(
+		`Unsupported form result status "${String(result.status)}"`,
+	)
+}
+
 function normalizeSubmissionIssue(issue: SubmissionIssue): SubmissionIssue {
 	if (!isObjectRecord(issue)) {
 		throw new TypeError("Submission issue must be an object")
@@ -37,6 +67,14 @@ export function normalizeSubmissionIssues(
 	issues: readonly SubmissionIssue[],
 ): readonly SubmissionIssue[] {
 	return Object.freeze(issues.map((issue) => normalizeSubmissionIssue(issue)))
+}
+
+function normalizeSuccessReset(reset: unknown): "defaults" | "submitted" {
+	if (reset === "defaults" || reset === "submitted") {
+		return reset
+	}
+
+	throw new TypeError(`Unsupported form result reset "${String(reset)}"`)
 }
 
 function normalizeSubmissionIssueSource(

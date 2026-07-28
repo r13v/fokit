@@ -7,6 +7,11 @@ import {
 } from "./array-state.js"
 import type { NormalizedFormDefinition } from "./definition.js"
 import {
+	type FormResult,
+	normalizeFormResult,
+	type SubmissionIssue,
+} from "./form-result.js"
+import {
 	cloneAndFreezeValue,
 	createFormSnapshot,
 	type FormSnapshot,
@@ -24,6 +29,7 @@ import {
 	isIssueStateEmpty,
 	reindexIssueStateArrayPaths,
 	replaceSchemaIssues,
+	replaceServerIssues,
 	setImperativeIssues,
 } from "./issues.js"
 import {
@@ -40,6 +46,7 @@ import {
 	isSamePath,
 	type PathInput,
 	parsePath,
+	pathsOverlap,
 } from "./path.js"
 import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
 import { type ResolvedUiState, resolveUi } from "./resolve-ui.js"
@@ -236,6 +243,25 @@ export type FormSubmissionAttempt<
 	finish(): void
 }
 
+export type ActionSubmissionAttempt<
+	Schema extends StandardSchema = StandardSchema,
+> = {
+	readonly input: FormInput<Schema>
+	readonly changedPaths: ReadonlySet<string>
+	recordChanges(paths: readonly PathInput[]): void
+	finish(): void
+}
+
+export type ApplyActionResultOptions<Schema extends StandardSchema> = {
+	readonly input?: FormInput<Schema>
+	readonly changedPaths?: readonly PathInput[]
+	readonly recordSubmit?: boolean
+}
+
+export type ApplyActionResultOutcome = {
+	readonly scheduledCurrentValidation: boolean
+}
+
 export function createFormStore<
 	Schema extends StandardSchema,
 	Context = unknown,
@@ -262,6 +288,47 @@ export function startFormSubmission<
 			core.finishSubmission(id)
 		},
 	})
+}
+
+export function startActionSubmission<
+	Schema extends StandardSchema,
+	Context = unknown,
+>(store: FormStore<Schema, Context>): ActionSubmissionAttempt<Schema> {
+	const submission = startFormSubmission(store)
+	const changedPaths = new Set<string>()
+	let finished = false
+
+	return Object.freeze({
+		input: store.getSnapshot().values,
+		changedPaths,
+		recordChanges(paths) {
+			for (const path of paths) {
+				changedPaths.add(formatPath(path))
+			}
+		},
+		finish() {
+			if (finished) {
+				return
+			}
+
+			finished = true
+			submission.finish()
+		},
+	})
+}
+
+export function applyActionResult<
+	Schema extends StandardSchema,
+	Context = unknown,
+>(
+	store: FormStore<Schema, Context>,
+	result: FormResult,
+	options: ApplyActionResultOptions<Schema> = {},
+): ApplyActionResultOutcome {
+	return asCoreFormStore(store).applyActionResult(
+		normalizeFormResult(result),
+		options,
+	)
 }
 
 class CoreFormStore<Schema extends StandardSchema, Context> {
@@ -480,6 +547,25 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			...this.#validationState,
 			isSubmitting: false,
 		})
+	}
+
+	applyActionResult(
+		result: FormResult,
+		options: ApplyActionResultOptions<Schema>,
+	): ApplyActionResultOutcome {
+		if (options.recordSubmit === true && result.status === "error") {
+			const id = this.startSubmission()
+			this.finishSubmission(id)
+		}
+
+		if (result.status === "success") {
+			this.#applyActionSuccess(result, options)
+			return Object.freeze({
+				scheduledCurrentValidation: false,
+			})
+		}
+
+		return this.#applyActionError(result.issues, options)
 	}
 
 	batch(callback: () => void): void {
@@ -1263,6 +1349,102 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#notify()
 	}
 
+	#applyActionSuccess(
+		result: Extract<FormResult, { readonly status: "success" }>,
+		options: ApplyActionResultOptions<Schema>,
+	): void {
+		if (result.reset === "defaults") {
+			this.reset()
+			return
+		}
+
+		if (result.reset === "submitted") {
+			if (options.input !== undefined) {
+				this.#resetBaselineTo(options.input)
+			}
+			return
+		}
+
+		const changedPaths = normalizeChangedPaths(options.changedPaths)
+		const nextIssueState = replaceServerIssues(
+			replaceSchemaIssues(this.#issueState, []),
+			[],
+		)
+		this.#commitIssueAndValidationState(nextIssueState, {
+			...this.#validationState,
+			isSubmitting: false,
+			validationStatus: changedPaths.length === 0 ? "valid" : "unvalidated",
+		})
+	}
+
+	#applyActionError(
+		issues: readonly SubmissionIssue[],
+		options: ApplyActionResultOptions<Schema>,
+	): ApplyActionResultOutcome {
+		const changedPaths = normalizeChangedPaths(options.changedPaths)
+		const hasPendingEdits = changedPaths.length > 0
+		let staleSchema = false
+		const schemaIssues: FormIssue[] = []
+		const serverIssues: ImperativeFormIssue[] = []
+
+		for (const issue of issues) {
+			if (issue.source === "schema") {
+				if (hasPendingEdits) {
+					staleSchema = true
+					continue
+				}
+
+				schemaIssues.push(toFormIssue(issue))
+				continue
+			}
+
+			if (isStaleServerIssue(issue, changedPaths)) {
+				continue
+			}
+
+			serverIssues.push(toImperativeServerIssue(issue))
+		}
+
+		const nextIssueState = replaceServerIssues(
+			replaceSchemaIssues(this.#issueState, schemaIssues, { all: true }),
+			serverIssues,
+			{ all: true },
+		)
+		this.#commitIssueAndValidationState(nextIssueState, {
+			...this.#validationState,
+			isSubmitting: false,
+			validationStatus: "invalid",
+		})
+
+		if (staleSchema) {
+			queueMicrotask(() => {
+				void this.validate().catch((error: unknown) => {
+					reportHostException(error)
+				})
+			})
+		}
+
+		return Object.freeze({
+			scheduledCurrentValidation: staleSchema,
+		})
+	}
+
+	#resetBaselineTo(values: FormInput<Schema>): void {
+		const nextBaselineValues = cloneAndFreezeValue(values)
+		const previousSnapshot = this.#snapshot
+		this.#baselineValues = nextBaselineValues
+		this.#metadataState = createInitialMetadataState(
+			this.definition,
+			this.#values,
+		)
+		this.#issueState = createIssueState()
+		this.#resetValidationRuntime()
+		this.#snapshot = this.#createSnapshot({
+			previousResolvedUi: previousSnapshot.resolvedUi,
+		})
+		this.#notify()
+	}
+
 	#callBeforeUpdate(
 		nextValues: FormInput<Schema>,
 		changes: readonly NormalizedValueChange[],
@@ -1384,6 +1566,44 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 	const prototype = Object.getPrototypeOf(value)
 	return prototype === Object.prototype || prototype === null
+}
+
+function normalizeChangedPaths(
+	paths: readonly PathInput[] = [],
+): readonly string[] {
+	return Object.freeze(paths.map((path) => formatPath(path)))
+}
+
+function toFormIssue(issue: SubmissionIssue): FormIssue {
+	return Object.freeze({
+		source: issue.source,
+		message: issue.message,
+		...(issue.code === undefined ? {} : { code: issue.code }),
+		...(issue.path === undefined ? {} : { path: issue.path }),
+	})
+}
+
+function toImperativeServerIssue(issue: SubmissionIssue): ImperativeFormIssue {
+	return Object.freeze({
+		source: "server" as const,
+		message: issue.message,
+		...(issue.code === undefined ? {} : { code: issue.code }),
+		...(issue.path === undefined ? {} : { path: issue.path }),
+	})
+}
+
+function isStaleServerIssue(
+	issue: SubmissionIssue,
+	changedPaths: readonly string[],
+): boolean {
+	if (changedPaths.length === 0) {
+		return false
+	}
+
+	return (
+		issue.path === undefined ||
+		changedPaths.some((path) => pathsOverlap(issue.path as string, path))
+	)
 }
 
 function createValidationRuntimeState(

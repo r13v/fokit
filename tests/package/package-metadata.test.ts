@@ -126,6 +126,31 @@ describe("package metadata", () => {
 			"dist/layout.css",
 		)
 	})
+
+	it("keeps React 19 Action APIs isolated to the React 19 subpath", async () => {
+		const builtEntrypoints = Object.fromEntries(
+			await Promise.all(
+				Object.values(javaScriptEntrypoints).map(async (distName) => [
+					distName,
+					await readFile(
+						new URL(`../../dist/${distName}.js`, import.meta.url),
+						"utf8",
+					),
+				]),
+			),
+		)
+
+		expect(builtEntrypoints.react19?.startsWith('"use client"')).toBe(true)
+		expect(builtEntrypoints.react19).toMatch(/use(?:ActionState|FormStatus)/)
+
+		for (const [distName, source] of Object.entries(builtEntrypoints)) {
+			if (distName === "react19") {
+				continue
+			}
+
+			expect(source).not.toMatch(/use(?:ActionState|FormStatus)/)
+		}
+	})
 })
 
 function expectedExports() {

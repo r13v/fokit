@@ -7,7 +7,12 @@ import { describe, expect, it } from "vitest"
 const rootDirectory = fileURLToPath(new URL("../..", import.meta.url))
 const deployPageUrlExpression =
 	"url: $" + "{{ steps.deployment.outputs.page_url }}"
+const releaseTagExpression =
+	"FOKIT_RELEASE_TAG: $" + "{{ github.event.release.tag_name }}"
+const releaseConcurrencyExpression =
+	"group: release-$" + "{{ github.event.release.tag_name }}"
 const pagesWorkflow = await readOptionalFile(".github/workflows/pages.yml")
+const publishWorkflow = await readOptionalFile(".github/workflows/publish.yml")
 
 describe("GitHub Pages workflow", () => {
 	it("deploys verified docs-site output from GitHub Actions", () => {
@@ -53,6 +58,56 @@ describe("GitHub Pages workflow", () => {
 	})
 })
 
+describe("trusted npm publishing workflow", () => {
+	it("runs only for stable published GitHub Releases with OIDC permissions", () => {
+		expect(publishWorkflow).toContain("name: Publish")
+		expect(publishWorkflow).toContain("release:")
+		expect(publishWorkflow).toContain("types: [published]")
+		expect(publishWorkflow).toContain(
+			"if: github.event.release.prerelease == false",
+		)
+		expect(publishWorkflow).toContain("contents: read")
+		expect(publishWorkflow).toContain("id-token: write")
+		expect(publishWorkflow).toContain(releaseConcurrencyExpression)
+		expect(publishWorkflow).toContain("cancel-in-progress: false")
+		expect(publishWorkflow).toContain("runs-on: ubuntu-latest")
+		expect(publishWorkflow).toContain("uses: actions/checkout@v6")
+		expect(publishWorkflow).toContain("uses: actions/setup-node@v6")
+		expect(publishWorkflow).toContain("node-version: 24")
+		expect(publishWorkflow).toContain(
+			"registry-url: https://registry.npmjs.org",
+		)
+		expect(publishWorkflow).not.toContain("cache: npm")
+		expect(publishWorkflow).not.toContain("pages: write")
+		expect(publishWorkflow).not.toContain("environment:")
+	})
+
+	it("verifies the release completely before publishing", () => {
+		expect(publishWorkflow).toContain(releaseTagExpression)
+		expectStepsInOrder(publishWorkflow, [
+			"run: node scripts/verify-release.mjs",
+			"run: npm ci",
+			"run: npx playwright install --with-deps chromium",
+			"run: npm run verify",
+			"run: npm ci --prefix docs-site",
+			"run: npm run site:verify",
+			"run: npm pack --dry-run",
+			"run: npm publish --access public",
+		])
+	})
+
+	it("does not configure branch publishing or long-lived npm credentials", () => {
+		expect(publishWorkflow).not.toContain("push:")
+		expect(publishWorkflow).not.toContain("workflow_dispatch:")
+		expect(publishWorkflow).not.toContain("pull_request:")
+		expect(publishWorkflow).not.toContain("NPM_TOKEN")
+		expect(publishWorkflow).not.toContain("NODE_AUTH_TOKEN")
+		expect(publishWorkflow).not.toContain("secrets.")
+		expect(publishWorkflow).not.toContain("--provenance")
+		expect(publishWorkflow).not.toMatch(/\bnpm version\b/)
+	})
+})
+
 async function readOptionalFile(path: string): Promise<string> {
 	try {
 		return await readFile(join(rootDirectory, path), "utf8")
@@ -78,4 +133,13 @@ async function fileMissing(path: string): Promise<boolean> {
 
 function isNotFoundError(error: unknown): boolean {
 	return error instanceof Error && "code" in error && error.code === "ENOENT"
+}
+
+function expectStepsInOrder(source: string, steps: readonly string[]): void {
+	let previousIndex = -1
+	for (const step of steps) {
+		const nextIndex = source.indexOf(step)
+		expect(nextIndex, step).toBeGreaterThan(previousIndex)
+		previousIndex = nextIndex
+	}
 }

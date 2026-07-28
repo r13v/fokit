@@ -1,0 +1,55 @@
+name: Publish
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Verify release contract
+        env:
+          FOKIT_RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: node scripts/verify-release.mjs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify package
+        run: npm run verify
+
+      - name: Install docs dependencies
+        run: npm ci --prefix docs-site
+
+      - name: Verify docs site
+        run: npm run site:verify
+
+      - name: Dry-run package
+        run: npm pack --dry-run
+
+      - name: Publish package
+        run: npm publish --access public

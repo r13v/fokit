@@ -1482,41 +1482,41 @@ decision.
 - Modify: `package.json`
 - Modify: `package-lock.json`
 
-- [ ] Regenerate `package-lock.json` through npm if its root version does not
+- [x] Regenerate `package-lock.json` through npm if its root version does not
   match `package.json`; never hand-edit lockfile version records.
-- [ ] Write failing release-contract and workflow tests first for mismatched
+- [x] Write failing release-contract and workflow tests first for mismatched
   tags/lockfiles/repositories, an existing registry version, prereleases,
   missing OIDC permissions, credential interpolation, incomplete release
   verification, registry not-found, outage, authentication, timeout, and
   malformed-response outcomes.
-- [ ] Implement a unit-testable release guard that requires the event tag to be
+- [x] Implement a unit-testable release guard that requires the event tag to be
   exactly `v${package.json.version}`, package and root lockfile versions to
   match, the version to be nonzero/stable, repository metadata to normalize to
   `https://github.com/r13v/fokit`, and `npm view fokit@<version> version` to
   confirm that the version is not already published. Inject the registry
   lookup in unit tests; treat only npm's package-version-not-found response as
   available and fail closed on network/auth/registry errors.
-- [ ] Trigger `publish.yml` only for `release: types: [published]`, and skip
+- [x] Trigger `publish.yml` only for `release: types: [published]`, and skip
   prereleases. Use `ubuntu-latest`, `contents: read`, `id-token: write`, a
   non-cancelling release concurrency group, `actions/checkout@v6`, and
   `actions/setup-node@v6` with Node 24, the npm registry URL, and package
   manager cache disabled.
-- [ ] Do not define `NPM_TOKEN`, `NODE_AUTH_TOKEN`, an npm secret, or a GitHub
+- [x] Do not define `NPM_TOKEN`, `NODE_AUTH_TOKEN`, an npm secret, or a GitHub
   Environment unless the npm trusted-publisher configuration is changed to
   match it. Do not pass `--provenance`; npm trusted publishing supplies
   provenance automatically for this public package/repository.
-- [ ] Run the release guard, `npm ci`,
+- [x] Run the release guard, `npm ci`,
   `npx playwright install --with-deps chromium`, `npm run verify`,
   `npm ci --prefix docs-site`, `npm run site:verify`, and
   `npm pack --dry-run` before `npm publish --access public`.
-- [ ] Document the maintainer flow in `docs/releasing.md`: choose a version
+- [x] Document the maintainer flow in `docs/releasing.md`: choose a version
   newer than the already-published `0.0.1`, update `package.json` and the
   lockfile together, run the full local checks, merge, then create a stable
   GitHub Release tagged exactly `v<version>`.
-- [ ] Keep version choice, release notes, and GitHub Release creation as
+- [x] Keep version choice, release notes, and GitHub Release creation as
   explicit maintainer actions in Task 15G; do not add automatic bumping or
   branch-push publication.
-- [ ] Run `npm run test:package`, `npm run verify`,
+- [x] Run `npm run test:package`, `npm run verify`,
   `npm run site:verify`, `npm run check`, and `npm run knip` before Task 15G.
 
 ### Task 15G: Release v1 and verify the public installation

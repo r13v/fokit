@@ -834,30 +834,30 @@ ownership into React.
 - Modify: `vitest.config.ts`
 - Modify: `src/index.ts`
 
-- [ ] Add the named inline Vitest `react` project before writing its first
+- [x] Add the named inline Vitest `react` project before writing its first
   test. Include `src/react/**/*.test.{ts,tsx}` and
   `src/react19/**/*.test.{ts,tsx}`, use `environment: "jsdom"`, and load
   `tests/setup.ts`; keep `passWithNoTests` disabled.
-- [ ] Write failing DOM tests for stable `useForm` identity, latest option
+- [x] Write failing DOM tests for stable `useForm` identity, latest option
   callbacks, context replacement, and unmount cleanup.
-- [ ] Implement `useSyncExternalStore` adapters with cached client and server
+- [x] Implement `useSyncExternalStore` adapters with cached client and server
   snapshots and selector equality.
-- [ ] Implement `useValue`, `useField`, `useArrayField`, and `useFormState`
+- [x] Implement `useValue`, `useField`, `useArrayField`, and `useFormState`
   with an explicit typed form instance.
-- [ ] Prove with render counters that one path update does not rerender
+- [x] Prove with render counters that one path update does not rerender
   unrelated hooks or controls.
-- [ ] Expose field and array metadata exactly as specified, including direct
+- [x] Expose field and array metadata exactly as specified, including direct
   array issues and stable row items.
-- [ ] Implement guarded focus and mounted ref registration.
-- [ ] Test SSR/hydration snapshot equivalence, deterministic initialization,
+- [x] Implement guarded focus and mounted ref registration.
+- [x] Test SSR/hydration snapshot equivalence, deterministic initialization,
   and no lifecycle-hook calls during Strict Mode render replay.
-- [ ] Add type tests for value inference, selector inference, array item types,
+- [x] Add type tests for value inference, selector inference, array item types,
   equality functions, and invalid paths.
-- [ ] Add positive and negative type tests proving `useForm` requires a
+- [x] Add positive and negative type tests proving `useForm` requires a
   complete `FormInput<S>` for `defaultValues`; reject missing required
   properties while accepting optional properties that are absent.
-- [ ] Ensure only React 18 APIs/types are reachable from `src/index.ts`.
-- [ ] Run
+- [x] Ensure only React 18 APIs/types are reachable from `src/index.ts`.
+- [x] Run
   `npm run test -- --project react src/react/hooks.test.tsx`,
   `npm run test:types`, `npm run build`, `npm run check`, and `npm run knip`
   before Task 9.

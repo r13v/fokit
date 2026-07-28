@@ -29,3 +29,7 @@ Wiring Task 6A array issue reindexing → an `apply_patch` hunk missed the curre
 ## 2026-07-28 17:39 — GPT-5
 
 Validating Task 7 server code → focused Vitest and tsdown build passed, but `npm run typecheck` caught tuple/literal/test type issues in the new files. Keep typecheck in the local loop when adding typed public APIs, even if the task's focused command list omits it.
+
+## 2026-07-28 17:50 — GPT-5
+
+Writing Task 8 type-only React hook assertions → Biome's hook rule rejected module-scope hook calls and underscore-prefixed harness functions. Put type assertions inside an unrendered PascalCase component and reference it with `void ComponentName`.

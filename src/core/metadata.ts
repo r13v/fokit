@@ -1,5 +1,9 @@
 import { type ArrayRowsState, createArrayRowsState } from "./array-state.js"
-import type { NormalizedFormDefinition } from "./definition.js"
+import type {
+	NormalizedArrayNode,
+	NormalizedFormDefinition,
+	NormalizedUiNode,
+} from "./definition.js"
 import { formatPath, pathsOverlap } from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
 import { getPathValue, isDirtyEqual } from "./value.js"
@@ -93,8 +97,18 @@ export function deriveFormMetadata<Schema extends StandardSchema>(
 
 	const arraysByPath = Object.create(null) as Record<string, ArrayMetadata>
 	for (const path of Object.keys(definition.arraysByPath)) {
+		const array = definition.arraysByPath[path]
 		arraysByPath[path] = createArrayMetadata(
 			path,
+			values,
+			baselineValues,
+			state,
+			isValidating,
+		)
+		addArrayChildMetadata(
+			array,
+			fieldsByPath,
+			arraysByPath,
 			values,
 			baselineValues,
 			state,
@@ -106,6 +120,91 @@ export function deriveFormMetadata<Schema extends StandardSchema>(
 		fieldsByPath: Object.freeze(fieldsByPath),
 		arraysByPath: Object.freeze(arraysByPath),
 	})
+}
+
+function addArrayChildMetadata(
+	array: NormalizedArrayNode,
+	fieldsByPath: Record<string, FieldMetadata>,
+	arraysByPath: Record<string, ArrayMetadata>,
+	values: unknown,
+	baselineValues: unknown,
+	state: MetadataState,
+	isValidating: boolean,
+): void {
+	const value = getPathValue(values, array.path)
+	if (!Array.isArray(value)) {
+		return
+	}
+
+	for (const index of value.keys()) {
+		addRelativeMetadata(
+			array.children,
+			`${array.path}.${index}`,
+			fieldsByPath,
+			arraysByPath,
+			values,
+			baselineValues,
+			state,
+			isValidating,
+		)
+	}
+}
+
+function addRelativeMetadata(
+	nodes: readonly NormalizedUiNode[],
+	scopePath: string,
+	fieldsByPath: Record<string, FieldMetadata>,
+	arraysByPath: Record<string, ArrayMetadata>,
+	values: unknown,
+	baselineValues: unknown,
+	state: MetadataState,
+	isValidating: boolean,
+): void {
+	for (const node of nodes) {
+		if (node.kind === "section") {
+			addRelativeMetadata(
+				node.children,
+				scopePath,
+				fieldsByPath,
+				arraysByPath,
+				values,
+				baselineValues,
+				state,
+				isValidating,
+			)
+			continue
+		}
+
+		const path = `${scopePath}.${node.path}`
+		if (node.kind === "field") {
+			fieldsByPath[path] = createFieldMetadata(
+				path,
+				values,
+				baselineValues,
+				state,
+				false,
+				isValidating,
+			)
+			continue
+		}
+
+		arraysByPath[path] = createArrayMetadata(
+			path,
+			values,
+			baselineValues,
+			state,
+			isValidating,
+		)
+		addArrayChildMetadata(
+			{ ...node, path },
+			fieldsByPath,
+			arraysByPath,
+			values,
+			baselineValues,
+			state,
+			isValidating,
+		)
+	}
 }
 
 function createArrayMetadata(

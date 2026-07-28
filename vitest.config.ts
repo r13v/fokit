@@ -10,6 +10,17 @@ export default defineConfig({
 					include: ["src/core/**/*.test.ts", "src/server/**/*.test.ts"],
 				},
 			},
+			{
+				test: {
+					name: "react",
+					environment: "jsdom",
+					include: [
+						"src/react/**/*.test.{ts,tsx}",
+						"src/react19/**/*.test.{ts,tsx}",
+					],
+					setupFiles: ["tests/setup.ts"],
+				},
+			},
 		],
 	},
 })

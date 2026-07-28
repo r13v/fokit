@@ -73,6 +73,8 @@
 		"site:dev": "npm run build && npm run dev --prefix docs-site",
 		"site:build": "npm run build && npm run build --prefix docs-site",
 		"site:test": "npm run test --prefix docs-site",
+		"site:test:e2e": "playwright test --config playwright.docs.config.ts",
+		"site:verify": "npm run site:test && BASE_PATH=/fokit/ npm run site:build && npm run site:test:e2e",
 		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./react19 ./server",
 		"knip": "knip",
 		"verify": "npm run check && npm run typecheck && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:smoke && npm run package:check && npm run test:docs && npm run knip"

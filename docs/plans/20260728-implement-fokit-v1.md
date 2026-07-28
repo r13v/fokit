@@ -1371,27 +1371,27 @@ features that a ten-lesson launch does not need.
 - Modify: `.gitignore`
 - Modify: `knip.json`
 
-- [ ] Write failing Playwright tests first for direct hash entry, fallback
+- [x] Write failing Playwright tests first for direct hash entry, fallback
   routes, locale switching/persistence, previous/next navigation, copy
   feedback, external links, and desktop/mobile navigation.
-- [ ] Build the reference-inspired shell: Fokit brand/header, GitHub link,
+- [x] Build the reference-inspired shell: Fokit brand/header, GitHub link,
   locale switch, grouped curriculum, lesson hero, copyable example pane,
   takeaways/notes, previous/next controls, and a responsive sidebar/drawer.
   Defer search and persistent progress until the ten-lesson launch shows a real
   need.
-- [ ] Render full code blocks only from `examples.js`; keep lesson prose and
+- [x] Render full code blocks only from `examples.js`; keep lesson prose and
   small fragments in `content.js` so there is one executable source for every
   copyable program.
-- [ ] Configure the docs Playwright server against an already-built production
+- [x] Configure the docs Playwright server against an already-built production
   output with `BASE_PATH=/fokit/` and base URL
   `http://127.0.0.1:<port>/fokit/`; fail when no site tests are found.
-- [ ] Add root `site:test:e2e` and `site:verify` commands. `site:verify` runs
+- [x] Add root `site:test:e2e` and `site:verify` commands. `site:verify` runs
   content tests, creates one production build, then previews and tests that
   same `dist` rather than rebuilding behind Playwright.
-- [ ] Test narrow and wide layouts, drawer dismissal, logical tab order,
+- [x] Test narrow and wide layouts, drawer dismissal, logical tab order,
   visible focus, focus movement after lesson navigation, and readable code
   overflow without horizontal page scrolling.
-- [ ] Run `npm run site:verify`, `npm run check`, and `npm run knip` before
+- [x] Run `npm run site:verify`, `npm run check`, and `npm run knip` before
   Task 15D.
 
 ### Task 15D: Add the real Fokit learning lab and CI coverage

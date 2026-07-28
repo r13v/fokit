@@ -77,3 +77,11 @@ Locating Task 15A source files → `rg --files src docs tests examples` failed b
 ## 2026-07-28 19:27 — GPT-5
 
 Generating and installing the Task 15B docs-site lockfile → npm completed successfully but emitted an allow-scripts warning for optional `fsevents`. This is harmless on this platform, but a repo-level npm script policy note would make clean-install output less surprising.
+
+## 2026-07-28 19:34 — GPT-5
+
+Running Task 15C docs-site Playwright tests → the production build used `BASE_PATH=/fokit/`, but plain `vite preview` served assets from the root and left `/fokit/assets/*` as 404s. Pass `--base /fokit/` to preview when testing the GitHub Pages base path.
+
+## 2026-07-28 19:36 — GPT-5
+
+Renaming the Task 15C app component → a move-only `apply_patch` hunk was rejected as empty, so the import edit had to use `apply_patch` and the filename change had to use `mv`. A supported move-only patch form would keep renames in one tool path.

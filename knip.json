@@ -3,12 +3,10 @@
 	"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 	"ignoreFiles": ["tests/setup.ts"],
 	"ignoreDependencies": [
-		"@standard-schema/spec",
 		"@testing-library/react",
 		"@testing-library/user-event",
 		"@types/react",
 		"@types/react-dom",
-		"fast-check",
 		"react",
 		"react-dom",
 		"zod"

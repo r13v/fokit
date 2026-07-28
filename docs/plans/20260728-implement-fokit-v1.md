@@ -488,25 +488,25 @@ entry depends on one safe runtime and compile-time path model.
 - Create: `tests/types/core-paths.test.ts`
 - Modify: `src/core/index.ts`
 
-- [ ] Write failing type tests for `FormInput`, `FormOutput`, `FieldPath`,
+- [x] Write failing type tests for `FormInput`, `FormOutput`, `FieldPath`,
   `ArrayFieldPath`, `PathValue`, relative array paths, optional paths, literal
   unions, and array indexes.
-- [ ] Write failing runtime and fast-check tests for canonical paths such as
+- [x] Write failing runtime and fast-check tests for canonical paths such as
   `address.city` and `contacts.0.value`.
-- [ ] Test rejection of brackets, empty segments, dotted property names,
+- [x] Test rejection of brackets, empty segments, dotted property names,
   numeric object keys, signed/zero-padded indexes, `__proto__`, `prototype`,
   `constructor`, and top-level `__fokit`.
-- [ ] Implement public Standard Schema aliases using
+- [x] Implement public Standard Schema aliases using
   `@standard-schema/spec` type imports.
-- [ ] Implement TypeScript 5.4-compatible recursive path utilities without
+- [x] Implement TypeScript 5.4-compatible recursive path utilities without
   widening valid literal paths to `string`.
-- [ ] Implement a single runtime path parser that returns immutable normalized
+- [x] Implement a single runtime path parser that returns immutable normalized
   segments and is reused by every later runtime entry point.
-- [ ] Implement path formatting, ancestor/equality/descendant overlap checks,
+- [x] Implement path formatting, ancestor/equality/descendant overlap checks,
   and bounded index parsing without object traversal.
-- [ ] Export only the documented public path and schema types/functions from
+- [x] Export only the documented public path and schema types/functions from
   `src/core/index.ts`.
-- [ ] Run `npm run build`,
+- [x] Run `npm run build`,
   `npm run test -- --project node src/core/path.test.ts`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 3A.
 

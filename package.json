@@ -1,0 +1,33 @@
+{
+  "name": "fokit",
+  "version": "1.0.0",
+  "description": "Fokit is a planned code-first, schema-validated React form library with generated forms, typed controls, granular subscriptions, and React 18/19 support.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest",
+    "knip": "knip",
+    "check": "biome check --write"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/r13v/fokit.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/r13v/fokit/issues"
+  },
+  "homepage": "https://github.com/r13v/fokit#readme",
+  "devDependencies": {
+    "@biomejs/biome": "2.5.5",
+    "@types/node": "^26.1.2",
+    "knip": "^6.29.0",
+    "lefthook": "^2.1.10",
+    "typescript": "^7.0.2"
+  }
+}

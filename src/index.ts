@@ -143,6 +143,10 @@ export type {
 	StructuralNodeName,
 	StructuralRootProps,
 } from "./react/slots.js"
+export type {
+	SubmitContext,
+	SubmitHandler,
+} from "./react/submission.js"
 export { Submit } from "./react/submit.js"
 export type {
 	FormInstance,

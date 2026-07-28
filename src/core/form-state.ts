@@ -40,6 +40,7 @@ export type CreateFormSnapshotOptions<Input, Context> = {
 	readonly metadata: FormMetadata
 	readonly isTouched: boolean
 	readonly isValidating: boolean
+	readonly isSubmitting: boolean
 	readonly validationStatus: ValidationStatus
 	readonly submitCount: number
 }
@@ -54,6 +55,7 @@ export function createFormSnapshot<Input, Context>({
 	metadata,
 	isTouched,
 	isValidating,
+	isSubmitting,
 	validationStatus,
 	submitCount,
 }: CreateFormSnapshotOptions<Input, Context>): FormSnapshot<Input, Context> {
@@ -64,7 +66,7 @@ export function createFormSnapshot<Input, Context>({
 		isDirty: !isDirtyEqual(values, baselineValues),
 		isTouched,
 		isValidating,
-		isSubmitting: false,
+		isSubmitting,
 		validationStatus,
 		submitCount,
 		context,

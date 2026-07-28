@@ -213,6 +213,7 @@ type ValueCommitOptions<Context> = {
 
 type ValidationRuntimeState = {
 	readonly isValidating: boolean
+	readonly isSubmitting: boolean
 	readonly validationStatus: "invalid" | "unvalidated" | "valid"
 	readonly submitCount: number
 }
@@ -228,11 +229,39 @@ type ValueProposal<Input, Context> = {
 	readonly resolvedUi: ResolvedUiState<Context>
 }
 
+export type FormSubmissionAttempt<
+	Schema extends StandardSchema = StandardSchema,
+> = {
+	validate(): Promise<ValidationResult<FormOutput<Schema>>>
+	finish(): void
+}
+
 export function createFormStore<
 	Schema extends StandardSchema,
 	Context = unknown,
 >(options: FormStoreOptions<Schema, Context>): FormStore<Schema, Context> {
 	return new CoreFormStore(options) as unknown as FormStore<Schema, Context>
+}
+
+export function startFormSubmission<
+	Schema extends StandardSchema,
+	Context = unknown,
+>(store: FormStore<Schema, Context>): FormSubmissionAttempt<Schema> {
+	const core = asCoreFormStore(store)
+	const id = core.startSubmission()
+	let finished = false
+
+	return Object.freeze({
+		validate: () => core.validateSubmission(),
+		finish() {
+			if (finished) {
+				return
+			}
+
+			finished = true
+			core.finishSubmission(id)
+		},
+	})
 }
 
 class CoreFormStore<Schema extends StandardSchema, Context> {
@@ -252,6 +281,8 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	readonly #disabled: boolean
 	#hasValidationResult = false
 	#nextValidationId = 0
+	#activeSubmissionId: number | undefined
+	#nextSubmissionId = 0
 	#nonSubmitAbortController: AbortController | undefined
 	#scheduledValidation: ReturnType<typeof setTimeout> | undefined
 	readonly #validationOptions: ValidationOptions
@@ -417,6 +448,38 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					? []
 					: filterPathSubtreeIssues(result.issues, canonicalPath),
 		)
+	}
+
+	startSubmission(): number {
+		const id = ++this.#nextSubmissionId
+		this.#activeSubmissionId = id
+		this.#commitValidationRuntimeState({
+			...this.#validationState,
+			isSubmitting: true,
+			submitCount: this.#validationState.submitCount + 1,
+		})
+		return id
+	}
+
+	validateSubmission(): Promise<ValidationResult<FormOutput<Schema>>> {
+		this.#cancelScheduledValidation()
+		return this.#runValidation({
+			kind: "submit",
+			exposeAll: true,
+			exposePaths: [],
+		})
+	}
+
+	finishSubmission(id: number): void {
+		if (this.#activeSubmissionId !== id) {
+			return
+		}
+
+		this.#activeSubmissionId = undefined
+		this.#commitValidationRuntimeState({
+			...this.#validationState,
+			isSubmitting: false,
+		})
 	}
 
 	batch(callback: () => void): void {
@@ -596,6 +659,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			metadata,
 			isTouched: isFormMetadataTouched(metadata),
 			isValidating: this.#validationState.isValidating,
+			isSubmitting: this.#validationState.isSubmitting,
 			validationStatus: this.#validationState.validationStatus,
 			submitCount: this.#validationState.submitCount,
 		})
@@ -878,10 +942,12 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	#applyResetMetadataOnly(baselineValues: FormInput<Schema>): void {
 		const nextBaselineValues = cloneAndFreezeValue(baselineValues)
+		const nextValidationState = createValidationRuntimeState()
 		if (
 			isDirtyEqual(this.#baselineValues, nextBaselineValues) &&
 			this.#metadataState.touchedPaths.size === 0 &&
-			isIssueStateEmpty(this.#issueState)
+			isIssueStateEmpty(this.#issueState) &&
+			isSameValidationRuntimeState(this.#validationState, nextValidationState)
 		) {
 			return
 		}
@@ -1129,6 +1195,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#validationRevision += 1
 		this.#cancelScheduledValidation()
 		this.#abortNonSubmitValidation(false)
+		this.#activeSubmissionId = undefined
 		this.#hasValidationResult = false
 		this.#validationState = createValidationRuntimeState()
 	}
@@ -1324,6 +1391,7 @@ function createValidationRuntimeState(
 ): ValidationRuntimeState {
 	return Object.freeze({
 		isValidating: state.isValidating === true,
+		isSubmitting: state.isSubmitting === true,
 		validationStatus: state.validationStatus ?? "unvalidated",
 		submitCount: state.submitCount ?? 0,
 	})
@@ -1335,9 +1403,20 @@ function isSameValidationRuntimeState(
 ): boolean {
 	return (
 		left.isValidating === right.isValidating &&
+		left.isSubmitting === right.isSubmitting &&
 		left.validationStatus === right.validationStatus &&
 		left.submitCount === right.submitCount
 	)
+}
+
+function asCoreFormStore<Schema extends StandardSchema, Context>(
+	store: FormStore<Schema, Context>,
+): CoreFormStore<Schema, Context> {
+	if (store instanceof CoreFormStore) {
+		return store
+	}
+
+	throw new TypeError("Submission requires a Fokit form store")
 }
 
 function filterPathSubtreeIssues(

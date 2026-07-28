@@ -1013,26 +1013,26 @@ requiring React 19.
 - Modify: `src/react/submit.tsx`
 - Modify: `src/react/use-form.ts`
 
-- [ ] Write failing tests for disabled submit, submit count, pending state,
+- [x] Write failing tests for disabled submit, submit count, pending state,
   complete validation, invalid focus, valid transformed output, and captured
   input/`FormData`.
-- [ ] Capture input, native `FormData`, and submitter synchronously before
+- [x] Capture input, native `FormData`, and submitter synchronously before
   pending state changes rendered controls.
-- [ ] Validate the captured snapshot; suppress stale issue installation after
+- [x] Validate the captured snapshot; suppress stale issue installation after
   later edits while preserving that attempt's callback decision.
-- [ ] Share one in-flight promise across concurrent native and imperative
+- [x] Share one in-flight promise across concurrent native and imperative
   submits.
-- [ ] Restore pending state in `finally`, propagate unexpected errors, and
+- [x] Restore pending state in `finally`, propagate unexpected errors, and
   never reset automatically.
-- [ ] Implement `form.submit(): Promise<void>` through mounted
+- [x] Implement `form.submit(): Promise<void>` through mounted
   `requestSubmit()` and reject clearly when no form is mounted.
-- [ ] Intercept native reset after hydration and call `form.reset()`; preserve
+- [x] Intercept native reset after hydration and call `form.reset()`; preserve
   browser reset behavior before hydration.
-- [ ] Focus the first visible/enabled/editable invalid field or the first
+- [x] Focus the first visible/enabled/editable invalid field or the first
   summary issue; keep focus calls guarded when no target exists.
-- [ ] Test same-value reset, new baseline reset, hook cancellation/replacement,
+- [x] Test same-value reset, new baseline reset, hook cancellation/replacement,
   file input clearing, and custom native reset buttons.
-- [ ] Run
+- [x] Run
   `npm run test -- --project react src/react/submission.test.tsx src/react/reset.test.tsx`,
   then `npm run test -- --project react`, `npm run check`, and `npm run knip`
   before Task 12.

@@ -10,16 +10,23 @@ import {
 	type NormalizedFormDefinition,
 	type StandardSchema,
 } from "../core/index.js"
+import {
+	attachClassicSubmission,
+	type ClassicFormInstance,
+	type SubmitHandler,
+} from "./submission.js"
 
 export type FormInstance<
 	Schema extends StandardSchema,
 	Context = unknown,
-> = FormStore<Schema, Context>
+> = ClassicFormInstance<Schema, Context>
 
 export type UseFormOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
-> = Omit<FormStoreOptions<Schema, Context>, "definition">
+> = Omit<FormStoreOptions<Schema, Context>, "definition"> & {
+	readonly onSubmit?: SubmitHandler<Schema, Context>
+}
 
 export function useForm<Schema extends StandardSchema, Context = unknown>(
 	definition: NormalizedFormDefinition<Schema>,
@@ -32,18 +39,21 @@ export function useForm<Schema extends StandardSchema, Context = unknown>(
 	const formRef = useRef<FormInstance<Schema, Context>>(undefined)
 
 	if (formRef.current === undefined) {
-		formRef.current = createFormStore({
-			definition,
-			defaultValues: options.defaultValues,
-			context: options.context,
-			disabled: options.disabled,
-			readOnly: options.readOnly,
-			validation: options.validation,
-			beforeUpdate: (event) => optionsRef.current.beforeUpdate?.(event),
-			onUpdate: (event) => {
-				optionsRef.current.onUpdate?.(event)
-			},
-		})
+		formRef.current = attachClassicSubmission(
+			createFormStore({
+				definition,
+				defaultValues: options.defaultValues,
+				context: options.context,
+				disabled: options.disabled,
+				readOnly: options.readOnly,
+				validation: options.validation,
+				beforeUpdate: (event) => optionsRef.current.beforeUpdate?.(event),
+				onUpdate: (event) => {
+					optionsRef.current.onUpdate?.(event)
+				},
+			}) as FormStore<Schema, Context>,
+			() => optionsRef.current.onSubmit,
+		)
 	}
 
 	useEffect(() => {

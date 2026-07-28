@@ -26,6 +26,7 @@ export function createAutoFormComponent(
 		validation,
 		beforeUpdate,
 		onUpdate,
+		onSubmit,
 		children,
 		...formProps
 	}: AutoFormProps<Schema, Context>) {
@@ -37,6 +38,7 @@ export function createAutoFormComponent(
 			validation,
 			beforeUpdate,
 			onUpdate,
+			onSubmit,
 		})
 
 		return (

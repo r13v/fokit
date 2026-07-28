@@ -4,12 +4,14 @@ import {
 	type ComponentPropsWithoutRef,
 	type FormEvent,
 	type ReactNode,
+	useCallback,
 	useId,
 } from "react"
 
 import { FormProvider } from "./form-context.js"
 import { useFormState } from "./hooks.js"
 import type { FokitStyle } from "./slots.js"
+import { registerClassicForm, submitClassicForm } from "./submission.js"
 import type { FormInstance } from "./use-form.js"
 
 export type NativeFormProps = Omit<
@@ -45,16 +47,20 @@ export function KitForm<
 		submitting: snapshot.isSubmitting,
 	}))
 
-	function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-		event.preventDefault()
-		if (state.disabled || state.submitting) {
-			event.stopPropagation()
-		}
-	}
+	const handleFormRef = useCallback(
+		(element: HTMLFormElement | null) => {
+			registerClassicForm(form, element)
+		},
+		[form],
+	)
 
 	function handleReset(event: FormEvent<HTMLFormElement>): void {
 		event.preventDefault()
+		const previousSnapshot = form.getSnapshot()
 		form.reset()
+		if (form.getSnapshot() !== previousSnapshot) {
+			clearFileInputs(event.currentTarget)
+		}
 	}
 
 	return (
@@ -71,13 +77,24 @@ export function KitForm<
 				data-validation-status={state.validationStatus}
 				id={generatedId}
 				noValidate
+				ref={handleFormRef}
 				onReset={handleReset}
-				onSubmit={handleSubmit}
+				onSubmit={(event) => {
+					void submitClassicForm(form, event)
+				}}
 			>
 				{children}
 			</form>
 		</FormProvider>
 	)
+}
+
+function clearFileInputs(form: HTMLFormElement): void {
+	for (const input of form.querySelectorAll<HTMLInputElement>(
+		'input[type="file"]',
+	)) {
+		input.value = ""
+	}
 }
 
 function rejectOwnedFormProps(props: object): void {

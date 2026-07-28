@@ -141,6 +141,60 @@ const kit = createFormKit({
 	slots,
 })
 
+const exampleDefinition = kit.defineForm<ExampleContext>()({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+		},
+		{
+			kind: "field",
+			path: "status",
+			control: "text",
+		},
+		{
+			kind: "field",
+			path: "age",
+			control: "number",
+		},
+		{
+			kind: "field",
+			path: "maybeNull",
+			control: "nullableText",
+		},
+	],
+})
+
+kit.AutoForm({
+	definition: exampleDefinition,
+	defaultValues: {
+		name: "Ada",
+		status: "draft",
+		age: 37,
+		maybeNull: null,
+	},
+	context: {
+		locale: "en",
+		locked: false,
+	},
+})
+
+kit.AutoForm({
+	definition: exampleDefinition,
+	// @ts-expect-error kit.AutoForm defaultValues must include required schema properties
+	defaultValues: {
+		name: "Ada",
+		status: "draft",
+		age: 37,
+	},
+	context: {
+		locale: "en",
+		locked: false,
+	},
+})
+
 kit.defineForm<ExampleContext>()({
 	schema,
 	ui: [

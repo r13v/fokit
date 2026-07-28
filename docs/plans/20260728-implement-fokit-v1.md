@@ -924,22 +924,22 @@ arrays and serialization add their own behavior.
 - Modify: `tests/types/controls-and-kit.test.ts`
 - Modify: `src/index.ts`
 
-- [ ] Write failing tests that render field, section, and error-message slots
+- [x] Write failing tests that render field, section, and error-message slots
   from a definition, with workflow children after generated nodes.
-- [ ] Implement `kit.Fields` and `kit.AutoForm` over the same form instance.
-- [ ] Add public type tests proving `kit.AutoForm` also requires complete
+- [x] Implement `kit.Fields` and `kit.AutoForm` over the same form instance.
+- [x] Add public type tests proving `kit.AutoForm` also requires complete
   `defaultValues`.
-- [ ] Resolve computed visible/disabled/read-only/required/options/context
+- [x] Resolve computed visible/disabled/read-only/required/options/context
   values with inherited state and declared dependencies only.
-- [ ] Pass mandatory `rootProps` to exactly one slot root and `layoutProps` to
+- [x] Pass mandatory `rootProps` to exactly one slot root and `layoutProps` to
   the section grid descendant without hidden wrappers.
-- [ ] Render direct field errors locally and form-level/unowned invisible
+- [x] Render direct field errors locally and form-level/unowned invisible
   issues in the summary with a guarded fallback focus target.
-- [ ] Implement labels, descriptions, deterministic IDs, `aria-describedby`,
+- [x] Implement labels, descriptions, deterministic IDs, `aria-describedby`,
   `aria-invalid`, and public state/layout data attributes.
-- [ ] Test that boolean data attributes disappear when false and
+- [x] Test that boolean data attributes disappear when false and
   `data-invalid` follows displayed rather than merely stored issues.
-- [ ] Run
+- [x] Run
   `npm run test -- --project react src/react/auto-form.test.tsx src/react/accessibility.test.tsx`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 10B.
 

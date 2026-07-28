@@ -1,14 +1,18 @@
 "use client"
 
-import type { ComponentType, ReactNode } from "react"
+import type { ComponentType, ReactElement, ReactNode } from "react"
 
 import {
 	type FormDefinition,
+	type FormInput,
 	type NormalizedFormDefinition,
 	normalizeDefinition,
 	type StandardSchema,
 } from "../core/index.js"
+import { createAutoFormComponent } from "./auto-form.js"
 import type { ControlDefinitionRegistry } from "./control.js"
+import { createFieldsComponent } from "./fields.js"
+import type { NativeFormProps } from "./form.js"
 import { KitForm, type KitFormProps } from "./form.js"
 import type {
 	ArrayItemSlotProps,
@@ -18,6 +22,7 @@ import type {
 	SectionSlotProps,
 } from "./slots.js"
 import { Submit, type SubmitProps } from "./submit.js"
+import type { UseFormOptions } from "./use-form.js"
 
 export type FormKitSlots = {
 	readonly Field: ComponentType<FieldSlotProps>
@@ -45,9 +50,24 @@ export type FieldsProps = {
 	readonly children?: ReactNode
 }
 
-export type AutoFormProps = {
-	readonly children?: ReactNode
-}
+export type AutoFormProps<
+	Schema extends StandardSchema = StandardSchema,
+	Context = unknown,
+> = NativeFormProps &
+	Omit<UseFormOptions<Schema, Context>, "defaultValues"> & {
+		readonly definition: NormalizedFormDefinition<Schema>
+		readonly defaultValues: FormInput<Schema>
+		readonly children?: ReactNode
+	}
+
+export type FieldsComponent = (props: FieldsProps) => ReactElement
+
+export type AutoFormComponent = <
+	Schema extends StandardSchema,
+	Context = unknown,
+>(
+	props: AutoFormProps<Schema, Context>,
+) => ReactElement
 
 export type FormKit<Controls extends ControlDefinitionRegistry> = {
 	readonly controls: Controls
@@ -55,8 +75,8 @@ export type FormKit<Controls extends ControlDefinitionRegistry> = {
 	readonly defineForm: DefineForm<Controls>
 	readonly Form: typeof KitForm
 	readonly Submit: typeof Submit
-	readonly Fields: (props: FieldsProps) => never
-	readonly AutoForm: (props: AutoFormProps) => never
+	readonly Fields: FieldsComponent
+	readonly AutoForm: AutoFormComponent
 }
 
 export function createFormKit<Controls extends ControlDefinitionRegistry>(
@@ -79,8 +99,8 @@ export function createFormKit<Controls extends ControlDefinitionRegistry>(
 		defineForm,
 		Form: KitForm,
 		Submit,
-		Fields,
-		AutoForm,
+		Fields: createFieldsComponent(options.controls, options.slots),
+		AutoForm: createAutoFormComponent(options.controls, options.slots),
 	})
 }
 
@@ -119,14 +139,6 @@ function assertSlots(
 			throw new TypeError(`createFormKit requires a ${key} slot`)
 		}
 	}
-}
-
-function Fields(_props: FieldsProps): never {
-	throw new Error("kit.Fields is implemented by Fokit's generated renderer")
-}
-
-function AutoForm(_props: AutoFormProps): never {
-	throw new Error("kit.AutoForm is implemented by Fokit's generated renderer")
 }
 
 export type { KitFormProps, SubmitProps }

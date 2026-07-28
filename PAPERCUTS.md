@@ -69,3 +69,7 @@ Running root type tests after adding smoke fixtures → `tsc --project tsconfig.
 ## 2026-07-28 19:12 — GPT-5
 
 Running Task 14C focused checks → `npm run test:package` rebuilt and cleaned `dist` while a parallel server test tried to inspect `dist/server.js`, causing a transient missing-file failure. Do not parallelize build/clean commands with tests that read built artifacts.
+
+## 2026-07-28 19:17 — GPT-5
+
+Locating Task 15A source files → `rg --files src docs tests examples` failed because the plan names `examples/` before the directory exists. Create the planned directory before broad file enumeration, or omit not-yet-created paths from bootstrap searches.

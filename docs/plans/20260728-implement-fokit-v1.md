@@ -1259,37 +1259,37 @@ introducing the full contract.
 - Create: `examples/form-kit.tsx`
 - Create: `examples/server-action.ts`
 
-- [ ] Update README from “planned” to implemented v1 status, explicitly
+- [x] Update README from “planned” to implemented v1 status, explicitly
   identify the existing `fokit@0.0.1` as a pre-implementation placeholder, and
   link both tutorials. Do not claim npm availability or link a live site until
   Task 15G verifies the new release and Pages deployment.
-- [ ] Document installation, React peers, Standard Schema compatibility,
+- [x] Document installation, React peers, Standard Schema compatibility,
   package subpaths, and explicit CSS import.
-- [ ] Write equivalent English and Russian long-form tutorials that get a new
+- [x] Write equivalent English and Russian long-form tutorials that get a new
   user from install to a working schema, application-owned controls, all five
   slots, `AutoForm`, validation, and classic submission in no more than 15
   minutes.
-- [ ] Continue both tutorials with conditional fields and `valuePolicy`,
+- [x] Continue both tutorials with conditional fields and `valuePolicy`,
   arrays and stable row identity, manual composition and subscriptions,
   `FormData`/server parsing, React 19 Actions, styling/layout, testing, and
   package boundaries.
-- [ ] Provide copyable reference controls and all five structural slots,
+- [x] Provide copyable reference controls and all five structural slots,
   including accessible label/error wiring and class/root prop preservation.
-- [ ] Document `dynamicOptions` as computed `options` backed by runtime context.
-- [ ] Document visible/disabled/read-only/value-policy behavior and
+- [x] Document `dynamicOptions` as computed `options` backed by runtime context.
+- [x] Document visible/disabled/read-only/value-policy behavior and
   `beforeUpdate`/`onUpdate` with one deterministic transaction example.
-- [ ] Document React 18 classic submission separately from server-first React
+- [x] Document React 18 classic submission separately from server-first React
   19 Actions.
-- [ ] Document FormData serializer requirements and Action compatibility
+- [x] Document FormData serializer requirements and Action compatibility
   failures.
-- [ ] Keep deferred features clearly out of v1 and update `docs/SPEC.md` only
+- [x] Keep deferred features clearly out of v1 and update `docs/SPEC.md` only
   for a concrete implementation-discovered contract clarification; add that
   file to the task only when the clarification exists. Apply the same rule to
   the accepted styling ADR.
-- [ ] Create `tsconfig.docs.json` for `examples/**/*.ts` and
+- [x] Create `tsconfig.docs.json` for `examples/**/*.ts` and
   `examples/**/*.tsx`, add `npm run test:docs`, and include it in
   `npm run verify` so copyable examples cannot drift.
-- [ ] Run `npm run test:docs`, `npm run check`, and `npm run knip` before
+- [x] Run `npm run test:docs`, `npm run check`, and `npm run knip` before
   Task 15B.
 
 ### Task 15B: Establish the docs package, curriculum, and routing

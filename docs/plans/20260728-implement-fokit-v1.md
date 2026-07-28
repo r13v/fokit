@@ -598,25 +598,25 @@ truth with granular selectors.
 - Create: `src/core/subscriptions.test.ts`
 - Modify: `src/core/index.ts`
 
-- [ ] Write failing tests for construction from complete `defaultValues`,
+- [x] Write failing tests for construction from complete `defaultValues`,
   stable store identity, cached snapshots, and immutable state reads.
-- [ ] Write render-independent selector tests proving unrelated path listeners
+- [x] Write render-independent selector tests proving unrelated path listeners
   are not notified and equality defaults to `Object.is`.
-- [ ] Implement `FormState` with values, form/field issues, dirty/touched
+- [x] Implement `FormState` with values, form/field issues, dirty/touched
   aggregates, validating/submitting flags, validation status, and submit count.
-- [ ] Keep baseline values and internal field/array metadata outside submitted
+- [x] Keep baseline values and internal field/array metadata outside submitted
   form data.
-- [ ] Implement `getValues`, `getValue`, `subscribe`, focus/ref registration,
+- [x] Implement `getValues`, `getValue`, `subscribe`, focus/ref registration,
   touch/blur metadata, and post-commit listener notification.
-- [ ] Ensure context replacement reevaluates UI without becoming form data,
+- [x] Ensure context replacement reevaluates UI without becoming form data,
   dirty state, or a normal value update.
-- [ ] Test context replacement with no resulting `valuePolicy` change and
+- [x] Test context replacement with no resulting `valuePolicy` change and
   assert values, baseline, dirty state, and update-hook counts are unchanged.
-- [ ] Ensure `defaultValues` and schema/definition identity are fixed for one
+- [x] Ensure `defaultValues` and schema/definition identity are fixed for one
   instance; later record data must use reset or a new instance.
-- [ ] Test listener unsubscribe, custom equality, no-op commits, and
+- [x] Test listener unsubscribe, custom equality, no-op commits, and
   mutation attempts against returned snapshots.
-- [ ] Run
+- [x] Run
   `npm run test -- --project node src/core/form-store.test.ts src/core/subscriptions.test.ts`,
   `npm run typecheck`, `npm run check`, and `npm run knip` before Task 5A.
 

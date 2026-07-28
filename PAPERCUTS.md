@@ -9,3 +9,7 @@ Inspecting Standard Schema declarations for Task 2 → `rg` over `node_modules/@
 ## 2026-07-28 16:26 — GPT-5
 
 Searching the spec for Task 3A context → an `rg` query containing markdown backticks reached zsh unescaped, so the shell tried to execute `defaultValues`. Quote search patterns that include backticks or run a narrower `rg` query first.
+
+## 2026-07-28 16:46 — GPT-5
+
+Typechecking Task 4 store types → embedding recursive `FieldPath<FormInput<Schema>>` across the whole generic store interface triggered TS2589. Keep the broad store runtime surface on `PathInput` and add command-specific path typing in the later transaction/type-test slice.

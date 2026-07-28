@@ -1,0 +1,236 @@
+import { describe, expect, it, vi } from "vitest"
+
+import type { ControlMetadata, StandardSchema, UiNode } from "./index.js"
+import {
+	computed,
+	createFormStore,
+	type FormStore,
+	normalizeDefinition,
+} from "./index.js"
+
+type AccountValues = {
+	name: string
+	kind: "person" | "company"
+	companyName?: string
+	contacts: {
+		value: string
+	}[]
+}
+
+type AccountContext = {
+	readonly locked: boolean
+	readonly showCompany: boolean
+}
+
+type AccountControls = {
+	readonly text: ControlMetadata<string | undefined>
+	readonly select: ControlMetadata<AccountValues["kind"]>
+}
+
+const schema = {} as StandardSchema<AccountValues>
+
+const controls = {
+	text: {
+		formData: {
+			mode: "native",
+		},
+	},
+	select: {
+		formData: {
+			mode: "native",
+		},
+	},
+} satisfies AccountControls
+
+function createDefinition() {
+	return normalizeDefinition<typeof schema, AccountControls, AccountContext>({
+		schema,
+		controls,
+		ui: [
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: "Name",
+			},
+			{
+				kind: "field",
+				path: "kind",
+				control: "select",
+				label: "Kind",
+			},
+			{
+				kind: "field",
+				path: "companyName",
+				control: "text",
+				label: "Company name",
+				visible: computed(
+					[] as const,
+					(_values, { context }: { readonly context: AccountContext }) =>
+						context.showCompany,
+				),
+				disabled: computed(
+					[] as const,
+					(_values, { context }: { readonly context: AccountContext }) =>
+						context.locked,
+				),
+			},
+		] satisfies readonly UiNode<
+			AccountValues,
+			AccountControls,
+			AccountContext
+		>[],
+	})
+}
+
+function createStore(
+	options: {
+		readonly defaultValues?: AccountValues
+		readonly context?: AccountContext
+		readonly beforeUpdate?: () => undefined
+		readonly onUpdate?: () => void
+	} = {},
+): FormStore<typeof schema, AccountContext> {
+	return createFormStore({
+		definition: createDefinition(),
+		defaultValues: options.defaultValues ?? {
+			name: "Ada",
+			kind: "person",
+			contacts: [{ value: "ada@example.test" }],
+		},
+		context: options.context ?? {
+			locked: false,
+			showCompany: true,
+		},
+		beforeUpdate: options.beforeUpdate,
+		onUpdate: options.onUpdate,
+	})
+}
+
+describe("form store construction and snapshots", () => {
+	it("constructs from complete defaultValues with cached immutable state reads", () => {
+		const defaultValues: AccountValues = {
+			name: "Ada",
+			kind: "person",
+			contacts: [{ value: "ada@example.test" }],
+		}
+		const form = createStore({ defaultValues })
+
+		const snapshot = form.getSnapshot()
+		const sameSnapshot = form.getSnapshot()
+
+		expect(sameSnapshot).toBe(snapshot)
+		expect(form.getServerSnapshot()).toBe(snapshot)
+		expect(form.definition.schema).toBe(schema)
+		expect(form.schema).toBe(schema)
+		expect(form.getValues()).toBe(snapshot.values)
+		expect(form.getValue("contacts.0.value")).toBe("ada@example.test")
+		expect(snapshot.values).toEqual(defaultValues)
+		expect(snapshot.values).not.toBe(defaultValues)
+		expect(snapshot.values.contacts).not.toBe(defaultValues.contacts)
+		expect(snapshot.errors.form).toEqual([])
+		expect(snapshot.errors.fields.size).toBe(0)
+		expect(snapshot.isDirty).toBe(false)
+		expect(snapshot.isTouched).toBe(false)
+		expect(snapshot.isValidating).toBe(false)
+		expect(snapshot.isSubmitting).toBe(false)
+		expect(snapshot.validationStatus).toBe("unvalidated")
+		expect(snapshot.submitCount).toBe(0)
+		expect(snapshot.metadata.fieldsByPath.name).toEqual({
+			dirty: false,
+			touched: false,
+			validating: false,
+		})
+		expect(snapshot.resolvedUi.fieldsByPath.companyName.visible).toBe(true)
+		expect(Object.isFrozen(snapshot)).toBe(true)
+		expect(Object.isFrozen(snapshot.values)).toBe(true)
+		expect(Object.isFrozen(snapshot.values.contacts)).toBe(true)
+
+		expect(() => {
+			;(snapshot.values as { name: string }).name = "Grace"
+		}).toThrow(TypeError)
+		expect(() => {
+			;(snapshot.errors.fields as Map<string, readonly unknown[]>).set(
+				"name",
+				[],
+			)
+		}).toThrow(TypeError)
+
+		defaultValues.name = "Grace"
+		defaultValues.contacts[0].value = "grace@example.test"
+
+		expect(form.getValues()).toEqual({
+			name: "Ada",
+			kind: "person",
+			contacts: [{ value: "ada@example.test" }],
+		})
+	})
+
+	it("keeps baseline and metadata outside submitted values while tracking blur metadata", () => {
+		const form = createStore()
+		const listener = vi.fn()
+		form.subscribe((snapshot) => snapshot.isTouched, listener)
+
+		form.blur("name")
+		const snapshot = form.getSnapshot()
+
+		expect(listener).toHaveBeenCalledTimes(1)
+		expect(listener).toHaveBeenLastCalledWith(true, false)
+		expect(snapshot.isTouched).toBe(true)
+		expect(snapshot.metadata.fieldsByPath.name.touched).toBe(true)
+		expect(snapshot.metadata.fieldsByPath.companyName.touched).toBe(false)
+		expect(form.getValues()).toEqual({
+			name: "Ada",
+			kind: "person",
+			contacts: [{ value: "ada@example.test" }],
+		})
+		expect(Object.hasOwn(form.getValues() as object, "__fokit")).toBe(false)
+	})
+
+	it("registers focus refs and focuses only mounted visible editable fields", () => {
+		const form = createStore({
+			context: {
+				locked: true,
+				showCompany: true,
+			},
+		})
+		const element = { focus: vi.fn() }
+
+		form.registerFieldRef("companyName", element)
+		form.focus("companyName")
+
+		expect(element.focus).not.toHaveBeenCalled()
+
+		form.replaceContext({
+			locked: false,
+			showCompany: true,
+		})
+		form.focus("companyName")
+		form.registerFieldRef("companyName", null)
+		form.focus("companyName")
+
+		expect(element.focus).toHaveBeenCalledTimes(1)
+	})
+
+	it("reevaluates context-dependent UI without changing values, dirty state, or update hooks", () => {
+		const beforeUpdate = vi.fn()
+		const onUpdate = vi.fn()
+		const form = createStore({ beforeUpdate, onUpdate })
+		const values = form.getValues()
+		const resolvedUi = form.getSnapshot().resolvedUi
+
+		form.replaceContext({
+			locked: true,
+			showCompany: true,
+		})
+		const snapshot = form.getSnapshot()
+
+		expect(snapshot.values).toBe(values)
+		expect(snapshot.isDirty).toBe(false)
+		expect(snapshot.metadata.fieldsByPath.name.dirty).toBe(false)
+		expect(snapshot.resolvedUi).not.toBe(resolvedUi)
+		expect(snapshot.resolvedUi.fieldsByPath.companyName.disabled).toBe(true)
+		expect(beforeUpdate).not.toHaveBeenCalled()
+		expect(onUpdate).not.toHaveBeenCalled()
+	})
+})

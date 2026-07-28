@@ -1,0 +1,200 @@
+"use client"
+
+import type { StandardSchemaV1 } from "@standard-schema/spec"
+import { fireEvent, render, screen } from "@testing-library/react"
+import { describe, expect, it } from "vitest"
+import type { FormInput, ImperativeFormIssue } from "../core/index.js"
+import { FieldControl } from "./control.js"
+import { createFormKit } from "./create-form-kit.js"
+import { useFormState } from "./hooks.js"
+import { type TestValues, testKit, textControl } from "./test-kit.js"
+import { useForm } from "./use-form.js"
+
+type TestSchema = StandardSchemaV1<TestValues>
+type CollisionValues = {
+	readonly "user-name": string
+	readonly user: {
+		readonly name: string
+	}
+}
+type CollisionSchema = StandardSchemaV1<CollisionValues>
+
+const schema = {} as TestSchema
+const collisionSchema = {} as CollisionSchema
+
+function createDefinition() {
+	return testKit.defineForm({
+		schema,
+		ui: [
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: "Name",
+				description: "Legal name",
+				required: true,
+				options: {
+					placeholder: "Full name",
+				},
+			},
+		],
+	})
+}
+
+function defaultValues(): FormInput<TestSchema> {
+	return {
+		name: "Ada",
+	}
+}
+
+describe("createFormKit", () => {
+	it("requires every structural slot and normalizes definitions with kit controls", () => {
+		expect(() =>
+			testKit.defineForm({
+				schema,
+				ui: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+					},
+				],
+			}),
+		).not.toThrow()
+
+		expect(() =>
+			testKit.defineForm<{ readonly locked: boolean }>()({
+				schema,
+				ui: [
+					{
+						kind: "field",
+						path: "nickname",
+						control: "text",
+						valuePolicy: "unset",
+					},
+				],
+			}),
+		).not.toThrow()
+	})
+
+	it("throws when a required structural slot is missing", () => {
+		const create = createFormKit as (options: unknown) => unknown
+
+		expect(() =>
+			create({
+				controls: {
+					text: textControl,
+				},
+				slots: {},
+			}),
+		).toThrow(/Field slot/i)
+	})
+
+	it("passes resolved control props with deterministic names, IDs, ARIA, and meta", () => {
+		const definition = createDefinition()
+
+		function ControlHarness() {
+			const form = useForm(definition, {
+				defaultValues: defaultValues(),
+			})
+			const displayErrors = useFormState(
+				form,
+				(snapshot) => snapshot.displayErrors.fields.get("name") ?? [],
+			)
+
+			return (
+				<testKit.Form form={form} id="profile">
+					<FieldControl
+						controls={{
+							text: textControl,
+						}}
+						descriptionId="profile-name-description"
+						form={form}
+						path="name"
+					/>
+					<button
+						type="button"
+						onClick={() => {
+							form.setErrors([issue("name", "Enter a name")])
+						}}
+					>
+						error
+					</button>
+					<output>{displayErrors.length}</output>
+				</testKit.Form>
+			)
+		}
+
+		render(<ControlHarness />)
+
+		const input = screen.getByLabelText("Name") as HTMLInputElement
+		expect(input.id).toBe("profile-name")
+		expect(input.name).toBe("name")
+		expect(input.getAttribute("aria-describedby")).toBe(
+			"profile-name-description",
+		)
+		expect(input.placeholder).toBe("Full name")
+		expect(input.required).toBe(true)
+		expect(input.value).toBe("Ada")
+
+		fireEvent.change(input, { target: { value: "Grace" } })
+		expect(input.value).toBe("Grace")
+
+		fireEvent.click(screen.getByRole("button", { name: "error" }))
+		expect(input.getAttribute("aria-invalid")).toBe("true")
+		expect(input.getAttribute("data-errors")).toBe("Enter a name")
+		expect(input.getAttribute("data-display-errors")).toBe("Enter a name")
+	})
+
+	it("keeps generated DOM IDs distinct for dashed and nested paths", () => {
+		const definition = testKit.defineForm({
+			schema: collisionSchema,
+			ui: [
+				{
+					kind: "field",
+					path: "user-name",
+					control: "text",
+					label: "Dashed",
+				},
+				{
+					kind: "field",
+					path: "user.name",
+					control: "text",
+					label: "Nested",
+				},
+			],
+		})
+
+		render(
+			<testKit.AutoForm
+				defaultValues={{
+					"user-name": "Ada",
+					user: {
+						name: "Grace",
+					},
+				}}
+				definition={definition}
+				id="profile"
+			/>,
+		)
+
+		const dashed = document.querySelector<HTMLInputElement>(
+			'input[name="user-name"]',
+		)
+		const nested = document.querySelector<HTMLInputElement>(
+			'input[name="user.name"]',
+		)
+
+		expect(dashed?.id).toBe("profile-user-name")
+		expect(nested?.id).toBe("profile-user%2Ename")
+		expect(dashed?.id).not.toBe(nested?.id)
+	})
+})
+
+function issue(path: string, message: string): ImperativeFormIssue {
+	return {
+		source: "manual",
+		path,
+		message,
+	}
+}

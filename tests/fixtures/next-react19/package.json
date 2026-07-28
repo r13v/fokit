@@ -1,0 +1,20 @@
+{
+	"name": "fokit-next-react19-smoke",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "next build"
+	},
+	"dependencies": {
+		"next": "16.2.12",
+		"react": "19.2.8",
+		"react-dom": "19.2.8"
+	},
+	"devDependencies": {
+		"@types/node": "26.1.2",
+		"@types/react": "19.2.17",
+		"@types/react-dom": "19.2.3",
+		"typescript": "7.0.2"
+	}
+}

@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [24]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify package
+        run: npm run verify
+
+      - name: Dry-run package
+        run: npm pack --dry-run
+
+  docs-site:
+    name: Docs site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            docs-site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Install docs dependencies
+        run: npm ci --prefix docs-site
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify docs site
+        run: npm run site:verify
+
+      - name: Upload docs Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-site-playwright
+          if-no-files-found: ignore
+          path: |
+            playwright-report
+            test-results

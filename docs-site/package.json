@@ -1,0 +1,20 @@
+{
+	"name": "fokit-docs-site",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"test": "node --test src/*.test.mjs"
+	},
+	"dependencies": {
+		"@phosphor-icons/react": "2.1.10",
+		"@vitejs/plugin-react": "6.0.4",
+		"fokit": "file:..",
+		"react": "19.2.8",
+		"react-dom": "19.2.8",
+		"vite": "8.1.5",
+		"zod": "4.4.3"
+	}
+}

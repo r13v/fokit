@@ -1,0 +1,21 @@
+{
+	"name": "fokit-react18-vite-smoke",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"build": "vite build"
+	},
+	"dependencies": {
+		"@vitejs/plugin-react": "6.0.4",
+		"vite": "8.1.5",
+		"react": "18.3.1",
+		"react-dom": "18.3.1"
+	},
+	"devDependencies": {
+		"@types/react": "18.3.31",
+		"@types/react-dom": "18.3.7",
+		"typescript": "5.4.5"
+	}
+}

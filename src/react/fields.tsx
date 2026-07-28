@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { type ReactNode, useCallback } from "react"
 
 import type {
 	FieldPath,
@@ -12,6 +12,7 @@ import type {
 	ResolvedUiNode,
 	StandardSchema,
 } from "../core/index.js"
+import { GeneratedArray } from "./array-field.js"
 import type { ControlDefinitionRegistry } from "./control.js"
 import { FieldControl } from "./control.js"
 import type {
@@ -99,6 +100,12 @@ function GeneratedNode<Schema extends StandardSchema, Context>({
 	slots,
 	node,
 }: GeneratedNodeProps<Schema, Context>) {
+	const renderNode = useCallback(
+		(child: ResolvedUiNode<Context>, key: string) =>
+			renderGeneratedNode(form, controls, slots, child, key),
+		[controls, form, slots],
+	)
+
 	if (!node.visible) {
 		return null
 	}
@@ -123,10 +130,35 @@ function GeneratedNode<Schema extends StandardSchema, Context>({
 				/>
 			)
 		case "array":
-			throw new Error("Generated array rendering is implemented in Task 10B")
+			return (
+				<GeneratedArray
+					form={form}
+					node={node}
+					renderNode={renderNode}
+					slots={slots}
+				/>
+			)
 		default:
 			throw new TypeError("Unknown resolved UI node kind")
 	}
+}
+
+function renderGeneratedNode<Schema extends StandardSchema, Context>(
+	form: FormInstance<Schema, Context>,
+	controls: ControlDefinitionRegistry,
+	slots: FormKitSlots,
+	node: ResolvedUiNode<Context>,
+	key: string,
+) {
+	return (
+		<GeneratedNode
+			controls={controls}
+			form={form}
+			key={key}
+			node={node}
+			slots={slots}
+		/>
+	)
 }
 
 function GeneratedSection<Schema extends StandardSchema, Context>({
@@ -199,6 +231,7 @@ function GeneratedField<Schema extends StandardSchema, Context>({
 					form={form}
 					id={inputId}
 					path={path}
+					resolved={node}
 				/>
 			}
 			description={node.description}

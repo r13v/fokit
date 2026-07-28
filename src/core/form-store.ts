@@ -530,7 +530,8 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	}
 
 	registerFieldRef(path: PathInput, element: FocusTarget | null): void {
-		const canonicalPath = this.#normalizeKnownFieldPath(path)
+		const canonicalPath =
+			element === null ? formatPath(path) : this.#normalizeKnownFieldPath(path)
 		if (element === null) {
 			this.#focusTargets.delete(canonicalPath)
 			return

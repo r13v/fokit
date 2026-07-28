@@ -101,6 +101,7 @@ export type FieldControlProps<
 	readonly id?: string
 	readonly descriptionId?: string
 	readonly describedBy?: readonly string[]
+	readonly resolved?: ResolvedFieldNode<Context>
 }
 
 export function FieldControl<
@@ -114,14 +115,16 @@ export function FieldControl<
 	id,
 	descriptionId,
 	describedBy = [],
+	resolved: providedResolved,
 }: FieldControlProps<Schema, Context, Path>) {
 	const idPrefix = useFormIdPrefix()
 	const canonicalPath = formatPath(path)
 	const field = useField(form, path)
-	const resolved = useFormState(
+	const storeResolved = useFormState(
 		form,
 		(snapshot) => snapshot.resolvedUi.fieldsByPath[canonicalPath],
 	)
+	const resolved = providedResolved ?? storeResolved
 
 	if (resolved === undefined) {
 		throw new TypeError(`Unknown field path "${canonicalPath}"`)

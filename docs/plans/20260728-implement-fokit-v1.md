@@ -954,17 +954,21 @@ core row-key model.
 - Create: `src/react/array-field.test.tsx`
 - Modify: `src/react/fields.tsx`
 - Modify: `src/react/auto-form.tsx`
++ Modify: `src/react/control.tsx`
++ Modify: `src/core/form-store.ts`
 
-- [ ] Write failing tests that render array and array-item slots with direct
+- [x] Write failing tests that render array and array-item slots with direct
   array errors and no duplicated child-field issues.
-- [ ] Implement generated arrays with cloned `itemDefault`, stable React keys,
+- [x] Implement generated arrays with cloned `itemDefault`, stable React keys,
   and relative item paths.
-- [ ] Pass guarded add/remove/move actions and correct `canAdd`,
+- [x] Pass guarded add/remove/move actions and correct `canAdd`,
   `canMoveUp`, and `canMoveDown` state to application slots.
-- [ ] Prove row identity and field subscriptions survive append, insert,
+- [x] Prove row identity and field subscriptions survive append, insert,
   remove, and move without rerendering unrelated rows.
-- [ ] Test disabled/read-only guards and fallback rendering for an empty array.
-- [ ] Run
+- [x] Test disabled/read-only guards and fallback rendering for an empty array.
++ [x] Allow scoped generated fields to use their resolved UI metadata, and allow
+  removed array-row refs to unregister after their paths leave current values.
+- [x] Run
   `npm run test -- --project react src/react/array-field.test.tsx`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 10C.
 

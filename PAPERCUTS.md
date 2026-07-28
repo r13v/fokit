@@ -45,3 +45,7 @@ Writing Task 9 React DOM assertions → the test setup uses Testing Library with
 ## 2026-07-28 18:01 — GPT-5
 
 Formatting Task 9 React helpers → `npm run check:fix` applied mechanical fixes but still failed on a test slot label because Biome could not infer `htmlFor` from spread `labelProps`. Make accessibility-critical props explicit in helper components.
+
+## 2026-07-28 18:19 — GPT-5
+
+Checking the next open plan task after committing Task 10B → `python` was not installed in the shell, while `python3` worked. Use `python3` in repository helper one-liners or add a portable npm script.

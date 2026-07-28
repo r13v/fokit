@@ -1315,42 +1315,42 @@ broken navigation cheap to test.
 - Modify: `package-lock.json`
 - Modify: `knip.json`
 
-- [ ] Write Node tests first that fail if the curriculum or an internal link is
+- [x] Write Node tests first that fail if the curriculum or an internal link is
   missing, EN/RU lesson sets diverge, a full example has no executable source,
   or route parsing/fallback behavior breaks.
-- [ ] Create a separate private Vite/React package with its own lockfile and
+- [x] Create a separate private Vite/React package with its own lockfile and
   `dev`, `build`, `preview`, and `test` scripts. Set `"private": true`, use the
   exact docs-site dependencies from this plan, `fokit: "file:.."`, and `.npmrc`
   settings `fund=false` and `audit=false`.
-- [ ] Record durable local decisions in `docs-site/AGENTS.md`: EN/RU parity
+- [x] Record durable local decisions in `docs-site/AGENTS.md`: EN/RU parity
   unless the maintainer resolves the open question differently, hash routes,
   static GitHub Pages hosting, actual Fokit public exports in the lab, and no
   OpenAI Sites worker or hosting manifest.
-- [ ] Configure `base: process.env.BASE_PATH ?? "/"`, output to
+- [x] Configure `base: process.env.BASE_PATH ?? "/"`, output to
   `docs-site/dist`, dedupe React/React DOM, and allow raw imports from the root
   `examples/` directory without opening unrelated filesystem paths.
-- [ ] Add root `site:dev`, `site:build`, and `site:test` commands. Dev/build
+- [x] Add root `site:dev`, `site:build`, and `site:test` commands. Dev/build
   must build Fokit before invoking Vite; site tests invoke the docs package's
   Node suite.
-- [ ] Configure Knip for the private docs package, including Vite config,
+- [x] Configure Knip for the private docs package, including Vite config,
   source, Node tests, raw example imports, and package dependencies before
   running the task gate.
-- [ ] Define a compact curriculum with 10 lesson IDs and equivalent EN/RU
+- [x] Define a compact curriculum with 10 lesson IDs and equivalent EN/RU
   content: `overview`, `first-form`, `controls-and-slots`,
   `validation-and-conditions`, `arrays`, `manual-composition`,
   `classic-submit`, `server-form-data`, `react19-actions`, and
   `styling-testing-boundaries`.
-- [ ] Make `examples/**/*` the only source for full copyable programs. Import
+- [x] Make `examples/**/*` the only source for full copyable programs. Import
   those files as raw text into `docs-site/src/examples.js`; the Markdown
   tutorials link to the same files and may use only short illustrative
   fragments. `test:docs` remains the compiler for every full example.
-- [ ] Implement hash routes in the form `#/en/overview` and `#/ru/overview`.
+- [x] Implement hash routes in the form `#/en/overview` and `#/ru/overview`.
   Routing precedence is valid hash locale, then saved locale, then English;
   normalize an invalid lesson independently to `overview`. Persist locale and
   update document language/title without server rewrites.
-- [ ] Test missing and malformed hashes with no saved locale and with saved
+- [x] Test missing and malformed hashes with no saved locale and with saved
   Russian locale, plus every previous/next and cross-locale route.
-- [ ] Run `npm ci --prefix docs-site`, `npm run site:test`,
+- [x] Run `npm ci --prefix docs-site`, `npm run site:test`,
   `npm run site:build`, `npm run check`, and `npm run knip` before Task 15C.
 
 ### Task 15C: Build and browser-test the tutorial shell

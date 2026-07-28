@@ -73,3 +73,7 @@ Running Task 14C focused checks → `npm run test:package` rebuilt and cleaned `
 ## 2026-07-28 19:17 — GPT-5
 
 Locating Task 15A source files → `rg --files src docs tests examples` failed because the plan names `examples/` before the directory exists. Create the planned directory before broad file enumeration, or omit not-yet-created paths from bootstrap searches.
+
+## 2026-07-28 19:27 — GPT-5
+
+Generating and installing the Task 15B docs-site lockfile → npm completed successfully but emitted an allow-scripts warning for optional `fsevents`. This is harmless on this platform, but a repo-level npm script policy note would make clean-install output less surprising.

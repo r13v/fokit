@@ -70,6 +70,9 @@
 		"test:package": "npm run build && vitest run --config vitest.package.config.ts",
 		"test:smoke": "node scripts/verify-smoke-fixtures.mjs",
 		"test:docs": "npm run build && tsc --project tsconfig.docs.json",
+		"site:dev": "npm run build && npm run dev --prefix docs-site",
+		"site:build": "npm run build && npm run build --prefix docs-site",
+		"site:test": "npm run test --prefix docs-site",
 		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./react19 ./server",
 		"knip": "knip",
 		"verify": "npm run check && npm run typecheck && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:smoke && npm run package:check && npm run test:docs && npm run knip"

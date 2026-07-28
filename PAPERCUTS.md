@@ -53,3 +53,7 @@ Checking the next open plan task after committing Task 10B → `python` was not 
 ## 2026-07-28 18:25 — GPT-5
 
 Investigating native file FormData behavior for Task 10C → a quick jsdom probe failed because `window.DataTransfer` is not constructible in this environment. Prefer Testing Library's upload helper or assert selected `input.files` when native FormData cannot be simulated directly.
+
+## 2026-07-28 18:38 — GPT-5
+
+Inspecting browser-test coverage for Task 12 → `rg --files tests/browser src/react tests/package` failed because `tests/browser/` did not exist yet while the Playwright config already pointed there. Creating the directory with the first spec resolves it; a placeholder note in the plan or a committed empty directory helper would make the bootstrap state clearer.

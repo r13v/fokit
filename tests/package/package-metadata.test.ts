@@ -1,9 +1,18 @@
+import { execFile } from "node:child_process"
 import { readFile } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
+import { promisify } from "node:util"
 
 import { describe, expect, it } from "vitest"
 
+const execFileAsync = promisify(execFile)
+const rootDirectory = fileURLToPath(new URL("../..", import.meta.url))
 const packageJson = JSON.parse(
 	await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+)
+const layoutCss = await readFile(
+	new URL("../../src/layout.css", import.meta.url),
+	"utf8",
 )
 
 const javaScriptEntrypoints = {
@@ -63,6 +72,60 @@ describe("package metadata", () => {
 			expect(exported.default).toBe(`./dist/${distName}.js`)
 		}
 	})
+
+	it("keeps the optional stylesheet structural and explicitly publishable", async () => {
+		expect(layoutCss).toContain("@layer fokit")
+		expect(layoutCss).toContain("@container (min-width: 40rem)")
+		expect(layoutCss).toContain("@container (min-width: 64rem)")
+		expect(layoutCss).not.toMatch(/@media\b/)
+		expect(layoutCss).not.toMatch(/resizeobserver/i)
+
+		const cssVariables = new Set(layoutCss.match(/--fokit-[a-z-]+/g) ?? [])
+		expect([...cssVariables].sort()).toEqual([
+			"--fokit-array-item-gap",
+			"--fokit-column-gap",
+			"--fokit-row-gap",
+			"--fokit-stack-gap",
+		])
+
+		for (const pattern of forbiddenCssPatterns()) {
+			expect(layoutCss).not.toMatch(pattern)
+		}
+
+		const sourceMain = await readFile(
+			new URL("../../src/index.ts", import.meta.url),
+			"utf8",
+		)
+		const builtMain = await readFile(
+			new URL("../../dist/index.js", import.meta.url),
+			"utf8",
+		)
+		const builtCommonJsMain = await readFile(
+			new URL("../../dist/index.cjs", import.meta.url),
+			"utf8",
+		)
+		expect(sourceMain).not.toContain("layout.css")
+		expect(builtMain).not.toContain("layout.css")
+		expect(builtCommonJsMain).not.toContain("layout.css")
+		expect(packageJson.exports["./layout.css"]).toBe("./dist/layout.css")
+		expect(packageJson.sideEffects).toEqual(["**/*.css"])
+
+		const { stdout } = await execFileAsync(
+			"npm",
+			["pack", "--dry-run", "--json"],
+			{
+				cwd: rootDirectory,
+			},
+		)
+		const [packResult] = JSON.parse(stdout) as [
+			{
+				readonly files: readonly { readonly path: string }[]
+			},
+		]
+		expect(packResult.files.map((file) => file.path)).toContain(
+			"dist/layout.css",
+		)
+	})
 })
 
 function expectedExports() {
@@ -86,4 +149,13 @@ function expectedExports() {
 		"./layout.css": "./dist/layout.css",
 		"./package.json": "./package.json",
 	}
+}
+
+function forbiddenCssPatterns(): readonly RegExp[] {
+	return [
+		/(^|[\s;{])(?:accent-color|appearance|background(?:-[a-z-]+)?|border(?:-[a-z-]+)?|box-shadow|color|font(?:-[a-z-]+)?|line-height|outline(?:-[a-z-]+)?|text-(?:align|decoration|transform))\s*:/i,
+		/@(?:apply|tailwind)\b/i,
+		/(^|[,{]\s*)\*/i,
+		/\b(?:body|button|html|input|select|textarea)\b/i,
+	]
 }

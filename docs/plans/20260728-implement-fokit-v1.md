@@ -1050,25 +1050,25 @@ CSS or imposing a visual theme.
 - Modify: `package.json`
 - Modify: `tests/package/package-metadata.test.ts`
 
-- [ ] Write failing browser tests for one, two, and four effective columns at
+- [x] Write failing browser tests for one, two, and four effective columns at
   the specified container widths.
-- [ ] Implement low-specificity `:where(...)` rules in `@layer fokit` for
+- [x] Implement low-specificity `:where(...)` rules in `@layer fokit` for
   grid, gaps, stack spacing, array-item spacing, numeric spans, and full spans.
-- [ ] Use container queries at `40rem` and `64rem`; do not add viewport media
+- [x] Use container queries at `40rem` and `64rem`; do not add viewport media
   queries or JavaScript measurement.
-- [ ] Expose only `--fokit-column-gap`, `--fokit-row-gap`,
+- [x] Expose only `--fokit-column-gap`, `--fokit-row-gap`,
   `--fokit-stack-gap`, and `--fokit-array-item-gap`.
-- [ ] Test CSS-variable overrides, nested independent containers, span
+- [x] Test CSS-variable overrides, nested independent containers, span
   clamping, full rows, and the one-column result with container-query rules
   removed.
-- [ ] Assert the stylesheet contains no colors, typography, control styling,
+- [x] Assert the stylesheet contains no colors, typography, control styling,
   reset, or Tailwind dependency.
-- [ ] Assert importing the JavaScript main entry does not load CSS and explicit
+- [x] Assert importing the JavaScript main entry does not load CSS and explicit
   `fokit/layout.css` remains in a consumer build.
-- [ ] After `tests/browser/layout.spec.ts` exists, remove the bootstrap-only
+- [x] After `tests/browser/layout.spec.ts` exists, remove the bootstrap-only
   `--pass-with-no-tests` flag from `npm run test:browser` so missing browser
   tests fail locally and in CI.
-- [ ] Run `npm run build`, `npm run test:browser`,
+- [x] Run `npm run build`, `npm run test:browser`,
   `npm run test:package`, `npm run check`, and `npm run knip` before Task 13.
 
 ### Task 13: Implement the isolated React 19 Action adapter

@@ -17,3 +17,7 @@ Typechecking Task 4 store types → embedding recursive `FieldPath<FormInput<Sch
 ## 2026-07-28 16:54 — GPT-5
 
 Running Task 5A validation → `npm run check` failed only on Biome import ordering and formatting after the transaction edits. Running the existing `npm run check:fix` resolved it, but a pre-check formatter hook would avoid the read-only check detour.
+
+## 2026-07-28 17:08 — GPT-5
+
+Implementing Task 5C array state → a large `apply_patch` mixed new files and several form-store hunks, then failed on a stale interface context. Smaller patches by file avoid losing the whole edit.

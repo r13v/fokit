@@ -1,3 +1,4 @@
+import { type ArrayRowsState, createArrayRowsState } from "./array-state.js"
 import type { NormalizedFormDefinition } from "./definition.js"
 import { formatPath, pathsOverlap } from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
@@ -9,18 +10,47 @@ export type FieldMetadata = {
 	readonly validating: boolean
 }
 
+export type ArrayItemMetadata = FieldMetadata & {
+	readonly key: string
+	readonly index: number
+}
+
+export type ArrayMetadata = FieldMetadata & {
+	readonly items: readonly ArrayItemMetadata[]
+}
+
 export type FormMetadata = {
 	readonly fieldsByPath: Readonly<Record<string, FieldMetadata>>
-	readonly arraysByPath: Readonly<Record<string, FieldMetadata>>
+	readonly arraysByPath: Readonly<Record<string, ArrayMetadata>>
 }
 
 export type MetadataState = {
 	readonly touchedPaths: ReadonlySet<string>
+	readonly arrayRowsByPath: ArrayRowsState
 }
 
-export function createMetadataState(): MetadataState {
+export type CreateMetadataStateOptions = {
+	readonly touchedPaths?: Iterable<string>
+	readonly arrayRowsByPath?: ArrayRowsState
+}
+
+export function createMetadataState(
+	options: CreateMetadataStateOptions = {},
+): MetadataState {
 	return Object.freeze({
-		touchedPaths: new Set<string>(),
+		touchedPaths: new Set(options.touchedPaths),
+		arrayRowsByPath:
+			options.arrayRowsByPath ??
+			(Object.freeze(Object.create(null)) as ArrayRowsState),
+	})
+}
+
+export function createInitialMetadataState<Schema extends StandardSchema>(
+	definition: NormalizedFormDefinition<Schema>,
+	values: FormInput<Schema>,
+): MetadataState {
+	return createMetadataState({
+		arrayRowsByPath: createArrayRowsState(definition, values),
 	})
 }
 
@@ -36,8 +66,9 @@ export function touchMetadataPath(
 	const touchedPaths = new Set(state.touchedPaths)
 	touchedPaths.add(canonicalPath)
 
-	return Object.freeze({
+	return createMetadataState({
 		touchedPaths,
+		arrayRowsByPath: state.arrayRowsByPath,
 	})
 }
 
@@ -58,14 +89,13 @@ export function deriveFormMetadata<Schema extends StandardSchema>(
 		)
 	}
 
-	const arraysByPath = Object.create(null) as Record<string, FieldMetadata>
+	const arraysByPath = Object.create(null) as Record<string, ArrayMetadata>
 	for (const path of Object.keys(definition.arraysByPath)) {
-		arraysByPath[path] = createFieldMetadata(
+		arraysByPath[path] = createArrayMetadata(
 			path,
 			values,
 			baselineValues,
 			state,
-			true,
 		)
 	}
 
@@ -73,6 +103,62 @@ export function deriveFormMetadata<Schema extends StandardSchema>(
 		fieldsByPath: Object.freeze(fieldsByPath),
 		arraysByPath: Object.freeze(arraysByPath),
 	})
+}
+
+function createArrayMetadata(
+	path: string,
+	values: unknown,
+	baselineValues: unknown,
+	state: MetadataState,
+): ArrayMetadata {
+	const fieldMetadata = createFieldMetadata(
+		path,
+		values,
+		baselineValues,
+		state,
+		true,
+	)
+
+	return Object.freeze({
+		...fieldMetadata,
+		items: createArrayItemMetadata(path, values, baselineValues, state),
+	})
+}
+
+function createArrayItemMetadata(
+	path: string,
+	values: unknown,
+	baselineValues: unknown,
+	state: MetadataState,
+): readonly ArrayItemMetadata[] {
+	const value = getPathValue(values, path)
+	if (!Array.isArray(value)) {
+		return Object.freeze([])
+	}
+
+	const baselineValue = getPathValue(baselineValues, path)
+	const baselineArray = Array.isArray(baselineValue) ? baselineValue : []
+	const rowState = state.arrayRowsByPath[path]
+	const keys = rowState?.keys ?? createFallbackRowKeys(path, value.length)
+	const baselineKeys =
+		rowState?.baselineKeys ?? createFallbackRowKeys(path, baselineArray.length)
+
+	return Object.freeze(
+		value.map((item, index) => {
+			const key = keys[index] ?? `${path}:${index}`
+			const baselineIndex = baselineKeys.indexOf(key)
+			const baselineItem =
+				baselineIndex === -1 ? undefined : baselineArray[baselineIndex]
+
+			return Object.freeze({
+				key,
+				index,
+				dirty: baselineIndex === -1 || !isDirtyEqual(item, baselineItem),
+				touched: isArrayItemTouched(path, index, state),
+				validating: false,
+			})
+		}),
+	)
 }
 
 export function isFormMetadataTouched(metadata: FormMetadata): boolean {
@@ -113,5 +199,25 @@ function isPathTouched(
 		[...state.touchedPaths].some((touchedPath) =>
 			pathsOverlap(path, touchedPath),
 		)
+	)
+}
+
+function isArrayItemTouched(
+	arrayPath: string,
+	index: number,
+	state: MetadataState,
+): boolean {
+	const itemPath = `${arrayPath}.${index}`
+	return [...state.touchedPaths].some((touchedPath) =>
+		pathsOverlap(itemPath, touchedPath),
+	)
+}
+
+function createFallbackRowKeys(
+	path: string,
+	length: number,
+): readonly string[] {
+	return Object.freeze(
+		Array.from({ length }, (_value, index) => `${path}:${index}`),
 	)
 }

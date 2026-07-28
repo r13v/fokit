@@ -1,3 +1,10 @@
+import {
+	type ArrayCommand,
+	createArrayCommandChange,
+	isKnownArrayDescendantFieldPath,
+	reindexTouchedArrayPaths,
+	replaceArrayRowState,
+} from "./array-state.js"
 import type { NormalizedFormDefinition } from "./definition.js"
 import {
 	cloneAndFreezeValue,
@@ -6,6 +13,7 @@ import {
 	freezeFormValue,
 } from "./form-state.js"
 import {
+	createInitialMetadataState,
 	createMetadataState,
 	deriveFormMetadata,
 	isFormMetadataTouched,
@@ -13,7 +21,7 @@ import {
 	touchMetadataPath,
 } from "./metadata.js"
 import { formatPath, type PathInput, parsePath } from "./path.js"
-import type { FieldPath, PathValue } from "./path-types.js"
+import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
 import { type ResolvedUiState, resolveUi } from "./resolve-ui.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
 import {
@@ -26,6 +34,7 @@ import {
 	type OptionalFieldPath,
 	type ValueChange,
 } from "./transaction.js"
+import type { ArrayItemValue } from "./ui-types.js"
 import { getPathValue, isDirtyEqual } from "./value.js"
 
 export type { ValueChange } from "./transaction.js"
@@ -103,6 +112,24 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 	unsetValue<Path extends OptionalFieldPath<FormInput<Schema>>>(
 		path: Path,
 	): void
+	append<Path extends ArrayFieldPath<FormInput<Schema>>>(
+		path: Path,
+		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+	): void
+	insert<Path extends ArrayFieldPath<FormInput<Schema>>>(
+		path: Path,
+		index: number,
+		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+	): void
+	remove<Path extends ArrayFieldPath<FormInput<Schema>>>(
+		path: Path,
+		index: number,
+	): void
+	move<Path extends ArrayFieldPath<FormInput<Schema>>>(
+		path: Path,
+		from: number,
+		to: number,
+	): void
 	reset(values?: FormInput<Schema>): void
 	batch(callback: () => void): void
 	subscribe<Selected>(
@@ -126,6 +153,7 @@ type Subscription<Input, Context, Selected = unknown> = {
 
 type ActiveBatch = {
 	changes: NormalizedValueChange[]
+	metadataState?: MetadataState
 	abortedError?: unknown
 }
 
@@ -139,6 +167,7 @@ type ValueCommitResult<Input> =
 	  }
 
 type ValueCommitOptions<Context> = {
+	readonly metadataState?: MetadataState
 	readonly resetAfterCommit?: boolean
 	readonly transitionFromUi?: ResolvedUiState<Context>
 }
@@ -187,7 +216,10 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#context = options.context as Context
 		this.#disabled = options.disabled === true
 		this.#readOnly = options.readOnly === true
-		this.#metadataState = createMetadataState()
+		this.#metadataState = createInitialMetadataState(
+			this.definition,
+			this.#values,
+		)
 		this.#snapshot = this.#createSnapshot()
 		this.#serverSnapshot = this.#snapshot
 		this.#beforeUpdate = options.beforeUpdate
@@ -226,6 +258,52 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		path: Path,
 	): void {
 		this.#runValueCommand(() => [createUnsetChange(path)])
+	}
+
+	append<Path extends ArrayFieldPath<FormInput<Schema>>>(
+		path: Path,
+		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+	): void {
+		this.#runArrayCommand(path, {
+			type: "append",
+			hasValue: value.length === 1,
+			value: value[0],
+		})
+	}
+
+	insert<Path extends ArrayFieldPath<FormInput<Schema>>>(
+		path: Path,
+		index: number,
+		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+	): void {
+		this.#runArrayCommand(path, {
+			type: "insert",
+			index,
+			hasValue: value.length === 1,
+			value: value[0],
+		})
+	}
+
+	remove<Path extends ArrayFieldPath<FormInput<Schema>>>(
+		path: Path,
+		index: number,
+	): void {
+		this.#runArrayCommand(path, {
+			type: "remove",
+			index,
+		})
+	}
+
+	move<Path extends ArrayFieldPath<FormInput<Schema>>>(
+		path: Path,
+		from: number,
+		to: number,
+	): void {
+		this.#runArrayCommand(path, {
+			type: "move",
+			from,
+			to,
+		})
 	}
 
 	reset(values?: FormInput<Schema>): void {
@@ -280,7 +358,9 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			throw batch.abortedError
 		}
 
-		this.#commitValueChanges(batch.changes, "imperative")
+		this.#commitValueChanges(batch.changes, "imperative", {
+			metadataState: batch.metadataState,
+		})
 	}
 
 	subscribe<Selected>(
@@ -407,8 +487,30 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	#normalizeKnownFieldPath(path: PathInput): string {
 		const canonicalPath = formatPath(path)
-		if (this.definition.fieldsByPath[canonicalPath] === undefined) {
+		if (
+			this.definition.fieldsByPath[canonicalPath] === undefined &&
+			this.definition.arraysByPath[canonicalPath] === undefined &&
+			!isKnownArrayDescendantFieldPath(
+				this.definition,
+				this.#values,
+				canonicalPath,
+			)
+		) {
 			throw new TypeError(`Unknown field path "${canonicalPath}"`)
+		}
+
+		return canonicalPath
+	}
+
+	#normalizeKnownArrayPath(path: PathInput): string {
+		const canonicalPath = formatPath(path)
+
+		if (this.definition.arraysByPath[canonicalPath] === undefined) {
+			if (this.definition.fieldsByPath[canonicalPath] !== undefined) {
+				throw new TypeError(`Path "${canonicalPath}" is not an array field`)
+			}
+
+			throw new TypeError(`Unknown array path "${canonicalPath}"`)
 		}
 
 		return canonicalPath
@@ -436,6 +538,58 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 	}
 
+	#runArrayCommand(path: PathInput, command: ArrayCommand): void {
+		this.#assertValueCommandAllowed()
+
+		try {
+			const canonicalPath = this.#normalizeKnownArrayPath(path)
+			const baseValues =
+				this.#activeBatch === undefined
+					? this.#values
+					: applyValueChanges(this.#values, this.#activeBatch.changes).values
+			const baseMetadataState =
+				this.#activeBatch?.metadataState ?? this.#metadataState
+			const update = createArrayCommandChange(
+				canonicalPath,
+				this.definition.arraysByPath[canonicalPath],
+				baseValues,
+				baseMetadataState.arrayRowsByPath,
+				command,
+			)
+
+			if (update === undefined) {
+				return
+			}
+
+			const metadataState = createMetadataState({
+				touchedPaths: reindexTouchedArrayPaths(
+					baseMetadataState.touchedPaths,
+					canonicalPath,
+					update.previousKeys,
+					update.nextKeys,
+				),
+				arrayRowsByPath: replaceArrayRowState(
+					baseMetadataState.arrayRowsByPath,
+					canonicalPath,
+					update.rowState,
+				),
+			})
+
+			if (this.#activeBatch !== undefined) {
+				this.#activeBatch.changes.push(...update.changes)
+				this.#activeBatch.metadataState = metadataState
+				return
+			}
+
+			this.#commitValueChanges(update.changes, "array", { metadataState })
+		} catch (error) {
+			if (this.#activeBatch !== undefined) {
+				this.#activeBatch.abortedError ??= error
+			}
+			throw error
+		}
+	}
+
 	#commitValueChanges(
 		changes: readonly NormalizedValueChange[],
 		source: UpdateSource,
@@ -445,6 +599,9 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			options.transitionFromUi ?? this.#snapshot.resolvedUi
 		const proposal = this.#createValueProposal(changes, transitionFromUi)
 		if (proposal === undefined) {
+			if (options.metadataState !== undefined) {
+				this.#applyMetadataOnly(options.metadataState)
+			}
 			return { status: "noValueChange", values: this.#values }
 		}
 
@@ -482,7 +639,12 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#values = nextValues
 		if (options.resetAfterCommit === true) {
 			this.#baselineValues = nextValues
-			this.#metadataState = createMetadataState()
+			this.#metadataState = createInitialMetadataState(
+				this.definition,
+				nextValues,
+			)
+		} else if (options.metadataState !== undefined) {
+			this.#metadataState = options.metadataState
 		}
 		this.#snapshot = this.#createSnapshot({
 			previousResolvedUi: previousSnapshot.resolvedUi,
@@ -583,7 +745,23 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 		const previousSnapshot = this.#snapshot
 		this.#baselineValues = nextBaselineValues
-		this.#metadataState = createMetadataState()
+		this.#metadataState = createInitialMetadataState(
+			this.definition,
+			nextBaselineValues,
+		)
+		this.#snapshot = this.#createSnapshot({
+			resolvedUi: previousSnapshot.resolvedUi,
+		})
+		this.#notify()
+	}
+
+	#applyMetadataOnly(metadataState: MetadataState): void {
+		if (metadataState === this.#metadataState) {
+			return
+		}
+
+		const previousSnapshot = this.#snapshot
+		this.#metadataState = metadataState
 		this.#snapshot = this.#createSnapshot({
 			resolvedUi: previousSnapshot.resolvedUi,
 		})

@@ -693,17 +693,17 @@ normalization before React bindings and issue reindexing are added.
 - Modify: `src/core/index.ts`
 - Modify: `tests/types/commands.test.ts`
 
-- [ ] Write failing runtime and type tests for append, insert, remove, and move
+- [x] Write failing runtime and type tests for append, insert, remove, and move
   with complete/cloned `itemDefault` values.
-- [ ] Implement deterministic per-store row keys and reindex dirty/touched
+- [x] Implement deterministic per-store row keys and reindex dirty/touched
   row metadata by stable key without adding keys to submitted values.
-- [ ] Add explicit rejection tests for malformed runtime paths, non-array
+- [x] Add explicit rejection tests for malformed runtime paths, non-array
   targets, sparse/out-of-range indexes, and invalid move destinations.
-- [ ] For every rejected array command, assert values and metadata are
+- [x] For every rejected array command, assert values and metadata are
   unchanged, no subscriber is notified, and neither update hook is called.
-- [ ] Add fast-check array-command sequences against a simple value/key
+- [x] Add fast-check array-command sequences against a simple value/key
   reference model.
-- [ ] Run
+- [x] Run
   `npm run test -- --project node src/core/array-state.test.ts`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 6A.
 

@@ -1,4 +1,10 @@
 export type {
+	ArrayCommand,
+	ArrayCommandChange,
+	ArrayRowState,
+	ArrayRowsState,
+} from "./array-state.js"
+export type {
 	Computed,
 	ComputedDependencyValues,
 	ComputedDetails,
@@ -51,6 +57,8 @@ export type {
 } from "./form-store.js"
 export { createFormStore } from "./form-store.js"
 export type {
+	ArrayItemMetadata,
+	ArrayMetadata,
 	FieldMetadata,
 	FormMetadata,
 } from "./metadata.js"

@@ -86,6 +86,25 @@ form.batch(() => {
 	form.unsetValue("companyName")
 })
 
+form.append("contacts")
+form.append("contacts", { value: "grace@example.test" })
+form.insert("contacts", 0)
+form.insert("contacts", 0, { value: "ada@example.test", note: "work" })
+form.remove("contacts", 0)
+form.move("contacts", 0, 1)
+
+// @ts-expect-error appended items must satisfy the selected array item type
+form.append("contacts", { note: "missing value" })
+
+// @ts-expect-error inserted items keep nested property types
+form.insert("contacts", 0, { value: "grace@example.test", note: 42 })
+
+// @ts-expect-error array commands accept array paths only
+form.append("profile.first", "Grace")
+
+// @ts-expect-error array commands reject unknown paths
+form.remove("profile.nickname", 0)
+
 form.reset()
 form.reset({
 	kind: "person",

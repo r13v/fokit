@@ -1225,14 +1225,14 @@ bootstrap allowances must not weaken final dependency checks.
 - Create: `.github/workflows/ci.yml`
 - Modify: `knip.json`
 
-- [ ] Configure GitHub Actions on Node 20 and Node 22 with npm cache, `npm ci`,
+- [x] Configure GitHub Actions on Node 20 and Node 22 with npm cache, `npm ci`,
   Chromium installation, `npm run verify`, and `npm pack --dry-run`.
-- [ ] Ensure CI does not publish, mutate source, or require credentials.
-- [ ] Remove bootstrap `ignoreDependencies` entries for
+- [x] Ensure CI does not publish, mutate source, or require credentials.
+- [x] Remove bootstrap `ignoreDependencies` entries for
   `@standard-schema/spec`, `@testing-library/user-event`, `fast-check`, and
   `zod`; retain an exemption only if Knip still cannot see a real use and
   document that concrete reason beside it.
-- [ ] Run `npm run test:types`, `npm run test:package`,
+- [x] Run `npm run test:types`, `npm run test:package`,
   `npm run test:smoke`, `npm run package:check`, `npm run check`, and
   `npm run knip` before Task 15A.
 

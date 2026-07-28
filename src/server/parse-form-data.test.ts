@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises"
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 
 import {
 	type FormResult,
@@ -50,6 +51,33 @@ describe("parseFormData", () => {
 				name: "Ada Lovelace",
 				tags: ["math", "systems"],
 				slug: "ada-lovelace",
+			},
+		})
+	})
+
+	it("accepts Zod through the Standard Schema contract", async () => {
+		const formData = new FormData()
+		formData.append(fokitArrayMarkerName, "tags")
+		formData.append("name", "Grace Hopper")
+		formData.append("tags", "compiler")
+		const schema = z
+			.object({
+				name: z.string().min(1),
+				tags: z.array(z.string()),
+			})
+			.transform((input) => ({
+				...input,
+				slug: input.name.toLowerCase().replaceAll(" ", "-"),
+			}))
+
+		const result = await parseFormData(formData, schema)
+
+		expect(result).toEqual({
+			success: true,
+			value: {
+				name: "Grace Hopper",
+				tags: ["compiler"],
+				slug: "grace-hopper",
 			},
 		})
 	})

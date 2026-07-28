@@ -65,3 +65,7 @@ Running the Task 14B Next.js smoke fixture → `next build` compiled but rejecte
 ## 2026-07-28 19:08 — GPT-5
 
 Running root type tests after adding smoke fixtures → `tsc --project tsconfig.json` tried to typecheck fixture sources before the smoke runner installs the packed tarball. Keep `tests/fixtures` excluded from the root tsconfig and validate them only through `npm run test:smoke`.
+
+## 2026-07-28 19:12 — GPT-5
+
+Running Task 14C focused checks → `npm run test:package` rebuilt and cleaned `dist` while a parallel server test tried to inspect `dist/server.js`, causing a transient missing-file failure. Do not parallelize build/clean commands with tests that read built artifacts.

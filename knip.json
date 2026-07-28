@@ -2,6 +2,5 @@
 	"$schema": "https://unpkg.com/knip@6/schema.json",
 	"ignore": ["tests/fixtures/**"],
 	"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-	"ignoreDependencies": ["zod"],
 	"tags": ["-lintignore"]
 }

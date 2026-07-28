@@ -11,8 +11,16 @@ import { type TestValues, testKit, textControl } from "./test-kit.js"
 import { useForm } from "./use-form.js"
 
 type TestSchema = StandardSchemaV1<TestValues>
+type CollisionValues = {
+	readonly "user-name": string
+	readonly user: {
+		readonly name: string
+	}
+}
+type CollisionSchema = StandardSchemaV1<CollisionValues>
 
 const schema = {} as TestSchema
+const collisionSchema = {} as CollisionSchema
 
 function createDefinition() {
 	return testKit.defineForm({
@@ -136,6 +144,50 @@ describe("createFormKit", () => {
 		expect(input.getAttribute("aria-invalid")).toBe("true")
 		expect(input.getAttribute("data-errors")).toBe("Enter a name")
 		expect(input.getAttribute("data-display-errors")).toBe("Enter a name")
+	})
+
+	it("keeps generated DOM IDs distinct for dashed and nested paths", () => {
+		const definition = testKit.defineForm({
+			schema: collisionSchema,
+			ui: [
+				{
+					kind: "field",
+					path: "user-name",
+					control: "text",
+					label: "Dashed",
+				},
+				{
+					kind: "field",
+					path: "user.name",
+					control: "text",
+					label: "Nested",
+				},
+			],
+		})
+
+		render(
+			<testKit.AutoForm
+				defaultValues={{
+					"user-name": "Ada",
+					user: {
+						name: "Grace",
+					},
+				}}
+				definition={definition}
+				id="profile"
+			/>,
+		)
+
+		const dashed = document.querySelector<HTMLInputElement>(
+			'input[name="user-name"]',
+		)
+		const nested = document.querySelector<HTMLInputElement>(
+			'input[name="user.name"]',
+		)
+
+		expect(dashed?.id).toBe("profile-user-name")
+		expect(nested?.id).toBe("profile-user%2Ename")
+		expect(dashed?.id).not.toBe(nested?.id)
 	})
 })
 

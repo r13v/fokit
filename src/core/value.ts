@@ -5,6 +5,10 @@ export function cloneValue<Value>(value: Value): Value {
 	return cloneValueInternal(value, new WeakSet()) as Value
 }
 
+export function cloneMutableValueLeaves<Value>(value: Value): Value {
+	return cloneMutableValueLeavesInternal(value, new WeakSet()) as Value
+}
+
 export function getPathValue(value: unknown, path: PathInput): unknown {
 	let current = value
 
@@ -65,6 +69,16 @@ export function isDirtyEqual(left: unknown, right: unknown): boolean {
 }
 
 function cloneValueInternal(value: unknown, seen: WeakSet<object>): unknown {
+	if (value instanceof Date) {
+		return new Date(value.getTime())
+	}
+
+	if (value instanceof RegExp) {
+		const cloned = new RegExp(value.source, value.flags)
+		cloned.lastIndex = value.lastIndex
+		return cloned
+	}
+
 	if (Array.isArray(value)) {
 		ensureAcyclic(value, seen)
 		const cloned = value.map((item) => cloneValueInternal(item, seen))
@@ -76,10 +90,52 @@ function cloneValueInternal(value: unknown, seen: WeakSet<object>): unknown {
 		ensureAcyclic(value, seen)
 		const cloned = createPlainClone(value)
 		for (const key of Object.keys(value)) {
-			cloned[key] = cloneValueInternal(value[key], seen)
+			defineDataProperty(cloned, key, cloneValueInternal(value[key], seen))
 		}
 		seen.delete(value)
 		return cloned
+	}
+
+	return value
+}
+
+function cloneMutableValueLeavesInternal(
+	value: unknown,
+	seen: WeakSet<object>,
+): unknown {
+	if (value instanceof Date) {
+		return new Date(value.getTime())
+	}
+
+	if (value instanceof RegExp) {
+		const cloned = new RegExp(value.source, value.flags)
+		cloned.lastIndex = value.lastIndex
+		return cloned
+	}
+
+	if (Array.isArray(value)) {
+		ensureAcyclic(value, seen)
+		let changed = false
+		const cloned = value.map((item) => {
+			const clonedItem = cloneMutableValueLeavesInternal(item, seen)
+			changed ||= clonedItem !== item
+			return clonedItem
+		})
+		seen.delete(value)
+		return changed ? cloned : value
+	}
+
+	if (isPlainObject(value)) {
+		ensureAcyclic(value, seen)
+		let changed = false
+		const cloned = createPlainClone(value)
+		for (const key of Object.keys(value)) {
+			const clonedChild = cloneMutableValueLeavesInternal(value[key], seen)
+			changed ||= clonedChild !== value[key]
+			defineDataProperty(cloned, key, clonedChild)
+		}
+		seen.delete(value)
+		return changed ? cloned : value
 	}
 
 	return value
@@ -192,13 +248,13 @@ function mergeValue(
 	const next = createPlainClone(current)
 
 	for (const key of Object.keys(current)) {
-		next[key] = current[key]
+		defineDataProperty(next, key, current[key])
 	}
 
 	for (const key of Object.keys(patch)) {
 		const currentChild = current[key]
 		const nextChild = mergeValue(currentChild, patch[key], seen)
-		next[key] = nextChild
+		defineDataProperty(next, key, nextChild)
 		changed ||= nextChild !== currentChild
 	}
 
@@ -271,6 +327,14 @@ function isDirtyEqualInternal(
 		return Object.is(left.getTime(), right.getTime())
 	}
 
+	if (left instanceof RegExp && right instanceof RegExp) {
+		return (
+			left.source === right.source &&
+			left.flags === right.flags &&
+			left.lastIndex === right.lastIndex
+		)
+	}
+
 	if (Array.isArray(left) && Array.isArray(right)) {
 		ensurePairAcyclic(left, right, seen)
 		const equal =
@@ -338,6 +402,19 @@ function createPlainClone(
 	value: Record<string, unknown>,
 ): Record<string, unknown> {
 	return Object.getPrototypeOf(value) === null ? Object.create(null) : {}
+}
+
+function defineDataProperty(
+	target: Record<string, unknown>,
+	key: string,
+	value: unknown,
+): void {
+	Object.defineProperty(target, key, {
+		value,
+		enumerable: true,
+		configurable: true,
+		writable: true,
+	})
 }
 
 function hasOwn(

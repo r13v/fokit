@@ -20,6 +20,9 @@ type AccountValues = {
 	profile: {
 		email: string
 	}
+	contacts: {
+		value: string
+	}[]
 	hiddenNote?: string
 }
 
@@ -45,6 +48,7 @@ const defaultValues = {
 	profile: {
 		email: "ada@example.test",
 	},
+	contacts: [{ value: "ada@example.test" }],
 	hiddenNote: "internal",
 } satisfies AccountValues
 
@@ -62,6 +66,12 @@ function createDefinition() {
 				kind: "field",
 				path: "profile.email",
 				control: "text",
+			},
+			{
+				kind: "array",
+				path: "contacts",
+				itemDefault: { value: "" },
+				children: [{ kind: "field", path: "value", control: "text" }],
 			},
 			{
 				kind: "field",
@@ -165,6 +175,39 @@ describe("form issues and display exposure", () => {
 		])
 	})
 
+	it("routes visible-array descendant issues without exact owners to the summary", () => {
+		const form = createAccountStore()
+
+		form.setErrors([
+			{
+				source: "manual",
+				path: "contacts.0",
+				message: "Contact row needs review",
+			},
+			{
+				source: "manual",
+				path: "contacts.0.hidden",
+				message: "Hidden contact detail needs review",
+			},
+		])
+
+		const snapshot = form.getSnapshot()
+		expect(snapshot.displayErrors.fields.get("contacts.0")).toEqual([
+			expect.objectContaining({ message: "Contact row needs review" }),
+		])
+		expect(snapshot.displayErrors.fields.get("contacts.0.hidden")).toEqual([
+			expect.objectContaining({
+				message: "Hidden contact detail needs review",
+			}),
+		])
+		expect(snapshot.displayErrors.summary).toEqual([
+			expect.objectContaining({ message: "Contact row needs review" }),
+			expect.objectContaining({
+				message: "Hidden contact detail needs review",
+			}),
+		])
+	})
+
 	it("immediately exposes manual and server errors and routes invisible owners to the summary", () => {
 		const form = createAccountStore()
 
@@ -260,6 +303,28 @@ describe("form issues and display exposure", () => {
 		expect(beforeUpdate).not.toHaveBeenCalled()
 		expect(onUpdate).not.toHaveBeenCalled()
 		expect(listener).toHaveBeenCalledTimes(4)
+	})
+
+	it("clears imperative errors when setErrors receives an empty list", () => {
+		const form = createAccountStore()
+
+		form.setErrors([
+			{
+				source: "manual",
+				path: "name",
+				message: "Manual name issue",
+			},
+			{
+				source: "server",
+				message: "Submission rejected",
+			},
+		])
+
+		form.setErrors([])
+
+		expect(form.getSnapshot().errors.form).toEqual([])
+		expect(form.getSnapshot().errors.fields.size).toBe(0)
+		expect(form.getSnapshot().displayErrors.summary).toEqual([])
 	})
 
 	it("clears stale server errors on edits and clears all issue state on reset", () => {

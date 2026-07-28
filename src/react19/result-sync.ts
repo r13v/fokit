@@ -5,28 +5,8 @@ import {
 	type ActionSubmissionAttempt,
 	applyActionResult,
 	type FormStore,
-	startActionSubmission,
 } from "../core/form-store.js"
-import type { PathInput } from "../core/path.js"
 import type { StandardSchema } from "../core/standard-schema.js"
-
-export type HydratedActionAttempt<
-	Schema extends StandardSchema = StandardSchema,
-> = ActionSubmissionAttempt<Schema>
-
-export function startHydratedActionAttempt<
-	Schema extends StandardSchema,
-	Context = unknown,
->(form: FormStore<Schema, Context>): HydratedActionAttempt<Schema> {
-	return startActionSubmission(form)
-}
-
-export function recordActionAttemptChanges<Schema extends StandardSchema>(
-	attempt: HydratedActionAttempt<Schema> | undefined,
-	paths: readonly PathInput[],
-) {
-	attempt?.recordChanges(paths)
-}
 
 export function syncActionResult<
 	Schema extends StandardSchema,
@@ -34,7 +14,7 @@ export function syncActionResult<
 >(
 	form: FormStore<Schema, Context>,
 	result: FormResult,
-	attempt?: HydratedActionAttempt<Schema>,
+	attempt?: ActionSubmissionAttempt<Schema>,
 	formElement?: HTMLFormElement,
 ): void {
 	attempt?.finish()

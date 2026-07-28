@@ -96,6 +96,19 @@ kit.defineForm({
 	ui: [
 		{
 			kind: "field",
+			path: "nested.child",
+			control: "text",
+			// @ts-expect-error required children under optional parents cannot use valuePolicy unset
+			valuePolicy: "unset",
+		},
+	],
+})
+
+kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
 			path: "requiredName",
 			control: "text",
 			// @ts-expect-error required paths cannot use valuePolicy unset

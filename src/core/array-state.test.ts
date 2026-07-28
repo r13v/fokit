@@ -23,11 +23,21 @@ type AccountValues = {
 	contacts: Contact[]
 }
 
+type GroupValues = {
+	groups: {
+		name: string
+		members: {
+			name: string
+		}[]
+	}[]
+}
+
 type AccountControls = {
 	readonly text: ControlMetadata<string | undefined>
 }
 
 const schema = {} as StandardSchema<AccountValues>
+const groupSchema = {} as StandardSchema<GroupValues>
 
 const controls = {
 	text: {
@@ -102,6 +112,58 @@ function contactKeys(form: FormStore<typeof schema>): readonly string[] {
 	return form
 		.getSnapshot()
 		.metadata.arraysByPath.contacts.items.map((item) => item.key)
+}
+
+function createGroupStore(): FormStore<typeof groupSchema> {
+	return createFormStore({
+		definition: normalizeDefinition<typeof groupSchema, AccountControls>({
+			schema: groupSchema,
+			controls,
+			ui: [
+				{
+					kind: "array",
+					path: "groups",
+					itemDefault: {
+						name: "",
+						members: [],
+					},
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+						},
+						{
+							kind: "array",
+							path: "members",
+							itemDefault: {
+								name: "",
+							},
+							children: [
+								{
+									kind: "field",
+									path: "name",
+									control: "text",
+								},
+							],
+						},
+					],
+				},
+			] satisfies readonly UiNode<GroupValues, AccountControls>[],
+		}),
+		defaultValues: {
+			groups: [
+				{
+					name: "Core",
+					members: [{ name: "Ada" }],
+				},
+				{
+					name: "Docs",
+					members: [],
+				},
+			],
+		},
+	})
 }
 
 describe("array commands and row metadata", () => {
@@ -224,6 +286,114 @@ describe("array commands and row metadata", () => {
 		])
 	})
 
+	it("keeps nested array descendants clean when a parent row moves first", () => {
+		const form = createGroupStore()
+		const originalMemberKey =
+			form.getSnapshot().metadata.arraysByPath["groups.0.members"].items[0]?.key
+
+		form.move("groups", 0, 1)
+
+		const snapshot = form.getSnapshot()
+		expect(snapshot.metadata.arraysByPath.groups.items).toEqual([
+			expect.objectContaining({
+				key: "groups:1",
+				index: 0,
+				dirty: false,
+			}),
+			expect.objectContaining({
+				key: "groups:0",
+				index: 1,
+				dirty: false,
+			}),
+		])
+		expect(snapshot.metadata.arraysByPath["groups.1.members"]).toMatchObject({
+			dirty: false,
+			items: [
+				expect.objectContaining({
+					key: originalMemberKey,
+					index: 0,
+					dirty: false,
+				}),
+			],
+		})
+		expect(
+			snapshot.metadata.fieldsByPath["groups.1.members.0.name"].dirty,
+		).toBe(false)
+	})
+
+	it("runs commands against nested concrete array paths and reindexes their row state", () => {
+		const form = createGroupStore()
+		const originalMemberKey =
+			form.getSnapshot().metadata.arraysByPath["groups.0.members"].items[0]?.key
+
+		form.append("groups.0.members", { name: "Grace" })
+
+		expect(form.getValues().groups[0]?.members).toEqual([
+			{ name: "Ada" },
+			{ name: "Grace" },
+		])
+		const appendedMemberKey =
+			form.getSnapshot().metadata.arraysByPath["groups.0.members"].items[1]?.key
+		expect(appendedMemberKey).toBe("groups.0.members:1")
+
+		form.move("groups", 0, 1)
+
+		expect(form.getValues().groups.map((group) => group.name)).toEqual([
+			"Docs",
+			"Core",
+		])
+		expect(
+			form
+				.getSnapshot()
+				.metadata.arraysByPath["groups.1.members"].items.map(
+					(item) => item.key,
+				),
+		).toEqual([originalMemberKey, appendedMemberKey])
+
+		form.remove("groups.1.members", 0)
+
+		expect(form.getValues().groups[1]?.members).toEqual([{ name: "Grace" }])
+	})
+
+	it("discards array reindex metadata when beforeUpdate replaces an array command", () => {
+		const form = createAccountStore({
+			beforeUpdate: (event) =>
+				event.source === "array"
+					? [
+							{
+								type: "set",
+								path: "profile.first",
+								value: "Grace",
+							},
+						]
+					: undefined,
+		})
+		const originalKeys = contactKeys(form)
+		form.setErrors([
+			{
+				source: "manual",
+				path: "contacts.1.value",
+				message: "Keep this issue on the same row",
+			},
+		])
+
+		form.remove("contacts", 0)
+
+		expect(form.getValues()).toEqual({
+			...defaultValues,
+			profile: {
+				first: "Grace",
+			},
+		})
+		expect(contactKeys(form)).toEqual(originalKeys)
+		expect(form.getSnapshot().errors.fields.get("contacts.1.value")).toEqual([
+			expect.objectContaining({
+				message: "Keep this issue on the same row",
+			}),
+		])
+		expect(form.getSnapshot().errors.fields.has("contacts.0.value")).toBe(false)
+	})
+
 	it("reindexes manual issues and exposure by row key while removal drops them", () => {
 		const form = createAccountStore()
 
@@ -260,6 +430,99 @@ describe("array commands and row metadata", () => {
 
 		form.remove("contacts", 0)
 
+		expect(form.getSnapshot().errors.fields.size).toBe(0)
+		expect(form.getSnapshot().displayErrors.fields.size).toBe(0)
+	})
+
+	it("keeps reindexed issue state when array commands are batched", () => {
+		const form = createAccountStore()
+
+		form.setErrors([
+			{
+				source: "manual",
+				path: "contacts.1.value",
+				message: "Review this contact",
+			},
+			{
+				source: "manual",
+				path: "contacts.0.note",
+				message: "Keep this note",
+			},
+		])
+
+		form.batch(() => {
+			form.move("contacts", 1, 0)
+		})
+
+		expect(form.getSnapshot().errors.fields.has("contacts.1.value")).toBe(false)
+		expect(form.getSnapshot().errors.fields.has("contacts.0.note")).toBe(false)
+		expect(form.getSnapshot().errors.fields.get("contacts.0.value")).toEqual([
+			expect.objectContaining({ message: "Review this contact" }),
+		])
+		expect(form.getSnapshot().errors.fields.get("contacts.1.note")).toEqual([
+			expect.objectContaining({ message: "Keep this note" }),
+		])
+
+		form.batch(() => {
+			form.remove("contacts", 0)
+		})
+
+		expect(form.getSnapshot().errors.fields.has("contacts.0.value")).toBe(false)
+		expect(form.getSnapshot().errors.fields.get("contacts.0.note")).toEqual([
+			expect.objectContaining({ message: "Keep this note" }),
+		])
+	})
+
+	it("keeps row metadata aligned when array commands follow batched replacement", () => {
+		const form = createAccountStore()
+
+		form.batch(() => {
+			form.setValue("contacts", [
+				{ value: "one@example.test", tags: [] },
+				{ value: "two@example.test", tags: [] },
+				{ value: "three@example.test", tags: [] },
+			])
+			form.append("contacts", { value: "four@example.test", tags: [] })
+		})
+
+		expect(contactKeys(form)).toHaveLength(4)
+
+		form.move("contacts", 3, 0)
+
+		expect(form.getValues().contacts.map((contact) => contact.value)).toEqual([
+			"four@example.test",
+			"one@example.test",
+			"two@example.test",
+			"three@example.test",
+		])
+		expect(contactKeys(form)).toHaveLength(4)
+	})
+
+	it("applies issue reindexing for identity-only batched array edits", () => {
+		const form = createAccountStore()
+
+		form.setErrors([
+			{
+				source: "manual",
+				path: "contacts.0.value",
+				message: "Manual stale row issue",
+			},
+			{
+				source: "server",
+				path: "contacts.0.value",
+				message: "Server stale row issue",
+			},
+		])
+
+		form.batch(() => {
+			form.remove("contacts", 0)
+			form.insert("contacts", 0, {
+				...defaultValues.contacts[0],
+				tags: [...defaultValues.contacts[0].tags],
+			})
+		})
+
+		expect(form.getValues()).toEqual(defaultValues)
 		expect(form.getSnapshot().errors.fields.size).toBe(0)
 		expect(form.getSnapshot().displayErrors.fields.size).toBe(0)
 	})

@@ -20,6 +20,7 @@ import type {
 	FieldsProps,
 	FormKitSlots,
 } from "./create-form-kit.js"
+import { createDomId } from "./dom-id.js"
 import { useFormContext, useFormIdPrefix } from "./form-context.js"
 import { useField, useFormState } from "./hooks.js"
 import type { StructuralNodeName, StructuralRootProps } from "./slots.js"
@@ -172,7 +173,7 @@ function GeneratedSection<Schema extends StandardSchema, Context>({
 	const idPrefix = useFormIdPrefix()
 	const Section = slots.Section
 	const rootProps = createStructuralRootProps("section", {
-		id: createNodeDomId(idPrefix, node.id),
+		id: createDomId(idPrefix, node.id),
 		className: node.className,
 		span: node.span,
 		disabled: node.disabled,
@@ -213,7 +214,7 @@ function GeneratedField<Schema extends StandardSchema, Context>({
 	const idPrefix = useFormIdPrefix()
 	const path = node.path as FieldPath<FormInput<Schema>>
 	const field = useField(form, path)
-	const inputId = createFieldInputId(idPrefix, node.path)
+	const inputId = createDomId(idPrefix, node.path)
 	const descriptionId =
 		node.description === undefined ? undefined : `${inputId}-description`
 	const errorIds = field.meta.displayErrors.map(
@@ -334,14 +335,6 @@ function createStructuralRootProps(
 	}
 
 	return props
-}
-
-function createFieldInputId(idPrefix: string, path: string): string {
-	return `${idPrefix}-${path.replaceAll(".", "-")}`
-}
-
-function createNodeDomId(idPrefix: string, nodeId: string): string {
-	return `${idPrefix}-${nodeId.replaceAll(".", "-")}`
 }
 
 function createIssueKey(issue: FormIssue, index: number): string {

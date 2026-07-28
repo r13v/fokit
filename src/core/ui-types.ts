@@ -8,6 +8,7 @@ import type {
 	IsValidControlValue,
 } from "./control-types.js"
 import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
+import type { OptionalFieldPath } from "./transaction.js"
 
 export type GridColumns = 1 | 2 | 3 | 4
 export type GridSpan = 1 | 2 | 3 | 4 | "full"
@@ -30,9 +31,8 @@ type FieldNodeBase<Input, Context> = {
 	readonly span?: GridSpan
 }
 
-type FieldValuePolicy<Value> = undefined extends Value
-	? ValuePolicy
-	: "preserve"
+type FieldValuePolicy<Input, Path extends FieldPath<Input>> =
+	Path extends OptionalFieldPath<Input> ? ValuePolicy : "preserve"
 
 type IsAny<Value> = 0 extends 1 & Value ? true : false
 
@@ -94,7 +94,7 @@ type FieldNodeForPath<
 	Path extends FieldPath<Input>,
 > = FieldNodeBase<Input, Context> & {
 	readonly path: Path
-	readonly valuePolicy?: FieldValuePolicy<PathValue<Input, Path>>
+	readonly valuePolicy?: FieldValuePolicy<Input, Path>
 } & {
 		[Name in CompatibleControlName<Input, Controls, Context, Path>]: {
 			readonly control: Name

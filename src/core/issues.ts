@@ -133,7 +133,7 @@ export function setImperativeIssues(
 	) as ReadonlySet<ImperativeIssueSource>
 
 	if (suppliedSources.size === 0) {
-		return state
+		return clearImperativeIssues(state)
 	}
 
 	const nextIssues = [
@@ -707,9 +707,7 @@ function hasVisibleOwner<Context>(
 		return array.visible
 	}
 
-	return Object.values(resolvedUi.arraysByPath).some(
-		(arrayNode) => arrayNode.visible && isDescendantPath(path, arrayNode.path),
-	)
+	return false
 }
 
 function normalizeStandardSchemaPath(

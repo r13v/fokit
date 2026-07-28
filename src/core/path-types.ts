@@ -1,8 +1,16 @@
 type Primitive = bigint | boolean | null | number | string | symbol | undefined
-type NativeLeaf = Blob | Date | File | FileList | RegExp
+type FileListLike = {
+	readonly length: number
+	item(index: number): unknown
+}
+type NativeLeaf = Blob | Date | File | FileListLike | RegExp
 type CallableLeaf = (...args: never[]) => unknown
 type Leaf = CallableLeaf | NativeLeaf | Primitive
-type ArrayIndex = `${number}`
+type NonZeroDigit = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+type IntegerString = `${bigint}`
+export type CanonicalArrayIndex = IntegerString &
+	("0" | `${NonZeroDigit}${string}`)
+type ArrayIndex = CanonicalArrayIndex
 type DefaultDepth = readonly [1, 1, 1, 1, 1, 1, 1, 1]
 
 type StringKeyOf<Value> = Extract<keyof Value, string>

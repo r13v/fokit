@@ -157,7 +157,7 @@ describe("form value transactions", () => {
 			},
 		})
 		expect(form.getSnapshot().values.profile).not.toBe(initial.values.profile)
-		expect(form.getSnapshot().values.contacts).toBe(initial.values.contacts)
+		expect(form.getSnapshot().values.contacts).toEqual(initial.values.contacts)
 		expect(form.getSnapshot().isDirty).toBe(true)
 		expect(
 			form.getSnapshot().metadata.fieldsByPath["profile.first"].dirty,
@@ -317,6 +317,21 @@ describe("form value transactions", () => {
 			last: "Hamilton",
 			middle: "Byron",
 		})
+
+		const invalidReplacement = createAccountStore({
+			beforeUpdate: () => [
+				{
+					type: "set",
+					path: "profile.nickname",
+					value: "Amazing",
+				},
+			],
+		})
+
+		expect(() => invalidReplacement.setValue("profile.first", "Grace")).toThrow(
+			'Unknown field path "profile.nickname"',
+		)
+		expect(invalidReplacement.getValues()).toEqual(defaultValues)
 	})
 
 	it("rejects nested commands during beforeUpdate and preserves thrown-hook semantics", () => {
@@ -415,6 +430,21 @@ describe("form value transactions", () => {
 			}),
 		).toThrow(/array/i)
 		expect(commandThrows.getValues()).toEqual(defaultValues)
+	})
+
+	it("rejects numeric-looking setValues patch keys without side effects", () => {
+		const form = createAccountStore()
+
+		expect(() =>
+			form.setValues({
+				contacts: {
+					"1e3": {
+						value: "ada@example.test",
+					},
+				},
+			} as never),
+		).toThrow(/index/)
+		expect(form.getValues()).toEqual(defaultValues)
 	})
 
 	it("matches random set, unset, and batch sequences against a reference model", () => {

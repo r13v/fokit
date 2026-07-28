@@ -32,6 +32,7 @@ export type ClassicFormInstance<
 type ClassicSubmissionController = {
 	register(element: HTMLFormElement | null): void
 	handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void>
+	rejectSubmit(error: unknown): void
 	submit(): Promise<void>
 }
 
@@ -86,6 +87,13 @@ export function submitClassicForm<
 	return getController(form).handleSubmit(event)
 }
 
+export function rejectClassicFormSubmit<
+	Schema extends StandardSchema,
+	Context = unknown,
+>(form: ClassicFormInstance<Schema, Context>, error: unknown): void {
+	getController(form).rejectSubmit(error)
+}
+
 function createClassicSubmissionController<
 	Schema extends StandardSchema,
 	Context = unknown,
@@ -96,6 +104,7 @@ function createClassicSubmissionController<
 	let element: HTMLFormElement | undefined
 	let inFlight: Promise<void> | undefined
 	let lastSubmitPromise: Promise<void> | undefined
+	let imperativeSubmitActive = false
 
 	function runSubmit(
 		formElement: HTMLFormElement,
@@ -151,6 +160,14 @@ function createClassicSubmissionController<
 			}
 			return promise
 		},
+		rejectSubmit(error) {
+			if (!imperativeSubmitActive || lastSubmitPromise !== undefined) {
+				return
+			}
+
+			lastSubmitPromise = Promise.reject(error)
+			lastSubmitPromise.catch(() => undefined)
+		},
 		submit() {
 			if (inFlight !== undefined) {
 				return inFlight
@@ -163,7 +180,15 @@ function createClassicSubmissionController<
 			}
 
 			lastSubmitPromise = undefined
-			element.requestSubmit()
+			imperativeSubmitActive = true
+			try {
+				element.requestSubmit()
+			} catch (error) {
+				lastSubmitPromise = Promise.reject(error)
+				lastSubmitPromise.catch(() => undefined)
+			} finally {
+				imperativeSubmitActive = false
+			}
 			return lastSubmitPromise ?? Promise.resolve()
 		},
 	})

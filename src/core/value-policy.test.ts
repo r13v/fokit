@@ -110,6 +110,29 @@ function createAccountStore(
 }
 
 describe("visibility-driven valuePolicy", () => {
+	it("stabilizes fields that start hidden into the initial baseline", () => {
+		const beforeUpdate = vi.fn()
+		const onUpdate = vi.fn()
+		const form = createAccountStore({
+			context: {
+				showCompany: false,
+			},
+			beforeUpdate,
+			onUpdate,
+		})
+
+		expect(form.getValues()).toEqual({
+			kind: "company",
+		})
+		expect(form.getSnapshot().isDirty).toBe(false)
+		expect(form.getSnapshot().resolvedUi.fieldsByPath.companyName.visible).toBe(
+			false,
+		)
+		expect(form.getSnapshot().resolvedUi.fieldsByPath.taxId.visible).toBe(false)
+		expect(beforeUpdate).not.toHaveBeenCalled()
+		expect(onUpdate).not.toHaveBeenCalled()
+	})
+
 	it("expands hidden unsets to stability before beforeUpdate and reports them in one update", () => {
 		const beforeUpdate = vi.fn()
 		const onUpdate = vi.fn()

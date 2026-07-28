@@ -61,6 +61,14 @@ export function useForm<Schema extends StandardSchema, Context = unknown>(
 	})
 
 	useEffect(() => {
+		formRef.current?.replaceOptions({
+			disabled: options.disabled,
+			readOnly: options.readOnly,
+			validation: options.validation,
+		})
+	}, [options.disabled, options.readOnly, options.validation])
+
+	useEffect(() => {
 		if (Object.is(contextRef.current, options.context)) {
 			return
 		}

@@ -16,6 +16,7 @@ import type {
 	FieldSlotProps,
 	SectionSlotProps,
 } from "./slots.js"
+import { useForm } from "./use-form.js"
 
 type Contact = {
 	readonly email: string
@@ -49,6 +50,15 @@ type Output = {
 
 type UploadValues = {
 	readonly avatar?: File
+}
+
+type NestedValues = {
+	readonly groups: readonly {
+		readonly name: string
+		readonly members: readonly {
+			readonly email: string
+		}[]
+	}[]
 }
 
 type Context = {
@@ -100,6 +110,9 @@ const schema = createSchema<Values, Output>((value) => {
 
 const uploadSchema = createSchema<UploadValues, UploadValues>((value) => ({
 	value: value as UploadValues,
+}))
+const nestedSchema = createSchema<NestedValues, NestedValues>((value) => ({
+	value: value as NestedValues,
 }))
 
 const nativeText = defineControl<string | undefined, TextOptions, Context>({
@@ -459,6 +472,19 @@ const definition = kit.defineForm<Context>()({
 	],
 })
 
+const incompatibleDefinition = kit.defineForm<Context>()({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "count",
+			control: "number",
+			label: "Count",
+			disabled: true,
+		},
+	],
+})
+
 const uploadDefinition = uploadKit.defineForm({
 	schema: uploadSchema,
 	ui: [
@@ -467,6 +493,41 @@ const uploadDefinition = uploadKit.defineForm({
 			path: "avatar",
 			control: "file",
 			label: "Avatar",
+		},
+	],
+})
+
+const nestedDefinition = kit.defineForm<Context>()({
+	schema: nestedSchema,
+	ui: [
+		{
+			kind: "array",
+			path: "groups",
+			itemDefault: {
+				name: "",
+				members: [],
+			},
+			children: [
+				{
+					kind: "field",
+					path: "name",
+					control: "nativeText",
+				},
+				{
+					kind: "array",
+					path: "members",
+					itemDefault: {
+						email: "",
+					},
+					children: [
+						{
+							kind: "field",
+							path: "email",
+							control: "nativeText",
+						},
+					],
+				},
+			],
 		},
 	],
 })
@@ -581,6 +642,88 @@ describe("native FormData serialization", () => {
 		expect(new FormData(form).getAll("__fokit.array")).toEqual(["contacts"])
 	})
 
+	it("renders hidden serializer entries for manually composed kit.Form", async () => {
+		function ManualForm() {
+			const form = useForm(definition, {
+				defaultValues: {
+					...defaultValues(),
+					contacts: [],
+				},
+				context: { prefix: "ctx" },
+			})
+
+			return (
+				<kit.Form form={form} id="manual-profile">
+					<kit.Fields />
+				</kit.Form>
+			)
+		}
+
+		render(<ManualForm />)
+		const form = document.querySelector("form")
+		if (form === null) {
+			throw new Error("Expected a form")
+		}
+
+		const formData = new FormData(form)
+		const parsed = await parseFormData(formData, schema)
+		const controlled = await normalizeSchemaResult(
+			schema["~standard"].validate({
+				...defaultValues(),
+				contacts: [],
+			}),
+		)
+
+		expect(hiddenInput("hiddenCode")?.value).toBe("secret")
+		expect(hiddenInput("disabledCode")?.value).toBe("locked")
+		expect(hiddenInput("invisibleNote")?.value).toBe("preserved")
+		expect(formData.getAll("__fokit.array")).toEqual(["contacts"])
+		expect(parsed).toEqual({
+			success: true,
+			value: controlled,
+		})
+	})
+
+	it("serializes nested array markers and values from concrete row paths", async () => {
+		const defaultValues = {
+			groups: [
+				{
+					name: "Core",
+					members: [{ email: "ada@example.test" }],
+				},
+				{
+					name: "Docs",
+					members: [],
+				},
+			],
+		} satisfies NestedValues
+		render(
+			<kit.AutoForm
+				context={{ prefix: "ctx" }}
+				defaultValues={defaultValues}
+				definition={nestedDefinition}
+				id="nested"
+			/>,
+		)
+		const form = document.querySelector("form")
+		if (form === null) {
+			throw new Error("Expected a form")
+		}
+
+		const formData = new FormData(form)
+		const parsed = await parseFormData(formData, nestedSchema)
+
+		expect(formData.getAll("__fokit.array")).toEqual([
+			"groups",
+			"groups.0.members",
+			"groups.1.members",
+		])
+		expect(parsed).toEqual({
+			success: true,
+			value: defaultValues,
+		})
+	})
+
 	it("preserves browser File objects for native file controls", async () => {
 		const user = userEvent.setup()
 		const avatar = new File(["avatar"], "avatar.txt", { type: "text/plain" })
@@ -628,6 +771,21 @@ describe("native FormData serialization", () => {
 		})
 
 		expect(hiddenInput("hiddenCode")?.value).toBe("changed")
+	})
+
+	it("rejects preserved disabled native controls without serializers", () => {
+		expect(() => {
+			render(
+				<kit.AutoForm
+					context={{ prefix: "ctx" }}
+					defaultValues={defaultValues()}
+					definition={incompatibleDefinition}
+					id="incompatible"
+				/>,
+			)
+		}).toThrow(
+			'Classic form cannot preserve field "count" while it is invisible or disabled without a serializer',
+		)
 	})
 })
 

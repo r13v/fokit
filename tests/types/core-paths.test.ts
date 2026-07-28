@@ -55,6 +55,8 @@ type _formOutput = Expect<Equal<FormOutput<ExampleSchema>, ExampleOutput>>
 const scalarPath = "kind" satisfies FieldPath<ExampleInput>
 const optionalPath = "address.city" satisfies FieldPath<ExampleInput>
 const arrayItemPath = "contacts.0.value" satisfies FieldPath<ExampleInput>
+const multiDigitArrayItemPath =
+	"contacts.10.value" satisfies FieldPath<ExampleInput>
 const relativeArrayItemPath = "channels.0.enabled" satisfies FieldPath<
 	ExampleInput["contacts"][number]
 >
@@ -78,6 +80,9 @@ type _optionalValue = Expect<
 type _arrayItemValue = Expect<
 	Equal<PathValue<ExampleInput, typeof arrayItemPath>, string>
 >
+type _multiDigitArrayItemValue = Expect<
+	Equal<PathValue<ExampleInput, typeof multiDigitArrayItemPath>, string>
+>
 type _relativeArrayItemValue = Expect<
 	Equal<
 		PathValue<ExampleInput["contacts"][number], typeof relativeArrayItemPath>,
@@ -99,6 +104,21 @@ type _arrayPrimitiveItemValue = Expect<
 
 // @ts-expect-error bracket syntax is never a canonical path
 const _bracketPath: FieldPath<ExampleInput> = "contacts[0].value"
+
+// @ts-expect-error signed indexes are not canonical paths
+const _signedIndexPath: FieldPath<ExampleInput> = "contacts.-1.value"
+
+// @ts-expect-error explicit plus indexes are not canonical paths
+const _plusIndexPath: FieldPath<ExampleInput> = "contacts.+1.value"
+
+// @ts-expect-error leading-zero indexes are not canonical paths
+const _leadingZeroIndexPath: FieldPath<ExampleInput> = "contacts.01.value"
+
+// @ts-expect-error alphabetic index suffixes are not canonical paths
+const _alphabeticIndexPath: FieldPath<ExampleInput> = "contacts.1abc.value"
+
+// @ts-expect-error scientific notation is not a canonical array index
+const _scientificIndexPath: FieldPath<ExampleInput> = "contacts.1e3.value"
 
 // @ts-expect-error object keys containing dots cannot be addressed
 const _dottedKeyPath: FieldPath<{ "address.city": string }> = "address.city"

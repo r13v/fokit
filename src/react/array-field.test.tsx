@@ -5,7 +5,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react"
 import { useRef } from "react"
 import { describe, expect, it } from "vitest"
 
-import type { ImperativeFormIssue } from "../core/index.js"
+import { computed, type ImperativeFormIssue } from "../core/index.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import { useFormContext } from "./form-context.js"
@@ -25,7 +25,16 @@ type Contact = {
 type Values = {
 	readonly contacts: readonly Contact[]
 	readonly lockedContacts: readonly Contact[]
+	readonly groups: readonly {
+		readonly name: string
+		readonly members: readonly {
+			readonly name: string
+		}[]
+	}[]
 }
+
+type GroupValue = Values["groups"][number]
+type MemberValue = GroupValue["members"][number]
 
 type Schema = StandardSchemaV1<Values>
 
@@ -153,6 +162,51 @@ const readOnlyDefinition = kit.defineForm({
 	],
 })
 
+const nestedDefinition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "array",
+			path: "groups",
+			label: "Groups",
+			itemDefault: {
+				name: "New group",
+				members: [],
+			},
+			children: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					label: "Group name",
+				},
+				{
+					kind: "array",
+					path: "members",
+					label: computed<readonly ["name"], string, unknown, GroupValue>(
+						["name"] as const,
+						({ name }) => `${name} members`,
+					),
+					itemDefault: {
+						name: "New member",
+					},
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							label: computed<readonly ["name"], string, unknown, MemberValue>(
+								["name"] as const,
+								({ name }) => `Member ${name}`,
+							),
+						},
+					],
+				},
+			],
+		},
+	],
+})
+
 describe("generated arrays", () => {
 	it("renders array and array-item slots with direct array errors only", () => {
 		render(
@@ -183,7 +237,7 @@ describe("generated arrays", () => {
 		).toBe("contacts.0.email")
 		expect(input("contacts.0.name").value).toBe("Ada")
 		expect(input("contacts.0.email").getAttribute("aria-describedby")).toBe(
-			"profile-contacts-0-email-error-0",
+			"profile-contacts%2E0%2Eemail-error-0",
 		)
 	})
 
@@ -239,6 +293,7 @@ describe("generated arrays", () => {
 			<kit.AutoForm
 				defaultValues={{
 					contacts: [],
+					groups: [],
 					lockedContacts: [],
 				}}
 				definition={disabledDefinition}
@@ -259,6 +314,7 @@ describe("generated arrays", () => {
 			<kit.AutoForm
 				defaultValues={{
 					contacts: [],
+					groups: [],
 					lockedContacts: [
 						{
 							name: "Ada",
@@ -279,6 +335,35 @@ describe("generated arrays", () => {
 		expect(input("lockedContacts.0.name").value).toBe("Ada")
 		fireEvent.click(screen.getByTestId("add-lockedContacts"))
 		expect(queryInput("lockedContacts.1.name")).toBeNull()
+	})
+
+	it("renders nested arrays with concrete paths and row-scoped computed labels", () => {
+		render(
+			<kit.AutoForm
+				defaultValues={defaultValues()}
+				definition={nestedDefinition}
+				id="profile"
+			/>,
+		)
+
+		expect(screen.getByText("Core members")).toBeTruthy()
+		expect(screen.getByText("Docs members")).toBeTruthy()
+		expect(screen.getByText("Member Ada")).toBeTruthy()
+		expect(input("groups.0.members.0.name").value).toBe("Ada")
+
+		fireEvent.click(screen.getByTestId("add-groups.0.members"))
+
+		expect(input("groups.0.members.1.name").value).toBe("New member")
+		expect(screen.getByText("Member New member")).toBeTruthy()
+
+		fireEvent.click(
+			within(screen.getByTestId("item-groups.0.members.0")).getByRole(
+				"button",
+				{ name: "Remove" },
+			),
+		)
+
+		expect(queryInput("groups.0.members.0.name")?.value).toBe("New member")
 	})
 })
 
@@ -422,6 +507,16 @@ function defaultValues(): Values {
 			},
 		],
 		lockedContacts: [],
+		groups: [
+			{
+				name: "Core",
+				members: [{ name: "Ada" }],
+			},
+			{
+				name: "Docs",
+				members: [],
+			},
+		],
 	}
 }
 

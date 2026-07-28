@@ -10,7 +10,6 @@ import type {
 import { ErrorSummary } from "./error-summary.js"
 import { FieldsRenderer } from "./fields.js"
 import { KitForm } from "./form.js"
-import { HiddenInputs } from "./hidden-inputs.js"
 import { useForm } from "./use-form.js"
 
 export function createAutoFormComponent(
@@ -42,10 +41,9 @@ export function createAutoFormComponent(
 		})
 
 		return (
-			<KitForm {...formProps} form={form}>
+			<KitForm {...formProps} controls={controls} form={form}>
 				<ErrorSummary form={form} slots={slots} />
 				<FieldsRenderer form={form} controls={controls} slots={slots} />
-				<HiddenInputs form={form} controls={controls} />
 				{children}
 			</KitForm>
 		)

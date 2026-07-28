@@ -57,12 +57,57 @@ export function createArrayRowsState<Schema extends StandardSchema>(
 	const rowsByPath = Object.create(null) as Record<string, ArrayRowState>
 
 	for (const array of Object.values(definition.arraysByPath)) {
-		const value = getPathValue(values, array.path)
-		const length = Array.isArray(value) ? value.length : 0
-		rowsByPath[array.path] = createInitialRowState(array.path, length)
+		addConcreteArrayRowStates(rowsByPath, array, values, array.path)
 	}
 
 	return freezeArrayRowsState(rowsByPath)
+}
+
+function addConcreteArrayRowStates(
+	rowsByPath: Record<string, ArrayRowState>,
+	array: NormalizedArrayNode,
+	values: unknown,
+	path: string,
+): void {
+	const value = getPathValue(values, path)
+	const length = Array.isArray(value) ? value.length : 0
+	rowsByPath[path] = createInitialRowState(path, length)
+
+	if (!Array.isArray(value)) {
+		return
+	}
+
+	for (const index of value.keys()) {
+		addRelativeArrayRowStates(
+			rowsByPath,
+			array.children,
+			values,
+			`${path}.${index}`,
+		)
+	}
+}
+
+function addRelativeArrayRowStates(
+	rowsByPath: Record<string, ArrayRowState>,
+	nodes: readonly NormalizedUiNode[],
+	values: unknown,
+	scopePath: string,
+): void {
+	for (const node of nodes) {
+		if (node.kind === "section") {
+			addRelativeArrayRowStates(rowsByPath, node.children, values, scopePath)
+			continue
+		}
+
+		if (node.kind === "array") {
+			addConcreteArrayRowStates(
+				rowsByPath,
+				node,
+				values,
+				`${scopePath}.${node.path}`,
+			)
+		}
+	}
 }
 
 export function createArrayCommandChange(
@@ -77,8 +122,13 @@ export function createArrayCommandChange(
 		throw new TypeError(`Array path "${path}" does not resolve to an array`)
 	}
 
-	const previousRowState =
+	const existingRowState =
 		rowsState[path] ?? createInitialRowState(path, currentValue.length)
+	const previousRowState = reconcileRowState(
+		path,
+		existingRowState,
+		currentValue.length,
+	)
 	const previousKeys = previousRowState.keys.slice(0, currentValue.length)
 	const result = applyArrayCommand(
 		path,
@@ -109,6 +159,29 @@ export function replaceArrayRowState(
 		...rowsState,
 		[path]: rowState,
 	})
+}
+
+export function reindexArrayRowsState(
+	rowsState: ArrayRowsState,
+	arrayPath: string,
+	previousKeys: readonly string[],
+	nextKeys: readonly string[],
+): ArrayRowsState {
+	let changed = false
+	const nextRowsState = Object.create(null) as Record<string, ArrayRowState>
+
+	for (const [path, rowState] of Object.entries(rowsState)) {
+		const nextPath = reindexArrayPath(path, arrayPath, previousKeys, nextKeys)
+		if (nextPath === undefined) {
+			changed = true
+			continue
+		}
+
+		changed ||= nextPath !== path
+		nextRowsState[nextPath] = rowState
+	}
+
+	return changed ? freezeArrayRowsState(nextRowsState) : rowsState
 }
 
 export function reindexTouchedArrayPaths(
@@ -220,6 +293,86 @@ export function isKnownArrayDescendantFieldPath<Schema extends StandardSchema>(
 	}
 
 	return false
+}
+
+export function findArrayNodeForPath<Schema extends StandardSchema>(
+	definition: NormalizedFormDefinition<Schema>,
+	path: PathInput,
+): NormalizedArrayNode | undefined {
+	const segments = parsePath(path)
+
+	for (const array of Object.values(definition.arraysByPath)) {
+		const match = findArrayNodeInTree(array, segments)
+		if (match !== undefined) {
+			return match
+		}
+	}
+
+	return undefined
+}
+
+function findArrayNodeInTree(
+	array: NormalizedArrayNode,
+	segments: PathSegments,
+): NormalizedArrayNode | undefined {
+	if (sameSegments(array.pathSegments, segments)) {
+		return array
+	}
+
+	if (!startsWithSegments(segments, array.pathSegments)) {
+		return undefined
+	}
+
+	const rowIndex = segments[array.pathSegments.length]
+	if (typeof rowIndex !== "number") {
+		return undefined
+	}
+
+	return findRelativeArrayNode(
+		array.children,
+		segments.slice(array.pathSegments.length + 1),
+	)
+}
+
+function findRelativeArrayNode(
+	nodes: readonly NormalizedUiNode[],
+	segments: PathSegments,
+): NormalizedArrayNode | undefined {
+	for (const node of nodes) {
+		if (node.kind === "section") {
+			const match = findRelativeArrayNode(node.children, segments)
+			if (match !== undefined) {
+				return match
+			}
+			continue
+		}
+
+		if (
+			node.kind !== "array" ||
+			!startsWithSegments(segments, node.pathSegments)
+		) {
+			continue
+		}
+
+		if (sameSegments(node.pathSegments, segments)) {
+			return node
+		}
+
+		const rowIndex = segments[node.pathSegments.length]
+		if (typeof rowIndex !== "number") {
+			continue
+		}
+
+		const match = findRelativeArrayNode(
+			node.children,
+			segments.slice(node.pathSegments.length + 1),
+		)
+		if (match !== undefined) {
+			return match
+		}
+	}
+
+	return undefined
 }
 
 function applyArrayCommand(
@@ -338,6 +491,30 @@ function createInitialRowState(path: string, length: number): ArrayRowState {
 		keys,
 		baselineKeys: keys,
 		nextKeyIndex: length,
+	})
+}
+
+function reconcileRowState(
+	path: string,
+	rowState: ArrayRowState,
+	length: number,
+): ArrayRowState {
+	if (rowState.keys.length === length) {
+		return rowState
+	}
+
+	const keys = rowState.keys.slice(0, length)
+	let nextKeyIndex = rowState.nextKeyIndex
+
+	while (keys.length < length) {
+		keys.push(createRowKey(path, nextKeyIndex))
+		nextKeyIndex += 1
+	}
+
+	return freezeArrayRowState({
+		keys,
+		baselineKeys: rowState.baselineKeys,
+		nextKeyIndex,
 	})
 }
 

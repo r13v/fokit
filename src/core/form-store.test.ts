@@ -123,7 +123,7 @@ describe("form store construction and snapshots", () => {
 		expect(form.getServerSnapshot()).toBe(snapshot)
 		expect(form.definition.schema).toBe(schema)
 		expect(form.schema).toBe(schema)
-		expect(form.getValues()).toBe(snapshot.values)
+		expect(form.getValues()).toEqual(snapshot.values)
 		expect(form.getValue("contacts.0.value")).toBe("ada@example.test")
 		expect(snapshot.values).toEqual(defaultValues)
 		expect(snapshot.values).not.toBe(defaultValues)
@@ -164,6 +164,49 @@ describe("form store construction and snapshots", () => {
 			kind: "person",
 			contacts: [{ value: "ada@example.test" }],
 		})
+	})
+
+	it("keeps mutable native values outside internal state reads", () => {
+		type NativeValues = {
+			createdAt: Date
+			pattern: RegExp
+		}
+		const nativeSchema = {} as StandardSchema<NativeValues>
+		const nativeDefinition = normalizeDefinition({
+			schema: nativeSchema,
+			controls: {},
+			ui: [],
+		})
+		const createdAt = new Date("2026-07-28T00:00:00.000Z")
+		const pattern = /ada/g
+		pattern.lastIndex = 1
+		const form = createFormStore({
+			definition: nativeDefinition,
+			defaultValues: {
+				createdAt,
+				pattern,
+			},
+			context: {},
+		})
+
+		createdAt.setTime(0)
+		pattern.lastIndex = 0
+
+		expect((form.getValue("createdAt") as Date).toISOString()).toBe(
+			"2026-07-28T00:00:00.000Z",
+		)
+		expect((form.getValue("pattern") as RegExp).lastIndex).toBe(1)
+		expect(form.getSnapshot().isDirty).toBe(false)
+
+		form.getSnapshot().values.createdAt.setTime(0)
+		form.getSnapshot().values.pattern.lastIndex = 0
+		form.getValues().createdAt.setTime(1)
+
+		expect((form.getValue("createdAt") as Date).toISOString()).toBe(
+			"2026-07-28T00:00:00.000Z",
+		)
+		expect((form.getValue("pattern") as RegExp).lastIndex).toBe(1)
+		expect(form.getSnapshot().isDirty).toBe(false)
 	})
 
 	it("keeps baseline and metadata outside submitted values while tracking blur metadata", () => {
@@ -225,7 +268,7 @@ describe("form store construction and snapshots", () => {
 		})
 		const snapshot = form.getSnapshot()
 
-		expect(snapshot.values).toBe(values)
+		expect(snapshot.values).toEqual(values)
 		expect(snapshot.isDirty).toBe(false)
 		expect(snapshot.metadata.fieldsByPath.name.dirty).toBe(false)
 		expect(snapshot.resolvedUi).not.toBe(resolvedUi)

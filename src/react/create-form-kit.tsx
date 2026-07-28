@@ -13,7 +13,11 @@ import { createAutoFormComponent } from "./auto-form.js"
 import type { ControlDefinitionRegistry } from "./control.js"
 import { createFieldsComponent } from "./fields.js"
 import type { NativeFormProps } from "./form.js"
-import { KitForm, type KitFormProps } from "./form.js"
+import {
+	createFormComponent,
+	type KitFormComponent,
+	type KitFormProps,
+} from "./form.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -73,7 +77,7 @@ export type FormKit<Controls extends ControlDefinitionRegistry> = {
 	readonly controls: Controls
 	readonly slots: FormKitSlots
 	readonly defineForm: DefineForm<Controls>
-	readonly Form: typeof KitForm
+	readonly Form: KitFormComponent
 	readonly Submit: typeof Submit
 	readonly Fields: FieldsComponent
 	readonly AutoForm: AutoFormComponent
@@ -97,7 +101,7 @@ export function createFormKit<Controls extends ControlDefinitionRegistry>(
 		controls: options.controls,
 		slots: options.slots,
 		defineForm,
-		Form: KitForm,
+		Form: createFormComponent(options.controls),
 		Submit,
 		Fields: createFieldsComponent(options.controls, options.slots),
 		AutoForm: createAutoFormComponent(options.controls, options.slots),

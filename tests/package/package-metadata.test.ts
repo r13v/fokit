@@ -10,6 +10,9 @@ const rootDirectory = fileURLToPath(new URL("../..", import.meta.url))
 const packageJson = JSON.parse(
 	await readFile(new URL("../../package.json", import.meta.url), "utf8"),
 )
+const packageLock = JSON.parse(
+	await readFile(new URL("../../package-lock.json", import.meta.url), "utf8"),
+)
 const layoutCss = await readFile(
 	new URL("../../src/layout.css", import.meta.url),
 	"utf8",
@@ -26,7 +29,6 @@ describe("package metadata", () => {
 	it("publishes only the supported package surface", () => {
 		expect(packageJson).toMatchObject({
 			name: "fokit",
-			version: "0.0.0",
 			license: "MIT",
 			type: "module",
 			homepage: "https://r13v.github.io/fokit/",
@@ -46,6 +48,11 @@ describe("package metadata", () => {
 			"./layout.css",
 			"./package.json",
 		])
+		expect(packageJson.version).toMatch(
+			/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/,
+		)
+		expect(packageLock.version).toBe(packageJson.version)
+		expect(packageLock.packages[""].version).toBe(packageJson.version)
 	})
 
 	it("does not retain npm-init entry-point metadata", () => {

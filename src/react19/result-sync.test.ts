@@ -2,18 +2,14 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it, vi } from "vitest"
-
+import { startActionSubmission } from "../core/form-store.js"
 import {
 	createFormStore,
 	type FormStore,
 	normalizeDefinition,
 } from "../core/index.js"
 import { defineControl } from "../react/control.js"
-import {
-	recordActionAttemptChanges,
-	startHydratedActionAttempt,
-	syncActionResult,
-} from "./result-sync.js"
+import { syncActionResult } from "./result-sync.js"
 
 type Values = {
 	readonly name: string
@@ -76,10 +72,10 @@ describe("React 19 Action result synchronization", () => {
 	it("filters stale returned issues after pending edits and schedules current schema validation", async () => {
 		const validate = vi.fn(validateValues)
 		const form = createStore({ validate })
-		const attempt = startHydratedActionAttempt(form)
+		const attempt = startActionSubmission(form)
 
 		form.setValue("email", "fixed@example.test")
-		recordActionAttemptChanges(attempt, ["email"])
+		attempt.recordChanges(["email"])
 
 		syncActionResult(
 			form,
@@ -120,10 +116,10 @@ describe("React 19 Action result synchronization", () => {
 
 	it("keeps pending edits while making the submitted snapshot the reset baseline", () => {
 		const form = createStore()
-		const attempt = startHydratedActionAttempt(form)
+		const attempt = startActionSubmission(form)
 
 		form.setValue("name", "Grace")
-		recordActionAttemptChanges(attempt, ["name"])
+		attempt.recordChanges(["name"])
 
 		syncActionResult(
 			form,
@@ -144,6 +140,37 @@ describe("React 19 Action result synchronization", () => {
 		expect(snapshot.isSubmitting).toBe(false)
 	})
 
+	it("resets to defaults and clears metadata after a successful default reset", () => {
+		const form = createStore()
+		const attempt = startActionSubmission(form)
+
+		form.setValue("name", "Grace")
+		form.blur("name")
+		form.setErrors([
+			{
+				source: "server",
+				path: "name",
+				message: "Needs review",
+			},
+		])
+
+		syncActionResult(
+			form,
+			{
+				status: "success",
+				reset: "defaults",
+			},
+			attempt,
+		)
+
+		const snapshot = form.getSnapshot()
+		expect(snapshot.values).toEqual(defaultValues())
+		expect(snapshot.isDirty).toBe(false)
+		expect(snapshot.isTouched).toBe(false)
+		expect(snapshot.errors.fields.size).toBe(0)
+		expect(snapshot.isSubmitting).toBe(false)
+	})
+
 	it("treats submitted reset without a hydrated typed snapshot as a no-op", () => {
 		const form = createStore()
 
@@ -154,6 +181,49 @@ describe("React 19 Action result synchronization", () => {
 
 		expect(form.getSnapshot().values).toEqual(defaultValues())
 		expect(form.getSnapshot().submitCount).toBe(0)
+	})
+
+	it.each([
+		[
+			"bad status",
+			{ status: "pending" },
+			'Unsupported form result status "pending"',
+		],
+		[
+			"bad reset",
+			{ status: "success", reset: "current" },
+			'Unsupported form result reset "current"',
+		],
+		[
+			"bad issues",
+			{ status: "error", issues: {} },
+			"Error form result issues must be an array",
+		],
+		[
+			"bad issue source",
+			{
+				status: "error",
+				issues: [{ source: "manual", message: "Nope" }],
+			},
+			'Unsupported submission issue source "manual"',
+		],
+		[
+			"bad issue message",
+			{
+				status: "error",
+				issues: [{ source: "server" }],
+			},
+			"Submission issue message must be a string",
+		],
+	])("rejects malformed Action result: %s", (_name, result, message) => {
+		const form = createStore()
+
+		expect(() => syncActionResult(form, result as never)).toThrow(message)
+
+		const snapshot = form.getSnapshot()
+		expect(snapshot.values).toEqual(defaultValues())
+		expect(snapshot.errors.fields.size).toBe(0)
+		expect(snapshot.submitCount).toBe(0)
 	})
 })
 

@@ -10,13 +10,11 @@ import type {
 	GridSpan,
 	PathSegments,
 	ResolvedArrayNode,
-	ResolvedFieldNode,
-	ResolvedSectionNode,
 	ResolvedUiNode,
 	StandardSchema,
 } from "../core/index.js"
-import { formatPath, parsePath } from "../core/index.js"
 import type { FormKitSlots } from "./create-form-kit.js"
+import { createDomId } from "./dom-id.js"
 import { useFormIdPrefix } from "./form-context.js"
 import { useArrayField, useFormState } from "./hooks.js"
 import type { StructuralNodeName, StructuralRootProps } from "./slots.js"
@@ -36,6 +34,7 @@ type GeneratedArrayItemProps<Schema extends StandardSchema, Context> = {
 	readonly item: ArrayItemMetadata
 	readonly itemCount: number
 	readonly itemCountRef: { readonly current: number }
+	readonly children: readonly ResolvedUiNode<Context>[]
 	renderNode(node: ResolvedUiNode<Context>, key: string): ReactNode
 }
 
@@ -76,7 +75,7 @@ export function GeneratedArray<Schema extends StandardSchema, Context>({
 	)
 	const itemCountRef = useRef(items.length)
 	itemCountRef.current = items.length
-	const arrayId = createNodeDomId(idPrefix, node.path)
+	const arrayId = createDomId(idPrefix, node.path)
 	const labelId = node.label === undefined ? undefined : `${arrayId}-label`
 	const descriptionId =
 		node.description === undefined ? undefined : `${arrayId}-description`
@@ -143,7 +142,9 @@ export function GeneratedArray<Schema extends StandardSchema, Context>({
 					node={node}
 					renderNode={renderNode}
 					slots={slots}
-				/>
+				>
+					{node.itemChildren[item.index] ?? []}
+				</GeneratedArrayItem>
 			))}
 		</ArraySlotComponent>
 	)
@@ -159,6 +160,7 @@ const GeneratedArrayItem = memo(function GeneratedArrayItem<
 	item,
 	itemCount,
 	itemCountRef,
+	children,
 	renderNode,
 }: GeneratedArrayItemProps<Schema, Context>) {
 	const path = node.path as ArrayFieldPath<FormInput<Schema>>
@@ -208,62 +210,12 @@ const GeneratedArrayItem = memo(function GeneratedArrayItem<
 				validating: item.validating,
 			})}
 		>
-			{node.children.map((child) =>
-				renderNode(
-					scopeArrayItemNode(child, itemPath),
-					`${item.key}:${child.id}`,
-				),
-			)}
+			{children.map((child) => renderNode(child, `${item.key}:${child.id}`))}
 		</ArrayItem>
 	)
 }, areArrayItemPropsEqual) as <Schema extends StandardSchema, Context>(
 	props: GeneratedArrayItemProps<Schema, Context>,
 ) => ReactNode
-
-function scopeArrayItemNode<Context>(
-	node: ResolvedUiNode<Context>,
-	itemPath: string,
-): ResolvedUiNode<Context> {
-	const id = `${itemPath}.${node.id}`
-
-	switch (node.kind) {
-		case "field": {
-			const path = joinPath(itemPath, node.path)
-			return Object.freeze({
-				...node,
-				id,
-				scopePath: "",
-				path,
-				pathSegments: parsePath(path),
-			}) satisfies ResolvedFieldNode<Context>
-		}
-		case "section":
-			return Object.freeze({
-				...node,
-				id,
-				scopePath: "",
-				children: node.children.map((child) =>
-					scopeArrayItemNode(child, itemPath),
-				),
-			}) satisfies ResolvedSectionNode<Context>
-		case "array": {
-			const path = joinPath(itemPath, node.path)
-			return Object.freeze({
-				...node,
-				id,
-				scopePath: "",
-				path,
-				pathSegments: parsePath(path),
-			}) satisfies ResolvedArrayNode<Context>
-		}
-		default:
-			throw new TypeError("Unknown resolved UI node kind")
-	}
-}
-
-function joinPath(prefix: string, path: string): string {
-	return formatPath(`${prefix}.${path}`)
-}
 
 function createErrorMessageRootProps({
 	id,
@@ -327,10 +279,6 @@ function createStructuralRootProps(
 	return props
 }
 
-function createNodeDomId(idPrefix: string, path: string): string {
-	return `${idPrefix}-${path.replaceAll(".", "-")}`
-}
-
 function createIssueKey(issue: FormIssue, index: number): string {
 	return `${issue.source}:${issue.path ?? "form"}:${issue.message}:${index}`
 }
@@ -355,7 +303,8 @@ function areArrayItemPropsEqual(
 		canMoveUp(previous) === canMoveUp(next) &&
 		canMoveDown(previous) === canMoveDown(next) &&
 		arrayItemEqual(previous.item, next.item) &&
-		resolvedArrayEqual(previous.node, next.node)
+		resolvedArrayShellEqual(previous.node, next.node) &&
+		resolvedNodesEqual(previous.children, next.children)
 	)
 }
 
@@ -401,7 +350,7 @@ function arrayItemEqual(
 	)
 }
 
-function resolvedArrayEqual<Context>(
+function resolvedArrayShellEqual<Context>(
 	previous: ResolvedArrayNode<Context>,
 	next: ResolvedArrayNode<Context>,
 ): boolean {
@@ -419,8 +368,7 @@ function resolvedArrayEqual<Context>(
 		pathSegmentsEqual(previous.pathSegments, next.pathSegments) &&
 		previous.label === next.label &&
 		previous.description === next.description &&
-		Object.is(previous.itemDefault, next.itemDefault) &&
-		resolvedNodesEqual(previous.children, next.children)
+		Object.is(previous.itemDefault, next.itemDefault)
 	)
 }
 
@@ -478,7 +426,7 @@ function resolvedNodeEqual<Context>(
 				resolvedNodesEqual(previous.children, next.children)
 			)
 		case "array":
-			return next.kind === "array" && resolvedArrayEqual(previous, next)
+			return next.kind === "array" && resolvedArrayShellEqual(previous, next)
 		default:
 			return false
 	}

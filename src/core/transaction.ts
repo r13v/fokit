@@ -1,13 +1,17 @@
 import type { PathInput } from "./path.js"
 import { formatPath, isDescendantPath, isSamePath } from "./path.js"
-import type { FieldPath } from "./path-types.js"
+import type { CanonicalArrayIndex, FieldPath } from "./path-types.js"
 import { isDirtyEqual, setPathValue, unsetPathValue } from "./value.js"
 
 type Primitive = bigint | boolean | null | number | string | symbol | undefined
-type NativeLeaf = Blob | Date | File | FileList | RegExp
+type FileListLike = {
+	readonly length: number
+	item(index: number): unknown
+}
+type NativeLeaf = Blob | Date | File | FileListLike | RegExp
 type CallableLeaf = (...args: never[]) => unknown
 type Leaf = CallableLeaf | NativeLeaf | Primitive
-type ArrayIndex = `${number}`
+type ArrayIndex = CanonicalArrayIndex
 
 type StrictSegmentValue<
 	Value,
@@ -46,7 +50,7 @@ export type FormDeepPartial<Value> = Value extends Leaf
 				}
 			: Value
 
-export type ValueChange<_Input = unknown> =
+type RawValueChange =
 	| {
 			readonly type: "set"
 			readonly path: string
@@ -57,23 +61,27 @@ export type ValueChange<_Input = unknown> =
 			readonly path: string
 	  }
 
-export type NormalizedValueChange =
-	| {
-			readonly type: "set"
-			readonly path: string
-			readonly value: unknown
-	  }
-	| {
-			readonly type: "unset"
-			readonly path: string
-	  }
+export type ValueChange<Input = never> = [Input] extends [never]
+	? RawValueChange
+	:
+			| {
+					readonly type: "set"
+					readonly path: FieldPath<Input>
+					readonly value: unknown
+			  }
+			| {
+					readonly type: "unset"
+					readonly path: OptionalFieldPath<Input>
+			  }
+
+export type NormalizedValueChange = RawValueChange
 
 export type ApplyValueChangesResult<Value> = {
 	readonly values: Value
 	readonly changes: readonly NormalizedValueChange[]
 }
 
-const numericLikePattern = /^[+-]?\d+$/
+const numericLikePattern = /^[+-]?\d+(?:e[+-]?\d+)?$/i
 const bracketPattern = /[[\]]/
 const unsafePropertySegments = new Set([
 	"__proto__",

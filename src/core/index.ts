@@ -51,6 +51,7 @@ export type {
 	FormStore,
 	FormStoreListener,
 	FormStoreOptions,
+	FormStoreRuntimeOptions,
 	FormStoreSelector,
 	FormStoreSubscriptionOptions,
 	UpdateEvent,

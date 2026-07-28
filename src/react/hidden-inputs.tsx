@@ -17,6 +17,7 @@ import type { FormInstance } from "./use-form.js"
 type HiddenInputsProps<Schema extends StandardSchema, Context> = {
 	readonly form: FormInstance<Schema, Context>
 	readonly controls: ControlDefinitionRegistry
+	readonly compatibilityOwner?: string
 }
 
 type HiddenInputEntry = {
@@ -31,15 +32,32 @@ type HiddenEntryState = {
 	readonly entries: HiddenInputEntry[]
 }
 
+type FormDataCompatibilityOptions = {
+	readonly owner: string
+	readonly rejectUnavailable: boolean
+}
+
 const fokitArrayMarkerName = "__fokit.array"
 
 export function HiddenInputs<Schema extends StandardSchema, Context>({
 	form,
 	controls,
+	compatibilityOwner = "Classic form",
 }: HiddenInputsProps<Schema, Context>) {
-	const entries = useFormState(form, (snapshot) =>
-		createHiddenInputEntries(snapshot.values, snapshot.resolvedUi.ui, controls),
-	)
+	const entries = useFormState(form, (snapshot) => {
+		if (!snapshot.resolvedUi.disabled) {
+			assertFormDataCompatible(snapshot, controls, {
+				owner: compatibilityOwner,
+				rejectUnavailable: false,
+			})
+		}
+
+		return createHiddenInputEntries(
+			snapshot.values,
+			snapshot.resolvedUi.ui,
+			controls,
+		)
+	})
 
 	return (
 		<>
@@ -53,6 +71,39 @@ export function HiddenInputs<Schema extends StandardSchema, Context>({
 			))}
 		</>
 	)
+}
+
+export function assertFormDataCompatible<Context>(
+	snapshot: ReturnType<FormInstance<StandardSchema, Context>["getSnapshot"]>,
+	controls: ControlDefinitionRegistry,
+	options: FormDataCompatibilityOptions,
+): void {
+	for (const field of Object.values(snapshot.resolvedUi.fieldsByPath)) {
+		if (!hasPathValue(snapshot.values, field.path)) {
+			continue
+		}
+
+		const control = controls[field.control]
+		if (control === undefined) {
+			throw new TypeError(`Unknown control "${field.control}"`)
+		}
+
+		if (options.rejectUnavailable && control.formData.mode === "none") {
+			throw new TypeError(
+				`${options.owner} cannot submit field "${field.path}" because control "${field.control}" uses FormData mode "none"`,
+			)
+		}
+
+		if (
+			control.formData.mode === "native" &&
+			(!field.visible || field.disabled) &&
+			control.formData.serialize === undefined
+		) {
+			throw new TypeError(
+				`${options.owner} cannot preserve field "${field.path}" while it is invisible or disabled without a serializer`,
+			)
+		}
+	}
 }
 
 function createHiddenInputEntries(
@@ -155,8 +206,8 @@ function appendArrayEntries(
 
 	pushHiddenInputEntry(state, fokitArrayMarkerName, path)
 
-	for (const [index] of value.entries()) {
-		appendNodeEntries(node.children, `${path}.${index}`, state)
+	for (const children of node.itemChildren) {
+		appendNodeEntries(children, "", state)
 	}
 }
 

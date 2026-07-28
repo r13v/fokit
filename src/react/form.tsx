@@ -8,10 +8,16 @@ import {
 	useId,
 } from "react"
 
+import type { ControlDefinitionRegistry } from "./control.js"
 import { FormProvider } from "./form-context.js"
+import { assertFormDataCompatible, HiddenInputs } from "./hidden-inputs.js"
 import { useFormState } from "./hooks.js"
 import type { FokitStyle } from "./slots.js"
-import { registerClassicForm, submitClassicForm } from "./submission.js"
+import {
+	registerClassicForm,
+	rejectClassicFormSubmit,
+	submitClassicForm,
+} from "./submission.js"
 import type { FormInstance } from "./use-form.js"
 
 export type NativeFormProps = Omit<
@@ -26,15 +32,23 @@ export type KitFormProps<
 	Context = unknown,
 > = NativeFormProps & {
 	readonly form: FormInstance<Schema, Context>
+	readonly controls?: ControlDefinitionRegistry
 	readonly children?: ReactNode
 }
+
+export type KitFormComponent = <
+	Schema extends import("../core/index.js").StandardSchema,
+	Context = unknown,
+>(
+	props: Omit<KitFormProps<Schema, Context>, "controls">,
+) => ReactNode
 
 export function KitForm<
 	Schema extends import("../core/index.js").StandardSchema,
 	Context = unknown,
 >(props: KitFormProps<Schema, Context>) {
 	rejectOwnedFormProps(props)
-	const { form, children, id, ...nativeProps } = props
+	const { form, controls, children, id, ...nativeProps } = props
 	const generatedId = useGeneratedFormId(id)
 	const state = useFormState(form, (snapshot) => ({
 		dirty: snapshot.isDirty,
@@ -80,13 +94,43 @@ export function KitForm<
 				ref={handleFormRef}
 				onReset={handleReset}
 				onSubmit={(event) => {
+					const snapshot = form.getSnapshot()
+					if (!snapshot.resolvedUi.disabled && controls !== undefined) {
+						try {
+							assertFormDataCompatible(snapshot, controls, {
+								owner: "Classic form",
+								rejectUnavailable: false,
+							})
+						} catch (error) {
+							event.preventDefault()
+							event.stopPropagation()
+							rejectClassicFormSubmit(form, error)
+							throw error
+						}
+					}
 					void submitClassicForm(form, event)
 				}}
 			>
 				{children}
+				{controls === undefined ? null : (
+					<HiddenInputs form={form} controls={controls} />
+				)}
 			</form>
 		</FormProvider>
 	)
+}
+
+export function createFormComponent(
+	controls: ControlDefinitionRegistry,
+): KitFormComponent {
+	function Form<
+		Schema extends import("../core/index.js").StandardSchema,
+		Context,
+	>(props: Omit<KitFormProps<Schema, Context>, "controls">) {
+		return <KitForm {...props} controls={controls} />
+	}
+
+	return Form
 }
 
 function clearFileInputs(form: HTMLFormElement): void {

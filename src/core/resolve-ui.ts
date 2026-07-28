@@ -8,6 +8,7 @@ import type {
 	NormalizedUiNode,
 } from "./definition.js"
 import type { PathSegments } from "./path.js"
+import { formatPath, parsePath } from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
 import type {
 	GridColumns,
@@ -75,6 +76,7 @@ export type ResolvedArrayNode<Context = unknown> = ResolvedNodeBase<Context> & {
 	readonly description?: string
 	readonly itemDefault: unknown | (() => unknown)
 	readonly children: readonly ResolvedUiNode<Context>[]
+	readonly itemChildren: readonly (readonly ResolvedUiNode<Context>[])[]
 }
 
 export type ResolvedUiNode<Context = unknown> =
@@ -111,6 +113,13 @@ type ParentState = {
 	readonly readOnly: boolean
 }
 
+type ResolveScope = {
+	readonly pathPrefix: string
+	readonly idPrefix: string
+	readonly registerNodes: boolean
+	readonly registerPaths: boolean
+}
+
 export function resolveUi<Schema extends StandardSchema, Context = unknown>(
 	definition: NormalizedFormDefinition<Schema>,
 	values: FormInput<Schema>,
@@ -135,11 +144,16 @@ export function resolveUi<Schema extends StandardSchema, Context = unknown>(
 	}
 	const rootDisabled = options.disabled === true
 	const rootReadOnly = options.readOnly === true
-	const ui = resolveNodes(definition.ui, state, {
-		visible: true,
-		disabled: rootDisabled,
-		readOnly: rootReadOnly,
-	})
+	const ui = resolveNodes(
+		definition.ui,
+		state,
+		{
+			visible: true,
+			disabled: rootDisabled,
+			readOnly: rootReadOnly,
+		},
+		rootScope,
+	)
 
 	return Object.freeze({
 		context,
@@ -158,16 +172,17 @@ function resolveNodes<Context>(
 	nodes: readonly NormalizedUiNode[],
 	state: ResolveState<Context>,
 	parent: ParentState,
+	scope: ResolveScope,
 ): readonly ResolvedUiNode<Context>[] {
 	return Object.freeze(
 		nodes.map((node) => {
 			switch (node.kind) {
 				case "field":
-					return resolveField(node, state, parent)
+					return resolveField(node, state, parent, scope)
 				case "section":
-					return resolveSection(node, state, parent)
+					return resolveSection(node, state, parent, scope)
 				case "array":
-					return resolveArray(node, state, parent)
+					return resolveArray(node, state, parent, scope)
 				default:
 					throw new TypeError("Unknown normalized UI node kind")
 			}
@@ -179,33 +194,47 @@ function resolveField<Context>(
 	node: NormalizedFieldNode,
 	state: ResolveState<Context>,
 	parent: ParentState,
+	scope: ResolveScope,
 ): ResolvedFieldNode<Context> {
-	const resolvedParent = resolveParent(node, state, parent)
+	const resolvedParent = resolveParent(node, state, parent, scope)
+	const path = joinScopedPath(scope.pathPrefix, node.path)
 	const resolved = Object.freeze({
 		...resolvedParent,
 		kind: "field" as const,
-		path: node.path,
-		pathSegments: node.pathSegments,
+		path,
+		pathSegments: parsePath(path),
 		control: node.control,
-		label: resolveOptional(`${node.id}:label`, node.label, state),
+		label: resolveOptional(
+			`${resolvedParent.id}:label`,
+			node.label,
+			state,
+			scope,
+		),
 		description: resolveOptional(
-			`${node.id}:description`,
+			`${resolvedParent.id}:description`,
 			node.description,
 			state,
+			scope,
 		),
 		required: resolveWithDefault(
-			`${node.id}:required`,
+			`${resolvedParent.id}:required`,
 			node.required,
 			false,
 			state,
+			scope,
 		),
 		valuePolicy: node.valuePolicy,
-		options: resolveOptional(`${node.id}:options`, node.options, state),
+		options: resolveOptional(
+			`${resolvedParent.id}:options`,
+			node.options,
+			state,
+			scope,
+		),
 	})
 
-	registerResolvedNode(resolved, state)
-	if (node.scopePath.length === 0) {
-		state.fieldsByPath[node.path] = resolved
+	registerResolvedNode(resolved, state, scope)
+	if (scope.registerPaths) {
+		state.fieldsByPath[path] = resolved
 	}
 
 	return resolved
@@ -215,23 +244,30 @@ function resolveSection<Context>(
 	node: NormalizedSectionNode,
 	state: ResolveState<Context>,
 	parent: ParentState,
+	scope: ResolveScope,
 ): ResolvedSectionNode<Context> {
-	const resolvedParent = resolveParent(node, state, parent)
-	const children = resolveNodes(node.children, state, resolvedParent)
+	const resolvedParent = resolveParent(node, state, parent, scope)
+	const children = resolveNodes(node.children, state, resolvedParent, scope)
 	const resolved = Object.freeze({
 		...resolvedParent,
 		kind: "section" as const,
-		title: resolveOptional(`${node.id}:title`, node.title, state),
+		title: resolveOptional(
+			`${resolvedParent.id}:title`,
+			node.title,
+			state,
+			scope,
+		),
 		description: resolveOptional(
-			`${node.id}:description`,
+			`${resolvedParent.id}:description`,
 			node.description,
 			state,
+			scope,
 		),
 		columns: node.columns,
 		children,
 	})
 
-	registerResolvedNode(resolved, state)
+	registerResolvedNode(resolved, state, scope)
 	return resolved
 }
 
@@ -239,52 +275,100 @@ function resolveArray<Context>(
 	node: NormalizedArrayNode,
 	state: ResolveState<Context>,
 	parent: ParentState,
+	scope: ResolveScope,
 ): ResolvedArrayNode<Context> {
-	const resolvedParent = resolveParent(node, state, parent)
-	const children = resolveNodes(node.children, state, resolvedParent)
+	const resolvedParent = resolveParent(node, state, parent, scope)
+	const path = joinScopedPath(scope.pathPrefix, node.path)
+	const children = resolveNodes(
+		node.children,
+		state,
+		resolvedParent,
+		templateScope,
+	)
+	const itemChildren = scope.registerPaths
+		? resolveArrayItemChildren(node, path, state, resolvedParent)
+		: Object.freeze([])
 	const resolved = Object.freeze({
 		...resolvedParent,
 		kind: "array" as const,
-		path: node.path,
-		pathSegments: node.pathSegments,
-		label: resolveOptional(`${node.id}:label`, node.label, state),
+		path,
+		pathSegments: parsePath(path),
+		label: resolveOptional(
+			`${resolvedParent.id}:label`,
+			node.label,
+			state,
+			scope,
+		),
 		description: resolveOptional(
-			`${node.id}:description`,
+			`${resolvedParent.id}:description`,
 			node.description,
 			state,
+			scope,
 		),
 		itemDefault: node.itemDefault,
 		children,
+		itemChildren,
 	})
 
-	registerResolvedNode(resolved, state)
-	if (node.scopePath.length === 0) {
-		state.arraysByPath[node.path] = resolved
+	registerResolvedNode(resolved, state, scope)
+	if (scope.registerPaths) {
+		state.arraysByPath[path] = resolved
 	}
 
 	return resolved
+}
+
+function resolveArrayItemChildren<Context>(
+	node: NormalizedArrayNode,
+	path: string,
+	state: ResolveState<Context>,
+	parent: ParentState,
+): readonly (readonly ResolvedUiNode<Context>[])[] {
+	const value = getPathValue(state.values, path)
+	if (!Array.isArray(value)) {
+		return Object.freeze([])
+	}
+
+	return Object.freeze(
+		value.map((_item, index) => {
+			const itemPath = `${path}.${index}`
+			return resolveNodes(node.children, state, parent, {
+				pathPrefix: itemPath,
+				idPrefix: itemPath,
+				registerNodes: true,
+				registerPaths: true,
+			})
+		}),
+	)
 }
 
 function resolveParent<Context>(
 	node: NormalizedArrayNode | NormalizedFieldNode | NormalizedSectionNode,
 	state: ResolveState<Context>,
 	parent: ParentState,
+	scope: ResolveScope,
 ): ResolvedNodeBase<Context> {
+	const id = joinScopedId(scope.idPrefix, node.id)
+
 	return {
-		id: node.id,
-		parentId: node.parentId,
-		scopePath: node.scopePath,
+		id,
+		parentId:
+			node.parentId === undefined
+				? undefined
+				: joinScopedId(scope.idPrefix, node.parentId),
+		scopePath:
+			scope.pathPrefix.length === 0 ? node.scopePath : scope.pathPrefix,
 		className: node.className,
 		span: node.span,
 		visible:
 			parent.visible &&
-			resolveWithDefault(`${node.id}:visible`, node.visible, true, state),
+			resolveWithDefault(`${id}:visible`, node.visible, true, state, scope),
 		disabled:
 			parent.disabled ||
-			resolveWithDefault(`${node.id}:disabled`, node.disabled, false, state),
+			resolveWithDefault(`${id}:disabled`, node.disabled, false, state, scope),
 		readOnly:
 			parent.readOnly ||
-			resolveWithDefault(`${node.id}:readOnly`, node.readOnly, false, state),
+			resolveWithDefault(`${id}:readOnly`, node.readOnly, false, state, scope),
 		context: state.context,
 	}
 }
@@ -294,37 +378,40 @@ function resolveWithDefault<Value, Context>(
 	value: Resolvable<Value> | undefined,
 	defaultValue: Value,
 	state: ResolveState<Context>,
+	scope: ResolveScope,
 ): Value {
 	if (value === undefined) {
 		return defaultValue
 	}
 
-	return resolveResolvable(key, value, state)
+	return resolveResolvable(key, value, state, scope)
 }
 
 function resolveOptional<Value, Context>(
 	key: string,
 	value: Resolvable<Value> | undefined,
 	state: ResolveState<Context>,
+	scope: ResolveScope,
 ): Value | undefined {
 	if (value === undefined) {
 		return undefined
 	}
 
-	return resolveResolvable(key, value, state)
+	return resolveResolvable(key, value, state, scope)
 }
 
 function resolveResolvable<Value, Context>(
 	key: string,
 	value: Resolvable<Value> | undefined,
 	state: ResolveState<Context>,
+	scope: ResolveScope,
 ): Value {
 	if (!isComputed(value)) {
 		return value as Value
 	}
 
 	const dependencyValues = value.dependencies.map((dependency) =>
-		getPathValue(state.values, dependency),
+		getPathValue(state.values, joinScopedPath(scope.pathPrefix, dependency)),
 	)
 	const previous = state.previousCache[key]
 	if (
@@ -373,7 +460,36 @@ function dependenciesEqual(
 function registerResolvedNode<Context>(
 	node: ResolvedUiNode<Context>,
 	state: ResolveState<Context>,
+	scope: ResolveScope,
 ): void {
+	if (!scope.registerNodes) {
+		return
+	}
+
 	state.nodes.push(node)
 	state.nodesById[node.id] = node
 }
+
+function joinScopedPath(prefix: string, path: string): string {
+	return prefix.length === 0
+		? formatPath(path)
+		: formatPath(`${prefix}.${path}`)
+}
+
+function joinScopedId(prefix: string, id: string): string {
+	return prefix.length === 0 ? id : `${prefix}.${id}`
+}
+
+const rootScope = Object.freeze({
+	pathPrefix: "",
+	idPrefix: "",
+	registerNodes: true,
+	registerPaths: true,
+}) satisfies ResolveScope
+
+const templateScope = Object.freeze({
+	pathPrefix: "",
+	idPrefix: "",
+	registerNodes: false,
+	registerPaths: false,
+}) satisfies ResolveScope

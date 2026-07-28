@@ -4,6 +4,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import { type TestValues, testKit } from "./test-kit.js"
+import type { FormInstance } from "./use-form.js"
 import { useForm } from "./use-form.js"
 
 type TestSchema = StandardSchemaV1<TestValues>
@@ -133,6 +134,64 @@ describe("kit.Form and kit.Submit", () => {
 		})
 
 		expect(form.dispatchEvent(event)).toBe(false)
+		expect(event.defaultPrevented).toBe(true)
+	})
+
+	it("prevents native submission before rethrowing compatibility errors", () => {
+		let mountedForm: FormInstance<TestSchema> | undefined
+
+		function View() {
+			const form = useForm(definition, {
+				defaultValues: defaultValues(),
+			})
+			mountedForm = form
+
+			return <testKit.Form aria-label="Profile" form={form} />
+		}
+
+		render(<View />)
+
+		if (mountedForm === undefined) {
+			throw new Error("Expected form to mount")
+		}
+
+		const snapshot = mountedForm.getSnapshot()
+		const nameField = snapshot.resolvedUi.fieldsByPath.name
+		Object.defineProperty(mountedForm, "getSnapshot", {
+			configurable: true,
+			value: () => ({
+				...snapshot,
+				resolvedUi: {
+					...snapshot.resolvedUi,
+					fieldsByPath: {
+						...snapshot.resolvedUi.fieldsByPath,
+						name: {
+							...nameField,
+							disabled: true,
+						},
+					},
+				},
+			}),
+		})
+
+		const form = screen.getByRole("form", { name: "Profile" })
+		const event = new Event("submit", {
+			bubbles: true,
+			cancelable: true,
+		})
+		const errors: Error[] = []
+		function handleError(errorEvent: ErrorEvent): void {
+			errors.push(errorEvent.error as Error)
+			errorEvent.preventDefault()
+		}
+
+		window.addEventListener("error", handleError)
+		form.dispatchEvent(event)
+		window.removeEventListener("error", handleError)
+
+		expect(errors[0]?.message).toContain(
+			'Classic form cannot preserve field "name"',
+		)
 		expect(event.defaultPrevented).toBe(true)
 	})
 })

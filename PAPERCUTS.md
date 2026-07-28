@@ -97,3 +97,59 @@ Checking the Task 15D docs lab → Biome caught a mix of formatting, kebab-case 
 ## 2026-07-28 19:49 — GPT-5
 
 Running full verify after docs-site e2e changes → root `npm run test:browser` also picked up `docs-site.spec.ts`, but that spec depends on the separate docs Playwright base URL. Keep docs e2e excluded from the root browser config and owned by `playwright.docs.config.ts`.
+
+## 2026-07-28 20:13 — GPT-5
+
+Reviewing changed test coverage → `rg` over `tests/core` and `tests/react19` failed because this repo colocates those tests under `src/core` and `src/react19`. Use the colocated source test directories in review searches.
+
+## 2026-07-28 20:14 — GPT-5
+
+Probing public path types in-memory → importing `typescript` did not expose the expected compiler API enums in this TypeScript 7 build. Prefer the repo's existing `tests/types` harness or a normal `tsc` fixture for type probes.
+
+## 2026-07-28 20:15 — GPT-5
+
+Confirming a type-level review finding with a disposable `tsc` file → the shell command was rejected because it included `rm -f` cleanup. Use a no-cleanup temp path or an existing type-test fixture when policy blocks cleanup commands.
+
+## 2026-07-28 20:13 — GPT-5
+
+Reviewing changed test coverage → a broad `rg` command included a stale `smoke` path and failed even though the fixture files live under `tests/fixtures`. Use `rg --files` or verify planned directories before adding them to search scopes.
+
+## 2026-07-28 20:14 — GPT-5
+
+Reviewing changed source files → a broad `rg --files` command included nonexistent `package-smoke`, producing a warning despite returning the rest of the file list. Verify optional directories before including them in bounded review searches.
+
+## 2026-07-28 20:20 — GPT-5
+
+Applying review fixes in `src/core/resolve-ui.ts` → a large patch missed the current formatting and failed on stale context. Rereading the exact block and splitting the edit into smaller hunks avoided losing the whole change.
+
+## 2026-07-28 20:21 — GPT-5
+
+Typechecking typed nested array paths → an exact recursive canonical-index type made `npm run typecheck` effectively hang until the local `npm` and `tsc` processes were killed. A simpler type-level guard plus runtime path parsing covered the useful case without the compiler blow-up.
+
+## 2026-07-28 21:32 — GPT-5
+
+Reviewing changed source files → BSD `nl` rejected multi-file invocations, so grouped numbered reads failed until each file was read separately. Use single-file `nl -ba` calls or plain `cat` when batching multiple file reads.
+
+## 2026-07-28 21:30 — GPT-5
+
+Reviewing changed source files → grouping multiple files into one `nl -ba` command failed because this platform's `nl` accepts a single file argument. Use separate `nl -ba` calls in parallel for numbered full-file reads.
+
+## 2026-07-28 21:04 — GPT-5
+
+Reviewing the full v1 branch → `git diff main...HEAD` produced a 245k-token diff and the tool truncated it before the full patch was visible. Use `git diff --name-only` plus targeted full-file reads for review-scale branches, or page the diff by path.
+
+## 2026-07-28 20:49 — GPT-5
+
+Probing aborted async validation during review → a dense inline `node --input-type=module` script had a mismatched brace and failed before exercising the case. Keep review probes formatted across lines or use an existing focused test harness.
+
+## 2026-07-28 21:10 — GPT-5
+
+Probing parser behavior during review → importing a TypeScript source file directly with Node followed the source `.js` specifiers and failed on missing `src/core/path.js`. Use built `dist` artifacts or a TS-aware loader for runtime probes.
+
+## 2026-07-28 21:42 — GPT-5
+
+Testing submit-time React errors during review fixes → React surfaced the expected submit handler throw as a window error event instead of a synchronous `dispatchEvent` exception. Capture and cancel the `error` event when asserting default prevention for expected event-handler failures.
+
+## 2026-07-28 21:58 — GPT-5
+
+Tightening the Node CJS smoke fixture to `skipLibCheck: false` without DOM libs → `@types/node@26` exposed iterator helper types unsupported by the fixture's TypeScript 5.4 compiler before Fokit declarations were checked. Keep the Node-only declaration fixture on a compiler version compatible with its Node types.

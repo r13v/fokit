@@ -27,6 +27,15 @@ type AccountControls = {
 
 type TestSchema = StandardSchema<AccountInput, AccountOutput>
 
+type GroupInput = {
+	groups: {
+		name: string
+		members: {
+			name: string
+		}[]
+	}[]
+}
+
 type Deferred<Value> = {
 	readonly promise: Promise<Value>
 	resolve(value: Value): void
@@ -230,6 +239,38 @@ describe("Standard Schema validation", () => {
 		expect(form.getSnapshot().validationStatus).toBe("valid")
 	})
 
+	it("uses updated validation options for later automatic validation", async () => {
+		const validate = vi.fn(validateAccount)
+		const form = createAccountForm({
+			schema: createSchema(validate),
+			defaultValues: {
+				name: "Ada",
+				email: "bad",
+				contacts: [],
+			},
+			validation: {
+				mode: "submit",
+				revalidateMode: "submit",
+			},
+		})
+
+		form.setValue("email", "still-bad")
+		await flushMicrotasks()
+		expect(validate).not.toHaveBeenCalled()
+
+		form.replaceOptions({
+			validation: {
+				mode: "change",
+				revalidateMode: "change",
+			},
+		})
+		form.setValue("email", "also-bad")
+		await flushMicrotasks()
+
+		expect(validate).toHaveBeenCalledTimes(1)
+		expect(form.getSnapshot().validationStatus).toBe("invalid")
+	})
+
 	it("debounces change validation, aborts stale attempts, and keeps the latest result", async () => {
 		vi.useFakeTimers()
 		const attempts: {
@@ -319,6 +360,46 @@ describe("Standard Schema validation", () => {
 		vi.unstubAllGlobals()
 	})
 
+	it("does not report expected aborts from stale automatic validation", async () => {
+		const reportError = vi.fn()
+		vi.stubGlobal("reportError", reportError)
+		const attempts: Deferred<ReturnType<typeof validateAccount>>[] = []
+		const schema = createSchema((_value, options) => {
+			const deferred = createDeferred<ReturnType<typeof validateAccount>>()
+			attempts.push(deferred)
+			const signal = options?.libraryOptions?.signal as AbortSignal | undefined
+			signal?.addEventListener(
+				"abort",
+				() => {
+					deferred.reject(new DOMException("Validation aborted", "AbortError"))
+				},
+				{ once: true },
+			)
+			return deferred.promise
+		})
+		const form = createAccountForm({
+			schema,
+			validation: {
+				mode: "change",
+				revalidateMode: "change",
+			},
+		})
+
+		form.setValue("email", "first")
+		await flushMicrotasks()
+		form.setValue("email", "second")
+		await flushMicrotasks()
+
+		expect(attempts).toHaveLength(2)
+		expect(reportError).not.toHaveBeenCalled()
+
+		attempts[1]?.resolve(validateAccount(form.getValues()))
+		await flushMicrotasks()
+
+		expect(form.getSnapshot().isValidating).toBe(false)
+		vi.unstubAllGlobals()
+	})
+
 	it("rejects imperative exceptions and does not install stale captured results", async () => {
 		const first = createDeferred<ReturnType<typeof validateAccount>>()
 		const second = createDeferred<ReturnType<typeof validateAccount>>()
@@ -372,6 +453,69 @@ describe("Standard Schema validation", () => {
 			expect.objectContaining({ message: "Current email is invalid" }),
 		])
 		expect(form.getSnapshot().isValidating).toBe(false)
+	})
+
+	it("validates concrete nested array paths for current rows", async () => {
+		const groupSchema = {
+			"~standard": {
+				version: 1,
+				vendor: "fokit-test",
+				validate() {
+					return {
+						issues: [
+							{
+								message: "Member list needs review",
+								path: ["groups", 0, "members"],
+							},
+						],
+					}
+				},
+			},
+		} as StandardSchema<GroupInput>
+		const form = createFormStore({
+			definition: normalizeDefinition({
+				schema: groupSchema,
+				controls,
+				ui: [
+					{
+						kind: "array",
+						path: "groups",
+						itemDefault: {
+							name: "",
+							members: [],
+						},
+						children: [
+							{ kind: "field", path: "name", control: "text" },
+							{
+								kind: "array",
+								path: "members",
+								itemDefault: { name: "" },
+								children: [{ kind: "field", path: "name", control: "text" }],
+							},
+						],
+					},
+				] satisfies readonly UiNode<GroupInput, AccountControls>[],
+			}),
+			defaultValues: {
+				groups: [
+					{
+						name: "Core",
+						members: [{ name: "Ada" }],
+					},
+				],
+			},
+		})
+
+		const issues = await form.validate("groups.0.members")
+
+		expect(issues).toEqual([
+			expect.objectContaining({ message: "Member list needs review" }),
+		])
+		expect(
+			form.getSnapshot().displayErrors.fields.get("groups.0.members"),
+		).toEqual([
+			expect.objectContaining({ message: "Member list needs review" }),
+		])
 	})
 
 	it("reindexes displayable schema issues by array row key", async () => {

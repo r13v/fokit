@@ -10,20 +10,26 @@ import {
 	useRef,
 } from "react"
 import type { FormResult } from "../core/form-result.js"
+import {
+	type ActionSubmissionAttempt,
+	startActionSubmission,
+} from "../core/form-store.js"
 import type {
 	FormInput,
 	FormStore,
 	NormalizedFormDefinition,
 	StandardSchema,
 } from "../core/index.js"
-import { parsePath } from "../core/index.js"
 import type { ControlDefinitionRegistry } from "../react/control.js"
 import type { FormKit } from "../react/create-form-kit.js"
 import { ErrorSummary } from "../react/error-summary.js"
 import { FieldsRenderer } from "../react/fields.js"
 import type { NativeFormProps } from "../react/form.js"
 import { FormProvider } from "../react/form-context.js"
-import { HiddenInputs } from "../react/hidden-inputs.js"
+import {
+	assertFormDataCompatible,
+	HiddenInputs,
+} from "../react/hidden-inputs.js"
 import { useFormState } from "../react/hooks.js"
 import type { FokitStyle } from "../react/slots.js"
 import { type UseFormOptions, useForm } from "../react/use-form.js"
@@ -31,12 +37,7 @@ import {
 	assertReact19ActionSupport,
 	useReact19FormStatus,
 } from "./action-submit.js"
-import {
-	type HydratedActionAttempt,
-	recordActionAttemptChanges,
-	startHydratedActionAttempt,
-	syncActionResult,
-} from "./result-sync.js"
+import { syncActionResult } from "./result-sync.js"
 
 export type ActionFormProps<
 	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
@@ -76,7 +77,7 @@ export function ActionForm<
 	rejectOwnedActionFormProps(nativeProps)
 	assertReact19ActionSupport()
 
-	const attemptRef = useRef<HydratedActionAttempt<Schema>>(undefined)
+	const attemptRef = useRef<ActionSubmissionAttempt<Schema>>(undefined)
 	const formElementRef = useRef<HTMLFormElement | null>(null)
 	const observedPendingRef = useRef(false)
 	const lastResultRef = useRef<FormResult | null | undefined>(undefined)
@@ -89,8 +90,7 @@ export function ActionForm<
 		validation,
 		beforeUpdate,
 		onUpdate: (event) => {
-			recordActionAttemptChanges(
-				attemptRef.current,
+			attemptRef.current?.recordChanges(
 				event.changes.map((change) => change.path),
 			)
 			onUpdate?.(event)
@@ -131,7 +131,7 @@ export function ActionForm<
 				if (attemptRef.current === undefined) {
 					const snapshot = form.getSnapshot()
 					if (!snapshot.resolvedUi.disabled && !snapshot.isSubmitting) {
-						attemptRef.current = startHydratedActionAttempt(form)
+						attemptRef.current = startActionSubmission(form)
 					}
 				}
 				return
@@ -163,7 +163,7 @@ export function ActionForm<
 			throw error
 		}
 
-		attemptRef.current = startHydratedActionAttempt(form)
+		attemptRef.current = startActionSubmission(form)
 	}
 
 	function handleReset(event: FormEvent<HTMLFormElement>): void {
@@ -199,7 +199,11 @@ export function ActionForm<
 				<ActionPendingBridge onPendingChange={handlePendingChange} />
 				<ErrorSummary form={form} slots={kit.slots} />
 				<FieldsRenderer controls={kit.controls} form={form} slots={kit.slots} />
-				<HiddenInputs controls={kit.controls} form={form} />
+				<HiddenInputs
+					compatibilityOwner="ActionForm"
+					controls={kit.controls}
+					form={form}
+				/>
 				{children}
 			</form>
 		</FormProvider>
@@ -210,32 +214,10 @@ export function assertActionFormCompatible<Context>(
 	snapshot: ReturnType<FormStore<StandardSchema, Context>["getSnapshot"]>,
 	controls: ControlDefinitionRegistry,
 ): void {
-	for (const field of Object.values(snapshot.resolvedUi.fieldsByPath)) {
-		if (!hasPathValue(snapshot.values, field.path)) {
-			continue
-		}
-
-		const control = controls[field.control]
-		if (control === undefined) {
-			throw new TypeError(`Unknown control "${field.control}"`)
-		}
-
-		if (control.formData.mode === "none") {
-			throw new TypeError(
-				`ActionForm cannot submit field "${field.path}" because control "${field.control}" uses FormData mode "none"`,
-			)
-		}
-
-		if (
-			control.formData.mode === "native" &&
-			(!field.visible || field.disabled) &&
-			control.formData.serialize === undefined
-		) {
-			throw new TypeError(
-				`ActionForm cannot preserve field "${field.path}" while it is invisible or disabled without a serializer`,
-			)
-		}
-	}
+	assertFormDataCompatible(snapshot, controls, {
+		owner: "ActionForm",
+		rejectUnavailable: true,
+	})
 }
 
 function ActionPendingBridge({
@@ -295,43 +277,4 @@ function hasDisplayErrors(
 	}
 
 	return false
-}
-
-function hasPathValue(value: unknown, path: string): boolean {
-	let current = value
-
-	for (const segment of parsePath(path)) {
-		if (Array.isArray(current)) {
-			if (
-				typeof segment !== "number" ||
-				segment >= current.length ||
-				!Object.hasOwn(current, segment)
-			) {
-				return false
-			}
-			current = current[segment]
-			continue
-		}
-
-		if (isPlainObject(current)) {
-			if (typeof segment !== "string" || !Object.hasOwn(current, segment)) {
-				return false
-			}
-			current = current[segment]
-			continue
-		}
-
-		return false
-	}
-
-	return true
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-	if (value === null || typeof value !== "object") {
-		return false
-	}
-
-	const prototype = Object.getPrototypeOf(value)
-	return prototype === Object.prototype || prototype === null
 }

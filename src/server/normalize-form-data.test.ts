@@ -9,12 +9,14 @@ describe("FormData normalization", () => {
 		const avatar = new File(["avatar"], "avatar.png", { type: "image/png" })
 		const formData = new FormData()
 		formData.append(fokitArrayMarkerName, "contacts")
+		formData.append(fokitArrayMarkerName, "contacts.0.channels")
 		formData.append(fokitArrayMarkerName, "tags")
 		formData.append(fokitArrayMarkerName, "emptyTags")
 		formData.append(fokitArrayMarkerName, "singleTag")
 		formData.append("name", "Ada")
 		formData.append("address.city", "London")
 		formData.append("contacts.0.value", "ada@example.test")
+		formData.append("contacts.0.channels.0.name", "email")
 		formData.append("contacts.1.value", "grace@example.test")
 		formData.append("tags", "engineer")
 		formData.append("tags", "speaker")
@@ -34,7 +36,7 @@ describe("FormData normalization", () => {
 		expect(value.name).toBe("Ada")
 		expect(value.address).toMatchObject({ city: "London" })
 		expect(value.contacts).toEqual([
-			{ value: "ada@example.test" },
+			{ value: "ada@example.test", channels: [{ name: "email" }] },
 			{ value: "grace@example.test" },
 		])
 		expect(value.tags).toEqual(["engineer", "speaker"])
@@ -87,6 +89,10 @@ describe("FormData normalization", () => {
 			],
 		],
 		["malformed paths", [["contacts.01.value", "ada@example.test"]]],
+		[
+			"scientific numeric object keys",
+			[["contacts.1e3.value", "ada@example.test"]],
+		],
 		["prototype mutation paths", [["account.__proto__.polluted", "yes"]]],
 		["malformed marker paths", [[fokitArrayMarkerName, "0.contacts"]]],
 	])("rejects %s", (_name, entries) => {

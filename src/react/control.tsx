@@ -14,13 +14,9 @@ import {
 	type ResolvedFieldNode,
 	type StandardSchema,
 } from "../core/index.js"
+import { createDomId } from "./dom-id.js"
 import { useFormIdPrefix } from "./form-context.js"
-import {
-	type FieldBinding,
-	type FieldBindingMeta,
-	useField,
-	useFormState,
-} from "./hooks.js"
+import { type FieldBinding, useField, useFormState } from "./hooks.js"
 import type { FormInstance } from "./use-form.js"
 
 export type ControlProps<
@@ -140,7 +136,7 @@ export function FieldControl<
 		createControlProps({
 			field,
 			resolved,
-			id: id ?? createFieldInputId(idPrefix, canonicalPath),
+			id: id ?? createDomId(idPrefix, canonicalPath),
 			ariaDescribedBy: joinIds([descriptionId, ...describedBy]),
 			path: canonicalPath,
 		}),
@@ -179,7 +175,7 @@ function createControlProps<
 				? {}
 				: { "aria-describedby": ariaDescribedBy }),
 		},
-		meta: createControlMeta(field.meta),
+		meta: field.meta,
 		options: (resolved.options ?? {}) as unknown,
 		context: resolved.context,
 		disabled: resolved.disabled,
@@ -188,24 +184,7 @@ function createControlProps<
 	}
 }
 
-function createControlMeta(
-	meta: FieldBindingMeta,
-): ControlProps<unknown>["meta"] {
-	return {
-		dirty: meta.dirty,
-		touched: meta.touched,
-		validating: meta.validating,
-		errors: meta.errors,
-		displayErrors: meta.displayErrors,
-		invalid: meta.invalid,
-	}
-}
-
 function joinIds(ids: readonly (string | undefined)[]): string | undefined {
 	const joined = ids.filter((id) => id !== undefined && id.length > 0).join(" ")
 	return joined.length === 0 ? undefined : joined
-}
-
-function createFieldInputId(idPrefix: string, path: string): string {
-	return `${idPrefix}-${path.replaceAll(".", "-")}`
 }

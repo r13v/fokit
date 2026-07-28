@@ -49,6 +49,14 @@ Completion means:
   tutorial's first form;
 - `npm run verify` succeeds from a clean install.
 
+## Final Status
+
+The local implementation and verification work for the v1 package is complete.
+External release gates remain maintainer-owned: selecting the final version,
+merging the reviewed release PR, confirming GitHub Pages, creating the stable
+GitHub Release, waiting for `publish.yml`, npm publication, and clean consumer
+install verification.
+
 ## Context
 
 ### Repository state

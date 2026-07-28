@@ -361,6 +361,62 @@ describe("classic React submission", () => {
 		expect(screen.getByDisplayValue("Ada")).not.toBeNull()
 	})
 
+	it("rejects imperative submit when compatibility validation prevents submission", async () => {
+		let form: FormInstance<TestSchema> | undefined
+
+		function View() {
+			form = useForm(definition, {
+				defaultValues: defaultValues(),
+			})
+
+			return (
+				<kit.Form aria-label="Profile" form={form}>
+					<kit.Fields />
+				</kit.Form>
+			)
+		}
+
+		render(<View />)
+
+		if (form === undefined) {
+			throw new Error("Expected form to mount")
+		}
+
+		const snapshot = form.getSnapshot()
+		const nameField = snapshot.resolvedUi.fieldsByPath.name
+		Object.defineProperty(form, "getSnapshot", {
+			configurable: true,
+			value: () => ({
+				...snapshot,
+				resolvedUi: {
+					...snapshot.resolvedUi,
+					fieldsByPath: {
+						...snapshot.resolvedUi.fieldsByPath,
+						name: {
+							...nameField,
+							disabled: true,
+						},
+					},
+				},
+			}),
+		})
+		const errors: Error[] = []
+		function handleError(errorEvent: ErrorEvent): void {
+			errors.push(errorEvent.error as Error)
+			errorEvent.preventDefault()
+		}
+
+		window.addEventListener("error", handleError)
+		await expect(form.submit()).rejects.toThrow(
+			'Classic form cannot preserve field "name"',
+		)
+		window.removeEventListener("error", handleError)
+
+		expect(errors[0]?.message).toContain(
+			'Classic form cannot preserve field "name"',
+		)
+	})
+
 	it("rejects imperative submit when no native form is mounted", async () => {
 		let form: FormInstance<TestSchema> | undefined
 

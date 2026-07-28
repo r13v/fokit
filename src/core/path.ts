@@ -12,7 +12,7 @@ const unsafePropertySegments = new Set([
 	"prototype",
 ])
 const canonicalIndexPattern = /^(0|[1-9]\d*)$/
-const numericLikePattern = /^[+-]?\d+$/
+const numericLikePattern = /^[+-]?\d+(?:e[+-]?\d+)?$/i
 const bracketPattern = /[[\]]/
 
 export function parsePath(

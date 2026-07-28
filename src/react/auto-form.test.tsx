@@ -68,6 +68,16 @@ const text = defineControl<string | undefined, TextOptions, ProfileContext>({
 	},
 	formData: {
 		mode: "native",
+		serialize(value, details) {
+			return value === undefined
+				? []
+				: [
+						{
+							name: details.name,
+							value,
+						},
+					]
+		},
 	},
 })
 

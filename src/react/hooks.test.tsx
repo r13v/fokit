@@ -179,6 +179,45 @@ describe("React form hooks", () => {
 		expect(new Set(seen).size).toBe(1)
 	})
 
+	it("updates root disabled and read-only options without recreating the form", async () => {
+		const seen: FormInstance<typeof schema, ProfileContext>[] = []
+
+		function View({
+			disabled,
+			readOnly,
+		}: {
+			readonly disabled: boolean
+			readonly readOnly: boolean
+		}) {
+			const form = useForm(definition, {
+				defaultValues: defaultValues(),
+				context: context(),
+				disabled,
+				readOnly,
+			})
+			seen.push(form)
+			const state = useFormState(
+				form,
+				(snapshot) =>
+					`${String(snapshot.resolvedUi.fieldsByPath.name?.disabled)}:${String(
+						snapshot.resolvedUi.fieldsByPath.name?.readOnly,
+					)}`,
+			)
+
+			return <output>{state}</output>
+		}
+
+		const { rerender } = render(<View disabled={false} readOnly={false} />)
+		expect(screen.getByText("false:false").textContent).toBe("false:false")
+
+		rerender(<View disabled={true} readOnly={true} />)
+
+		await waitFor(() => {
+			expect(screen.getByText("true:true").textContent).toBe("true:true")
+		})
+		expect(new Set(seen).size).toBe(1)
+	})
+
 	it("rerenders only hooks whose selected path changes", () => {
 		let form: FormInstance<typeof schema, ProfileContext> | undefined
 		const counters = {

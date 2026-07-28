@@ -10,11 +10,13 @@ import {
 } from "./index.js"
 
 describe("immutable value operations", () => {
-	it("structurally clones arrays and plain objects without cloning native leaves", () => {
+	it("structurally clones arrays, plain objects, and mutable native leaves", () => {
 		const date = new Date("2026-07-28T00:00:00.000Z")
+		const pattern = /ada/gy
+		pattern.lastIndex = 2
 		const file = new File(["avatar"], "avatar.txt")
 		const values = {
-			profile: { name: "Ada", birthday: date },
+			profile: { name: "Ada", birthday: date, pattern },
 			files: [file],
 		}
 
@@ -24,8 +26,46 @@ describe("immutable value operations", () => {
 		expect(cloned).not.toBe(values)
 		expect(cloned.profile).not.toBe(values.profile)
 		expect(cloned.files).not.toBe(values.files)
-		expect(cloned.profile.birthday).toBe(date)
+		expect(cloned.profile.birthday).not.toBe(date)
+		expect(cloned.profile.birthday.getTime()).toBe(date.getTime())
+		expect(cloned.profile.pattern).not.toBe(pattern)
+		expect(cloned.profile.pattern.source).toBe(pattern.source)
+		expect(cloned.profile.pattern.flags).toBe(pattern.flags)
+		expect(cloned.profile.pattern.lastIndex).toBe(pattern.lastIndex)
 		expect(cloned.files[0]).toBe(file)
+
+		date.setTime(0)
+		pattern.lastIndex = 0
+
+		expect(cloned.profile.birthday.toISOString()).toBe(
+			"2026-07-28T00:00:00.000Z",
+		)
+		expect(cloned.profile.pattern.lastIndex).toBe(2)
+	})
+
+	it("preserves hostile prototype keys as data properties", () => {
+		const values = JSON.parse(
+			'{"__proto__":{"polluted":true},"profile":{"__proto__":{"admin":true}}}',
+		) as { readonly profile: Record<string, unknown> } & Record<string, unknown>
+
+		const cloned = cloneValue(values)
+
+		expect(Object.getPrototypeOf(cloned)).toBe(Object.prototype)
+		expect(Object.hasOwn(cloned, "__proto__")).toBe(true)
+		expect("polluted" in cloned).toBe(false)
+		expect(Object.getPrototypeOf(cloned.profile)).toBe(Object.prototype)
+		expect(Object.hasOwn(cloned.profile, "__proto__")).toBe(true)
+		expect("admin" in cloned.profile).toBe(false)
+
+		const merged = mergePathValue(
+			{ profile: { name: "Ada" } },
+			"profile",
+			JSON.parse('{"__proto__":{"admin":true}}') as Record<string, unknown>,
+		)
+
+		expect(Object.getPrototypeOf(merged.profile)).toBe(Object.prototype)
+		expect(Object.hasOwn(merged.profile, "__proto__")).toBe(true)
+		expect("admin" in merged.profile).toBe(false)
 	})
 
 	it("reads deep values without mutating or creating containers", () => {
@@ -105,7 +145,8 @@ describe("immutable value operations", () => {
 		expect(next.profile).toBe(values.profile)
 		expect(next.account.tags).toEqual(nextTags)
 		expect(next.account.tags).not.toBe(nextTags)
-		expect(next.account.createdAt).toBe(nextDate)
+		expect(next.account.createdAt).not.toBe(nextDate)
+		expect(next.account.createdAt.getTime()).toBe(nextDate.getTime())
 		expect(originalTags).toEqual(["friend"])
 	})
 
@@ -121,6 +162,15 @@ describe("immutable value operations", () => {
 				{ dates: [new Date("2026-07-28T00:00:00.000Z")] },
 			),
 		).toBe(true)
+		const leftPattern = /ada/g
+		const rightPattern = /ada/g
+		leftPattern.lastIndex = 1
+		rightPattern.lastIndex = 1
+		expect(isDirtyEqual(/ada/gi, /ada/gi)).toBe(true)
+		expect(isDirtyEqual(leftPattern, rightPattern)).toBe(true)
+		rightPattern.lastIndex = 0
+		expect(isDirtyEqual(leftPattern, rightPattern)).toBe(false)
+		expect(isDirtyEqual(/ada/g, /ada/i)).toBe(false)
 		expect(isDirtyEqual(leftFile, leftFile)).toBe(true)
 		expect(isDirtyEqual(leftFile, rightFile)).toBe(false)
 	})

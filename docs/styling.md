@@ -18,8 +18,8 @@ It reads Fokit data attributes and provides:
 
 - stacked form, section, field, array, and array-item structure;
 - section grid layout;
-- one, two, and four effective columns through container queries at `40rem`
-  and `64rem`;
+- one, two, three, and four effective columns through container queries at
+  `40rem` and `64rem`;
 - span handling, including `span: "full"`;
 - independent nested containers.
 

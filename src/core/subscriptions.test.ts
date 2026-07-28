@@ -112,9 +112,11 @@ describe("form store subscriptions", () => {
 	it("uses Object.is selector equality by default", () => {
 		const form = createProfileForm()
 		const contextListener = vi.fn()
+		const valuesListener = vi.fn()
 		const valueListener = vi.fn()
 
 		form.subscribe((snapshot) => snapshot.context, contextListener)
+		form.subscribe((snapshot) => snapshot.values, valuesListener)
 		form.subscribe((snapshot) => snapshot.values.name, valueListener)
 
 		form.replaceContext({
@@ -123,6 +125,7 @@ describe("form store subscriptions", () => {
 		})
 
 		expect(contextListener).toHaveBeenCalledTimes(1)
+		expect(valuesListener).not.toHaveBeenCalled()
 		expect(valueListener).not.toHaveBeenCalled()
 	})
 

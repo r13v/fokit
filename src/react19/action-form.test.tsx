@@ -27,7 +27,14 @@ type Values = {
 	readonly archivedNote?: string
 }
 
+type NestedValues = {
+	readonly items: readonly {
+		readonly archivedNote?: string
+	}[]
+}
+
 type Schema = StandardSchemaV1<Values>
+type NestedSchema = StandardSchemaV1<NestedValues>
 
 const textControl = defineControl<string | undefined>({
 	component({ path, value, setValue, blur, input, disabled, readOnly }) {
@@ -122,7 +129,7 @@ const definition = kit.defineForm({
 describe("React 19 ActionForm", () => {
 	it("keeps the supplied Action on the native form without prevalidating or preventing a valid dispatch", async () => {
 		const validate = vi.fn(validateValues)
-		const action = vi.fn()
+		const action = vi.fn((_formData: FormData) => undefined)
 		const submittedEvents: boolean[] = []
 
 		render(
@@ -150,19 +157,20 @@ describe("React 19 ActionForm", () => {
 			</ActionForm>,
 		)
 
-		const form = screen.getByRole("form", { name: "Profile" })
-		const event = new Event("submit", {
-			bubbles: true,
-			cancelable: true,
-		})
+		await userEvent.click(screen.getByRole("button", { name: "Save" }))
 
-		expect(form.dispatchEvent(event)).toBe(false)
+		await waitFor(() => {
+			expect(action).toHaveBeenCalledTimes(1)
+		})
+		const formData = action.mock.calls[0]?.[0]
+		expect(formData).toBeInstanceOf(FormData)
+		expect((formData as FormData).get("name")).toBe("Ada")
 		expect(submittedEvents).toEqual([false])
 		expect(validate).not.toHaveBeenCalled()
 		await waitFor(() => {
 			expect(screen.getByTestId("submit-count").textContent).toBe("1")
-			expect(screen.getByTestId("submitting").textContent).toBe("true")
 		})
+		expect(screen.getByTestId("submitting").textContent).toBe("false")
 	})
 
 	it("blocks only disabled or already-pending submissions", async () => {
@@ -354,6 +362,9 @@ describe("React 19 ActionForm", () => {
 			expect(button.disabled).toBe(true)
 		})
 		pending.resolve()
+		await waitFor(() => {
+			expect(button.disabled).toBe(false)
+		})
 	})
 
 	it("throws before dispatch when active controls cannot be represented in Action FormData", () => {
@@ -398,29 +409,66 @@ describe("React 19 ActionForm", () => {
 	})
 
 	it("rejects preserved disabled native controls without serializers", () => {
-		let snapshot: ReturnType<FormInstance<Schema>["getSnapshot"]> | undefined
+		expect(() => {
+			render(
+				<ActionForm
+					aria-label="Profile"
+					action={noopAction}
+					defaultValues={defaultValues({
+						archivedNote: "hidden",
+					})}
+					definition={kit.defineForm({
+						schema: createSchema(validateValues),
+						ui: [
+							{
+								kind: "field",
+								path: "archivedNote",
+								control: "nativeWithoutSerializer",
+								disabled: true,
+							},
+						],
+					})}
+					kit={kit}
+				/>,
+			)
+		}).toThrow(/ActionForm cannot preserve field "archivedNote".*serializer/i)
+	})
+
+	it("rejects incompatible controls inside array rows", () => {
+		let snapshot:
+			| ReturnType<FormInstance<NestedSchema>["getSnapshot"]>
+			| undefined
+		const nestedSchema = createSchema<NestedValues>((value) => ({
+			value: value as NestedValues,
+		}))
 
 		render(
 			<ActionForm
 				aria-label="Profile"
 				action={noopAction}
-				defaultValues={defaultValues({
-					archivedNote: "hidden",
-				})}
+				defaultValues={{
+					items: [{ archivedNote: "keep me" }],
+				}}
 				definition={kit.defineForm({
-					schema: createSchema(validateValues),
+					schema: nestedSchema,
 					ui: [
 						{
-							kind: "field",
-							path: "archivedNote",
-							control: "nativeWithoutSerializer",
-							disabled: true,
+							kind: "array",
+							path: "items",
+							itemDefault: {},
+							children: [
+								{
+									kind: "field",
+									path: "archivedNote",
+									control: "unavailable",
+								},
+							],
 						},
 					],
 				})}
 				kit={kit}
 			>
-				<SnapshotProbe
+				<NestedSnapshotProbe
 					onSnapshot={(nextSnapshot) => {
 						snapshot = nextSnapshot
 					}}
@@ -430,7 +478,7 @@ describe("React 19 ActionForm", () => {
 
 		expect(() =>
 			assertActionFormCompatible(requireSnapshot(snapshot), kit.controls),
-		).toThrow(/without a serializer/i)
+		).toThrow(/cannot submit field "items.0.archivedNote".*mode "none"/i)
 	})
 
 	it("rejects owned native form and submit props", () => {
@@ -486,9 +534,19 @@ function SnapshotProbe({
 	return null
 }
 
-function requireSnapshot(
-	snapshot: ReturnType<FormInstance<Schema>["getSnapshot"]> | undefined,
-) {
+function NestedSnapshotProbe({
+	onSnapshot,
+}: {
+	readonly onSnapshot: (
+		snapshot: ReturnType<FormInstance<NestedSchema>["getSnapshot"]>,
+	) => void
+}) {
+	const form = useFormContext<NestedSchema>()
+	onSnapshot(form.getSnapshot())
+	return null
+}
+
+function requireSnapshot<Snapshot>(snapshot: Snapshot | undefined): Snapshot {
 	if (snapshot === undefined) {
 		throw new Error("No Fokit form snapshot was available")
 	}
@@ -504,14 +562,16 @@ function defaultValues(values: Partial<Values> = {}): Values {
 	}
 }
 
-function createSchema(validate: Schema["~standard"]["validate"]): Schema {
+function createSchema<Input>(
+	validate: StandardSchemaV1<Input>["~standard"]["validate"],
+): StandardSchemaV1<Input> {
 	return {
 		"~standard": {
 			version: 1,
 			vendor: "fokit-test",
 			validate,
 		},
-	} as Schema
+	} as StandardSchemaV1<Input>
 }
 
 function validateValues(value: unknown): StandardSchemaV1.Result<Values> {

@@ -4,7 +4,12 @@ import type {
 	NormalizedFormDefinition,
 	NormalizedUiNode,
 } from "./definition.js"
-import { formatPath, pathsOverlap } from "./path.js"
+import {
+	formatPath,
+	type PathSegment,
+	parsePath,
+	pathsOverlap,
+} from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
 import { getPathValue, isDirtyEqual } from "./value.js"
 
@@ -247,7 +252,11 @@ function createArrayItemMetadata(
 		return Object.freeze([])
 	}
 
-	const baselineValue = getPathValue(baselineValues, path)
+	const baselinePath = createBaselinePath(path, state)
+	const baselineValue =
+		baselinePath === undefined
+			? undefined
+			: getPathValue(baselineValues, baselinePath)
 	const baselineArray = Array.isArray(baselineValue) ? baselineValue : []
 	const rowState = state.arrayRowsByPath[path]
 	const keys = rowState?.keys ?? createFallbackRowKeys(path, value.length)
@@ -287,14 +296,52 @@ function createFieldMetadata(
 	includeDescendants: boolean,
 	isValidating: boolean,
 ): FieldMetadata {
+	const baselinePath = createBaselinePath(path, state)
 	return Object.freeze({
-		dirty: !isDirtyEqual(
-			getPathValue(values, path),
-			getPathValue(baselineValues, path),
-		),
+		dirty:
+			baselinePath === undefined ||
+			!isDirtyEqual(
+				getPathValue(values, path),
+				getPathValue(baselineValues, baselinePath),
+			),
 		touched: isPathTouched(path, state, includeDescendants),
 		validating: isValidating,
 	})
+}
+
+function createBaselinePath(
+	path: string,
+	state: MetadataState,
+): string | undefined {
+	const segments = parsePath(path)
+	const baselineSegments: PathSegment[] = []
+
+	for (let index = 0; index < segments.length; index++) {
+		const segment = segments[index] as PathSegment
+		baselineSegments.push(segment)
+
+		const rowState =
+			state.arrayRowsByPath[formatPath(segments.slice(0, index + 1))]
+		const rowIndex = segments[index + 1]
+		if (rowState === undefined || typeof rowIndex !== "number") {
+			continue
+		}
+
+		const key = rowState.keys[rowIndex]
+		if (key === undefined) {
+			return undefined
+		}
+
+		const baselineIndex = rowState.baselineKeys.indexOf(key)
+		if (baselineIndex === -1) {
+			return undefined
+		}
+
+		baselineSegments.push(baselineIndex)
+		index += 1
+	}
+
+	return formatPath(baselineSegments)
 }
 
 function isPathTouched(

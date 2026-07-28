@@ -1,11 +1,16 @@
 import {
 	type ArrayCommand,
 	createArrayCommandChange,
+	findArrayNodeForPath,
 	isKnownArrayDescendantFieldPath,
+	reindexArrayRowsState,
 	reindexTouchedArrayPaths,
 	replaceArrayRowState,
 } from "./array-state.js"
-import type { NormalizedFormDefinition } from "./definition.js"
+import type {
+	NormalizedArrayNode,
+	NormalizedFormDefinition,
+} from "./definition.js"
 import {
 	type FormResult,
 	normalizeFormResult,
@@ -74,12 +79,16 @@ import {
 	type ValidationOptions,
 	type ValidationResult,
 } from "./validation.js"
-import { getPathValue, isDirtyEqual } from "./value.js"
+import { cloneMutableValueLeaves, getPathValue, isDirtyEqual } from "./value.js"
 
 export type { ValueChange } from "./transaction.js"
 
+type FocusTargetOptions = {
+	readonly preventScroll?: boolean
+}
+
 export type FocusTarget = {
-	focus(options?: FocusOptions): void
+	focus(options?: FocusTargetOptions): void
 }
 
 export type UpdateSource =
@@ -92,7 +101,7 @@ export type UpdateSource =
 export type BeforeUpdateEvent<Input, Context> = {
 	readonly currentValues: Readonly<Input>
 	readonly nextValues: Readonly<Input>
-	readonly changes: readonly ValueChange<Input>[]
+	readonly changes: readonly ValueChange[]
 	readonly source: UpdateSource
 	readonly context: Readonly<Context>
 }
@@ -100,7 +109,7 @@ export type BeforeUpdateEvent<Input, Context> = {
 export type UpdateEvent<Input, Context> = {
 	readonly previousValues: Readonly<Input>
 	readonly values: Readonly<Input>
-	readonly changes: readonly ValueChange<Input>[]
+	readonly changes: readonly ValueChange[]
 	readonly source: UpdateSource
 	readonly context: Readonly<Context>
 }
@@ -123,6 +132,11 @@ export type FormStoreOptions<
 	readonly readOnly?: boolean
 	readonly validation?: Partial<ValidationOptions>
 }
+
+export type FormStoreRuntimeOptions = Pick<
+	FormStoreOptions<StandardSchema, unknown>,
+	"disabled" | "readOnly" | "validation"
+>
 
 export type FormStoreSelector<Input, Context, Selected> = (
 	snapshot: FormSnapshot<Input, Context>,
@@ -181,6 +195,7 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 		listener: FormStoreListener<Selected>,
 		options?: FormStoreSubscriptionOptions<Selected>,
 	): () => void
+	replaceOptions(options: FormStoreRuntimeOptions): void
 	replaceContext(context: Context): void
 	touch(path: PathInput): void
 	blur(path: PathInput): void
@@ -345,19 +360,19 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	#activeBatch: ActiveBatch | undefined
 	#activeValidation: ActiveValidation | undefined
-	readonly #disabled: boolean
+	#disabled: boolean
 	#hasValidationResult = false
 	#nextValidationId = 0
 	#activeSubmissionId: number | undefined
 	#nextSubmissionId = 0
 	#nonSubmitAbortController: AbortController | undefined
 	#scheduledValidation: ReturnType<typeof setTimeout> | undefined
-	readonly #validationOptions: ValidationOptions
+	#validationOptions: ValidationOptions
 	#validationRevision = 0
 	#validationState: ValidationRuntimeState = createValidationRuntimeState()
 	readonly #focusTargets = new Map<string, FocusTarget>()
 	#isRunningBeforeUpdate = false
-	readonly #readOnly: boolean
+	#readOnly: boolean
 	readonly #subscriptions = new Set<Subscription<FormInput<Schema>, Context>>()
 	readonly #beforeUpdate: UpdateHooks<
 		FormInput<Schema>,
@@ -368,18 +383,29 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	constructor(options: FormStoreOptions<Schema, Context>) {
 		this.definition = options.definition
 		this.schema = options.definition.schema
-		this.#values = cloneAndFreezeValue(options.defaultValues)
-		this.#baselineValues = cloneAndFreezeValue(options.defaultValues)
 		this.#context = options.context as Context
 		this.#disabled = options.disabled === true
 		this.#readOnly = options.readOnly === true
 		this.#validationOptions = normalizeValidationOptions(options.validation)
+		const initialState = createInitialValuePolicyState(
+			this.definition,
+			cloneAndFreezeValue(options.defaultValues),
+			this.#context,
+			{
+				disabled: this.#disabled,
+				readOnly: this.#readOnly,
+			},
+		)
+		this.#values = initialState.values
+		this.#baselineValues = cloneAndFreezeValue(this.#values)
 		this.#issueState = createIssueState()
 		this.#metadataState = createInitialMetadataState(
 			this.definition,
 			this.#values,
 		)
-		this.#snapshot = this.#createSnapshot()
+		this.#snapshot = this.#createSnapshot({
+			resolvedUi: initialState.resolvedUi,
+		})
 		this.#serverSnapshot = this.#snapshot
 		this.#beforeUpdate = options.beforeUpdate
 		this.#onUpdate = options.onUpdate
@@ -394,12 +420,12 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	}
 
 	getValues(): FormInput<Schema> {
-		return this.#snapshot.values
+		return clonePublicValue(this.#values)
 	}
 
 	getValue(path: PathInput): unknown
 	getValue(path: PathInput): unknown {
-		return getPathValue(this.#snapshot.values, path)
+		return clonePublicValue(getPathValue(this.#values, path))
 	}
 
 	setValue<Path extends FieldPath<FormInput<Schema>>>(
@@ -599,6 +625,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		this.#commitValueChanges(batch.changes, "imperative", {
+			issueState: batch.issueState,
 			metadataState: batch.metadataState,
 		})
 	}
@@ -624,6 +651,40 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				subscription as Subscription<FormInput<Schema>, Context>,
 			)
 		}
+	}
+
+	replaceOptions(options: FormStoreRuntimeOptions): void {
+		const nextDisabled = options.disabled === true
+		const nextReadOnly = options.readOnly === true
+		const nextValidationOptions = normalizeValidationOptions(options.validation)
+		const validationChanged = !isSameValidationOptions(
+			this.#validationOptions,
+			nextValidationOptions,
+		)
+
+		if (
+			this.#disabled === nextDisabled &&
+			this.#readOnly === nextReadOnly &&
+			!validationChanged
+		) {
+			return
+		}
+
+		const previousSnapshot = this.#snapshot
+		this.#disabled = nextDisabled
+		this.#readOnly = nextReadOnly
+		this.#validationOptions = nextValidationOptions
+		if (validationChanged) {
+			this.#cancelScheduledValidation()
+			this.#abortNonSubmitValidation(false)
+		}
+		this.#snapshot = this.#createSnapshot({
+			previousResolvedUi: previousSnapshot.resolvedUi,
+		})
+		this.#notify()
+		this.#commitValueChanges([], "valuePolicy", {
+			transitionFromUi: previousSnapshot.resolvedUi,
+		})
 	}
 
 	replaceContext(context: Context): void {
@@ -713,15 +774,14 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		const resolvedUi =
 			options.resolvedUi ??
 			(options.previousResolvedUi === undefined
-				? resolveUi(
-						this.definition,
-						this.#values,
-						this.#context,
-						this.#resolveUiOptions(),
-					)
+				? resolveUi(this.definition, this.#values, this.#context, {
+						disabled: this.#disabled,
+						readOnly: this.#readOnly,
+					})
 				: resolveUi(this.definition, this.#values, this.#context, {
-						...this.#resolveUiOptions(),
+						disabled: this.#disabled,
 						previous: options.previousResolvedUi,
+						readOnly: this.#readOnly,
 					}))
 		const metadata = deriveFormMetadata(
 			this.definition,
@@ -734,9 +794,10 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			this.#issueState,
 			resolvedUi,
 		)
+		const values = clonePublicValue(this.#values)
 
 		return createFormSnapshot({
-			values: this.#values,
+			values,
 			baselineValues: this.#baselineValues,
 			context: this.#context,
 			displayErrors,
@@ -756,6 +817,8 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		if (
 			this.definition.fieldsByPath[canonicalPath] === undefined &&
 			this.definition.arraysByPath[canonicalPath] === undefined &&
+			this.#snapshot.resolvedUi.fieldsByPath[canonicalPath] === undefined &&
+			this.#snapshot.resolvedUi.arraysByPath[canonicalPath] === undefined &&
 			!isKnownArrayDescendantFieldPath(
 				this.definition,
 				this.#values,
@@ -768,10 +831,14 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		return canonicalPath
 	}
 
-	#normalizeKnownArrayPath(path: PathInput): string {
+	#normalizeKnownArrayPath(path: PathInput): {
+		readonly path: string
+		readonly node: NormalizedArrayNode
+	} {
 		const canonicalPath = formatPath(path)
+		const arrayNode = findArrayNodeForPath(this.definition, canonicalPath)
 
-		if (this.definition.arraysByPath[canonicalPath] === undefined) {
+		if (arrayNode === undefined) {
 			if (this.definition.fieldsByPath[canonicalPath] !== undefined) {
 				throw new TypeError(`Path "${canonicalPath}" is not an array field`)
 			}
@@ -779,7 +846,10 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			throw new TypeError(`Unknown array path "${canonicalPath}"`)
 		}
 
-		return canonicalPath
+		return {
+			path: canonicalPath,
+			node: arrayNode,
+		}
 	}
 
 	#runValueCommand(
@@ -808,7 +878,8 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#assertValueCommandAllowed()
 
 		try {
-			const canonicalPath = this.#normalizeKnownArrayPath(path)
+			const arrayTarget = this.#normalizeKnownArrayPath(path)
+			const canonicalPath = arrayTarget.path
 			const baseValues =
 				this.#activeBatch === undefined
 					? this.#values
@@ -818,7 +889,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			const baseIssueState = this.#activeBatch?.issueState ?? this.#issueState
 			const update = createArrayCommandChange(
 				canonicalPath,
-				this.definition.arraysByPath[canonicalPath],
+				arrayTarget.node,
 				baseValues,
 				baseMetadataState.arrayRowsByPath,
 				command,
@@ -836,7 +907,12 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					update.nextKeys,
 				),
 				arrayRowsByPath: replaceArrayRowState(
-					baseMetadataState.arrayRowsByPath,
+					reindexArrayRowsState(
+						baseMetadataState.arrayRowsByPath,
+						canonicalPath,
+						update.previousKeys,
+						update.nextKeys,
+					),
 					canonicalPath,
 					update.rowState,
 				),
@@ -876,8 +952,15 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			options.transitionFromUi ?? this.#snapshot.resolvedUi
 		const proposal = this.#createValueProposal(changes, transitionFromUi)
 		if (proposal === undefined) {
-			if (options.metadataState !== undefined) {
-				this.#applyMetadataOnly(options.metadataState)
+			const issueState =
+				options.issueState === undefined
+					? undefined
+					: clearServerIssuesForChanges(
+							options.issueState,
+							changes.map((change) => change.path),
+						)
+			if (options.metadataState !== undefined || issueState !== undefined) {
+				this.#applyMetadataAndIssueOnly(options.metadataState, issueState)
 			}
 			return { status: "noValueChange", values: this.#values }
 		}
@@ -885,6 +968,8 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		let nextValues = proposal.values
 		let effectiveChanges = proposal.changes
 		let resolvedUi = proposal.resolvedUi
+		let metadataState = options.metadataState
+		let issueState = options.issueState
 
 		if (this.#beforeUpdate !== undefined) {
 			const replacement = this.#callBeforeUpdate(
@@ -898,8 +983,10 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			}
 
 			if (replacement !== undefined) {
+				const replacementChanges =
+					this.#normalizeReplacementChanges(replacement)
 				const replacementProposal = this.#createValueProposal(
-					replacement,
+					replacementChanges,
 					transitionFromUi,
 				)
 				if (replacementProposal === undefined) {
@@ -909,10 +996,13 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				nextValues = replacementProposal.values
 				effectiveChanges = replacementProposal.changes
 				resolvedUi = replacementProposal.resolvedUi
+				metadataState = undefined
+				issueState = undefined
 			}
 		}
 
 		const previousSnapshot = this.#snapshot
+		const previousValues = clonePublicValue(this.#values)
 		this.#values = nextValues
 		if (options.resetAfterCommit === true) {
 			this.#baselineValues = nextValues
@@ -922,13 +1012,13 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			)
 			this.#issueState = createIssueState()
 			this.#resetValidationRuntime()
-		} else if (options.metadataState !== undefined) {
-			this.#metadataState = options.metadataState
+		} else if (metadataState !== undefined) {
+			this.#metadataState = metadataState
 		}
 		if (options.resetAfterCommit !== true) {
 			this.#markValuesChangedForValidation()
 			this.#issueState = clearServerIssuesForChanges(
-				options.issueState ?? this.#issueState,
+				issueState ?? this.#issueState,
 				effectiveChanges.map((change) => change.path),
 			)
 		}
@@ -939,9 +1029,9 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#notify()
 		this.#onUpdate?.(
 			Object.freeze({
-				previousValues: previousSnapshot.values,
+				previousValues,
 				values: this.#snapshot.values,
-				changes: effectiveChanges as readonly ValueChange<FormInput<Schema>>[],
+				changes: effectiveChanges as readonly ValueChange[],
 				source,
 				context: this.#context as Readonly<Context>,
 			}),
@@ -953,6 +1043,34 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			)
 		}
 		return { status: "committed" }
+	}
+
+	#normalizeReplacementChanges(
+		changes: readonly ValueChange[],
+	): readonly NormalizedValueChange[] {
+		if (!Array.isArray(changes)) {
+			throw new TypeError("Value changes must be an array")
+		}
+
+		return Object.freeze(
+			changes.map((change) => {
+				if (change.type === "set") {
+					return createSetChange(
+						this.#normalizeKnownFieldPath(change.path),
+						change.value,
+					)
+				}
+
+				if (change.type === "unset") {
+					return createUnsetChange(this.#normalizeKnownFieldPath(change.path))
+				}
+
+				const unsupported = change as { readonly type?: unknown }
+				throw new TypeError(
+					`Unsupported value change type "${String(unsupported.type)}"`,
+				)
+			}),
+		)
 	}
 
 	#createValueProposal(
@@ -970,8 +1088,9 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			pass++
 		) {
 			const resolvedUi = resolveUi(this.definition, nextValues, this.#context, {
-				...this.#resolveUiOptions(),
+				disabled: this.#disabled,
 				previous: previousResolvedUi,
+				readOnly: this.#readOnly,
 			})
 			const policyChanges = this.#createValuePolicyChanges(
 				transitionFromUi,
@@ -1008,22 +1127,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		resolvedUi: ResolvedUiState<Context>,
 		values: FormInput<Schema>,
 	): readonly NormalizedValueChange[] {
-		const changes: NormalizedValueChange[] = []
-
-		for (const field of Object.values(resolvedUi.fieldsByPath)) {
-			if (
-				field.valuePolicy !== "unset" ||
-				field.visible ||
-				transitionFromUi.fieldsByPath[field.path]?.visible !== true ||
-				!hasPathValue(values, field.path)
-			) {
-				continue
-			}
-
-			changes.push(createUnsetChange(field.path))
-		}
-
-		return Object.freeze(changes)
+		return createHiddenValuePolicyChanges(resolvedUi, values, transitionFromUi)
 	}
 
 	#applyResetMetadataOnly(baselineValues: FormInput<Schema>): void {
@@ -1052,13 +1156,22 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#notify()
 	}
 
-	#applyMetadataOnly(metadataState: MetadataState): void {
-		if (metadataState === this.#metadataState) {
+	#applyMetadataAndIssueOnly(
+		metadataState?: MetadataState,
+		issueState?: IssueState,
+	): void {
+		const nextMetadataState = metadataState ?? this.#metadataState
+		const nextIssueState = issueState ?? this.#issueState
+		if (
+			nextMetadataState === this.#metadataState &&
+			nextIssueState === this.#issueState
+		) {
 			return
 		}
 
 		const previousSnapshot = this.#snapshot
-		this.#metadataState = metadataState
+		this.#metadataState = nextMetadataState
+		this.#issueState = nextIssueState
 		this.#snapshot = this.#createSnapshot({
 			resolvedUi: previousSnapshot.resolvedUi,
 		})
@@ -1101,7 +1214,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					exposeAll: false,
 					exposePaths,
 				}).catch((error: unknown) => {
-					reportHostException(error)
+					reportValidationHostException(error)
 				})
 			}, this.#validationOptions.asyncDebounceMs)
 			return
@@ -1112,7 +1225,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			exposeAll: false,
 			exposePaths,
 		}).catch((error: unknown) => {
-			reportHostException(error)
+			reportValidationHostException(error)
 		})
 	}
 
@@ -1419,7 +1532,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		if (staleSchema) {
 			queueMicrotask(() => {
 				void this.validate().catch((error: unknown) => {
-					reportHostException(error)
+					reportValidationHostException(error)
 				})
 			})
 		}
@@ -1449,7 +1562,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		nextValues: FormInput<Schema>,
 		changes: readonly NormalizedValueChange[],
 		source: UpdateSource,
-	): false | readonly ValueChange<FormInput<Schema>>[] | undefined {
+	): false | readonly ValueChange[] | undefined {
 		const beforeUpdate = this.#beforeUpdate
 		if (beforeUpdate === undefined) {
 			return undefined
@@ -1459,9 +1572,9 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		try {
 			return beforeUpdate(
 				Object.freeze({
-					currentValues: this.#snapshot.values,
-					nextValues,
-					changes: changes as readonly ValueChange<FormInput<Schema>>[],
+					currentValues: clonePublicValue(this.#values),
+					nextValues: clonePublicValue(nextValues),
+					changes: changes as readonly ValueChange[],
 					source,
 					context: this.#context as Readonly<Context>,
 				}),
@@ -1495,16 +1608,81 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			subscription.listener(nextSelected, previousSelected)
 		}
 	}
+}
 
-	#resolveUiOptions(): {
-		readonly disabled?: boolean
-		readonly readOnly?: boolean
-	} {
-		return {
-			disabled: this.#disabled,
-			readOnly: this.#readOnly,
+function clonePublicValue<Value>(value: Value): Value {
+	return freezeFormValue(cloneMutableValueLeaves(value))
+}
+
+function createInitialValuePolicyState<Schema extends StandardSchema, Context>(
+	definition: NormalizedFormDefinition<Schema>,
+	values: FormInput<Schema>,
+	context: Context,
+	options: {
+		readonly disabled: boolean
+		readonly readOnly: boolean
+	},
+): {
+	readonly values: FormInput<Schema>
+	readonly resolvedUi: ResolvedUiState<Context>
+} {
+	let nextValues = values
+	let previousResolvedUi: ResolvedUiState<Context> | undefined
+
+	for (
+		let pass = 0;
+		pass <= Object.keys(definition.fieldsByPath).length;
+		pass++
+	) {
+		const resolvedUi =
+			previousResolvedUi === undefined
+				? resolveUi(definition, nextValues, context, options)
+				: resolveUi(definition, nextValues, context, {
+						...options,
+						previous: previousResolvedUi,
+					})
+		const policyChanges = createHiddenValuePolicyChanges(resolvedUi, nextValues)
+
+		if (policyChanges.length === 0) {
+			return {
+				values: nextValues,
+				resolvedUi,
+			}
 		}
+
+		nextValues = freezeFormValue(
+			applyValueChanges(nextValues, policyChanges).values,
+		)
+		previousResolvedUi = resolvedUi
 	}
+
+	throw new TypeError("initial valuePolicy changes did not converge")
+}
+
+function createHiddenValuePolicyChanges<Context>(
+	resolvedUi: ResolvedUiState<Context>,
+	values: unknown,
+	transitionFromUi?: ResolvedUiState<Context>,
+): readonly NormalizedValueChange[] {
+	const changes: NormalizedValueChange[] = []
+
+	for (const field of Object.values(resolvedUi.fieldsByPath)) {
+		const previouslyVisible =
+			transitionFromUi === undefined ||
+			transitionFromUi.fieldsByPath[field.path]?.visible === true
+		if (
+			field.valuePolicy !== "unset" ||
+			field.visible ||
+			!previouslyVisible ||
+			!hasPathValue(values, field.path)
+		) {
+			continue
+		}
+
+		changes.push(createUnsetChange(field.path))
+	}
+
+	return Object.freeze(changes)
 }
 
 function createResetChanges(
@@ -1629,6 +1807,17 @@ function isSameValidationRuntimeState(
 	)
 }
 
+function isSameValidationOptions(
+	left: ValidationOptions,
+	right: ValidationOptions,
+): boolean {
+	return (
+		left.mode === right.mode &&
+		left.revalidateMode === right.revalidateMode &&
+		left.asyncDebounceMs === right.asyncDebounceMs
+	)
+}
+
 function asCoreFormStore<Schema extends StandardSchema, Context>(
 	store: FormStore<Schema, Context>,
 ): CoreFormStore<Schema, Context> {
@@ -1649,6 +1838,23 @@ function filterPathSubtreeIssues(
 				issue.path !== undefined &&
 				(isSamePath(issue.path, path) || isDescendantPath(issue.path, path)),
 		),
+	)
+}
+
+function reportValidationHostException(error: unknown): void {
+	if (isAbortError(error)) {
+		return
+	}
+
+	reportHostException(error)
+}
+
+function isAbortError(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"name" in error &&
+		(error as { readonly name?: unknown }).name === "AbortError"
 	)
 }
 

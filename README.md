@@ -32,8 +32,9 @@ Zod implements the Standard Schema contract.
   types.
 - `fokit/core`: React-free store, path, definition, computed UI, and value
   helpers.
-- `fokit/server`: safe FormData normalization and Standard Schema validation.
-- `fokit/react19`: React 19 Action components and result transport types.
+- `fokit/server`: safe FormData normalization, Standard Schema validation,
+  `FormResult`, and `SubmissionIssue`.
+- `fokit/react19`: React 19 Action components.
 - `fokit/layout.css`: optional structural layout CSS. Import it explicitly:
 
 ```ts
@@ -53,6 +54,18 @@ The main JavaScript entry never imports the CSS automatically.
 - [React 19 Actions](docs/react19-actions.md)
 - [Fokit specification](docs/SPEC.md)
 - [Architecture decisions](docs/adr/)
+- [Release process](docs/releasing.md)
 
 Copyable examples live in `examples/` and are typechecked by
 `npm run test:docs`.
+
+## Configuration
+
+Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
+`asyncDebounceMs: 0`. Pass `validation` to `useForm` or `AutoForm` to override
+them per form instance.
+
+`parseFormData` accepts safety limits for server parsing: `maxEntries` defaults
+to `1000`, `maxPathLength` to `1024`, `maxDepth` to `32`, and `maxArrayIndex` to
+`10000`. Framework request, multipart, file-count, and file-size limits should
+run before calling `parseFormData`.

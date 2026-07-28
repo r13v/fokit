@@ -1,0 +1,14 @@
+{
+	"name": "fokit-node-cjs-smoke",
+	"version": "0.0.0",
+	"private": true,
+	"type": "commonjs",
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"runtime": "node index.cjs"
+	},
+	"devDependencies": {
+		"@types/node": "26.1.2",
+		"typescript": "5.4.5"
+	}
+}

@@ -7,9 +7,9 @@
 		"jsx": "react-jsx",
 		"strict": true,
 		"noEmit": true,
+		"types": ["vite/client"],
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true
 	},
-	"include": ["src", "tests", "*.config.ts"],
-	"exclude": ["tests/fixtures"]
+	"include": ["src"]
 }

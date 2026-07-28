@@ -57,3 +57,11 @@ Investigating native file FormData behavior for Task 10C → a quick jsdom probe
 ## 2026-07-28 18:38 — GPT-5
 
 Inspecting browser-test coverage for Task 12 → `rg --files tests/browser src/react tests/package` failed because `tests/browser/` did not exist yet while the Playwright config already pointed there. Creating the directory with the first spec resolves it; a placeholder note in the plan or a committed empty directory helper would make the bootstrap state clearer.
+
+## 2026-07-28 19:06 — GPT-5
+
+Running the Task 14B Next.js smoke fixture → `next build` compiled but rejected TypeScript 7.0.2 through the compiler API path. Next 16.2.12 needs `experimental.useTypeScriptCli` enabled or a TypeScript 6 fixture dependency.
+
+## 2026-07-28 19:08 — GPT-5
+
+Running root type tests after adding smoke fixtures → `tsc --project tsconfig.json` tried to typecheck fixture sources before the smoke runner installs the packed tarball. Keep `tests/fixtures` excluded from the root tsconfig and validate them only through `npm run test:smoke`.

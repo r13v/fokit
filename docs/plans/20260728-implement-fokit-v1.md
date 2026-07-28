@@ -1185,30 +1185,35 @@ React versions, bundlers, Next.js, ESM, CommonJS, and TypeScript 5.4.
 - Modify: `package.json`
 - Modify: `package-lock.json`
 
-- [ ] Build and pack once to a temporary directory from
+- [x] Build and pack once to a temporary directory from
   `scripts/verify-smoke-fixtures.mjs`; never write tarball paths into committed
   fixture manifests.
-- [ ] Copy each fixture to a fresh temporary directory, run `npm ci`, install
+- [x] Copy each fixture to a fresh temporary directory, run `npm ci`, install
   the absolute generated `.tgz` with `npm install --no-save`, run its declared
   typecheck/build/runtime commands, and delete the directory in `finally`.
-- [ ] Make the React 18 fixture use React/React DOM `18.3.1`,
+- [x] Make the React 18 fixture use React/React DOM `18.3.1`,
   `@types/react@18.3.31`, `@types/react-dom@18.3.7`, and TypeScript `5.4.5`.
   Import every main-entry API and reject any reachable React 19 symbol.
-- [ ] Make the React 19 fixture use React/React DOM `19.2.8` and current
+- [x] Make the React 19 fixture use React/React DOM `19.2.8` and current
   TypeScript/types. Import all main APIs and `fokit/react19`.
-- [ ] Make the Next.js `16.2.12` fixture import `fokit/core` in a Server
+- [x] Make the Next.js `16.2.12` fixture import `fokit/core` in a Server
   Component and `fokit`/`fokit/react19` in a `"use client"` component.
-- [ ] Make the Node ESM fixture import and execute `fokit/core` and
+- [x] Make the Node ESM fixture import and execute `fokit/core` and
   `fokit/server`.
-- [ ] Make the Node CommonJS fixture typecheck `index.cts` with
+- [x] Make the Node CommonJS fixture typecheck `index.cts` with
   TypeScript `5.4.5`, `module: "NodeNext"`, and
   `moduleResolution: "NodeNext"`; prove resolution through the
   `require.types` `.d.cts` targets, and execute `index.cjs` against
   `fokit/core` and `fokit/server`.
-- [ ] Verify the Vite fixture without CSS import emits no Fokit CSS, while the
+- [x] Verify the Vite fixture without CSS import emits no Fokit CSS, while the
   fixture with `fokit/layout.css` emits the structural stylesheet.
-- [ ] Run `npm run test:smoke`, `npm run package:check`, `npm run check`, and
+- [x] Run `npm run test:smoke`, `npm run package:check`, `npm run check`, and
   `npm run knip` before Task 14C.
++ [x] Add `next.config.mjs` to the Next.js smoke fixture because Next
+  `16.2.12` requires `experimental.useTypeScriptCli` with TypeScript `7.0.2`.
++ [x] Keep smoke fixtures out of the root `tsconfig.json` and Knip project
+  because the fixture sources resolve `fokit` only after the smoke runner
+  installs the packed tarball into temporary copies.
 
 ### Task 14C: Add release-equivalent CI and remove bootstrap exemptions
 

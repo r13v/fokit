@@ -14,6 +14,7 @@ import type {
 import { cloneValue } from "./value.js"
 
 type NodeKind = "array" | "field" | "section"
+type NoInferValue<Value> = [Value][Value extends unknown ? 0 : never]
 type NodeScope = {
 	readonly idPrefix: string
 	readonly pathScope: string
@@ -129,7 +130,11 @@ export type FormDefinition<
 	Context = unknown,
 > = {
 	readonly schema: Schema
-	readonly ui: readonly UiNode<FormInput<Schema>, Controls, Context>[]
+	readonly ui: readonly UiNode<
+		FormInput<NoInferValue<Schema>>,
+		Controls,
+		Context
+	>[]
 }
 
 export type NormalizeDefinitionInput<

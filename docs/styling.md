@@ -60,5 +60,5 @@ Use Fokit's structural attributes for layout selectors, then style your design
 system classes normally. Do not depend on internal DOM order beyond the slot
 props you render yourself.
 
-Deferred styling work stays outside v1: themes, CSS-in-JS adapters, generated
-tokens, animation presets, and component libraries.
+Fokit leaves themes, CSS-in-JS adapters, generated tokens, animation presets,
+and component libraries to the application.

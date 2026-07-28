@@ -7,9 +7,8 @@ branch push.
 
 ## Maintainer flow
 
-1. Choose the next stable semantic version newer than 0.0.1. The current
-   `fokit@0.0.1` package is the pre-implementation placeholder, so the first
-   implementation release must not reuse it.
+1. Choose the next stable semantic version newer than 0.0.1 because that
+   package version is already published and cannot be reused.
 2. Update `package.json` and `package-lock.json` together. A safe pattern is
    `npm pkg set version=<version>` followed by
    `npm install --package-lock-only --ignore-scripts`.

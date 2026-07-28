@@ -5,14 +5,7 @@ core, application-owned controls and slots, generated React forms, granular
 subscriptions, safe FormData parsing, an isolated React 19 Action adapter, and
 optional structural CSS.
 
-This repository contains the implemented v1 package. The existing public
-`fokit@0.0.1` package on npm is a pre-implementation placeholder, not the
-reviewed v1 release. Do not treat npm availability or the final published
-version as verified until the release task confirms them.
-
 ## Install
-
-After the reviewed v1 release is published:
 
 ```sh
 npm install fokit zod

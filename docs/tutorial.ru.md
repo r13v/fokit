@@ -14,16 +14,10 @@
 
 ## 1. Установка
 
-После публикации проверенного v1-релиза:
-
 ```sh
 npm install fokit zod
 npm install react react-dom
 ```
-
-Текущий пакет npm `fokit@0.0.1` - это только заглушка до реализации. Пока
-релизная задача не проверит npm и GitHub Pages, используйте сборку из
-репозитория или проверенный release artifact.
 
 ## 2. Опишите схему
 
@@ -332,9 +326,9 @@ npm run test:docs
 Перед завершением документационных изменений запускайте `npm run check` и
 `npm run knip`.
 
-## Что намеренно не входит в v1
+## Граница продукта
 
-В v1 нет schema-to-UI inference, visual builder, remote JSON definitions,
-темы, middleware chains, wizards, autosave, async option loading, devtools и
-React Native поддержки. Держите это в коде приложения, пока потребность не
-станет конкретной.
+Fokit отвечает за типизированную инфраструктуру форм, а schema-to-UI inference,
+visual builder, remote JSON definitions, темы, middleware chains, wizards,
+autosave, async option loading, devtools и React Native поддержку оставляет
+коду приложения.

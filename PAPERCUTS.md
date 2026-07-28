@@ -136,7 +136,7 @@ Reviewing changed source files → grouping multiple files into one `nl -ba` com
 
 ## 2026-07-28 21:04 — GPT-5
 
-Reviewing the full v1 branch → `git diff main...HEAD` produced a 245k-token diff and the tool truncated it before the full patch was visible. Use `git diff --name-only` plus targeted full-file reads for review-scale branches, or page the diff by path.
+Reviewing the full implementation branch → `git diff main...HEAD` produced a 245k-token diff and the tool truncated it before the full patch was visible. Use `git diff --name-only` plus targeted full-file reads for review-scale branches, or page the diff by path.
 
 ## 2026-07-28 20:49 — GPT-5
 
@@ -153,3 +153,7 @@ Testing submit-time React errors during review fixes → React surfaced the expe
 ## 2026-07-28 21:58 — GPT-5
 
 Tightening the Node CJS smoke fixture to `skipLibCheck: false` without DOM libs → `@types/node@26` exposed iterator helper types unsupported by the fixture's TypeScript 5.4 compiler before Fokit declarations were checked. Keep the Node-only declaration fixture on a compiler version compatible with its Node types.
+
+## 2026-07-28 22:35 — GPT-5
+
+Removing the old product-version framing → one large `apply_patch` failed because the Russian tutorial wording differed from the expected context, so none of its edits applied. Split cross-file copy edits into smaller patches or inspect localized text before patching it.

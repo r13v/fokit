@@ -13,16 +13,10 @@ The complete code is split across:
 
 ## 1. Install
 
-After the reviewed v1 release is published:
-
 ```sh
 npm install fokit zod
 npm install react react-dom
 ```
-
-The current npm `fokit@0.0.1` package is only a pre-implementation placeholder.
-Use the repository build or reviewed release artifact until the release task
-verifies npm and GitHub Pages.
 
 ## 2. Define the schema
 
@@ -332,9 +326,9 @@ npm run test:docs
 Run `npm run check` and `npm run knip` before reporting documentation changes
 done.
 
-## What v1 intentionally does not include
+## Product boundary
 
-V1 does not include schema-to-UI inference, a visual builder, remote JSON form
-definitions, a theme, middleware chains, wizards, autosave, async option
-loading, devtools, or React Native support. Keep those in application code
-until they are concrete.
+Fokit focuses on typed form infrastructure and leaves schema-to-UI inference,
+visual builders, remote JSON form definitions, themes, middleware chains,
+wizards, autosave, async option loading, devtools, and React Native support to
+application code.

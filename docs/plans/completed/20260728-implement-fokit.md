@@ -1,8 +1,8 @@
-# Implement Fokit v1
+# Implement Fokit
 
 ## Overview
 
-Implement the complete Fokit v1 npm library described by
+Implement the complete Fokit npm library described by
 `docs/SPEC.md`. Fokit is a code-first, schema-validated form library with a
 React-free core, generated React forms, application-owned controls and slots,
 granular subscriptions, safe `FormData` parsing, an optional React 19 Action
@@ -51,7 +51,7 @@ Completion means:
 
 ## Final Status
 
-The local implementation and verification work for the v1 package is complete.
+The local implementation and verification work for the package is complete.
 External release gates remain maintainer-owned: selecting the final version,
 merging the reviewed release PR, confirming GitHub Pages, creating the stable
 GitHub Release, waiting for `publish.yml`, npm publication, and clean consumer
@@ -61,7 +61,7 @@ install verification.
 
 ### Repository state
 
-- `docs/SPEC.md` is the normative v1 product and API specification.
+- `docs/SPEC.md` is the normative product and API specification.
 - `docs/adr/0001-styling-and-layout-boundary.md` is the accepted styling ADR.
 - `README.md` currently announces the specification but not an implemented
   package.
@@ -88,7 +88,7 @@ install verification.
 
 ### Selected implementation approach
 
-- Scope: the complete v1 specification, not a core-only MVP.
+- Scope: the complete specification, not a core-only MVP.
 - Sequencing: dependency-ordered vertical slices, with a usable and tested
   contract at the end of every task.
 - Testing: strict TDD for behavior and public types. Toolchain bootstrapping is
@@ -218,7 +218,7 @@ adapter, CSS-in-JS library, ID package, or form library dependency.
   ECSplain docs site, GitHub Pages deployment, and npm publication from
   `publish.yml`.
 - Key decisions:
-  - implement the whole v1;
+  - implement the complete product;
   - use TDD;
   - own the store and renderer rather than wrapping another form library;
   - support React 18 and React 19 from the first release;
@@ -233,7 +233,7 @@ adapter, CSS-in-JS library, ID package, or form library dependency.
   - keep the docs site as a separate bilingual Vite/React package with hash
     routing and a real Fokit-powered learning lab;
   - deploy the static artifact at the GitHub Pages project path `/fokit/`;
-  - publish the maintainer-selected v1 version only from a reviewed stable
+  - publish the maintainer-selected version only from a reviewed stable
     GitHub Release with an exact `v<package version>` tag.
 - Explicit non-goals:
   - migration or compatibility APIs;
@@ -1267,10 +1267,8 @@ introducing the full contract.
 - Create: `examples/form-kit.tsx`
 - Create: `examples/server-action.ts`
 
-- [x] Update README from “planned” to implemented v1 status, explicitly
-  identify the existing `fokit@0.0.1` as a pre-implementation placeholder, and
-  link both tutorials. Do not claim npm availability or link a live site until
-  Task 15G verifies the new release and Pages deployment.
+- [x] Update README from “planned” to implemented status and link both
+  tutorials.
 - [x] Document installation, React peers, Standard Schema compatibility,
   package subpaths, and explicit CSS import.
 - [x] Write equivalent English and Russian long-form tutorials that get a new
@@ -1290,10 +1288,10 @@ introducing the full contract.
   19 Actions.
 - [x] Document FormData serializer requirements and Action compatibility
   failures.
-- [x] Keep deferred features clearly out of v1 and update `docs/SPEC.md` only
-  for a concrete implementation-discovered contract clarification; add that
-  file to the task only when the clarification exists. Apply the same rule to
-  the accepted styling ADR.
+- [x] Keep deferred features clearly outside the product scope and update
+  `docs/SPEC.md` only for a concrete implementation-discovered contract
+  clarification; add that file to the task only when the clarification exists.
+  Apply the same rule to the accepted styling ADR.
 - [x] Create `tsconfig.docs.json` for `examples/**/*.ts` and
   `examples/**/*.tsx`, add `npm run test:docs`, and include it in
   `npm run verify` so copyable examples cannot drift.
@@ -1527,7 +1525,7 @@ decision.
 - [x] Run `npm run test:package`, `npm run verify`,
   `npm run site:verify`, `npm run check`, and `npm run knip` before Task 15G.
 
-### Task 15G: Release v1 and verify the public installation
+### Task 15G: Release Fokit and verify the public installation
 
 **Why:** The existing `fokit@0.0.1` package predates the implementation. The
 documentation cannot be considered generally available until its install
@@ -1622,7 +1620,7 @@ consumer environments, tutorials, workflows, and repository hygiene agree.
   overwritten or staged by the implementation.
 - [x] Mark every completed task in this plan.
 - [x] Move this file to
-  `docs/plans/completed/20260728-implement-fokit-v1.md`.
+  `docs/plans/completed/20260728-implement-fokit.md`.
 
 ## Technical Details
 

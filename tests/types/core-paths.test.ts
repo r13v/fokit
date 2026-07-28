@@ -123,7 +123,7 @@ const _scientificIndexPath: FieldPath<ExampleInput> = "contacts.1e3.value"
 // @ts-expect-error object keys containing dots cannot be addressed
 const _dottedKeyPath: FieldPath<{ "address.city": string }> = "address.city"
 
-// @ts-expect-error numeric object keys are outside the v1 path grammar
+// @ts-expect-error numeric object keys are outside the path grammar
 const _numericObjectKeyPath: FieldPath<{ 0: string }> = "0"
 
 // @ts-expect-error reserved metadata is not user form data

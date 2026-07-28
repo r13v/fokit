@@ -1,17 +1,11 @@
 # Getting started
 
-Fokit v1 is for teams that want schema-validated forms without surrendering the
+Fokit is for teams that want schema-validated forms without surrendering the
 application design system. You bring controls and slots; Fokit supplies the
 typed form store, generated rendering, native FormData parity, validation, and
 submission wiring.
 
-The public npm package currently available as `fokit@0.0.1` is a
-pre-implementation placeholder. Use the repository build or a reviewed release
-artifact until the v1 release task publishes and verifies the final version.
-
 ## Install
-
-After v1 is published:
 
 ```sh
 npm install fokit zod
@@ -164,9 +158,9 @@ Action forms fail before dispatch when an active field cannot be represented:
 a `mode: "none"` control is active, or an invisible/disabled native control has
 no serializer for preservation.
 
-## Deferred outside v1
+## Product boundary
 
-Fokit v1 does not include schema-to-UI inference, remote JSON form definitions,
-a visual builder, a theme, wizards, autosave, async option loading, devtools,
-React Native support, or a middleware/plugin pipeline. Compose those in the
-application around Fokit's store and slots when they become real needs.
+Fokit focuses on typed form infrastructure and leaves schema-to-UI inference,
+remote JSON form definitions, visual builders, themes, wizards, autosave, async
+option loading, devtools, React Native support, and middleware/plugin pipelines
+to application code built around its store and slots.

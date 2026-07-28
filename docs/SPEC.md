@@ -1,12 +1,12 @@
 # Fokit Specification
 
-- Status: Draft
-- Target: npm library for React 18+ (initially tested on React 18 and 19)
+- Status: Normative
+- Supported React versions: 18 and 19
 - Last updated: 2026-07-28
 
 ## Summary
 
-Fokit is a new, code-first React form library that combines:
+Fokit is a code-first React form library that combines:
 
 - schema-based validation;
 - type-safe form state;
@@ -31,7 +31,7 @@ The architecture separates three concerns:
 The form state lives in a single external store. React components subscribe to
 the smallest state slice they need through `useSyncExternalStore`.
 
-The initial release supports the tested React 18 and React 19 major lines.
+Fokit supports React 18 and React 19.
 React 19 Form Actions are provided through an isolated `fokit/react19` entry
 point so that the main entry point never imports React 19-only APIs. Support
 for a future React major is added only after its compatibility is covered by
@@ -70,7 +70,7 @@ CI.
 
 ## Non-goals
 
-The first version will not:
+Fokit does not:
 
 - implement a compatibility or migration layer for another library;
 - wrap or mirror another form state manager;
@@ -204,7 +204,7 @@ styling, while Standard Schema remains the only validation authority.
 
 ## Package exports
 
-The initial release is one npm package with subpath exports:
+Fokit ships as one npm package with subpath exports:
 
 ```ts
 // React-free core
@@ -863,7 +863,7 @@ Production does not silently repair an invalid definition.
 
 ### UI node types
 
-The minimal v1 UI tree contains three node kinds:
+Fokit's UI tree contains three node kinds:
 
 ```ts
 type UiNode = FieldNode | SectionNode | ArrayNode;
@@ -876,8 +876,8 @@ All definition, imperative, issue, subscription, and `FormData` paths use the
 same canonical dot grammar: `address.city` and `contacts.0.value`. Bracket
 syntax is not accepted. Empty segments, property names containing dots,
 numeric object keys, prototype-mutating segments (`__proto__`, `prototype`,
-`constructor`), and the reserved top-level `__fokit` segment are outside the
-v1 model. Array indexes use `0` or a non-zero decimal without a leading zero;
+`constructor`), and the reserved top-level `__fokit` segment are invalid.
+Array indexes use `0` or a non-zero decimal without a leading zero;
 negative, signed, decimal-point, and zero-padded indexes are non-canonical.
 Every runtime path entry point applies the same checks.
 
@@ -982,7 +982,7 @@ require an explicit ID because they have no data path.
 Explicit node IDs are non-empty and contain no ASCII whitespace so they remain
 valid deterministic DOM ID segments.
 
-Arbitrary content nodes are not part of v1. Workflow content belongs in
+Arbitrary content nodes are not supported. Workflow content belongs in
 `AutoForm` children, and layout-specific content can be composed manually
 around `kit.Fields`.
 
@@ -1229,7 +1229,7 @@ type FormState<Input> = {
 };
 ```
 
-Fokit does not expose `canSubmit` in v1. Consumers can derive application
+Fokit does not expose `canSubmit`. Consumers can derive application
 policy from state, while `kit.Submit` does not become inaccessible merely
 because the last validation result is invalid. Before the first validation,
 validity is `unvalidated`, not implicitly `valid`.
@@ -1368,7 +1368,7 @@ const defaultValidation = {
 
 Validation options are form-instance behavior accepted by `useForm` and
 `AutoForm`, not reusable-definition data. An instance may override any default.
-There is no field-specific debounce API in v1.
+There is no field-specific debounce API.
 
 Rules:
 
@@ -1947,7 +1947,7 @@ since that submission; a form-level server issue is stale after any such
 change. This is equivalent to applying the result at submission time and then
 replaying the later edits.
 
-In a fully pre-hydration/no-JavaScript round trip, v1 does not echo an
+In a fully pre-hydration/no-JavaScript round trip, Fokit does not echo an
 unvalidated raw payload into the typed store. Applications that require this
 for a particular form map serializable action state back to valid
 `defaultValues`; Fokit does not add a second raw-value store to solve it
@@ -2049,7 +2049,7 @@ paths produce multiple entries with the same reserved name. Unknown
 same array path are normalization errors rather than ignored input.
 
 Property names containing dots, empty segments, leading numeric segments,
-numeric object keys, and non-canonical array indexes are unsupported in v1. A
+numeric object keys, and non-canonical array indexes are unsupported. A
 generated field path therefore has exactly one unambiguous representation.
 Mixing scalar and nested use of the same prefix, mixing repeated and explicitly
 indexed forms of one collection, or submitting sparse/non-contiguous indexes
@@ -2133,7 +2133,7 @@ definition or an internal shared validator used by browser and server flows.
 
 ## Extensibility boundaries
 
-### Supported in v1
+### Supported
 
 - custom controls;
 - custom field, section, array, array-item, and error slots;
@@ -2150,7 +2150,7 @@ definition or an internal shared validator used by browser and server flows.
 - manual field and form errors;
 - subscriptions and batching.
 
-### Deferred
+### Outside product scope
 
 - arbitrary content nodes in the UI tree;
 - reusable typed field groups;
@@ -2323,17 +2323,16 @@ CI must include at least:
   export;
 - package checks with `publint` and Are the Types Wrong.
 
-## Resolved v1 decisions
+## Resolved product decisions
 
-The implementation begins with no unresolved public-API questions from this
-specification:
+The product has no unresolved public-API questions in this specification:
 
 1. Native encoding uses canonical dot paths, repeated value names, explicit
    array markers, browser checkbox absence semantics, preserved `File` values,
    and Standard Schema coercion.
 2. `defaultValues` is a complete `FormInput<S>` baseline.
 3. Validation mode and `asyncDebounceMs` are instance-level, with no per-field
-   debounce API in v1.
+   debounce API.
 4. A path value must be assignable to a non-`any`, non-`unknown` control value
    type, including its nullable members.
 5. Generated definitions reject duplicate field paths; composite widgets own
@@ -2343,7 +2342,7 @@ specification:
 7. React 19 uses a serializable `FormResult` with explicit defaults/submitted
    reset modes.
 8. Every control declares native, serialized, or unavailable `FormData`
-   behavior in v1.
+   behavior.
 
 Implementation discoveries may refine private algorithms, but changing these
 contracts requires an explicit specification update rather than an implicit

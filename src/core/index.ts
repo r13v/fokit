@@ -23,3 +23,11 @@ export type {
 	FormOutput,
 	StandardSchema,
 } from "./standard-schema.js"
+export {
+	cloneValue,
+	getPathValue,
+	isDirtyEqual,
+	mergePathValue,
+	setPathValue,
+	unsetPathValue,
+} from "./value.js"

@@ -521,15 +521,15 @@ shared value model before definitions or state are added.
 - Create: `src/core/value.test.ts`
 - Modify: `src/core/index.ts`
 
-- [ ] Write failing tests for structural cloning, structural sharing, deep get,
+- [x] Write failing tests for structural cloning, structural sharing, deep get,
   set, unset, deep partial merge, and documented dirty equality.
-- [ ] Add error tests for cyclic input and invalid traversal without mutating
+- [x] Add error tests for cyclic input and invalid traversal without mutating
   the original value.
-- [ ] Implement primitives with `Object.is`, arrays/plain objects recursively,
+- [x] Implement primitives with `Object.is`, arrays/plain objects recursively,
   `Date` timestamps, and identity semantics for other non-plain values.
-- [ ] Export only the documented value utilities required by later public core
+- [x] Export only the documented value utilities required by later public core
   APIs.
-- [ ] Run
+- [x] Run
   `npm run test -- --project node src/core/value.test.ts`,
   `npm run typecheck`, `npm run check`, and `npm run knip` before Task 3B.
 

@@ -547,17 +547,17 @@ control metadata remains independent of React components.
 - Create: `src/core/definition.test.ts`
 - Modify: `src/core/index.ts`
 
-- [ ] Write failing runtime tests for duplicate paths/IDs, bad IDs, unknown
+- [x] Write failing runtime tests for duplicate paths/IDs, bad IDs, unknown
   controls, invalid spans/columns, invalid relative paths, and invalid
   `valuePolicy`.
-- [ ] Define React-free control registry metadata, `FormDataEntrySpec`,
+- [x] Define React-free control registry metadata, `FormDataEntrySpec`,
   `ControlFormData`, field/section/array nodes, layout enums, and
   `computed(dependencies, resolver)`.
-- [ ] Keep computed resolvers synchronous, explicitly dependent, typed by
+- [x] Keep computed resolvers synchronous, explicitly dependent, typed by
   context, and unable to access form commands.
-- [ ] Implement definition normalization and immutable indexing by node ID and
+- [x] Implement definition normalization and immutable indexing by node ID and
   canonical path.
-- [ ] Run
+- [x] Run
   `npm run test -- --project node src/core/definition.test.ts`,
   `npm run typecheck`, `npm run check`, and `npm run knip` before Task 3C.
 

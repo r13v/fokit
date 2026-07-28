@@ -36,10 +36,12 @@ export type {
 } from "./definition.js"
 export { normalizeDefinition } from "./definition.js"
 export type {
+	DisplayFormErrors,
 	FormErrors,
 	FormIssue,
 	FormSnapshot,
 	FormState,
+	ImperativeFormIssue,
 	ValidationStatus,
 } from "./form-state.js"
 export type {

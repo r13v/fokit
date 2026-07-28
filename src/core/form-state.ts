@@ -1,24 +1,21 @@
+import type { DisplayFormErrors, FormErrors } from "./issues.js"
 import type { FormMetadata } from "./metadata.js"
 import type { ResolvedUiState } from "./resolve-ui.js"
 import { cloneValue, isDirtyEqual } from "./value.js"
 
-export type FormIssue = {
-	readonly path?: string
-	readonly code?: string
-	readonly message: string
-	readonly source: "manual" | "schema" | "server"
-}
-
-export type FormErrors = {
-	readonly form: readonly FormIssue[]
-	readonly fields: ReadonlyMap<string, readonly FormIssue[]>
-}
+export type {
+	DisplayFormErrors,
+	FormErrors,
+	FormIssue,
+	ImperativeFormIssue,
+} from "./issues.js"
 
 export type ValidationStatus = "invalid" | "unvalidated" | "valid"
 
 export type FormState<Input> = {
 	readonly values: Input
 	readonly errors: FormErrors
+	readonly displayErrors: DisplayFormErrors
 	readonly isDirty: boolean
 	readonly isTouched: boolean
 	readonly isValidating: boolean
@@ -33,17 +30,12 @@ export type FormSnapshot<Input, Context = unknown> = FormState<Input> & {
 	readonly metadata: FormMetadata
 }
 
-const emptyIssues = Object.freeze([]) as readonly FormIssue[]
-const emptyFieldIssues = createEmptyReadonlyMap<string, readonly FormIssue[]>()
-const emptyErrors = Object.freeze({
-	form: emptyIssues,
-	fields: emptyFieldIssues,
-}) satisfies FormErrors
-
 export type CreateFormSnapshotOptions<Input, Context> = {
 	readonly values: Input
 	readonly baselineValues: Input
 	readonly context: Context
+	readonly displayErrors: DisplayFormErrors
+	readonly errors: FormErrors
 	readonly resolvedUi: ResolvedUiState<Context>
 	readonly metadata: FormMetadata
 	readonly isTouched: boolean
@@ -53,13 +45,16 @@ export function createFormSnapshot<Input, Context>({
 	values,
 	baselineValues,
 	context,
+	displayErrors,
+	errors,
 	resolvedUi,
 	metadata,
 	isTouched,
 }: CreateFormSnapshotOptions<Input, Context>): FormSnapshot<Input, Context> {
 	return Object.freeze({
 		values,
-		errors: emptyErrors,
+		errors,
+		displayErrors,
 		isDirty: !isDirtyEqual(values, baselineValues),
 		isTouched,
 		isValidating: false,
@@ -115,18 +110,4 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 	const prototype = Object.getPrototypeOf(value)
 	return prototype === Object.prototype || prototype === null
-}
-
-function createEmptyReadonlyMap<K, V>(): ReadonlyMap<K, V> {
-	return Object.freeze({
-		size: 0,
-		get: (_key: K) => undefined,
-		has: (_key: K) => false,
-		forEach: () => undefined,
-		entries: function* emptyEntries(): IterableIterator<[K, V]> {},
-		keys: function* emptyKeys(): IterableIterator<K> {},
-		values: function* emptyValues(): IterableIterator<V> {},
-		[Symbol.iterator]: function* emptyIterator(): IterableIterator<[K, V]> {},
-		[Symbol.toStringTag]: "Map",
-	}) as unknown as ReadonlyMap<K, V>
 }

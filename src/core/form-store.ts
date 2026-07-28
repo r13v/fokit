@@ -13,6 +13,18 @@ import {
 	freezeFormValue,
 } from "./form-state.js"
 import {
+	clearImperativeIssues,
+	clearServerIssuesForChanges,
+	createIssueState,
+	deriveFormErrors,
+	exposeIssuePaths,
+	type ImperativeFormIssue,
+	type IssueState,
+	isIssueStateEmpty,
+	reindexIssueStateArrayPaths,
+	setImperativeIssues,
+} from "./issues.js"
+import {
 	createInitialMetadataState,
 	createMetadataState,
 	deriveFormMetadata,
@@ -131,6 +143,8 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 		to: number,
 	): void
 	reset(values?: FormInput<Schema>): void
+	setErrors(issues: readonly ImperativeFormIssue[]): void
+	clearErrors(path?: PathInput): void
 	batch(callback: () => void): void
 	subscribe<Selected>(
 		selector: FormStoreSelector<FormInput<Schema>, Context, Selected>,
@@ -153,6 +167,7 @@ type Subscription<Input, Context, Selected = unknown> = {
 
 type ActiveBatch = {
 	changes: NormalizedValueChange[]
+	issueState?: IssueState
 	metadataState?: MetadataState
 	abortedError?: unknown
 }
@@ -167,6 +182,7 @@ type ValueCommitResult<Input> =
 	  }
 
 type ValueCommitOptions<Context> = {
+	readonly issueState?: IssueState
 	readonly metadataState?: MetadataState
 	readonly resetAfterCommit?: boolean
 	readonly transitionFromUi?: ResolvedUiState<Context>
@@ -191,6 +207,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	#baselineValues: FormInput<Schema>
 	#context: Context
+	#issueState: IssueState
 	#metadataState: MetadataState
 	#snapshot: FormSnapshot<FormInput<Schema>, Context>
 	#serverSnapshot: FormSnapshot<FormInput<Schema>, Context>
@@ -216,6 +233,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#context = options.context as Context
 		this.#disabled = options.disabled === true
 		this.#readOnly = options.readOnly === true
+		this.#issueState = createIssueState()
 		this.#metadataState = createInitialMetadataState(
 			this.definition,
 			this.#values,
@@ -328,6 +346,14 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 	}
 
+	setErrors(issues: readonly ImperativeFormIssue[]): void {
+		this.#commitIssueState(setImperativeIssues(this.#issueState, issues))
+	}
+
+	clearErrors(path?: PathInput): void {
+		this.#commitIssueState(clearImperativeIssues(this.#issueState, path))
+	}
+
 	batch(callback: () => void): void {
 		this.#assertValueCommandAllowed()
 
@@ -403,25 +429,37 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	}
 
 	touch(path: PathInput): void {
+		this.#touchPath(path, false)
+	}
+
+	blur(path: PathInput): void {
+		this.#touchPath(path, true)
+	}
+
+	#touchPath(path: PathInput, exposeIssues: boolean): void {
 		const canonicalPath = this.#normalizeKnownFieldPath(path)
 		const nextMetadataState = touchMetadataPath(
 			this.#metadataState,
 			canonicalPath,
 		)
-		if (nextMetadataState === this.#metadataState) {
+		const nextIssueState = exposeIssues
+			? exposeIssuePaths(this.#issueState, [canonicalPath])
+			: this.#issueState
+
+		if (
+			nextMetadataState === this.#metadataState &&
+			nextIssueState === this.#issueState
+		) {
 			return
 		}
 
 		const previousSnapshot = this.#snapshot
 		this.#metadataState = nextMetadataState
+		this.#issueState = nextIssueState
 		this.#snapshot = this.#createSnapshot({
 			resolvedUi: previousSnapshot.resolvedUi,
 		})
 		this.#notify()
-	}
-
-	blur(path: PathInput): void {
-		this.touch(path)
 	}
 
 	registerFieldRef(path: PathInput, element: FocusTarget | null): void {
@@ -474,11 +512,17 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			this.#baselineValues,
 			this.#metadataState,
 		)
+		const { errors, displayErrors } = deriveFormErrors(
+			this.#issueState,
+			resolvedUi,
+		)
 
 		return createFormSnapshot({
 			values: this.#values,
 			baselineValues: this.#baselineValues,
 			context: this.#context,
+			displayErrors,
+			errors,
 			resolvedUi,
 			metadata,
 			isTouched: isFormMetadataTouched(metadata),
@@ -549,6 +593,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					: applyValueChanges(this.#values, this.#activeBatch.changes).values
 			const baseMetadataState =
 				this.#activeBatch?.metadataState ?? this.#metadataState
+			const baseIssueState = this.#activeBatch?.issueState ?? this.#issueState
 			const update = createArrayCommandChange(
 				canonicalPath,
 				this.definition.arraysByPath[canonicalPath],
@@ -574,14 +619,24 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					update.rowState,
 				),
 			})
+			const issueState = reindexIssueStateArrayPaths(
+				baseIssueState,
+				canonicalPath,
+				update.previousKeys,
+				update.nextKeys,
+			)
 
 			if (this.#activeBatch !== undefined) {
 				this.#activeBatch.changes.push(...update.changes)
 				this.#activeBatch.metadataState = metadataState
+				this.#activeBatch.issueState = issueState
 				return
 			}
 
-			this.#commitValueChanges(update.changes, "array", { metadataState })
+			this.#commitValueChanges(update.changes, "array", {
+				issueState,
+				metadataState,
+			})
 		} catch (error) {
 			if (this.#activeBatch !== undefined) {
 				this.#activeBatch.abortedError ??= error
@@ -643,8 +698,15 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				this.definition,
 				nextValues,
 			)
+			this.#issueState = createIssueState()
 		} else if (options.metadataState !== undefined) {
 			this.#metadataState = options.metadataState
+		}
+		if (options.resetAfterCommit !== true) {
+			this.#issueState = clearServerIssuesForChanges(
+				options.issueState ?? this.#issueState,
+				effectiveChanges.map((change) => change.path),
+			)
 		}
 		this.#snapshot = this.#createSnapshot({
 			previousResolvedUi: previousSnapshot.resolvedUi,
@@ -738,7 +800,8 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		const nextBaselineValues = cloneAndFreezeValue(baselineValues)
 		if (
 			isDirtyEqual(this.#baselineValues, nextBaselineValues) &&
-			this.#metadataState.touchedPaths.size === 0
+			this.#metadataState.touchedPaths.size === 0 &&
+			isIssueStateEmpty(this.#issueState)
 		) {
 			return
 		}
@@ -749,6 +812,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			this.definition,
 			nextBaselineValues,
 		)
+		this.#issueState = createIssueState()
 		this.#snapshot = this.#createSnapshot({
 			resolvedUi: previousSnapshot.resolvedUi,
 		})
@@ -762,6 +826,19 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 		const previousSnapshot = this.#snapshot
 		this.#metadataState = metadataState
+		this.#snapshot = this.#createSnapshot({
+			resolvedUi: previousSnapshot.resolvedUi,
+		})
+		this.#notify()
+	}
+
+	#commitIssueState(issueState: IssueState): void {
+		if (issueState === this.#issueState) {
+			return
+		}
+
+		const previousSnapshot = this.#snapshot
+		this.#issueState = issueState
 		this.#snapshot = this.#createSnapshot({
 			resolvedUi: previousSnapshot.resolvedUi,
 		})

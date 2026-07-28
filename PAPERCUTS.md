@@ -21,3 +21,7 @@ Running Task 5A validation → `npm run check` failed only on Biome import order
 ## 2026-07-28 17:08 — GPT-5
 
 Implementing Task 5C array state → a large `apply_patch` mixed new files and several form-store hunks, then failed on a stale interface context. Smaller patches by file avoid losing the whole edit.
+
+## 2026-07-28 17:21 — GPT-5
+
+Wiring Task 6A array issue reindexing → an `apply_patch` hunk missed the current `#runArrayCommand` body after earlier edits. Patch narrow function-local hunks after rereading the exact target block.

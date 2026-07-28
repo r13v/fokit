@@ -224,6 +224,95 @@ describe("array commands and row metadata", () => {
 		])
 	})
 
+	it("reindexes manual issues and exposure by row key while removal drops them", () => {
+		const form = createAccountStore()
+
+		form.setErrors([
+			{
+				source: "manual",
+				path: "contacts.1.value",
+				message: "Review this contact",
+			},
+		])
+
+		form.insert("contacts", 0, {
+			value: "new@example.test",
+			tags: [],
+		})
+
+		expect(form.getSnapshot().errors.fields.has("contacts.1.value")).toBe(false)
+		expect(form.getSnapshot().errors.fields.get("contacts.2.value")).toEqual([
+			expect.objectContaining({ message: "Review this contact" }),
+		])
+		expect(
+			form.getSnapshot().displayErrors.fields.get("contacts.2.value"),
+		).toEqual([expect.objectContaining({ message: "Review this contact" })])
+
+		form.move("contacts", 2, 0)
+
+		expect(form.getSnapshot().errors.fields.has("contacts.2.value")).toBe(false)
+		expect(form.getSnapshot().errors.fields.get("contacts.0.value")).toEqual([
+			expect.objectContaining({ message: "Review this contact" }),
+		])
+		expect(
+			form.getSnapshot().displayErrors.fields.get("contacts.0.value"),
+		).toEqual([expect.objectContaining({ message: "Review this contact" })])
+
+		form.remove("contacts", 0)
+
+		expect(form.getSnapshot().errors.fields.size).toBe(0)
+		expect(form.getSnapshot().displayErrors.fields.size).toBe(0)
+	})
+
+	it("clears server issues that overlap array edits without clearing manual issues", () => {
+		const form = createAccountStore()
+
+		form.setErrors([
+			{
+				source: "server",
+				message: "Submission rejected",
+			},
+			{
+				source: "server",
+				path: "contacts.1.value",
+				message: "Server contact issue",
+			},
+			{
+				source: "server",
+				path: "profile.first",
+				message: "Server profile issue",
+			},
+			{
+				source: "manual",
+				path: "contacts.1.value",
+				message: "Manual contact issue",
+			},
+		])
+
+		form.setValue("profile.first", "Grace")
+
+		expect(form.getSnapshot().errors.form).toEqual([])
+		expect(
+			form.getSnapshot().errors.fields.get("profile.first"),
+		).toBeUndefined()
+		expect(form.getSnapshot().errors.fields.get("contacts.1.value")).toEqual([
+			expect.objectContaining({ message: "Server contact issue" }),
+			expect.objectContaining({ message: "Manual contact issue" }),
+		])
+
+		form.move("contacts", 1, 0)
+
+		expect(form.getSnapshot().errors.fields.get("contacts.0.value")).toEqual([
+			expect.objectContaining({ message: "Manual contact issue" }),
+		])
+		expect(
+			form
+				.getSnapshot()
+				.errors.fields.get("contacts.0.value")
+				?.some((issue) => issue.source === "server"),
+		).toBe(false)
+	})
+
 	it("rejects malformed paths, non-array targets, sparse indexes, and bad moves without side effects", () => {
 		const beforeUpdate = vi.fn()
 		const onUpdate = vi.fn()

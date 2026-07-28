@@ -125,7 +125,7 @@ export function reindexTouchedArrayPaths(
 	const nextTouchedPaths = new Set<string>()
 
 	for (const touchedPath of touchedPaths) {
-		const nextPath = reindexTouchedPath(
+		const nextPath = reindexArrayPath(
 			touchedPath,
 			arrayPath,
 			previousKeys,
@@ -142,6 +142,45 @@ export function reindexTouchedArrayPaths(
 	}
 
 	return changed ? nextTouchedPaths : touchedPaths
+}
+
+export function reindexArrayPath(
+	path: string,
+	arrayPath: string,
+	previousKeys: readonly string[],
+	nextKeys: readonly string[],
+): string | undefined {
+	const pathSegments = parsePath(path)
+	const arraySegments = parsePath(arrayPath)
+
+	if (!startsWithSegments(pathSegments, arraySegments)) {
+		return path
+	}
+
+	if (pathSegments.length === arraySegments.length) {
+		return path
+	}
+
+	const previousIndex = pathSegments[arraySegments.length]
+	if (typeof previousIndex !== "number") {
+		return path
+	}
+
+	const key = previousKeys[previousIndex]
+	if (key === undefined) {
+		return undefined
+	}
+
+	const nextIndex = nextKeys.indexOf(key)
+	if (nextIndex === -1) {
+		return undefined
+	}
+
+	return formatPath([
+		...arraySegments,
+		nextIndex,
+		...pathSegments.slice(arraySegments.length + 1),
+	])
 }
 
 export function isKnownArrayDescendantFieldPath<Schema extends StandardSchema>(
@@ -304,45 +343,6 @@ function createInitialRowState(path: string, length: number): ArrayRowState {
 
 function createRowKey(path: string, index: number): string {
 	return `${path}:${index}`
-}
-
-function reindexTouchedPath(
-	touchedPath: string,
-	arrayPath: string,
-	previousKeys: readonly string[],
-	nextKeys: readonly string[],
-): string | undefined {
-	const touchedSegments = parsePath(touchedPath)
-	const arraySegments = parsePath(arrayPath)
-
-	if (!startsWithSegments(touchedSegments, arraySegments)) {
-		return touchedPath
-	}
-
-	if (touchedSegments.length === arraySegments.length) {
-		return touchedPath
-	}
-
-	const previousIndex = touchedSegments[arraySegments.length]
-	if (typeof previousIndex !== "number") {
-		return touchedPath
-	}
-
-	const key = previousKeys[previousIndex]
-	if (key === undefined) {
-		return undefined
-	}
-
-	const nextIndex = nextKeys.indexOf(key)
-	if (nextIndex === -1) {
-		return undefined
-	}
-
-	return formatPath([
-		...arraySegments,
-		nextIndex,
-		...touchedSegments.slice(arraySegments.length + 1),
-	])
 }
 
 function hasRelativeFieldPath(

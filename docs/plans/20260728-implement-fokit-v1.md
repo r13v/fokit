@@ -721,19 +721,19 @@ schema validation starts replacing issues asynchronously.
 - Modify: `src/core/array-state.ts`
 - Modify: `src/core/index.ts`
 
-- [ ] Write failing tests for raw errors versus `displayErrors`,
+- [x] Write failing tests for raw errors versus `displayErrors`,
   overlap-based exposure, submit exposure, immediate manual/server exposure,
   and invisible-owner summary routing metadata.
-- [ ] Implement atomic manual/server source replacement, `setErrors`,
+- [x] Implement atomic manual/server source replacement, `setErrors`,
   `clearErrors`, edit-driven stale server clearing, reset clearing, and no
   value-update hooks for error-only commits.
-- [ ] Map unsupported Standard Schema issue paths to form-level issues without
+- [x] Map unsupported Standard Schema issue paths to form-level issues without
   attempting unsafe traversal.
-- [ ] Test that insert/move preserve and reindex manual issues and exposure by
+- [x] Test that insert/move preserve and reindex manual issues and exposure by
   row key; removal drops row metadata.
-- [ ] Test that edits and array operations clear overlapping server issues,
+- [x] Test that edits and array operations clear overlapping server issues,
   including form-level server issues, without clearing manual issues.
-- [ ] Run
+- [x] Run
   `npm run test -- --project node src/core/issues.test.ts src/core/array-state.test.ts`,
   `npm run typecheck`, `npm run check`, and `npm run knip` before Task 6B.
 

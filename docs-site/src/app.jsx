@@ -17,6 +17,7 @@ import {
 
 import { getLesson, LESSON_IDS } from "./content.js"
 import { examples } from "./examples.js"
+import { Lab } from "./lab.jsx"
 import {
 	applyRouteSideEffects,
 	getRouteLinks,
@@ -289,6 +290,8 @@ export function App() {
 							</nav>
 						</section>
 					</div>
+
+					<Lab locale={route.locale} />
 
 					<section className="examples" aria-labelledby="examples-title">
 						<h2 id="examples-title">{t.examples}</h2>

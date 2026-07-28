@@ -92,12 +92,12 @@ test.describe("Fokit docs shell", () => {
 		const metrics = await page.evaluate(() => {
 			const code = document.querySelector("[data-testid='example-code']")
 			return {
-				codeScrollable: code ? code.scrollWidth > code.clientWidth : false,
+				codeOverflowX: code ? getComputedStyle(code).overflowX : "",
 				pageWidth: document.documentElement.scrollWidth,
 				viewportWidth: document.documentElement.clientWidth,
 			}
 		})
-		expect(metrics.codeScrollable).toBe(true)
+		expect(metrics.codeOverflowX).toBe("auto")
 		expect(metrics.pageWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1)
 	})
 
@@ -131,5 +131,125 @@ test.describe("Fokit docs shell", () => {
 			viewportWidth: document.documentElement.clientWidth,
 		}))
 		expect(widths.pageWidth).toBeLessThanOrEqual(widths.viewportWidth + 1)
+	})
+
+	test("runs the Fokit lab through validation, conditions, reset, and classic submit", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 920 })
+		await page.goto("./#/en/first-form")
+
+		const lab = page.getByRole("region", { name: "Interactive Fokit lab" })
+		await expect(lab.getByTestId("lab-values")).toContainText(
+			'"name": "Ada Lovelace"',
+		)
+		await expect(lab.getByTestId("lab-dirty")).toHaveText("false")
+		await expect(lab.getByTestId("lab-form-data")).toContainText(
+			"__fokit.array=contacts",
+		)
+		await expect(lab.getByTestId("lab-form-data")).toContainText(
+			"contacts.0.email=ada@example.com",
+		)
+
+		await lab.getByLabel("Name").fill("")
+		await lab.getByRole("button", { name: "Save profile" }).click()
+		await expect(
+			lab.locator(".lab-error", { hasText: "Name is required" }),
+		).toBeVisible()
+		await expect(lab.getByTestId("lab-issues")).toContainText(
+			"name: Name is required",
+		)
+
+		await lab.getByLabel("Name").fill("Grace Hopper")
+		await lab.getByLabel("Account type").selectOption("company")
+		await lab.getByLabel("Company name").fill("Compiler Labs")
+		await expect(lab.getByTestId("lab-values")).toContainText(
+			'"companyName": "Compiler Labs"',
+		)
+		await lab.getByLabel("Account type").selectOption("personal")
+		await expect(lab.getByLabel("Company name")).toHaveCount(0)
+		await expect(lab.getByTestId("lab-values")).not.toContainText("companyName")
+		await expect(lab.getByTestId("lab-form-data")).not.toContainText(
+			"companyName",
+		)
+
+		await expect(lab.getByTestId("lab-dirty")).toHaveText("true")
+		await lab.getByRole("button", { name: "Reset lab" }).click()
+		await expect(lab.getByLabel("Name")).toHaveValue("Ada Lovelace")
+		await expect(lab.getByTestId("lab-dirty")).toHaveText("false")
+
+		await lab.getByRole("button", { name: "Save profile" }).click()
+		await expect(lab.getByTestId("lab-submission")).toContainText(
+			"Saved Ada Lovelace with 1 contact",
+		)
+	})
+
+	test("keeps lab array commands and native FormData inspector in parity", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1180, height: 900 })
+		await page.goto("./#/en/arrays")
+
+		const lab = page.getByRole("region", { name: "Interactive Fokit lab" })
+		await lab.getByRole("button", { name: "Add contact" }).click()
+		await expect(lab.locator("[data-lab-array-item]")).toHaveCount(2)
+
+		await lab.getByLabel("Email").nth(1).fill("support@example.com")
+		await expect(lab.getByTestId("lab-values")).toContainText(
+			'"email": "support@example.com"',
+		)
+		await expect(lab.getByTestId("lab-form-data")).toContainText(
+			"contacts.1.email=support@example.com",
+		)
+
+		await lab.getByRole("button", { name: "Move contact 2 up" }).click()
+		await expect(lab.getByLabel("Email").first()).toHaveValue(
+			"support@example.com",
+		)
+		await expect(lab.getByTestId("lab-form-data")).toContainText(
+			"contacts.0.email=support@example.com",
+		)
+
+		await lab.getByRole("button", { name: "Remove contact 1" }).click()
+		await expect(lab.locator("[data-lab-array-item]")).toHaveCount(1)
+		await expect(lab.getByTestId("lab-form-data")).not.toContainText(
+			"contacts.1.email",
+		)
+		await expect(lab.getByTestId("lab-form-data")).toContainText(
+			"__fokit.array=contacts",
+		)
+	})
+
+	test("captures wide and narrow lab screenshots for docs CI review", async ({
+		page,
+	}, testInfo) => {
+		await page.setViewportSize({ width: 1360, height: 1000 })
+		await page.goto("./#/en/overview")
+		const wideLab = page.getByRole("region", {
+			name: "Interactive Fokit lab",
+		})
+		await expect(wideLab).toBeVisible()
+		await wideLab.screenshot({
+			path: testInfo.outputPath("fokit-lab-wide.png"),
+		})
+
+		await page.setViewportSize({ width: 390, height: 860 })
+		await page.goto("./#/en/overview")
+		await expect(page.getByTestId("lesson-drawer")).toHaveAttribute(
+			"data-open",
+			"false",
+		)
+		const narrowLab = page.getByRole("region", {
+			name: "Interactive Fokit lab",
+		})
+		await expect(narrowLab).toBeVisible()
+		const widths = await page.evaluate(() => ({
+			pageWidth: document.documentElement.scrollWidth,
+			viewportWidth: document.documentElement.clientWidth,
+		}))
+		expect(widths.pageWidth).toBeLessThanOrEqual(widths.viewportWidth + 1)
+		await narrowLab.screenshot({
+			path: testInfo.outputPath("fokit-lab-narrow.png"),
+		})
 	})
 })

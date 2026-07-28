@@ -1407,26 +1407,26 @@ same state and `FormData` contracts explained by the lessons.
 - Modify: `tests/browser/docs-site.spec.ts`
 - Modify: `.github/workflows/ci.yml`
 
-- [ ] Extend the browser suite first with failing tests for validation,
+- [x] Extend the browser suite first with failing tests for validation,
   conditional unset, array add/move/remove, reset, classic submission, and
   inspector parity with native `FormData`.
-- [ ] Build one real Fokit-powered profile/account lab using the built public
+- [x] Build one real Fokit-powered profile/account lab using the built public
   exports, Zod, application-owned controls, all five slots, `AutoForm`,
   conditional company data with `valuePolicy`, and a contacts array.
-- [ ] Add a focused inspector for current values, dirty/touched state, exposed
+- [x] Add a focused inspector for current values, dirty/touched state, exposed
   issues, and native `FormData`/array markers. Keep the React 19 lesson
   copyable and tested, but do not fake a server Action on static Pages.
-- [ ] Capture wide and narrow Playwright screenshots as CI artifacts and
+- [x] Capture wide and narrow Playwright screenshots as CI artifacts and
   perform a qualitative design QA against the ECSplain reference: information
   hierarchy, density, navigation clarity, code/lab balance, responsive
   behavior, and a distinct Fokit visual identity. Do not add pixel-diff
   coupling to the reference. Upload the Playwright report/screenshots from the
   docs CI job with `actions/upload-artifact@v4`.
-- [ ] Add a dedicated docs-site job to `ci.yml`: build the root package,
+- [x] Add a dedicated docs-site job to `ci.yml`: build the root package,
   install the docs-site lockfile, install Chromium, and run
   `npm run site:verify`. Keep the root library matrix independent so site
   failures are easy to diagnose.
-- [ ] Run `npm run site:verify`, `npm run verify`, `npm run check`, and
+- [x] Run `npm run site:verify`, `npm run verify`, `npm run check`, and
   `npm run knip` before Task 15E.
 
 ### Task 15E: Deploy the verified site to GitHub Pages

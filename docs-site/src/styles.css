@@ -157,6 +157,10 @@ a {
 	margin: 0 auto;
 }
 
+.drawer-backdrop {
+	display: none;
+}
+
 .lesson-drawer {
 	position: sticky;
 	top: 4.25rem;
@@ -318,6 +322,333 @@ a {
 	font-weight: 680;
 }
 
+.lab-section {
+	display: grid;
+	gap: 1.1rem;
+	margin: 1.4rem 0 1.8rem;
+	border-block: 1px solid #dce4df;
+	background: #edf4f1;
+	padding: clamp(1rem, 2.4vw, 1.45rem) 0;
+	scroll-margin-top: 5.25rem;
+}
+
+.lab-heading {
+	display: grid;
+	gap: 0.45rem;
+	max-width: 62rem;
+}
+
+.lab-heading p,
+.lab-heading h2,
+.lab-heading span {
+	margin: 0;
+}
+
+.lab-heading p {
+	color: #be4d2e;
+	font-size: 0.78rem;
+	font-weight: 780;
+	text-transform: uppercase;
+}
+
+.lab-heading h2 {
+	color: #10201b;
+	font-size: clamp(1.55rem, 3.2vw, 2.35rem);
+	line-height: 1.05;
+}
+
+.lab-heading span {
+	max-width: 52rem;
+	color: #455852;
+	line-height: 1.62;
+}
+
+.lab-workspace {
+	min-width: 0;
+}
+
+.lab-form-panel {
+	min-width: 0;
+	border: 1px solid #cbd8d2;
+	border-radius: 0.5rem;
+	background: #ffffff;
+	box-shadow: 0 20px 42px rgba(24, 33, 31, 0.08);
+}
+
+.lab-form {
+	grid-template-columns: minmax(0, 1.05fr) minmax(19rem, 0.95fr);
+	align-items: start;
+	padding: clamp(0.9rem, 2vw, 1.2rem);
+}
+
+.lab-card-section,
+.lab-array {
+	min-width: 0;
+	border: 1px solid #dce4df;
+	border-radius: 0.45rem;
+	background: #fbfdfc;
+	padding: 1rem;
+}
+
+.lab-section-title {
+	display: grid;
+	gap: 0.28rem;
+	margin-bottom: 0.85rem;
+}
+
+.lab-section-title h3,
+.lab-section-title p,
+.lab-description,
+.lab-error,
+.lab-array-label {
+	margin: 0;
+}
+
+.lab-section-title h3,
+.lab-array-label {
+	color: #10201b;
+	font-size: 1rem;
+	font-weight: 760;
+}
+
+.lab-section-title p,
+.lab-description {
+	color: #66766f;
+	font-size: 0.9rem;
+	line-height: 1.5;
+}
+
+.lab-fields-grid,
+.lab-array-item-fields {
+	min-width: 0;
+}
+
+.lab-field {
+	gap: 0.38rem;
+}
+
+.lab-label {
+	color: #243632;
+	font-size: 0.88rem;
+	font-weight: 720;
+}
+
+.lab-control-shell {
+	min-width: 0;
+}
+
+.lab-input {
+	width: 100%;
+	min-height: 2.5rem;
+	border: 1px solid #b9c8c1;
+	border-radius: 0.4rem;
+	background: #ffffff;
+	color: #16251f;
+	padding: 0.55rem 0.68rem;
+}
+
+.lab-input:disabled,
+.lab-control-shell[data-readonly="true"] .lab-input {
+	background: #eef4f1;
+	color: #61736c;
+}
+
+.lab-checkbox {
+	width: 1.15rem;
+	height: 1.15rem;
+	accent-color: #14805f;
+}
+
+.lab-field[data-invalid] .lab-input,
+.lab-field[data-invalid] .lab-checkbox {
+	border-color: #be4d2e;
+}
+
+.lab-error {
+	color: #a43822;
+	font-size: 0.86rem;
+	font-weight: 650;
+}
+
+.lab-array-heading {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-bottom: 0.9rem;
+}
+
+.lab-array-items {
+	display: grid;
+	gap: 0.85rem;
+}
+
+.lab-array-item {
+	border: 1px solid #d9e4df;
+	border-radius: 0.45rem;
+	background: #ffffff;
+	padding: 0.85rem;
+}
+
+.lab-row-actions,
+.lab-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55rem;
+}
+
+.lab-row-actions {
+	justify-content: flex-end;
+}
+
+.lab-primary-button,
+.lab-secondary-button,
+.lab-icon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 2.35rem;
+	border-radius: 0.45rem;
+	padding: 0.52rem 0.78rem;
+	font-weight: 720;
+}
+
+.lab-primary-button {
+	border: 1px solid #10201b;
+	background: #10201b;
+	color: #ffffff;
+}
+
+.lab-secondary-button,
+.lab-icon-button {
+	border: 1px solid #c4d3cc;
+	background: #ffffff;
+	color: #1b3029;
+}
+
+.lab-icon-button.danger {
+	color: #9a3b26;
+}
+
+.lab-primary-button:disabled,
+.lab-secondary-button:disabled,
+.lab-icon-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.48;
+}
+
+.lab-actions {
+	grid-column: 1 / -1;
+	border-top: 1px solid #dce4df;
+	padding-top: 0.9rem;
+}
+
+.lab-inspector {
+	grid-column: 1 / -1;
+	min-width: 0;
+	border: 1px solid #203d35;
+	border-radius: 0.5rem;
+	background: #10201b;
+	color: #e6f2ee;
+	overflow: hidden;
+}
+
+.lab-submit-state {
+	display: grid;
+	gap: 0.25rem;
+	border-bottom: 1px solid #244940;
+	padding: 0.9rem 1rem;
+}
+
+.lab-submit-state span {
+	color: #9bdac7;
+	font-size: 0.78rem;
+	font-weight: 780;
+	text-transform: uppercase;
+}
+
+.lab-submit-state output {
+	color: #ffffff;
+	font-weight: 700;
+	line-height: 1.45;
+}
+
+.lab-inspector-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1px;
+	background: #244940;
+}
+
+.lab-inspector-panel {
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr);
+	min-width: 0;
+	background: #10201b;
+}
+
+.lab-inspector-panel h3 {
+	margin: 0;
+	border-bottom: 1px solid #244940;
+	padding: 0.65rem 0.75rem;
+	color: #9bdac7;
+	font-size: 0.78rem;
+	font-weight: 780;
+	text-transform: uppercase;
+}
+
+.lab-inspector-panel pre {
+	max-height: 14rem;
+	max-width: 100%;
+	margin: 0;
+	overflow-x: auto;
+	background: #0b1512;
+	box-shadow: none;
+	color: #e8f2ee;
+	padding: 1rem 1.1rem 1.25rem;
+	font-size: 0.75rem;
+	line-height: 1.55;
+	tab-size: 2;
+}
+
+.lab-state-list {
+	display: grid;
+	gap: 0;
+	margin: 0;
+	padding: 0.35rem 0.75rem 0.75rem;
+}
+
+.lab-state-list div {
+	display: grid;
+	grid-template-columns: minmax(5.2rem, 0.75fr) minmax(0, 1fr);
+	gap: 0.55rem;
+	border-bottom: 1px solid #203d35;
+	padding: 0.36rem 0;
+}
+
+.lab-state-list div:last-child {
+	border-bottom: 0;
+}
+
+.lab-state-list dt {
+	color: #8aa49b;
+	font-size: 0.76rem;
+	font-weight: 740;
+}
+
+.lab-state-list dd {
+	margin: 0;
+	overflow-wrap: anywhere;
+	color: #ffffff;
+	font-size: 0.8rem;
+}
+
+.lab-empty {
+	margin: 0;
+	color: #66766f;
+	font-size: 0.9rem;
+}
+
 .examples {
 	display: grid;
 	gap: 1rem;
@@ -367,7 +698,7 @@ a {
 	font-weight: 720;
 }
 
-pre {
+.example-panel pre {
 	max-width: 100%;
 	margin: 0;
 	overflow-x: auto;
@@ -437,6 +768,7 @@ code {
 	}
 
 	.drawer-backdrop {
+		display: block;
 		position: fixed;
 		inset: 0;
 		z-index: 21;
@@ -518,8 +850,24 @@ code {
 	}
 
 	.lesson-grid,
-	.lesson-pagination {
+	.lesson-pagination,
+	.lab-form,
+	.lab-inspector-grid {
 		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.lab-section {
+		margin-inline: -1rem;
+		padding-inline: 1rem;
+	}
+
+	.lab-array-heading {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.lab-row-actions {
+		justify-content: flex-start;
 	}
 
 	.example-toolbar {

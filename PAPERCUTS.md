@@ -85,3 +85,15 @@ Running Task 15C docs-site Playwright tests → the production build used `BASE_
 ## 2026-07-28 19:36 — GPT-5
 
 Renaming the Task 15C app component → a move-only `apply_patch` hunk was rejected as empty, so the import edit had to use `apply_patch` and the filename change had to use `mv`. A supported move-only patch form would keep renames in one tool path.
+
+## 2026-07-28 19:43 — GPT-5
+
+Selecting the next Ralphex task → the completed packaging section looked like the next boundary until the later open docs-site section loaded. Read through the next unchecked Task header before announcing the picked task.
+
+## 2026-07-28 19:48 — GPT-5
+
+Checking the Task 15D docs lab → Biome caught a mix of formatting, kebab-case filename, label association, hook dependency, and CSS specificity issues after the first passing browser run. Running `npm run check` before full validation kept the fixes local.
+
+## 2026-07-28 19:49 — GPT-5
+
+Running full verify after docs-site e2e changes → root `npm run test:browser` also picked up `docs-site.spec.ts`, but that spec depends on the separate docs Playwright base URL. Keep docs e2e excluded from the root browser config and owned by `playwright.docs.config.ts`.

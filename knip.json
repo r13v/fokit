@@ -1,6 +1,6 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema.json",
 	"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-	"ignoreDependencies": ["@testing-library/user-event", "zod"],
+	"ignoreDependencies": ["zod"],
 	"tags": ["-lintignore"]
 }

@@ -985,17 +985,17 @@ serialization path that matches the safe server protocol.
 - Modify: `src/react/create-form-kit.tsx`
 - Modify: `src/index.ts`
 
-- [ ] Write failing tests for native, hidden, and unavailable control modes;
+- [x] Write failing tests for native, hidden, and unavailable control modes;
   resolved options/context; array markers; and hidden-mode editor names.
-- [ ] Implement serializers as synchronous pure functions whose entries render
+- [x] Implement serializers as synchronous pure functions whose entries render
   as hidden inputs during SSR and client rendering.
-- [ ] Assert serializer output normalizes through `parseFormData` to the same
+- [x] Assert serializer output normalizes through `parseFormData` to the same
   schema output as classic controlled submission.
-- [ ] Serialize preserved fields under invisible/disabled subtrees without
+- [x] Serialize preserved fields under invisible/disabled subtrees without
   rendering visual slots; omit unset fields.
-- [ ] Add DOM parity tests for empty arrays, repeated values, absent
+- [x] Add DOM parity tests for empty arrays, repeated values, absent
   checkboxes, numbers, dates, read-only/disabled fields, and files.
-- [ ] Run
+- [x] Run
   `npm run test -- --project react src/react/form-data.test.tsx`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 11.
 

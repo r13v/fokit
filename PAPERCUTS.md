@@ -49,3 +49,7 @@ Formatting Task 9 React helpers → `npm run check:fix` applied mechanical fixes
 ## 2026-07-28 18:19 — GPT-5
 
 Checking the next open plan task after committing Task 10B → `python` was not installed in the shell, while `python3` worked. Use `python3` in repository helper one-liners or add a portable npm script.
+
+## 2026-07-28 18:25 — GPT-5
+
+Investigating native file FormData behavior for Task 10C → a quick jsdom probe failed because `window.DataTransfer` is not constructible in this environment. Prefer Testing Library's upload helper or assert selected `input.files` when native FormData cannot be simulated directly.

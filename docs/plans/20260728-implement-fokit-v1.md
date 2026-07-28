@@ -634,19 +634,19 @@ before reset, arrays, validation, or React controls are layered on top.
 - Modify: `src/core/form-state.ts`
 - Modify: `src/core/index.ts`
 
-- [ ] Write failing runtime and type tests for `setValue`, deep `setValues`,
+- [x] Write failing runtime and type tests for `setValue`, deep `setValues`,
   optional-only `unsetValue`, ordered overlap, no-op transactions, and batches.
-- [ ] Implement ordered transaction normalization with last-overlap-wins
+- [x] Implement ordered transaction normalization with last-overlap-wins
   semantics and one atomic commit.
-- [ ] Test `beforeUpdate` accept/cancel/replace behavior, replacement
+- [x] Test `beforeUpdate` accept/cancel/replace behavior, replacement
   normalization, nested-command rejection, and thrown-hook semantics.
-- [ ] Test `onUpdate` once per commit, post-commit exception behavior, nested
+- [x] Test `onUpdate` once per commit, post-commit exception behavior, nested
   follow-up transactions, and no calls for metadata-only updates.
-- [ ] Implement nested batches as one outer transaction and abort the entire
+- [x] Implement nested batches as one outer transaction and abort the entire
   uncommitted batch when a command or callback throws.
-- [ ] Add fast-check state-machine tests comparing random set/unset/batch
+- [x] Add fast-check state-machine tests comparing random set/unset/batch
   sequences with a simple reference model.
-- [ ] Run
+- [x] Run
   `npm run test -- --project node src/core/transaction.test.ts`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 5B.
 

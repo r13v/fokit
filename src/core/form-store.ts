@@ -3,6 +3,7 @@ import {
 	cloneAndFreezeValue,
 	createFormSnapshot,
 	type FormSnapshot,
+	freezeFormValue,
 } from "./form-state.js"
 import {
 	createMetadataState,
@@ -12,18 +13,25 @@ import {
 	touchMetadataPath,
 } from "./metadata.js"
 import { formatPath, type PathInput } from "./path.js"
+import type { FieldPath, PathValue } from "./path-types.js"
 import { type ResolvedUiState, resolveUi } from "./resolve-ui.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
+import {
+	applyValueChanges,
+	createDeepPartialChanges,
+	createSetChange,
+	createUnsetChange,
+	type FormDeepPartial,
+	type NormalizedValueChange,
+	type OptionalFieldPath,
+	type ValueChange,
+} from "./transaction.js"
 import { getPathValue } from "./value.js"
+
+export type { ValueChange } from "./transaction.js"
 
 export type FocusTarget = {
 	focus(options?: FocusOptions): void
-}
-
-export type ValueChange = {
-	readonly path: string
-	readonly type: "set" | "unset"
-	readonly value?: unknown
 }
 
 export type UpdateSource =
@@ -36,7 +44,7 @@ export type UpdateSource =
 export type BeforeUpdateEvent<Input, Context> = {
 	readonly currentValues: Readonly<Input>
 	readonly nextValues: Readonly<Input>
-	readonly changes: readonly ValueChange[]
+	readonly changes: readonly ValueChange<Input>[]
 	readonly source: UpdateSource
 	readonly context: Readonly<Context>
 }
@@ -44,7 +52,7 @@ export type BeforeUpdateEvent<Input, Context> = {
 export type UpdateEvent<Input, Context> = {
 	readonly previousValues: Readonly<Input>
 	readonly values: Readonly<Input>
-	readonly changes: readonly ValueChange[]
+	readonly changes: readonly ValueChange<Input>[]
 	readonly source: UpdateSource
 	readonly context: Readonly<Context>
 }
@@ -87,6 +95,15 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 	getServerSnapshot(): FormSnapshot<FormInput<Schema>, Context>
 	getValues(): FormInput<Schema>
 	getValue(path: PathInput): unknown
+	setValue<Path extends FieldPath<FormInput<Schema>>>(
+		path: Path,
+		value: PathValue<FormInput<Schema>, Path>,
+	): void
+	setValues(values: FormDeepPartial<FormInput<Schema>>): void
+	unsetValue<Path extends OptionalFieldPath<FormInput<Schema>>>(
+		path: Path,
+	): void
+	batch(callback: () => void): void
 	subscribe<Selected>(
 		selector: FormStoreSelector<FormInput<Schema>, Context, Selected>,
 		listener: FormStoreListener<Selected>,
@@ -104,6 +121,11 @@ type Subscription<Input, Context, Selected = unknown> = {
 	readonly listener: FormStoreListener<Selected>
 	readonly equalityFn: (previous: Selected, next: Selected) => boolean
 	selected: Selected
+}
+
+type ActiveBatch = {
+	changes: NormalizedValueChange[]
+	abortedError?: unknown
 }
 
 export function createFormStore<
@@ -124,10 +146,17 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	#serverSnapshot: FormSnapshot<FormInput<Schema>, Context>
 	#values: FormInput<Schema>
 
+	#activeBatch: ActiveBatch | undefined
 	readonly #disabled: boolean
 	readonly #focusTargets = new Map<string, FocusTarget>()
+	#isRunningBeforeUpdate = false
 	readonly #readOnly: boolean
 	readonly #subscriptions = new Set<Subscription<FormInput<Schema>, Context>>()
+	readonly #beforeUpdate: UpdateHooks<
+		FormInput<Schema>,
+		Context
+	>["beforeUpdate"]
+	readonly #onUpdate: UpdateHooks<FormInput<Schema>, Context>["onUpdate"]
 
 	constructor(options: FormStoreOptions<Schema, Context>) {
 		this.definition = options.definition
@@ -140,6 +169,8 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#metadataState = createMetadataState()
 		this.#snapshot = this.#createSnapshot()
 		this.#serverSnapshot = this.#snapshot
+		this.#beforeUpdate = options.beforeUpdate
+		this.#onUpdate = options.onUpdate
 	}
 
 	getSnapshot(): FormSnapshot<FormInput<Schema>, Context> {
@@ -157,6 +188,56 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	getValue(path: PathInput): unknown
 	getValue(path: PathInput): unknown {
 		return getPathValue(this.#snapshot.values, path)
+	}
+
+	setValue<Path extends FieldPath<FormInput<Schema>>>(
+		path: Path,
+		value: PathValue<FormInput<Schema>, Path>,
+	): void {
+		this.#runValueCommand(() => [createSetChange(path, value)])
+	}
+
+	setValues(values: FormDeepPartial<FormInput<Schema>>): void {
+		this.#runValueCommand(() => createDeepPartialChanges(values))
+	}
+
+	unsetValue<Path extends OptionalFieldPath<FormInput<Schema>>>(
+		path: Path,
+	): void {
+		this.#runValueCommand(() => [createUnsetChange(path)])
+	}
+
+	batch(callback: () => void): void {
+		this.#assertValueCommandAllowed()
+
+		if (this.#activeBatch !== undefined) {
+			try {
+				callback()
+			} catch (error) {
+				this.#activeBatch.abortedError ??= error
+				throw error
+			}
+			return
+		}
+
+		const batch: ActiveBatch = {
+			changes: [],
+		}
+		this.#activeBatch = batch
+
+		try {
+			callback()
+		} catch (error) {
+			batch.abortedError ??= error
+		} finally {
+			this.#activeBatch = undefined
+		}
+
+		if (batch.abortedError !== undefined) {
+			throw batch.abortedError
+		}
+
+		this.#commitValueChanges(batch.changes, "imperative")
 	}
 
 	subscribe<Selected>(
@@ -285,6 +366,113 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		return canonicalPath
+	}
+
+	#runValueCommand(
+		createChanges: () => readonly NormalizedValueChange[],
+		source: UpdateSource = "imperative",
+	): void {
+		this.#assertValueCommandAllowed()
+
+		try {
+			const changes = createChanges()
+			if (this.#activeBatch !== undefined) {
+				this.#activeBatch.changes.push(...changes)
+				return
+			}
+
+			this.#commitValueChanges(changes, source)
+		} catch (error) {
+			if (this.#activeBatch !== undefined) {
+				this.#activeBatch.abortedError ??= error
+			}
+			throw error
+		}
+	}
+
+	#commitValueChanges(
+		changes: readonly NormalizedValueChange[],
+		source: UpdateSource,
+	): void {
+		const proposal = applyValueChanges(this.#values, changes)
+		if (proposal.changes.length === 0) {
+			return
+		}
+
+		let nextValues = freezeFormValue(proposal.values)
+		let effectiveChanges = proposal.changes
+
+		if (this.#beforeUpdate !== undefined) {
+			const replacement = this.#callBeforeUpdate(
+				nextValues,
+				effectiveChanges,
+				source,
+			)
+
+			if (replacement === false) {
+				return
+			}
+
+			if (replacement !== undefined) {
+				const replacementProposal = applyValueChanges(this.#values, replacement)
+				if (replacementProposal.changes.length === 0) {
+					return
+				}
+
+				nextValues = freezeFormValue(replacementProposal.values)
+				effectiveChanges = replacementProposal.changes
+			}
+		}
+
+		const previousSnapshot = this.#snapshot
+		this.#values = nextValues
+		this.#snapshot = this.#createSnapshot({
+			previousResolvedUi: previousSnapshot.resolvedUi,
+		})
+		this.#notify()
+		this.#onUpdate?.(
+			Object.freeze({
+				previousValues: previousSnapshot.values,
+				values: this.#snapshot.values,
+				changes: effectiveChanges as readonly ValueChange<FormInput<Schema>>[],
+				source,
+				context: this.#context as Readonly<Context>,
+			}),
+		)
+	}
+
+	#callBeforeUpdate(
+		nextValues: FormInput<Schema>,
+		changes: readonly NormalizedValueChange[],
+		source: UpdateSource,
+	): false | readonly ValueChange<FormInput<Schema>>[] | undefined {
+		const beforeUpdate = this.#beforeUpdate
+		if (beforeUpdate === undefined) {
+			return undefined
+		}
+
+		this.#isRunningBeforeUpdate = true
+		try {
+			return beforeUpdate(
+				Object.freeze({
+					currentValues: this.#snapshot.values,
+					nextValues,
+					changes: changes as readonly ValueChange<FormInput<Schema>>[],
+					source,
+					context: this.#context as Readonly<Context>,
+				}),
+			)
+		} finally {
+			this.#isRunningBeforeUpdate = false
+		}
+	}
+
+	#assertValueCommandAllowed(): void {
+		if (this.#isRunningBeforeUpdate) {
+			throw new TypeError(
+				"Value commands cannot be called during beforeUpdate; return replacement changes instead",
+			)
+		}
 	}
 
 	#notify(): void {

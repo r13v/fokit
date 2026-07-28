@@ -13,3 +13,7 @@ Searching the spec for Task 3A context → an `rg` query containing markdown bac
 ## 2026-07-28 16:46 — GPT-5
 
 Typechecking Task 4 store types → embedding recursive `FieldPath<FormInput<Schema>>` across the whole generic store interface triggered TS2589. Keep the broad store runtime surface on `PathInput` and add command-specific path typing in the later transaction/type-test slice.
+
+## 2026-07-28 16:54 — GPT-5
+
+Running Task 5A validation → `npm run check` failed only on Biome import ordering and formatting after the transaction edits. Running the existing `npm run check:fix` resolved it, but a pre-check formatter hook would avoid the read-only check detour.

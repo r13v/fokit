@@ -73,10 +73,10 @@ export function createFormSnapshot<Input, Context>({
 }
 
 export function cloneAndFreezeValue<Value>(value: Value): Value {
-	return freezeSnapshotValue(cloneValue(value))
+	return freezeFormValue(cloneValue(value))
 }
 
-function freezeSnapshotValue<Value>(value: Value): Value {
+export function freezeFormValue<Value>(value: Value): Value {
 	return freezePlainContainers(value, new WeakSet()) as Value
 }
 

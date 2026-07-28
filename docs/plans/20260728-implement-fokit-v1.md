@@ -440,10 +440,11 @@ jsdom globals despite the DOM-free package contract.
 
 - Modify: `package.json`
 - Modify: `docs/SPEC.md`
+- Modify: `knip.json`
 - Modify: `vitest.config.ts`
 - Modify: `tests/package/package-metadata.test.ts`
 
-- [ ] Update the four JavaScript subpath exports in `package.json` and the
+- [x] Update the four JavaScript subpath exports in `package.json` and the
   normative package example in `docs/SPEC.md` to nested `import` and `require`
   objects. Use `index.d.ts`/`index.js` and `index.d.cts`/`index.cjs` for `"."`;
   `core.d.ts`/`core.js` and `core.d.cts`/`core.cjs` for `"./core"`;
@@ -452,21 +453,24 @@ jsdom globals despite the DOM-free package contract.
   `server.d.cts`/`server.cjs` for `"./server"`. Paths are under `./dist/`.
   Keep `types` first inside each nested condition and retain the ESM `.js`
   target as each subpath's final top-level `default`.
-- [ ] Extend `tests/package/package-metadata.test.ts` first so the old
+- [x] Extend `tests/package/package-metadata.test.ts` first so the old
   top-level declaration routing fails and all four subpaths must point ESM and
   CommonJS consumers to their matching declaration formats.
-- [ ] Change `npm run package:check` to run
+- [x] Change `npm run package:check` to run
   `attw --pack . --profile node16 --entrypoints . ./core ./react19 ./server`
   after build and publint. Do not ignore `false-esm`, `false-cjs`, or
   `no-resolution`; CSS is intentionally outside ATTW and remains covered by
   package and Vite tests.
-- [ ] Configure a named inline Vitest `node` project that includes
+- [x] Configure a named inline Vitest `node` project that includes
   `src/core/**/*.test.ts` and `src/server/**/*.test.ts` with
   `environment: "node"`. Task 8 adds the `react` project immediately before
   the first React test is created.
-- [ ] Remove Vitest's bootstrap-only `passWithNoTests` setting. Task 2 creates
+- [x] Remove Vitest's bootstrap-only `passWithNoTests` setting. Task 2 creates
   the first Node-project test before invoking `npm run test`.
-- [ ] Run `npm run build`, `npm run test:package`,
+- [x] Keep Knip passing while the React test setup is staged by ignoring
+  `tests/setup.ts` and the future React test dependencies until Task 8 wires
+  the React project back into Vitest.
+- [x] Run `npm run build`, `npm run test:package`,
   `npm run package:check`, `npm run typecheck`, `npm run check`, and
   `npm run knip` before Task 2.
 

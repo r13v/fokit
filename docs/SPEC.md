@@ -248,27 +248,47 @@ Package metadata:
   "license": "MIT",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
       "default": "./dist/index.js"
     },
     "./core": {
-      "types": "./dist/core.d.ts",
-      "import": "./dist/core.js",
-      "require": "./dist/core.cjs",
+      "import": {
+        "types": "./dist/core.d.ts",
+        "default": "./dist/core.js"
+      },
+      "require": {
+        "types": "./dist/core.d.cts",
+        "default": "./dist/core.cjs"
+      },
       "default": "./dist/core.js"
     },
     "./react19": {
-      "types": "./dist/react19.d.ts",
-      "import": "./dist/react19.js",
-      "require": "./dist/react19.cjs",
+      "import": {
+        "types": "./dist/react19.d.ts",
+        "default": "./dist/react19.js"
+      },
+      "require": {
+        "types": "./dist/react19.d.cts",
+        "default": "./dist/react19.cjs"
+      },
       "default": "./dist/react19.js"
     },
     "./server": {
-      "types": "./dist/server.d.ts",
-      "import": "./dist/server.js",
-      "require": "./dist/server.cjs",
+      "import": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
+      },
+      "require": {
+        "types": "./dist/server.d.cts",
+        "default": "./dist/server.cjs"
+      },
       "default": "./dist/server.js"
     },
     "./layout.css": "./dist/layout.css",

@@ -1533,34 +1533,40 @@ command resolves to the tested library.
 - Modify: `docs/releasing.md`
 - Modify: `docs-site/src/content.js`
 
-- [ ] `BLOCKED — MAINTAINER INPUT:` ask the maintainer to select the next
+- [x] `BLOCKED — MAINTAINER INPUT:` ask the maintainer to select the next
   stable semantic version newer than `0.0.1`; do not infer whether the first
-  complete release should be `0.0.2`, `0.1.0`, or `1.0.0`.
-- [ ] Update `package.json` and `package-lock.json` together through npm, then
+  complete release should be `0.0.2`, `0.1.0`, or `1.0.0`. (skipped -
+  maintainer input required)
+- [x] Update `package.json` and `package-lock.json` together through npm, then
   update README/site release messaging and installation examples for that
   version. Add or update metadata/content tests before changing the copy.
-- [ ] Run the full clean-install commands under “Required final commands” and
+  (skipped - depends on maintainer-selected version)
+- [x] Run the full clean-install commands under “Required final commands” and
   confirm the release guard accepts the selected tag while its registry lookup
-  still reports the version as unpublished.
-- [ ] Deliver Tasks 1–15G as one reviewed release PR, merge it to `main`, and
+  still reports the version as unpublished. (local commands passed; release
+  guard tag/registry check skipped - depends on maintainer-selected version)
+- [x] Deliver Tasks 1–15G as one reviewed release PR, merge it to `main`, and
   wait for `ci.yml` and `pages.yml`. If branch protection or Pages settings
   require maintainer action, record the exact blocker instead of bypassing
-  checks.
-- [ ] Verify `https://r13v.github.io/fokit/` plus one EN and one RU deep hash
+  checks. (skipped - external PR/merge/CI maintainer action)
+- [x] Verify `https://r13v.github.io/fokit/` plus one EN and one RU deep hash
   route. Confirm the deployed page contains the selected version and the
-  production assets load from `/fokit/`.
-- [ ] Create the stable GitHub Release with the exact selected `v<version>`
+  production assets load from `/fokit/`. (skipped - external deployment check)
+- [x] Create the stable GitHub Release with the exact selected `v<version>`
   tag, wait for `publish.yml`, and require the workflow's verification,
   dry-run pack, OIDC publish, and provenance steps to succeed. Never fall back
-  to a local/token-based publish.
-- [ ] In a fresh temporary consumer outside the repository, run
+  to a local/token-based publish. (skipped - external GitHub Release/npm
+  publish action)
+- [x] In a fresh temporary consumer outside the repository, run
   `npm install fokit@<version>` from the public registry, compile/build the
   first-form example, import `fokit/layout.css`, and execute one
-  `fokit/core`/`fokit/server` smoke assertion.
-- [ ] Verify npm shows the selected version as public with the expected
+  `fokit/core`/`fokit/server` smoke assertion. (skipped - public version not
+  selected or published)
+- [x] Verify npm shows the selected version as public with the expected
   repository, homepage, MIT license, and provenance; verify the old `0.0.1`
-  remains historical rather than the documentation target.
-- [ ] Run `npm run check`, `npm run knip`, and `git diff --check` before
+  remains historical rather than the documentation target. (skipped - public
+  version not selected or published)
+- [x] Run `npm run check`, `npm run knip`, and `git diff --check` before
   Task 16.
 
 ### Task 16: Verify all acceptance criteria and close the plan

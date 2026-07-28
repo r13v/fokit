@@ -573,14 +573,14 @@ before the store starts reacting to context and value changes.
 - Modify: `src/core/computed.ts`
 - Modify: `src/core/index.ts`
 
-- [ ] Write failing tests for labels, descriptions, options, required state,
+- [x] Write failing tests for labels, descriptions, options, required state,
   layout, context, and inherited visible/disabled/read-only precedence.
-- [ ] Implement `resolveUi` as a synchronous, React-free operation over a
+- [x] Implement `resolveUi` as a synchronous, React-free operation over a
   normalized definition, input values, and read-only context.
-- [ ] Test that computed resolvers rerun only when a declared dependency or
+- [x] Test that computed resolvers rerun only when a declared dependency or
   runtime-context reference changes.
-- [ ] Test that unrelated value changes reuse resolved computed results.
-- [ ] Run
+- [x] Test that unrelated value changes reuse resolved computed results.
+- [x] Run
   `npm run test -- --project node src/core/resolve-ui.test.ts`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 4.
 

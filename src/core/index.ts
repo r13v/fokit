@@ -50,6 +50,17 @@ export type {
 	PathValue,
 } from "./path-types.js"
 export type {
+	ResolvedArrayNode,
+	ResolvedComputedCache,
+	ResolvedComputedEntry,
+	ResolvedFieldNode,
+	ResolvedSectionNode,
+	ResolvedUiNode,
+	ResolvedUiState,
+	ResolveUiOptions,
+} from "./resolve-ui.js"
+export { resolveUi } from "./resolve-ui.js"
+export type {
 	FormInput,
 	FormOutput,
 	StandardSchema,

@@ -52,6 +52,12 @@ describe("package metadata", () => {
 		expect(packageJson).not.toHaveProperty("directories")
 	})
 
+	it("runs strict package analyzers against JavaScript entry points", () => {
+		expect(packageJson.scripts["package:check"]).toBe(
+			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./react19 ./server",
+		)
+	})
+
 	it("routes declarations to the matching module format", () => {
 		for (const [entrypoint, distName] of Object.entries(
 			javaScriptEntrypoints,

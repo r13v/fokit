@@ -1132,19 +1132,19 @@ files, declarations, directives, and runtime boundaries.
 - Modify: `tests/package/package-metadata.test.ts`
 - Modify: `vitest.package.config.ts`
 
-- [ ] Write failing packed-output tests for every JavaScript export target,
+- [x] Write failing packed-output tests for every JavaScript export target,
   condition-specific declaration target, CSS side effect, `"use client"`
   directive, and forbidden React import.
-- [ ] Assert every nested `import.types` target exists as `.d.ts` and every
+- [x] Assert every nested `import.types` target exists as `.d.ts` and every
   nested `require.types` target exists as `.d.cts`; no JavaScript subpath may
   fall back to a declaration with the opposite module kind.
-- [ ] Assert the packed tarball excludes source, tests, fixtures, plans, and
+- [x] Assert the packed tarball excludes source, tests, fixtures, plans, and
   local references while retaining `dist`, `README.md`, `LICENSE`, and
   `package.json`.
-- [ ] Run `publint --strict` and the exact ATTW command established in Task 1A;
+- [x] Run `publint --strict` and the exact ATTW command established in Task 1A;
   treat any JavaScript-entry `FalseESM`, `FalseCJS`, or resolution failure as a
   blocker.
-- [ ] Run `npm run build`, `npm run test:package`,
+- [x] Run `npm run build`, `npm run test:package`,
   `npm run package:check`, `npm run check`, and `npm run knip` before Task 14B.
 
 ### Task 14B: Build packed-tarball consumer fixtures

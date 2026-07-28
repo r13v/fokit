@@ -663,19 +663,19 @@ transaction boundary without introducing loops or partial reset metadata.
 - Modify: `src/core/form-store.ts`
 - Modify: `src/core/form-state.ts`
 
-- [ ] Write failing tests for same-value reset, new baseline reset,
+- [x] Write failing tests for same-value reset, new baseline reset,
   cancellation, replacement-baseline semantics, and update-hook call counts.
-- [ ] Implement reset so changed values pass through the transaction pipeline,
+- [x] Implement reset so changed values pass through the transaction pipeline,
   successful committed values become the baseline, and cancelled resets apply
   no reset metadata.
-- [ ] Expand visibility-driven `valuePolicy` changes to stability before
+- [x] Expand visibility-driven `valuePolicy` changes to stability before
   `beforeUpdate`, and include all effective changes in `onUpdate`.
-- [ ] Test that invisible `valuePolicy: "unset"` fields converge without
+- [x] Test that invisible `valuePolicy: "unset"` fields converge without
   update loops and that a context-only visibility change creates one separate
   `source: "valuePolicy"` transaction.
-- [ ] Leave source-specific issue clearing to Task 6A, where the issue model is
+- [x] Leave source-specific issue clearing to Task 6A, where the issue model is
   introduced; reset dirty/touched/submission metadata here.
-- [ ] Run
+- [x] Run
   `npm run test -- --project node src/core/reset.test.ts src/core/value-policy.test.ts`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 5C.
 

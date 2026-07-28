@@ -12,7 +12,7 @@ import {
 	type MetadataState,
 	touchMetadataPath,
 } from "./metadata.js"
-import { formatPath, type PathInput } from "./path.js"
+import { formatPath, type PathInput, parsePath } from "./path.js"
 import type { FieldPath, PathValue } from "./path-types.js"
 import { type ResolvedUiState, resolveUi } from "./resolve-ui.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
@@ -26,7 +26,7 @@ import {
 	type OptionalFieldPath,
 	type ValueChange,
 } from "./transaction.js"
-import { getPathValue } from "./value.js"
+import { getPathValue, isDirtyEqual } from "./value.js"
 
 export type { ValueChange } from "./transaction.js"
 
@@ -103,6 +103,7 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 	unsetValue<Path extends OptionalFieldPath<FormInput<Schema>>>(
 		path: Path,
 	): void
+	reset(values?: FormInput<Schema>): void
 	batch(callback: () => void): void
 	subscribe<Selected>(
 		selector: FormStoreSelector<FormInput<Schema>, Context, Selected>,
@@ -126,6 +127,26 @@ type Subscription<Input, Context, Selected = unknown> = {
 type ActiveBatch = {
 	changes: NormalizedValueChange[]
 	abortedError?: unknown
+}
+
+type ValueCommitResult<Input> =
+	| {
+			readonly status: "cancelled" | "committed"
+	  }
+	| {
+			readonly status: "noValueChange"
+			readonly values: Input
+	  }
+
+type ValueCommitOptions<Context> = {
+	readonly resetAfterCommit?: boolean
+	readonly transitionFromUi?: ResolvedUiState<Context>
+}
+
+type ValueProposal<Input, Context> = {
+	readonly values: Input
+	readonly changes: readonly NormalizedValueChange[]
+	readonly resolvedUi: ResolvedUiState<Context>
 }
 
 export function createFormStore<
@@ -207,6 +228,28 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#runValueCommand(() => [createUnsetChange(path)])
 	}
 
+	reset(values?: FormInput<Schema>): void {
+		this.#assertValueCommandAllowed()
+		if (this.#activeBatch !== undefined) {
+			throw new TypeError("reset cannot be called inside a batch")
+		}
+
+		const resetValues = cloneAndFreezeValue(values ?? this.#baselineValues)
+		const result = this.#commitValueChanges(
+			createResetChanges(this.#values, resetValues),
+			"reset",
+			{ resetAfterCommit: true },
+		)
+
+		if (result.status === "cancelled") {
+			return
+		}
+
+		if (result.status === "noValueChange") {
+			this.#applyResetMetadataOnly(result.values)
+		}
+	}
+
 	batch(callback: () => void): void {
 		this.#assertValueCommandAllowed()
 
@@ -274,6 +317,9 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			previousResolvedUi: previousSnapshot.resolvedUi,
 		})
 		this.#notify()
+		this.#commitValueChanges([], "valuePolicy", {
+			transitionFromUi: previousSnapshot.resolvedUi,
+		})
 	}
 
 	touch(path: PathInput): void {
@@ -393,14 +439,18 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	#commitValueChanges(
 		changes: readonly NormalizedValueChange[],
 		source: UpdateSource,
-	): void {
-		const proposal = applyValueChanges(this.#values, changes)
-		if (proposal.changes.length === 0) {
-			return
+		options: ValueCommitOptions<Context> = {},
+	): ValueCommitResult<FormInput<Schema>> {
+		const transitionFromUi =
+			options.transitionFromUi ?? this.#snapshot.resolvedUi
+		const proposal = this.#createValueProposal(changes, transitionFromUi)
+		if (proposal === undefined) {
+			return { status: "noValueChange", values: this.#values }
 		}
 
-		let nextValues = freezeFormValue(proposal.values)
+		let nextValues = proposal.values
 		let effectiveChanges = proposal.changes
+		let resolvedUi = proposal.resolvedUi
 
 		if (this.#beforeUpdate !== undefined) {
 			const replacement = this.#callBeforeUpdate(
@@ -410,24 +460,33 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			)
 
 			if (replacement === false) {
-				return
+				return { status: "cancelled" }
 			}
 
 			if (replacement !== undefined) {
-				const replacementProposal = applyValueChanges(this.#values, replacement)
-				if (replacementProposal.changes.length === 0) {
-					return
+				const replacementProposal = this.#createValueProposal(
+					replacement,
+					transitionFromUi,
+				)
+				if (replacementProposal === undefined) {
+					return { status: "noValueChange", values: this.#values }
 				}
 
-				nextValues = freezeFormValue(replacementProposal.values)
+				nextValues = replacementProposal.values
 				effectiveChanges = replacementProposal.changes
+				resolvedUi = replacementProposal.resolvedUi
 			}
 		}
 
 		const previousSnapshot = this.#snapshot
 		this.#values = nextValues
+		if (options.resetAfterCommit === true) {
+			this.#baselineValues = nextValues
+			this.#metadataState = createMetadataState()
+		}
 		this.#snapshot = this.#createSnapshot({
 			previousResolvedUi: previousSnapshot.resolvedUi,
+			resolvedUi,
 		})
 		this.#notify()
 		this.#onUpdate?.(
@@ -439,6 +498,96 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				context: this.#context as Readonly<Context>,
 			}),
 		)
+		return { status: "committed" }
+	}
+
+	#createValueProposal(
+		changes: readonly ValueChange[] | readonly NormalizedValueChange[],
+		transitionFromUi: ResolvedUiState<Context>,
+	): ValueProposal<FormInput<Schema>, Context> | undefined {
+		let proposal = applyValueChanges(this.#values, changes)
+		let nextValues = proposal.values
+		let effectiveChanges = proposal.changes
+		let previousResolvedUi = this.#snapshot.resolvedUi
+
+		for (
+			let pass = 0;
+			pass <= Object.keys(this.definition.fieldsByPath).length;
+			pass++
+		) {
+			const resolvedUi = resolveUi(this.definition, nextValues, this.#context, {
+				...this.#resolveUiOptions(),
+				previous: previousResolvedUi,
+			})
+			const policyChanges = this.#createValuePolicyChanges(
+				transitionFromUi,
+				resolvedUi,
+				nextValues,
+			)
+
+			if (policyChanges.length === 0) {
+				if (effectiveChanges.length === 0) {
+					return undefined
+				}
+
+				return {
+					values: freezeFormValue(nextValues),
+					changes: effectiveChanges,
+					resolvedUi,
+				}
+			}
+
+			proposal = applyValueChanges(this.#values, [
+				...effectiveChanges,
+				...policyChanges,
+			])
+			nextValues = proposal.values
+			effectiveChanges = proposal.changes
+			previousResolvedUi = resolvedUi
+		}
+
+		throw new TypeError("valuePolicy changes did not converge")
+	}
+
+	#createValuePolicyChanges(
+		transitionFromUi: ResolvedUiState<Context>,
+		resolvedUi: ResolvedUiState<Context>,
+		values: FormInput<Schema>,
+	): readonly NormalizedValueChange[] {
+		const changes: NormalizedValueChange[] = []
+
+		for (const field of Object.values(resolvedUi.fieldsByPath)) {
+			if (
+				field.valuePolicy !== "unset" ||
+				field.visible ||
+				transitionFromUi.fieldsByPath[field.path]?.visible !== true ||
+				!hasPathValue(values, field.path)
+			) {
+				continue
+			}
+
+			changes.push(createUnsetChange(field.path))
+		}
+
+		return Object.freeze(changes)
+	}
+
+	#applyResetMetadataOnly(baselineValues: FormInput<Schema>): void {
+		const nextBaselineValues = cloneAndFreezeValue(baselineValues)
+		if (
+			isDirtyEqual(this.#baselineValues, nextBaselineValues) &&
+			this.#metadataState.touchedPaths.size === 0
+		) {
+			return
+		}
+
+		const previousSnapshot = this.#snapshot
+		this.#baselineValues = nextBaselineValues
+		this.#metadataState = createMetadataState()
+		this.#snapshot = this.#createSnapshot({
+			resolvedUi: previousSnapshot.resolvedUi,
+		})
+		this.#notify()
 	}
 
 	#callBeforeUpdate(
@@ -501,4 +650,65 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			readOnly: this.#readOnly,
 		}
 	}
+}
+
+function createResetChanges(
+	currentValues: unknown,
+	resetValues: unknown,
+): readonly NormalizedValueChange[] {
+	if (!isPlainObject(resetValues) || !isPlainObject(currentValues)) {
+		throw new TypeError("reset values must be plain object form values")
+	}
+
+	const changes: NormalizedValueChange[] = []
+	for (const key of Object.keys(resetValues)) {
+		changes.push(createSetChange(key, resetValues[key]))
+	}
+
+	for (const key of Object.keys(currentValues)) {
+		if (!Object.hasOwn(resetValues, key)) {
+			changes.push(createUnsetChange(key))
+		}
+	}
+
+	return Object.freeze(changes)
+}
+
+function hasPathValue(value: unknown, path: PathInput): boolean {
+	let current = value
+
+	for (const segment of parsePath(path)) {
+		if (Array.isArray(current)) {
+			if (
+				typeof segment !== "number" ||
+				segment >= current.length ||
+				!Object.hasOwn(current, segment)
+			) {
+				return false
+			}
+			current = current[segment]
+			continue
+		}
+
+		if (isPlainObject(current)) {
+			if (typeof segment !== "string" || !Object.hasOwn(current, segment)) {
+				return false
+			}
+			current = current[segment]
+			continue
+		}
+
+		return false
+	}
+
+	return true
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	if (value === null || typeof value !== "object") {
+		return false
+	}
+
+	const prototype = Object.getPrototypeOf(value)
+	return prototype === Object.prototype || prototype === null
 }

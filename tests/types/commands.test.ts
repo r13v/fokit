@@ -86,6 +86,19 @@ form.batch(() => {
 	form.unsetValue("companyName")
 })
 
+form.reset()
+form.reset({
+	kind: "person",
+	profile: {
+		first: "Grace",
+		last: "Hopper",
+	},
+	contacts: [{ value: "grace@example.test" }],
+})
+
+// @ts-expect-error reset requires a complete form input value
+form.reset({ kind: "person" })
+
 type _valuesStayReadonly = Expect<
 	Equal<ReturnType<typeof form.getValues>, ExampleInput>
 >

@@ -18,10 +18,12 @@ import {
 	createIssueState,
 	deriveFormErrors,
 	exposeIssuePaths,
+	type FormIssue,
 	type ImperativeFormIssue,
 	type IssueState,
 	isIssueStateEmpty,
 	reindexIssueStateArrayPaths,
+	replaceSchemaIssues,
 	setImperativeIssues,
 } from "./issues.js"
 import {
@@ -32,10 +34,20 @@ import {
 	type MetadataState,
 	touchMetadataPath,
 } from "./metadata.js"
-import { formatPath, type PathInput, parsePath } from "./path.js"
+import {
+	formatPath,
+	isDescendantPath,
+	isSamePath,
+	type PathInput,
+	parsePath,
+} from "./path.js"
 import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
 import { type ResolvedUiState, resolveUi } from "./resolve-ui.js"
-import type { FormInput, StandardSchema } from "./standard-schema.js"
+import type {
+	FormInput,
+	FormOutput,
+	StandardSchema,
+} from "./standard-schema.js"
 import {
 	applyValueChanges,
 	createDeepPartialChanges,
@@ -47,6 +59,14 @@ import {
 	type ValueChange,
 } from "./transaction.js"
 import type { ArrayItemValue } from "./ui-types.js"
+import {
+	isPromiseLike,
+	normalizeValidationOptions,
+	normalizeValidationResult,
+	runStandardSchemaValidation,
+	type ValidationOptions,
+	type ValidationResult,
+} from "./validation.js"
 import { getPathValue, isDirtyEqual } from "./value.js"
 
 export type { ValueChange } from "./transaction.js"
@@ -94,6 +114,7 @@ export type FormStoreOptions<
 	readonly context?: Context
 	readonly disabled?: boolean
 	readonly readOnly?: boolean
+	readonly validation?: Partial<ValidationOptions>
 }
 
 export type FormStoreSelector<Input, Context, Selected> = (
@@ -145,6 +166,8 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 	reset(values?: FormInput<Schema>): void
 	setErrors(issues: readonly ImperativeFormIssue[]): void
 	clearErrors(path?: PathInput): void
+	validate(): Promise<ValidationResult<FormOutput<Schema>>>
+	validate(path: PathInput): Promise<readonly FormIssue[]>
 	batch(callback: () => void): void
 	subscribe<Selected>(
 		selector: FormStoreSelector<FormInput<Schema>, Context, Selected>,
@@ -188,6 +211,17 @@ type ValueCommitOptions<Context> = {
 	readonly transitionFromUi?: ResolvedUiState<Context>
 }
 
+type ValidationRuntimeState = {
+	readonly isValidating: boolean
+	readonly validationStatus: "invalid" | "unvalidated" | "valid"
+	readonly submitCount: number
+}
+
+type ActiveValidation = {
+	readonly id: number
+	readonly kind: "nonSubmit" | "submit"
+}
+
 type ValueProposal<Input, Context> = {
 	readonly values: Input
 	readonly changes: readonly NormalizedValueChange[]
@@ -214,7 +248,15 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	#values: FormInput<Schema>
 
 	#activeBatch: ActiveBatch | undefined
+	#activeValidation: ActiveValidation | undefined
 	readonly #disabled: boolean
+	#hasValidationResult = false
+	#nextValidationId = 0
+	#nonSubmitAbortController: AbortController | undefined
+	#scheduledValidation: ReturnType<typeof setTimeout> | undefined
+	readonly #validationOptions: ValidationOptions
+	#validationRevision = 0
+	#validationState: ValidationRuntimeState = createValidationRuntimeState()
 	readonly #focusTargets = new Map<string, FocusTarget>()
 	#isRunningBeforeUpdate = false
 	readonly #readOnly: boolean
@@ -233,6 +275,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#context = options.context as Context
 		this.#disabled = options.disabled === true
 		this.#readOnly = options.readOnly === true
+		this.#validationOptions = normalizeValidationOptions(options.validation)
 		this.#issueState = createIssueState()
 		this.#metadataState = createInitialMetadataState(
 			this.definition,
@@ -354,6 +397,28 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#commitIssueState(clearImperativeIssues(this.#issueState, path))
 	}
 
+	validate(): Promise<ValidationResult<FormOutput<Schema>>>
+	validate(path: PathInput): Promise<readonly FormIssue[]>
+	validate(
+		path?: PathInput,
+	): Promise<ValidationResult<FormOutput<Schema>> | readonly FormIssue[]> {
+		this.#cancelScheduledValidation()
+		const canonicalPath =
+			path === undefined ? undefined : this.#normalizeKnownFieldPath(path)
+
+		return this.#runValidation({
+			kind: "nonSubmit",
+			exposeAll: canonicalPath === undefined,
+			exposePaths: canonicalPath === undefined ? [] : [canonicalPath],
+		}).then((result) =>
+			canonicalPath === undefined
+				? result
+				: result.success
+					? []
+					: filterPathSubtreeIssues(result.issues, canonicalPath),
+		)
+	}
+
 	batch(callback: () => void): void {
 		this.#assertValueCommandAllowed()
 
@@ -450,6 +515,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			nextMetadataState === this.#metadataState &&
 			nextIssueState === this.#issueState
 		) {
+			this.#scheduleAutomaticValidation("blur", [canonicalPath])
 			return
 		}
 
@@ -460,6 +526,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			resolvedUi: previousSnapshot.resolvedUi,
 		})
 		this.#notify()
+		this.#scheduleAutomaticValidation("blur", [canonicalPath])
 	}
 
 	registerFieldRef(path: PathInput, element: FocusTarget | null): void {
@@ -511,6 +578,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			this.#values,
 			this.#baselineValues,
 			this.#metadataState,
+			this.#validationState.isValidating,
 		)
 		const { errors, displayErrors } = deriveFormErrors(
 			this.#issueState,
@@ -526,6 +594,9 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			resolvedUi,
 			metadata,
 			isTouched: isFormMetadataTouched(metadata),
+			isValidating: this.#validationState.isValidating,
+			validationStatus: this.#validationState.validationStatus,
+			submitCount: this.#validationState.submitCount,
 		})
 	}
 
@@ -699,10 +770,12 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				nextValues,
 			)
 			this.#issueState = createIssueState()
+			this.#resetValidationRuntime()
 		} else if (options.metadataState !== undefined) {
 			this.#metadataState = options.metadataState
 		}
 		if (options.resetAfterCommit !== true) {
+			this.#markValuesChangedForValidation()
 			this.#issueState = clearServerIssuesForChanges(
 				options.issueState ?? this.#issueState,
 				effectiveChanges.map((change) => change.path),
@@ -722,6 +795,12 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				context: this.#context as Readonly<Context>,
 			}),
 		)
+		if (options.resetAfterCommit !== true) {
+			this.#scheduleAutomaticValidation(
+				"change",
+				effectiveChanges.map((change) => change.path),
+			)
+		}
 		return { status: "committed" }
 	}
 
@@ -813,6 +892,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			nextBaselineValues,
 		)
 		this.#issueState = createIssueState()
+		this.#resetValidationRuntime()
 		this.#snapshot = this.#createSnapshot({
 			resolvedUi: previousSnapshot.resolvedUi,
 		})
@@ -839,6 +919,276 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 		const previousSnapshot = this.#snapshot
 		this.#issueState = issueState
+		this.#snapshot = this.#createSnapshot({
+			resolvedUi: previousSnapshot.resolvedUi,
+		})
+		this.#notify()
+	}
+
+	#scheduleAutomaticValidation(
+		trigger: "blur" | "change",
+		paths: readonly string[],
+	): void {
+		if (!this.#shouldRunAutomaticValidation(trigger)) {
+			return
+		}
+
+		const exposePaths = paths.map((path) => formatPath(path))
+		this.#cancelScheduledValidation()
+
+		if (
+			trigger === "change" &&
+			(this.#validationOptions.asyncDebounceMs ?? 0) > 0
+		) {
+			this.#abortNonSubmitValidation()
+			this.#scheduledValidation = setTimeout(() => {
+				this.#scheduledValidation = undefined
+				void this.#runValidation({
+					kind: "nonSubmit",
+					exposeAll: false,
+					exposePaths,
+				}).catch((error: unknown) => {
+					reportHostException(error)
+				})
+			}, this.#validationOptions.asyncDebounceMs)
+			return
+		}
+
+		void this.#runValidation({
+			kind: "nonSubmit",
+			exposeAll: false,
+			exposePaths,
+		}).catch((error: unknown) => {
+			reportHostException(error)
+		})
+	}
+
+	#shouldRunAutomaticValidation(trigger: "blur" | "change"): boolean {
+		const mode = this.#hasValidationResult
+			? this.#validationOptions.revalidateMode
+			: this.#validationOptions.mode
+
+		return mode === trigger
+	}
+
+	#runValidation(options: {
+		readonly kind: "nonSubmit" | "submit"
+		readonly exposeAll: boolean
+		readonly exposePaths: readonly string[]
+	}): Promise<ValidationResult<FormOutput<Schema>>> {
+		const values = this.#values
+		const revision = this.#validationRevision
+		const id = ++this.#nextValidationId
+		const abortController = new AbortController()
+
+		if (options.kind === "nonSubmit") {
+			this.#abortNonSubmitValidation()
+			this.#nonSubmitAbortController = abortController
+		}
+		this.#activeValidation = {
+			id,
+			kind: options.kind,
+		}
+
+		let schemaResult:
+			| Promise<unknown>
+			| ReturnType<typeof runStandardSchemaValidation<Schema>>
+		try {
+			schemaResult = runStandardSchemaValidation(
+				this.schema,
+				values,
+				abortController.signal,
+			)
+		} catch (error) {
+			this.#failValidation(id)
+			return Promise.reject(error)
+		}
+
+		if (isPromiseLike(schemaResult)) {
+			this.#commitValidationRuntimeState({
+				...this.#validationState,
+				isValidating: true,
+			})
+
+			return Promise.resolve(schemaResult)
+				.then((result) =>
+					this.#finishValidation(
+						id,
+						revision,
+						values,
+						normalizeValidationResult(
+							result as Awaited<
+								ReturnType<typeof runStandardSchemaValidation<Schema>>
+							>,
+						),
+						options,
+					),
+				)
+				.catch((error: unknown) => {
+					this.#failValidation(id)
+					throw error
+				})
+		}
+
+		try {
+			return Promise.resolve(
+				this.#finishValidation(
+					id,
+					revision,
+					values,
+					normalizeValidationResult(schemaResult),
+					options,
+				),
+			)
+		} catch (error) {
+			this.#failValidation(id)
+			return Promise.reject(error)
+		}
+	}
+
+	#finishValidation(
+		id: number,
+		revision: number,
+		values: FormInput<Schema>,
+		result: ValidationResult<FormOutput<Schema>>,
+		options: {
+			readonly exposeAll: boolean
+			readonly exposePaths: readonly string[]
+		},
+	): ValidationResult<FormOutput<Schema>> {
+		const isCurrentAttempt = this.#activeValidation?.id === id
+		const shouldInstall =
+			isCurrentAttempt &&
+			revision === this.#validationRevision &&
+			isDirtyEqual(values, this.#values)
+
+		if (isCurrentAttempt) {
+			if (this.#activeValidation?.kind === "nonSubmit") {
+				this.#nonSubmitAbortController = undefined
+			}
+			this.#activeValidation = undefined
+		}
+
+		if (!shouldInstall) {
+			if (isCurrentAttempt) {
+				this.#commitValidationRuntimeState({
+					...this.#validationState,
+					isValidating: false,
+				})
+			}
+			return result
+		}
+
+		this.#hasValidationResult = true
+		this.#commitIssueAndValidationState(
+			replaceSchemaIssues(
+				this.#issueState,
+				result.success ? [] : result.issues,
+				{
+					all: options.exposeAll,
+					paths: options.exposePaths,
+				},
+			),
+			{
+				...this.#validationState,
+				isValidating: false,
+				validationStatus: result.success ? "valid" : "invalid",
+			},
+		)
+
+		return result
+	}
+
+	#failValidation(id: number): void {
+		if (this.#activeValidation?.id !== id) {
+			return
+		}
+
+		if (this.#activeValidation.kind === "nonSubmit") {
+			this.#nonSubmitAbortController = undefined
+		}
+		this.#activeValidation = undefined
+		this.#commitValidationRuntimeState({
+			...this.#validationState,
+			isValidating: false,
+			validationStatus: "unvalidated",
+		})
+	}
+
+	#markValuesChangedForValidation(): void {
+		this.#validationRevision += 1
+		this.#cancelScheduledValidation()
+		this.#validationState = createValidationRuntimeState({
+			...this.#validationState,
+			validationStatus: "unvalidated",
+		})
+	}
+
+	#resetValidationRuntime(): void {
+		this.#validationRevision += 1
+		this.#cancelScheduledValidation()
+		this.#abortNonSubmitValidation(false)
+		this.#hasValidationResult = false
+		this.#validationState = createValidationRuntimeState()
+	}
+
+	#cancelScheduledValidation(): void {
+		if (this.#scheduledValidation === undefined) {
+			return
+		}
+
+		clearTimeout(this.#scheduledValidation)
+		this.#scheduledValidation = undefined
+	}
+
+	#abortNonSubmitValidation(notify = true): void {
+		this.#nonSubmitAbortController?.abort()
+		this.#nonSubmitAbortController = undefined
+
+		if (this.#activeValidation?.kind !== "nonSubmit") {
+			return
+		}
+
+		this.#activeValidation = undefined
+		const nextValidationState = createValidationRuntimeState({
+			...this.#validationState,
+			isValidating: false,
+		})
+		if (notify) {
+			this.#commitValidationRuntimeState(nextValidationState)
+			return
+		}
+
+		this.#validationState = nextValidationState
+	}
+
+	#commitIssueAndValidationState(
+		issueState: IssueState,
+		validationState: ValidationRuntimeState,
+	): void {
+		if (
+			issueState === this.#issueState &&
+			isSameValidationRuntimeState(validationState, this.#validationState)
+		) {
+			return
+		}
+
+		const previousSnapshot = this.#snapshot
+		this.#issueState = issueState
+		this.#validationState = validationState
+		this.#snapshot = this.#createSnapshot({
+			resolvedUi: previousSnapshot.resolvedUi,
+		})
+		this.#notify()
+	}
+
+	#commitValidationRuntimeState(validationState: ValidationRuntimeState): void {
+		if (isSameValidationRuntimeState(validationState, this.#validationState)) {
+			return
+		}
+
+		const previousSnapshot = this.#snapshot
+		this.#validationState = validationState
 		this.#snapshot = this.#createSnapshot({
 			resolvedUi: previousSnapshot.resolvedUi,
 		})
@@ -966,4 +1316,49 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 	const prototype = Object.getPrototypeOf(value)
 	return prototype === Object.prototype || prototype === null
+}
+
+function createValidationRuntimeState(
+	state: Partial<ValidationRuntimeState> = {},
+): ValidationRuntimeState {
+	return Object.freeze({
+		isValidating: state.isValidating === true,
+		validationStatus: state.validationStatus ?? "unvalidated",
+		submitCount: state.submitCount ?? 0,
+	})
+}
+
+function isSameValidationRuntimeState(
+	left: ValidationRuntimeState,
+	right: ValidationRuntimeState,
+): boolean {
+	return (
+		left.isValidating === right.isValidating &&
+		left.validationStatus === right.validationStatus &&
+		left.submitCount === right.submitCount
+	)
+}
+
+function filterPathSubtreeIssues(
+	issues: readonly FormIssue[],
+	path: string,
+): readonly FormIssue[] {
+	return Object.freeze(
+		issues.filter(
+			(issue) =>
+				issue.path !== undefined &&
+				(isSamePath(issue.path, path) || isDescendantPath(issue.path, path)),
+		),
+	)
+}
+
+function reportHostException(error: unknown): void {
+	if (typeof globalThis.reportError === "function") {
+		globalThis.reportError(error)
+		return
+	}
+
+	setTimeout(() => {
+		throw error
+	}, 0)
 }

@@ -751,24 +751,24 @@ validation scheduling and stale-result rules remain deterministic.
 - Modify: `src/core/form-store.ts`
 - Modify: `src/core/index.ts`
 
-- [ ] Write failing tests with synchronous, asynchronous, transforming, and
+- [x] Write failing tests with synchronous, asynchronous, transforming, and
   throwing Standard Schemas.
-- [ ] Implement full-schema validation for submit, blur, change,
+- [x] Implement full-schema validation for submit, blur, change,
   `validate()`, and `validate(path)`.
-- [ ] Return `ValidationResult<FormOutput<S>>` from full validation and only
+- [x] Return `ValidationResult<FormOutput<S>>` from full validation and only
   path-subtree issues from path validation; never replace input with output.
-- [ ] Implement default `mode: "submit"`, `revalidateMode: "change"`, and
+- [x] Implement default `mode: "submit"`, `revalidateMode: "change"`, and
   change-only `asyncDebounceMs`.
-- [ ] Test latest-result-wins, abort-when-possible, debounce cancellation,
+- [x] Test latest-result-wins, abort-when-possible, debounce cancellation,
   non-debounced blur/imperative/submit, and `isValidating` timing.
-- [ ] Keep submit-snapshot validation authoritative for that attempt while
+- [x] Keep submit-snapshot validation authoritative for that attempt while
   preventing stale results from updating current issues/status after edits.
-- [ ] Test that insert/move preserve and reindex still-displayable schema
+- [x] Test that insert/move preserve and reindex still-displayable schema
   issues by row key after validation; removal drops the removed row's issues.
-- [ ] Restore pending state and retain previous issues after unexpected schema
+- [x] Restore pending state and retain previous issues after unexpected schema
   exceptions; reject imperative/submit promises and report automatic
   validation exceptions to the host.
-- [ ] Run
+- [x] Run
   `npm run test -- --project node src/core/validation.test.ts src/core/issues.test.ts`,
   `npm run typecheck`, `npm run check`, and `npm run knip` before Task 7.
 

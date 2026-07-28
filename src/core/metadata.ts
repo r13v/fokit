@@ -77,6 +77,7 @@ export function deriveFormMetadata<Schema extends StandardSchema>(
 	values: FormInput<Schema>,
 	baselineValues: FormInput<Schema>,
 	state: MetadataState,
+	isValidating = false,
 ): FormMetadata {
 	const fieldsByPath = Object.create(null) as Record<string, FieldMetadata>
 	for (const path of Object.keys(definition.fieldsByPath)) {
@@ -86,6 +87,7 @@ export function deriveFormMetadata<Schema extends StandardSchema>(
 			baselineValues,
 			state,
 			false,
+			isValidating,
 		)
 	}
 
@@ -96,6 +98,7 @@ export function deriveFormMetadata<Schema extends StandardSchema>(
 			values,
 			baselineValues,
 			state,
+			isValidating,
 		)
 	}
 
@@ -110,6 +113,7 @@ function createArrayMetadata(
 	values: unknown,
 	baselineValues: unknown,
 	state: MetadataState,
+	isValidating: boolean,
 ): ArrayMetadata {
 	const fieldMetadata = createFieldMetadata(
 		path,
@@ -117,11 +121,18 @@ function createArrayMetadata(
 		baselineValues,
 		state,
 		true,
+		isValidating,
 	)
 
 	return Object.freeze({
 		...fieldMetadata,
-		items: createArrayItemMetadata(path, values, baselineValues, state),
+		items: createArrayItemMetadata(
+			path,
+			values,
+			baselineValues,
+			state,
+			isValidating,
+		),
 	})
 }
 
@@ -130,6 +141,7 @@ function createArrayItemMetadata(
 	values: unknown,
 	baselineValues: unknown,
 	state: MetadataState,
+	isValidating: boolean,
 ): readonly ArrayItemMetadata[] {
 	const value = getPathValue(values, path)
 	if (!Array.isArray(value)) {
@@ -155,7 +167,7 @@ function createArrayItemMetadata(
 				index,
 				dirty: baselineIndex === -1 || !isDirtyEqual(item, baselineItem),
 				touched: isArrayItemTouched(path, index, state),
-				validating: false,
+				validating: isValidating,
 			})
 		}),
 	)
@@ -174,6 +186,7 @@ function createFieldMetadata(
 	baselineValues: unknown,
 	state: MetadataState,
 	includeDescendants: boolean,
+	isValidating: boolean,
 ): FieldMetadata {
 	return Object.freeze({
 		dirty: !isDirtyEqual(
@@ -181,7 +194,7 @@ function createFieldMetadata(
 			getPathValue(baselineValues, path),
 		),
 		touched: isPathTouched(path, state, includeDescendants),
-		validating: false,
+		validating: isValidating,
 	})
 }
 

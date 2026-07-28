@@ -39,6 +39,9 @@ export type CreateFormSnapshotOptions<Input, Context> = {
 	readonly resolvedUi: ResolvedUiState<Context>
 	readonly metadata: FormMetadata
 	readonly isTouched: boolean
+	readonly isValidating: boolean
+	readonly validationStatus: ValidationStatus
+	readonly submitCount: number
 }
 
 export function createFormSnapshot<Input, Context>({
@@ -50,6 +53,9 @@ export function createFormSnapshot<Input, Context>({
 	resolvedUi,
 	metadata,
 	isTouched,
+	isValidating,
+	validationStatus,
+	submitCount,
 }: CreateFormSnapshotOptions<Input, Context>): FormSnapshot<Input, Context> {
 	return Object.freeze({
 		values,
@@ -57,10 +63,10 @@ export function createFormSnapshot<Input, Context>({
 		displayErrors,
 		isDirty: !isDirtyEqual(values, baselineValues),
 		isTouched,
-		isValidating: false,
+		isValidating,
 		isSubmitting: false,
-		validationStatus: "unvalidated" as const,
-		submitCount: 0,
+		validationStatus,
+		submitCount,
 		context,
 		resolvedUi,
 		metadata,

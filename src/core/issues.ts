@@ -232,8 +232,17 @@ export function exposeIssuePaths(
 	}
 
 	const nextPaths = new Set(state.exposure.paths)
+	let changed = false
 	for (const path of paths) {
-		nextPaths.add(formatPath(path))
+		const canonicalPath = formatPath(path)
+		if (!nextPaths.has(canonicalPath)) {
+			changed = true
+			nextPaths.add(canonicalPath)
+		}
+	}
+
+	if (!changed) {
+		return state
 	}
 
 	return createIssueStateFromNormalized(
@@ -259,13 +268,49 @@ export function exposeAllIssues(state: IssueState): IssueState {
 	)
 }
 
+export function replaceSchemaIssues(
+	state: IssueState,
+	issues: readonly FormIssue[],
+	exposure: {
+		readonly all?: boolean
+		readonly paths?: readonly PathInput[]
+	} = {},
+): IssueState {
+	const normalized = issues.map((issue) => normalizeSchemaIssue(issue))
+	const nextIssues = [
+		...state.issues.filter((issue) => issue.source !== "schema"),
+		...normalized,
+	]
+	let nextExposure = state.exposure
+
+	if (exposure.all === true) {
+		nextExposure = createIssueExposureState({
+			...nextExposure,
+			all: true,
+		})
+	}
+
+	if (exposure.paths !== undefined && exposure.paths.length > 0) {
+		const nextPaths = new Set(nextExposure.paths)
+		for (const path of exposure.paths) {
+			nextPaths.add(formatPath(path))
+		}
+		nextExposure = createIssueExposureState({
+			...nextExposure,
+			paths: nextPaths,
+		})
+	}
+
+	return createIssueStateFromNormalized(nextIssues, nextExposure)
+}
+
 export function reindexIssueStateArrayPaths(
 	state: IssueState,
 	arrayPath: string,
 	previousKeys: readonly string[],
 	nextKeys: readonly string[],
 ): IssueState {
-	const reindexedSources = new Set(["manual"])
+	const reindexedSources = new Set(["manual", "schema"])
 	const nextIssues: FormIssue[] = []
 	let issuesChanged = false
 
@@ -352,6 +397,15 @@ function normalizeImperativeIssue(issue: ImperativeFormIssue): FormIssue {
 	const normalized = normalizeFormIssue(issue)
 	if (!isImperativeSource(normalized.source)) {
 		throw new TypeError("setErrors accepts only manual or server issues")
+	}
+
+	return normalized
+}
+
+function normalizeSchemaIssue(issue: FormIssue): FormIssue {
+	const normalized = normalizeFormIssue(issue)
+	if (normalized.source !== "schema") {
+		throw new TypeError("Validation accepts only schema issues")
 	}
 
 	return normalized

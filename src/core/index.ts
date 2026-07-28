@@ -112,6 +112,11 @@ export type {
 	UiNode,
 	ValuePolicy,
 } from "./ui-types.js"
+export type {
+	ValidationMode,
+	ValidationOptions,
+	ValidationResult,
+} from "./validation.js"
 export {
 	cloneValue,
 	getPathValue,

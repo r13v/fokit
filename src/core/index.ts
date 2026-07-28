@@ -24,6 +24,7 @@ export type {
 	ControlRegistry,
 	ControlValueOf,
 	FormDataEntrySpec,
+	IsValidControlValue,
 } from "./control-types.js"
 export type {
 	FormDefinition,

@@ -1,15 +1,6 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema.json",
 	"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-	"ignoreFiles": ["tests/setup.ts"],
-	"ignoreDependencies": [
-		"@testing-library/react",
-		"@testing-library/user-event",
-		"@types/react",
-		"@types/react-dom",
-		"react",
-		"react-dom",
-		"zod"
-	],
+	"ignoreDependencies": ["@testing-library/user-event", "zod"],
 	"tags": ["-lintignore"]
 }

@@ -33,3 +33,15 @@ Validating Task 7 server code → focused Vitest and tsdown build passed, but `n
 ## 2026-07-28 17:50 — GPT-5
 
 Writing Task 8 type-only React hook assertions → Biome's hook rule rejected module-scope hook calls and underscore-prefixed harness functions. Put type assertions inside an unrendered PascalCase component and reference it with `void ComponentName`.
+
+## 2026-07-28 17:57 — GPT-5
+
+Adding Task 9 control renderer types → Vitest's OXC transform rejected a `const` type parameter on a type alias. Reserve `const` type parameters for functions, methods, and classes; type aliases need a regular generic parameter.
+
+## 2026-07-28 17:58 — GPT-5
+
+Writing Task 9 React DOM assertions → the test setup uses Testing Library without jest-dom matchers, so `toHaveAttribute` and `toBeDisabled` fail as unknown Chai properties. Use plain DOM assertions or add matcher setup deliberately in a tooling task.
+
+## 2026-07-28 18:01 — GPT-5
+
+Formatting Task 9 React helpers → `npm run check:fix` applied mechanical fixes but still failed on a test slot label because Biome could not infer `htmlFor` from spread `labelProps`. Make accessibility-critical props explicit in helper components.

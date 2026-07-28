@@ -55,23 +55,51 @@ export type ControlName<Controls extends ControlRegistry> = Extract<
 	string
 >
 
+export type ControlContextOf<Control> =
+	Control extends ControlMetadata<infer _Value, infer _Options, infer Context>
+		? Context
+		: never
+
 export type ControlValueOf<Control> =
 	Control extends ControlMetadata<infer Value, infer Options, infer Context>
 		? ControlMetadata<Value, Options, Context> extends Control
 			? Value
-			: never
+			: Control extends {
+						readonly formData: ControlFormData<Value, Options, Context>
+					}
+				? Value
+				: never
 		: never
 
 export type ControlOptionsOf<Control> =
 	Control extends ControlMetadata<infer Value, infer Options, infer Context>
 		? ControlMetadata<Value, Options, Context> extends Control
 			? Options
-			: never
+			: Control extends {
+						readonly formData: ControlFormData<Value, Options, Context>
+					}
+				? Options
+				: never
 		: never
 
-export type ControlContextOf<Control> =
-	Control extends ControlMetadata<infer Value, infer Options, infer Context>
-		? ControlMetadata<Value, Options, Context> extends Control
-			? Context
-			: never
-		: never
+type IsAny<Value> = 0 extends 1 & Value ? true : false
+
+type IsNever<Value> = [Value] extends [never] ? true : false
+
+type IsUnknown<Value> =
+	IsAny<Value> extends true
+		? false
+		: unknown extends Value
+			? [Value] extends [unknown]
+				? true
+				: false
+			: false
+
+export type IsValidControlValue<Value> =
+	IsNever<Value> extends true
+		? false
+		: IsAny<Value> extends true
+			? false
+			: IsUnknown<Value> extends true
+				? false
+				: true

@@ -5,24 +5,34 @@ import { createContext, type ReactNode, useContext } from "react"
 import type { StandardSchema } from "../core/index.js"
 import type { FormInstance } from "./use-form.js"
 
-const FormContext = createContext<FormInstance<StandardSchema, unknown> | null>(
-	null,
-)
+type FormContextValue = {
+	readonly form: FormInstance<StandardSchema, unknown>
+	readonly idPrefix: string
+}
+
+const FormContext = createContext<FormContextValue | null>(null)
 
 export type FormProviderProps<
 	Schema extends StandardSchema,
 	Context = unknown,
 > = {
 	readonly form: FormInstance<Schema, Context>
+	readonly idPrefix?: string
 	readonly children?: ReactNode
 }
 
 export function FormProvider<Schema extends StandardSchema, Context = unknown>({
 	form,
+	idPrefix = "fokit-form",
 	children,
 }: FormProviderProps<Schema, Context>) {
 	return (
-		<FormContext.Provider value={form as FormInstance<StandardSchema, unknown>}>
+		<FormContext.Provider
+			value={{
+				form: form as FormInstance<StandardSchema, unknown>,
+				idPrefix,
+			}}
+		>
 			{children}
 		</FormContext.Provider>
 	)
@@ -37,5 +47,14 @@ export function useFormContext<
 		throw new Error("Fokit form context is missing")
 	}
 
-	return form as FormInstance<Schema, Context>
+	return form.form as FormInstance<Schema, Context>
+}
+
+export function useFormIdPrefix(): string {
+	const form = useContext(FormContext)
+	if (form === null) {
+		throw new Error("Fokit form context is missing")
+	}
+
+	return form.idPrefix
 }

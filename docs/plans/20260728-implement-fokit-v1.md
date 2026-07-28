@@ -881,30 +881,30 @@ rendering can be built.
 - Create: `tests/types/definitions.test.ts`
 - Modify: `src/index.ts`
 
-- [ ] Write failing type tests for `defineControl`, control options/context,
+- [x] Write failing type tests for `defineControl`, control options/context,
   path-to-control compatibility, literal unions, nullable members, and
   rejection of `any`/`unknown` control values.
-- [ ] Prove at compile time that a context-aware control cannot be used by a
+- [x] Prove at compile time that a context-aware control cannot be used by a
   form whose context does not satisfy the control requirement.
-- [ ] Prove through the public `kit.defineForm` API that
+- [x] Prove through the public `kit.defineForm` API that
   `valuePolicy: "unset"` is accepted for optional or `undefined`-capable paths
   and rejected for required paths.
-- [ ] Implement `ControlProps`, resolved options/context, native input IDs,
+- [x] Implement `ControlProps`, resolved options/context, native input IDs,
   names, refs, ARIA description links, and raw/displayed meta.
-- [ ] Implement `createFormKit` with all five required slots and curried
+- [x] Implement `createFormKit` with all five required slots and curried
   context-aware `defineForm`.
-- [ ] Export public slot prop types, `FokitStyle`, CSS-variable names, and
+- [x] Export public slot prop types, `FokitStyle`, CSS-variable names, and
   structural root contracts.
-- [ ] Implement `kit.Form` as a native `noValidate` form with safe prop
+- [x] Implement `kit.Form` as a native `noValidate` form with safe prop
   passthrough, owned handlers, deterministic `useId` prefixing, and form-root
   data attributes.
-- [ ] Implement `kit.Submit` as an unstyled native submit button combining
+- [x] Implement `kit.Submit` as an unstyled native submit button combining
   consumer disabled state with form disabled/submitting state.
-- [ ] Ensure application design-system submit buttons still work because the
+- [x] Ensure application design-system submit buttons still work because the
   form handler guards disabled and duplicate submissions.
-- [ ] Test class/style/ARIA/data passthrough and rejection of attempts to
+- [x] Test class/style/ARIA/data passthrough and rejection of attempts to
   replace owned `action`, `onSubmit`, `onReset`, or `noValidate`.
-- [ ] Run
+- [x] Run
   `npm run test -- --project react src/react/form.test.tsx src/react/create-form-kit.test.tsx`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 10A.
 

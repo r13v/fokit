@@ -1,8 +1,11 @@
 import type { Computed } from "./computed.js"
 import type {
+	ControlContextOf,
 	ControlName,
 	ControlOptionsOf,
 	ControlRegistry,
+	ControlValueOf,
+	IsValidControlValue,
 } from "./control-types.js"
 import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
 
@@ -17,32 +20,99 @@ export type Resolvable<Value, Input = unknown, Context = unknown> =
 type FieldNodeBase<Input, Context> = {
 	readonly kind: "field"
 	readonly id?: string
-	readonly path: FieldPath<Input>
 	readonly label?: Resolvable<string, Input, Context>
 	readonly description?: Resolvable<string, Input, Context>
 	readonly required?: Resolvable<boolean, Input, Context>
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
 	readonly visible?: Resolvable<boolean, Input, Context>
-	readonly valuePolicy?: ValuePolicy
 	readonly className?: string
 	readonly span?: GridSpan
 }
+
+type FieldValuePolicy<Value> = undefined extends Value
+	? ValuePolicy
+	: "preserve"
+
+type IsAny<Value> = 0 extends 1 & Value ? true : false
+
+type IsNever<Value> = [Value] extends [never] ? true : false
+
+type IsUnknown<Value> =
+	IsAny<Value> extends true
+		? false
+		: unknown extends Value
+			? [Value] extends [unknown]
+				? true
+				: false
+			: false
+
+type IsUntyped<Value> =
+	IsNever<Value> extends true
+		? true
+		: IsUnknown<Value> extends true
+			? true
+			: false
+
+type ContextMatches<Context, Requirement> =
+	IsUntyped<Requirement> extends true
+		? true
+		: [Context] extends [Requirement]
+			? true
+			: false
+
+type CompatibleControlName<
+	Input,
+	Controls extends ControlRegistry,
+	Context,
+	Path extends FieldPath<Input>,
+> = {
+	[Name in ControlName<Controls>]: IsAny<
+		ControlValueOf<Controls[Name]>
+	> extends true
+		? never
+		: IsUntyped<ControlValueOf<Controls[Name]>> extends true
+			? ContextMatches<Context, ControlContextOf<Controls[Name]>> extends true
+				? Name
+				: never
+			: IsValidControlValue<ControlValueOf<Controls[Name]>> extends true
+				? [PathValue<Input, Path>] extends [ControlValueOf<Controls[Name]>]
+					? ContextMatches<
+							Context,
+							ControlContextOf<Controls[Name]>
+						> extends true
+						? Name
+						: never
+					: never
+				: never
+}[ControlName<Controls>]
+
+type FieldNodeForPath<
+	Input,
+	Controls extends ControlRegistry,
+	Context,
+	Path extends FieldPath<Input>,
+> = FieldNodeBase<Input, Context> & {
+	readonly path: Path
+	readonly valuePolicy?: FieldValuePolicy<PathValue<Input, Path>>
+} & {
+		[Name in CompatibleControlName<Input, Controls, Context, Path>]: {
+			readonly control: Name
+			readonly options?: Resolvable<
+				ControlOptionsOf<Controls[Name]>,
+				Input,
+				Context
+			>
+		}
+	}[CompatibleControlName<Input, Controls, Context, Path>]
 
 export type FieldNode<
 	Input,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
 > = {
-	[Name in ControlName<Controls>]: FieldNodeBase<Input, Context> & {
-		readonly control: Name
-		readonly options?: Resolvable<
-			ControlOptionsOf<Controls[Name]>,
-			Input,
-			Context
-		>
-	}
-}[ControlName<Controls>]
+	[Path in FieldPath<Input>]: FieldNodeForPath<Input, Controls, Context, Path>
+}[FieldPath<Input>]
 
 export type SectionNode<
 	Input,

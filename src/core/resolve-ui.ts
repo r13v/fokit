@@ -84,6 +84,8 @@ export type ResolvedUiNode<Context = unknown> =
 
 export type ResolvedUiState<Context = unknown> = {
 	readonly context: Readonly<Context>
+	readonly disabled: boolean
+	readonly readOnly: boolean
 	readonly ui: readonly ResolvedUiNode<Context>[]
 	readonly nodes: readonly ResolvedUiNode<Context>[]
 	readonly nodesById: Readonly<Record<string, ResolvedUiNode<Context>>>
@@ -131,14 +133,18 @@ export function resolveUi<Schema extends StandardSchema, Context = unknown>(
 			ResolvedArrayNode<Context>
 		>,
 	}
+	const rootDisabled = options.disabled === true
+	const rootReadOnly = options.readOnly === true
 	const ui = resolveNodes(definition.ui, state, {
 		visible: true,
-		disabled: options.disabled === true,
-		readOnly: options.readOnly === true,
+		disabled: rootDisabled,
+		readOnly: rootReadOnly,
 	})
 
 	return Object.freeze({
 		context,
+		disabled: rootDisabled,
+		readOnly: rootReadOnly,
 		ui,
 		nodes: Object.freeze([...state.nodes]),
 		nodesById: Object.freeze({ ...state.nodesById }),

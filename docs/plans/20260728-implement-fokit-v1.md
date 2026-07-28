@@ -1443,26 +1443,26 @@ at build time.
 - Modify: `package-lock.json`
 - Modify: `README.md`
 
-- [ ] Write failing package/workflow assertions first for the Pages triggers,
+- [x] Write failing package/workflow assertions first for the Pages triggers,
   permissions, action versions, `/fokit/` build base, verification command,
   artifact path, job dependency, and deployment environment.
-- [ ] Change package `homepage` to `https://r13v.github.io/fokit/` and extend
+- [x] Change package `homepage` to `https://r13v.github.io/fokit/` and extend
   package metadata tests so later release work cannot silently restore the
   README anchor URL.
-- [ ] Configure `pages.yml` for pushes to `main` and manual dispatch, with
+- [x] Configure `pages.yml` for pushes to `main` and manual dispatch, with
   `contents: read`, `pages: write`, `id-token: write`, and a `pages`
   concurrency group that cancels superseded deployments.
-- [ ] Use GitHub-hosted `ubuntu-latest`, `actions/checkout@v6`,
+- [x] Use GitHub-hosted `ubuntu-latest`, `actions/checkout@v6`,
   `actions/setup-node@v6` with Node 24, `actions/configure-pages@v5`,
   `actions/upload-pages-artifact@v4`, and `actions/deploy-pages@v4`.
-- [ ] In the build job, install root and docs-site lockfiles plus Chromium,
+- [x] In the build job, install root and docs-site lockfiles plus Chromium,
   then run `BASE_PATH=/fokit/ npm run site:verify`. Upload only the resulting,
   already browser-tested `docs-site/dist`; do not run a second build.
-- [ ] Put deployment in a separate job that needs the build, targets the
+- [x] Put deployment in a separate job that needs the build, targets the
   `github-pages` environment, and records the URL from the deploy action.
-- [ ] Do not add `.openai/hosting.json`, a worker, redirects, a custom-domain
+- [x] Do not add `.openai/hosting.json`, a worker, redirects, a custom-domain
   `CNAME`, or copied ECSplain build output.
-- [ ] Run `npm run test:package`, `npm run site:verify`, `npm run check`, and
+- [x] Run `npm run test:package`, `npm run site:verify`, `npm run check`, and
   `npm run knip` before Task 15F.
 
 ### Task 15F: Configure trusted npm publication in `publish.yml`

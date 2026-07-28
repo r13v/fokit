@@ -29,6 +29,7 @@ describe("package metadata", () => {
 			version: "0.0.0",
 			license: "MIT",
 			type: "module",
+			homepage: "https://r13v.github.io/fokit/",
 			files: ["dist"],
 			sideEffects: ["**/*.css"],
 			peerDependencies: {

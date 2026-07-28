@@ -7,8 +7,8 @@ optional structural CSS.
 
 This repository contains the implemented v1 package. The existing public
 `fokit@0.0.1` package on npm is a pre-implementation placeholder, not the
-reviewed v1 release. Do not treat npm availability, GitHub Pages deployment, or
-the final published version as verified until the release task confirms them.
+reviewed v1 release. Do not treat npm availability or the final published
+version as verified until the release task confirms them.
 
 ## Install
 
@@ -44,6 +44,7 @@ The main JavaScript entry never imports the CSS automatically.
 
 ## Start here
 
+- [Interactive documentation](https://r13v.github.io/fokit/)
 - [English tutorial](docs/tutorial.md)
 - [Russian tutorial](docs/tutorial.ru.md)
 - [Getting started](docs/getting-started.md)

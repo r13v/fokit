@@ -789,32 +789,32 @@ prototype-safe normalization and validation path.
 - Modify: `src/core/control-types.ts`
 - Modify: `src/core/index.ts`
 
-- [ ] Write failing tests for dot objects, explicit indexed arrays, repeated
+- [x] Write failing tests for dot objects, explicit indexed arrays, repeated
   names, empty/single/multiple arrays, checkbox absence, strings, and `File`.
-- [ ] Implement exact repeated markers named `__fokit.array` whose values are
+- [x] Implement exact repeated markers named `__fokit.array` whose values are
   canonical array paths.
-- [ ] Reject unknown reserved metadata, duplicate markers, sparse indexes,
+- [x] Reject unknown reserved metadata, duplicate markers, sparse indexes,
   mixed indexed/repeated collections, scalar/nested collisions, and malformed
   paths.
-- [ ] Build intermediate objects with null prototypes and reject prototype
+- [x] Build intermediate objects with null prototypes and reject prototype
   mutation segments before allocation.
-- [ ] Enforce defaults: 1,000 entries, 1,024-character path, depth 32, and
+- [x] Enforce defaults: 1,000 entries, 1,024-character path, depth 32, and
   maximum array index 10,000.
-- [ ] Return one form-level `source: "server"` /
+- [x] Return one form-level `source: "server"` /
   `code: "invalid_form_data"` issue on structural failure, with no partial
   value.
-- [ ] Validate normalized values through Standard Schema and expose
+- [x] Validate normalized values through Standard Schema and expose
   `ParseResult<FormOutput<S>>`, `SubmissionIssue`, `FormResult`, and
   `reply(additionalIssues)`.
-- [ ] Keep serializable `SubmissionIssue`/`FormResult` transport types in
+- [x] Keep serializable `SubmissionIssue`/`FormResult` transport types in
   `src/core/form-result.ts`; re-export them publicly only from
   `src/server/index.ts` so React 19 can share the type without a
   `src/react19/ -> src/server/` dependency.
-- [ ] Add fast-check hostile-name and structural-collision properties proving
+- [x] Add fast-check hostile-name and structural-collision properties proving
   no prototype pollution or sparse allocation.
-- [ ] Assert `src/server/` and built `fokit/server` import neither React nor
+- [x] Assert `src/server/` and built `fokit/server` import neither React nor
   controls.
-- [ ] Run
+- [x] Run
   `npm run test -- --project node src/server/normalize-form-data.test.ts src/server/parse-form-data.test.ts`,
   `npm run build`, `npm run check`, and `npm run knip` before Task 8.
 

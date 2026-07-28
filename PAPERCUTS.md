@@ -25,3 +25,7 @@ Implementing Task 5C array state → a large `apply_patch` mixed new files and s
 ## 2026-07-28 17:21 — GPT-5
 
 Wiring Task 6A array issue reindexing → an `apply_patch` hunk missed the current `#runArrayCommand` body after earlier edits. Patch narrow function-local hunks after rereading the exact target block.
+
+## 2026-07-28 17:39 — GPT-5
+
+Validating Task 7 server code → focused Vitest and tsdown build passed, but `npm run typecheck` caught tuple/literal/test type issues in the new files. Keep typecheck in the local loop when adding typed public APIs, even if the task's focused command list omits it.

@@ -221,17 +221,11 @@ describe("parseFormData", () => {
 		})
 	})
 
-	it("keeps source and built server entries free of React and control imports", async () => {
+	it("keeps server sources free of React and control imports", async () => {
 		const sourceFiles = await readServerSourceFiles()
 		for (const [file, source] of sourceFiles) {
 			expect(source, file).not.toMatch(/from\s+["']react(?:\/|["'])/)
 			expect(source, file).not.toMatch(/control-types/)
-		}
-
-		for (const [file, builtServer] of await readBuiltServerFiles()) {
-			expect(builtServer, file).not.toMatch(/from\s+["']react(?:\/|["'])/)
-			expect(builtServer, file).not.toMatch(/require\(["']react(?:\/|["'])/)
-			expect(builtServer, file).not.toMatch(/control-types/)
 		}
 	})
 })
@@ -279,18 +273,6 @@ async function readServerSourceFiles(): Promise<readonly [string, string][]> {
 		sourceFiles.map(async (file) => [
 			file,
 			await readFile(new URL(file, serverDirectory), "utf8"),
-		]),
-	)
-}
-
-async function readBuiltServerFiles(): Promise<readonly [string, string][]> {
-	const distDirectory = new URL("../../dist/", import.meta.url)
-	const files = ["server.js", "server.cjs"]
-
-	return Promise.all(
-		files.map(async (file) => [
-			file,
-			await readFile(new URL(file, distDirectory), "utf8"),
 		]),
 	)
 }

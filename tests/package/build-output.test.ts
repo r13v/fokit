@@ -99,12 +99,12 @@ describe("packed build output", () => {
 		}
 	})
 
-	it("keeps React imports out of the core and server export graphs", async () => {
+	it("keeps React and control imports out of the core and server export graphs", async () => {
 		for (const entrypoint of ["./core", "./server"] as const) {
 			const exported = getJavaScriptExport(entrypoint)
 
-			await expectNoReactRuntimeImport(exported.import.default)
-			await expectNoReactRuntimeImport(exported.require.default)
+			await expectNoClientRuntimeImport(exported.import.default)
+			await expectNoClientRuntimeImport(exported.require.default)
 		}
 	})
 
@@ -180,7 +180,7 @@ function hasUseClientDirective(source: string): boolean {
 	return source.trimStart().startsWith('"use client";')
 }
 
-async function expectNoReactRuntimeImport(
+async function expectNoClientRuntimeImport(
 	packagePath: string,
 	visited = new Set<string>(),
 ): Promise<void> {
@@ -194,9 +194,10 @@ async function expectNoReactRuntimeImport(
 	for (const specifier of collectRuntimeSpecifiers(source)) {
 		expect(specifier).not.toMatch(/^react(?:\/|$)/)
 		expect(specifier).not.toMatch(/^react-dom(?:\/|$)/)
+		expect(specifier).not.toMatch(/control-types/)
 
 		if (specifier.startsWith(".")) {
-			await expectNoReactRuntimeImport(
+			await expectNoClientRuntimeImport(
 				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
 				visited,
 			)

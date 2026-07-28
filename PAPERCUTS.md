@@ -157,3 +157,7 @@ Tightening the Node CJS smoke fixture to `skipLibCheck: false` without DOM libs 
 ## 2026-07-28 22:35 — GPT-5
 
 Removing the old product-version framing → one large `apply_patch` failed because the Russian tutorial wording differed from the expected context, so none of its edits applied. Split cross-file copy edits into smaller patches or inspect localized text before patching it.
+
+## 2026-07-28 22:44 — GPT-5
+
+Resolving the PR for a failing GitHub Actions run → this `gh` version rejected `gh pr view --head <branch>`. Pass the branch as the positional argument (`gh pr view <branch>`) or use the current branch instead.

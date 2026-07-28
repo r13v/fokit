@@ -12,7 +12,7 @@ const ci = parse(ciWorkflow) as Record<string, unknown>
 const matrixNodeVersionExpression = "$" + "{{ matrix.node-version }}"
 
 describe("release-equivalent CI workflow", () => {
-	it("runs the local release-equivalent package gates on Node 20 and 22", () => {
+	it("runs the local release-equivalent package gates on Node 24", () => {
 		const verify = job(ci, "verify")
 		const steps = workflowSteps(verify)
 
@@ -20,9 +20,7 @@ describe("release-equivalent CI workflow", () => {
 		expect(record(ci.on).pull_request).toBeNull()
 		expect(record(record(ci.on).push).branches).toEqual(["main"])
 		expect(record(ci.permissions).contents).toBe("read")
-		expect(record(record(verify.strategy).matrix)["node-version"]).toEqual([
-			20, 22,
-		])
+		expect(record(record(verify.strategy).matrix)["node-version"]).toEqual([24])
 		expect(steps.map((step) => step.name)).toEqual([
 			"Checkout",
 			"Setup Node",

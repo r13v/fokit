@@ -904,17 +904,17 @@ content.
 - Delete: `examples/basic-form.tsx`
 - Delete: `examples/server-action.ts`
 
-- [ ] Verify every row in the parity map against its destination page and
+- [x] Verify every row in the parity map against its destination page and
       confirm all destination-heading tests pass before deleting a source.
-- [ ] Add failing assertions for the superseded paths and known old
+- [x] Add failing assertions for the superseded paths and known old
       locale/hash-router symbols, then delete the duplicated English guides
       and old example copies.
-- [ ] Do not reject Cyrillic mechanically: English prose, navigation, and
+- [x] Do not reject Cyrillic mechanically: English prose, navigation, and
       metadata are required, but localization examples may legitimately
       contain non-English message strings.
-- [ ] Update `README.md` and `docs/tutorial.ru.md` to use clean Vocs links and
+- [x] Update `README.md` and `docs/tutorial.ru.md` to use clean Vocs links and
       the canonical `docs-site/src/snippets/` paths.
-- [ ] Run `npm run site:test`, `npm run test:docs`, and
+- [x] Run `npm run site:test`, `npm run test:docs`, and
       `BASE_PATH=/fokit npm run site:build`.
 
 ### Task 9: Embed the Interactive Fokit Lab as a Vocs client component

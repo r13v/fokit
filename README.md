@@ -38,16 +38,19 @@ The main JavaScript entry never imports the CSS automatically.
 
 ## Start here
 
-- [Interactive documentation](https://r13v.github.io/fokit/)
-- [React 19 Actions](docs/react19-actions.md)
+- [Get started](https://r13v.github.io/fokit/get-started)
+- [API reference](https://r13v.github.io/fokit/api)
+- [React 19 Actions](https://r13v.github.io/fokit/guides/react-19-actions)
 - [Fokit specification](docs/SPEC.md)
 - [Styling boundary ADR](docs/adr/0001-styling-and-layout-boundary.md)
 - [Russian repository tutorial](docs/tutorial.ru.md)
 - [Architecture decisions](docs/adr/)
 - [Release process](docs/releasing.md)
 
-Copyable examples live in `examples/` and are typechecked by
-`npm run test:docs`.
+Copyable examples live in `docs-site/src/snippets/form-kit.tsx`,
+`docs-site/src/snippets/basic-form.tsx`, and
+`docs-site/src/snippets/server-action.ts`; `npm run test:docs` typechecks
+them.
 
 ## Shortest kit
 

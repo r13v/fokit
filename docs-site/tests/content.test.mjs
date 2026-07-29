@@ -105,20 +105,31 @@ const publicApiTerms = [
 
 const canonicalSnippets = [
 	{
-		source: "examples/form-kit.tsx",
 		target: "src/snippets/form-kit.tsx",
 		include: "~/snippets/form-kit.tsx",
+		terms: ["createFormKit", "defineControl", "profileSchema"],
 	},
 	{
-		source: "examples/basic-form.tsx",
 		target: "src/snippets/basic-form.tsx",
 		include: "~/snippets/basic-form.tsx",
+		terms: ["useForm", "kit.Form", "ProfileEditor"],
 	},
 	{
-		source: "examples/server-action.ts",
 		target: "src/snippets/server-action.ts",
 		include: "~/snippets/server-action.ts",
+		terms: ["parseFormData", "FormResult", "saveProfileAction"],
 	},
+]
+
+const supersededRepositoryFiles = [
+	"docs/getting-started.md",
+	"docs/controls.md",
+	"docs/styling.md",
+	"docs/react19-actions.md",
+	"docs/tutorial.md",
+	"examples/form-kit.tsx",
+	"examples/basic-form.tsx",
+	"examples/server-action.ts",
 ]
 
 const requiredCorePageContent = {
@@ -361,13 +372,21 @@ async function readRepositoryJson(path) {
 	return JSON.parse(await readRepositoryText(path))
 }
 
-async function pathExists(path) {
+async function pathExistsFrom(root, path) {
 	try {
-		await access(new URL(path, siteRoot), constants.F_OK)
+		await access(new URL(path, root), constants.F_OK)
 		return true
 	} catch {
 		return false
 	}
+}
+
+async function pathExists(path) {
+	return await pathExistsFrom(siteRoot, path)
+}
+
+async function repositoryPathExists(path) {
+	return await pathExistsFrom(repositoryRoot, path)
 }
 
 async function listFiles(path) {
@@ -446,6 +465,7 @@ test("docs TypeScript and verification gates are wired", async () => {
 	])
 	assert.equal(typeof knipConfig.compilers.css, "function")
 	assert.equal(knipConfig.compilers.mdx, true)
+	assert.deepEqual(knipConfig.ignoreFiles, ["docs-site/src/lab.jsx"])
 	assert.match(gitignore, /^docs-site\/\.vocs\/$/m)
 })
 
@@ -457,14 +477,17 @@ test("canonical TypeScript snippets are physical files covered by docs typecheck
 	assert.equal(includeSet.has("src/snippets/**/*.tsx"), true)
 
 	for (const snippet of canonicalSnippets) {
-		const source = await readRepositoryText(snippet.source)
 		const target = await readText(snippet.target)
 
-		assert.equal(
-			target,
-			source,
-			`${snippet.target} must mirror ${snippet.source} until the examples move`,
-		)
+		assert.notEqual(target.trim(), "", `${snippet.target} must not be empty`)
+
+		for (const term of snippet.terms) {
+			assert.match(
+				target,
+				new RegExp(escapeRegExp(term)),
+				`${snippet.target} must keep ${term} discoverable`,
+			)
+		}
 	}
 })
 
@@ -573,7 +596,6 @@ test("Vocs pages expose the canonical English route map", async () => {
 		)
 
 		assert.match(source, frontmatter, `${page.path} needs English metadata`)
-		assert.doesNotMatch(source, /[А-Яа-яЁё]/, `${page.path} must stay English`)
 		assert.doesNotMatch(source, /#\/|LOCALES|locale-switch/)
 		assert.match(config, sidebarEntry, `${page.route} must be in the sidebar`)
 	}
@@ -646,11 +668,12 @@ test("Vocs root page and root CSS replace the custom app shell", async () => {
 	assert.doesNotMatch(css, /\.site-shell|\.locale-switch|\.syntax-token/)
 })
 
-test("bespoke SPA files are removed while migration content stays inactive", async () => {
+test("bespoke SPA files and temporary migration content are removed", async () => {
 	const deletedFiles = [
 		"index.html",
 		"vite.config.mjs",
 		"src/app.jsx",
+		"src/content.js",
 		"src/examples.js",
 		"src/main.jsx",
 		"src/routing.mjs",
@@ -663,18 +686,45 @@ test("bespoke SPA files are removed while migration content stays inactive", asy
 		assert.equal(await pathExists(file), false, `${file} should be removed`)
 	}
 
-	assert.equal(await pathExists("src/content.js"), true)
-
-	const inactiveMigrationFiles = new Set(["src/content.js", "src/lab.jsx"])
+	const inactiveMigrationFiles = new Set(["src/lab.jsx"])
 	const sourceFiles = await listFiles("src/")
 	const activeFiles = sourceFiles.filter(
 		(file) => !inactiveMigrationFiles.has(file),
 	)
 	for (const file of activeFiles) {
 		const source = await readText(file)
-		assert.doesNotMatch(source, /content\.js|LOCALES|#\/|locale-switch/)
+		assert.doesNotMatch(
+			source,
+			/content\.js|LOCALES|#\/|locale-switch|fokit\.docs\.locale|localStorage/,
+		)
 		assert.doesNotMatch(source, /@phosphor-icons\/react|syntaxPattern/)
 	}
+})
+
+test("superseded public guides and example copies are deleted", async () => {
+	const readme = await readRepositoryText("README.md")
+	const tutorial = await readRepositoryText("docs/tutorial.ru.md")
+
+	for (const file of supersededRepositoryFiles) {
+		assert.equal(
+			await repositoryPathExists(file),
+			false,
+			`${file} should be removed after Vocs parity passes`,
+		)
+		assert.doesNotMatch(readme, new RegExp(escapeRegExp(file)))
+		assert.doesNotMatch(tutorial, new RegExp(escapeRegExp(file)))
+	}
+
+	assert.match(readme, /https:\/\/r13v\.github\.io\/fokit\/get-started/)
+	assert.match(
+		readme,
+		/https:\/\/r13v\.github\.io\/fokit\/guides\/react-19-actions/,
+	)
+	assert.match(readme, /docs-site\/src\/snippets\/form-kit\.tsx/)
+	assert.match(tutorial, /https:\/\/r13v\.github\.io\/fokit\/guides\/tutorial/)
+	assert.match(tutorial, /docs-site\/src\/snippets\/form-kit\.tsx/)
+	assert.match(tutorial, /docs-site\/src\/snippets\/basic-form\.tsx/)
+	assert.match(tutorial, /docs-site\/src\/snippets\/server-action\.ts/)
 })
 
 test("docs-site instructions describe the English-only Vocs boundary", async () => {

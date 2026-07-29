@@ -21,7 +21,7 @@ export default {
 	},
 	ignore: ["tests/fixtures/**"],
 	ignoreDependencies: ["fokit", "zod"],
-	ignoreFiles: ["docs-site/src/content.js", "docs-site/src/lab.jsx"],
+	ignoreFiles: ["docs-site/src/lab.jsx"],
 	workspaces: {
 		".": {
 			project: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],

@@ -7,12 +7,13 @@
 опциональным CSS для раскладки. Там, где нужен дизайн-системный виджет или
 своя разметка, tutorial показывает, как заменить отдельный control или slot.
 
-Расширенный пример с пользовательскими контролами и слотами пока лежит в
-старых repository paths:
+Публичный English tutorial опубликован как Vocs route:
+`https://r13v.github.io/fokit/guides/tutorial`. Полные проверяемые примеры
+теперь лежат в canonical snippets:
 
-- `examples/form-kit.tsx`
-- `examples/basic-form.tsx`
-- `examples/server-action.ts`
+- `docs-site/src/snippets/form-kit.tsx`
+- `docs-site/src/snippets/basic-form.tsx`
+- `docs-site/src/snippets/server-action.ts`
 
 ## 1. Установка
 
@@ -183,8 +184,9 @@ function FieldSlot({
 }
 ```
 
-Полный набор слотов в `examples/form-kit.tsx` сохраняет root props, labels,
-descriptions, errors, кнопки add/remove/move для массивов и layout props.
+Полный набор слотов в `docs-site/src/snippets/form-kit.tsx` сохраняет root
+props, labels, descriptions, errors, кнопки add/remove/move для массивов и
+layout props.
 
 ## 5. Соберите kit и definition
 

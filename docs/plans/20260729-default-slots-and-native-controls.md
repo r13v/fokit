@@ -618,27 +618,27 @@ documentation without retaining a second English tutorial set.
 - Modify: `docs/adr/0001-styling-and-layout-boundary.md`
 - Modify: `docs/tutorial.ru.md`
 
-- [ ] Replace the statement that all five slots are required with the new
+- [x] Replace the statement that all five slots are required with the new
       English-default, partial-override behavior.
-- [ ] Clarify that default slots are unstyled accessible markup, not a visual
+- [x] Clarify that default slots are unstyled accessible markup, not a visual
       theme, and that `fokit/layout.css` remains opt-in.
-- [ ] Document `createDefaultSlots({ i18n })`, string/function messages,
+- [x] Document `createDefaultSlots({ i18n })`, string/function messages,
       function data, partial locale fallback, and slot composition.
-- [ ] Document `nativeControls`, their exact value types and options, and
+- [x] Document `nativeControls`, their exact value types and options, and
       explicit registry composition with custom controls.
-- [ ] Document native FormData and schema-coercion requirements for number,
+- [x] Document native FormData and schema-coercion requirements for number,
       date, checkbox, optional string, and file fields.
-- [ ] Update the ADR to distinguish an unstyled semantic fallback from the
+- [x] Update the ADR to distinguish an unstyled semantic fallback from the
       still-rejected mandatory visual theme.
-- [ ] Keep `README.md` concise: show the shortest
+- [x] Keep `README.md` concise: show the shortest
       `createFormKit({ controls: nativeControls })` setup and retain links to
       the specification, ADR, release process, and Russian repository tutorial.
       Defer clean Vocs-page and snippet-path rewrites to Task 8E, after those
       destinations exist.
-- [ ] Update `docs/tutorial.ru.md` for the new APIs, but keep its current
+- [x] Update `docs/tutorial.ru.md` for the new APIs, but keep its current
       example paths until Task 8D creates the canonical snippets. Do not expose
       the tutorial in Vocs navigation or content.
-- [ ] Run `npm run check` before the documentation-site migration.
+- [x] Run `npm run check` before the documentation-site migration.
 
 ### Task 7A: Replace the bespoke documentation shell with Vocs
 

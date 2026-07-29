@@ -1,9 +1,9 @@
 # fokit
 
 Fokit is a code-first, schema-validated React form library with a React-free
-core, application-owned controls and slots, generated React forms, granular
-subscriptions, safe FormData parsing, an isolated React 19 Action adapter, and
-optional structural CSS.
+core, explicit control registries, accessible default slots, generated React
+forms, granular subscriptions, safe FormData parsing, an isolated React 19
+Action adapter, and optional structural CSS.
 
 ## Install
 
@@ -21,8 +21,8 @@ Zod implements the Standard Schema contract.
 
 ## Package entries
 
-- `fokit`: React kit APIs, controls, hooks, generated forms, and shared public
-  types.
+- `fokit`: React kit APIs, default slots, native controls, hooks, generated
+  forms, and shared public types.
 - `fokit/core`: React-free store, path, definition, computed UI, and value
   helpers.
 - `fokit/server`: safe FormData normalization, Standard Schema validation,
@@ -39,18 +39,30 @@ The main JavaScript entry never imports the CSS automatically.
 ## Start here
 
 - [Interactive documentation](https://r13v.github.io/fokit/)
-- [English tutorial](docs/tutorial.md)
-- [Russian tutorial](docs/tutorial.ru.md)
-- [Getting started](docs/getting-started.md)
-- [Controls and slots](docs/controls.md)
-- [Styling boundary](docs/styling.md)
 - [React 19 Actions](docs/react19-actions.md)
 - [Fokit specification](docs/SPEC.md)
+- [Styling boundary ADR](docs/adr/0001-styling-and-layout-boundary.md)
+- [Russian repository tutorial](docs/tutorial.ru.md)
 - [Architecture decisions](docs/adr/)
 - [Release process](docs/releasing.md)
 
 Copyable examples live in `examples/` and are typechecked by
 `npm run test:docs`.
+
+## Shortest kit
+
+```tsx
+import { createFormKit, nativeControls } from "fokit"
+
+export const kit = createFormKit({
+	controls: nativeControls,
+})
+```
+
+Omitted slots resolve to English, unstyled, accessible structural markup.
+Controls stay explicit because their value and FormData behavior are part of
+the public form contract. Add custom controls by composing a registry, and
+override any slot by passing a partial `slots` object.
 
 ## Configuration
 

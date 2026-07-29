@@ -527,42 +527,42 @@ explicit rather than approximated by silently disabling every element.
 - Modify: `src/react/form-data.test.tsx`
 - Modify: `src/react/reset.test.tsx`
 
-- [ ] Write failing interaction and actual `new FormData(form)` tests for
+- [x] Write failing interaction and actual `new FormData(form)` tests for
       `select`, `checkbox`, and `file`, including transitions into read-only
       state, before implementing them.
-- [ ] Implement `select` for `string` with typed string options and disabled
+- [x] Implement `select` for `string` with typed string options and disabled
       option support; do not inject an implicit placeholder option.
-- [ ] Implement `checkbox` for `boolean` with native checked/unchecked
+- [x] Implement `checkbox` for `boolean` with native checked/unchecked
       FormData behavior.
-- [ ] Keep read-only select and checkbox controls enabled and named so they
+- [x] Keep read-only select and checkbox controls enabled and named so they
       remain successful controls. Expose `aria-readonly`, prevent pointer and
       keyboard value changes, and guard `onChange`; the controlled value must
       remain unchanged.
-- [ ] Implement a single `file` control for `File | undefined` with optional
+- [x] Implement a single `file` control for `File | undefined` with optional
       `accept`; keep the native input uncontrolled and select only the first
       file.
-- [ ] For a read-only file input, keep the currently selected native file and
+- [x] For a read-only file input, keep the currently selected native file and
       successful-control status, expose `aria-readonly`, block click,
       Enter/Space activation, and drop before the picker or drop mutation, and
       guard `onChange`. Verify the store value and actual `FormData` stay
       unchanged after each attempted user edit.
-- [ ] Document that a file field starts as `undefined`: browsers do not allow a
+- [x] Document that a file field starts as `undefined`: browsers do not allow a
       `File` default value to hydrate an uncontrolled input. A file selected
       before the field becomes read-only remains the submitted native file.
-- [ ] Add serializers for select and checkbox where hidden or disabled value
+- [x] Add serializers for select and checkbox where hidden or disabled value
       preservation is possible. Do not add a file serializer.
-- [ ] Preserve and test `input.id`, `input.name`, `input.ref`,
+- [x] Preserve and test `input.id`, `input.name`, `input.ref`,
       `input["aria-describedby"]`, `meta.invalid` as `aria-invalid`, blur,
       disabled, required, and every supported option for select, checkbox, and
       file. Include disabled serialization, file ref/reset, and focus behavior.
-- [ ] Assert that hidden or disabled file fields are rejected by classic and
+- [x] Assert that hidden or disabled file fields are rejected by classic and
       Action submission compatibility checks because their `File` value cannot
       be represented by hidden inputs.
-- [ ] Freeze the exported `nativeControls` registry and its control
+- [x] Freeze the exported `nativeControls` registry and its control
       definitions consistently with `defineControl`.
-- [ ] Test and document native protocol differences: visible unchecked
+- [x] Test and document native protocol differences: visible unchecked
       checkboxes are absent, and visible number/date entries are strings.
-- [ ] Run `npm test -- src/react/native-controls.test.tsx
+- [x] Run `npm test -- src/react/native-controls.test.tsx
       src/react/form-data.test.tsx src/react/reset.test.tsx`.
 
 ### Task 5: Export and declaration-test the public API

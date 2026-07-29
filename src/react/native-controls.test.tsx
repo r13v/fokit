@@ -3,6 +3,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { useState } from "react"
 import { describe, expect, it } from "vitest"
 
 import { createFormKit } from "./create-form-kit.js"
@@ -10,7 +11,10 @@ import { useFormContext } from "./form-context.js"
 import { useFormState } from "./hooks.js"
 import {
 	type NativeDateOptions,
+	type NativeFileOptions,
 	type NativeNumberOptions,
+	type NativeSelectOption,
+	type NativeSelectOptions,
 	type NativeTextareaOptions,
 	type NativeTextOptions,
 	type NativeTextType,
@@ -22,10 +26,17 @@ type Values = {
 	readonly bio?: string
 	readonly age?: number
 	readonly birthday?: string
+	readonly status: "draft" | "published" | "archived"
+	readonly newsletter: boolean
+	readonly avatar?: File
 	readonly disabledEmail?: string
 	readonly hiddenBio?: string
 	readonly disabledAge?: number
 	readonly hiddenBirthday?: string
+	readonly disabledStatus: string
+	readonly hiddenStatus: string
+	readonly disabledNewsletter: boolean
+	readonly hiddenNewsletter: boolean
 	readonly readonlyEmail?: string
 	readonly readonlyBio?: string
 	readonly readonlyAge?: number
@@ -102,6 +113,45 @@ const editableDefinition = kit.defineForm({
 	],
 })
 
+const choiceDefinition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "status",
+			control: "select",
+			label: "Status",
+			description: "Publication state",
+			required: true,
+			options: {
+				options: [
+					{ value: "draft", label: "Draft" },
+					{ value: "published", label: "Published", disabled: true },
+					{ value: "archived", label: "Archived" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "newsletter",
+			control: "checkbox",
+			label: "Newsletter",
+			description: "Send product notes",
+			required: true,
+		},
+		{
+			kind: "field",
+			path: "avatar",
+			control: "file",
+			label: "Avatar",
+			description: "PNG only",
+			options: {
+				accept: "image/png",
+			},
+		},
+	],
+})
+
 const preservationDefinition = kit.defineForm({
 	schema,
 	ui: [
@@ -131,6 +181,46 @@ const preservationDefinition = kit.defineForm({
 			path: "hiddenBirthday",
 			control: "date",
 			label: "Hidden birthday",
+			visible: false,
+		},
+		{
+			kind: "field",
+			path: "disabledStatus",
+			control: "select",
+			label: "Disabled status",
+			disabled: true,
+			options: {
+				options: [
+					{ value: "draft", label: "Draft" },
+					{ value: "archived", label: "Archived" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "hiddenStatus",
+			control: "select",
+			label: "Hidden status",
+			visible: false,
+			options: {
+				options: [
+					{ value: "draft", label: "Draft" },
+					{ value: "archived", label: "Archived" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "disabledNewsletter",
+			control: "checkbox",
+			label: "Disabled newsletter",
+			disabled: true,
+		},
+		{
+			kind: "field",
+			path: "hiddenNewsletter",
+			control: "checkbox",
+			label: "Hidden newsletter",
 			visible: false,
 		},
 	],
@@ -171,6 +261,13 @@ const readOnlyDefinition = kit.defineForm({
 })
 
 describe("nativeControls text-like controls", () => {
+	it("freezes the registry and every native control definition", () => {
+		expect(Object.isFrozen(nativeControls)).toBe(true)
+		for (const control of Object.values(nativeControls)) {
+			expect(Object.isFrozen(control)).toBe(true)
+		}
+	})
+
 	it("renders native attributes, metadata, refs, blur, and supported options", async () => {
 		const user = userEvent.setup()
 		render(
@@ -256,6 +353,8 @@ describe("nativeControls text-like controls", () => {
 		expect(screen.getByTestId("bio-value").textContent).toBe("Compiler notes")
 		expect(screen.getByTestId("age-value").textContent).toBe("42")
 		expect(screen.getByTestId("birthday-value").textContent).toBe("2030-05-06")
+		expect(new FormData(requireForm()).get("age")).toBe("42")
+		expect(new FormData(requireForm()).get("birthday")).toBe("2030-05-06")
 
 		await user.clear(age)
 		expect(screen.getByTestId("age-value").textContent).toBe("undefined")
@@ -277,10 +376,21 @@ describe("nativeControls text-like controls", () => {
 		expect(
 			(screen.getByLabelText("Disabled email") as HTMLInputElement).name,
 		).toBe("disabledEmail")
+		expect(
+			(screen.getByLabelText("Disabled status") as HTMLSelectElement).disabled,
+		).toBe(true)
+		expect(
+			(screen.getByLabelText("Disabled newsletter") as HTMLInputElement)
+				.disabled,
+		).toBe(true)
 		expect(formData.get("disabledEmail")).toBe("locked@example.test")
 		expect(formData.get("hiddenBio")).toBe("Private notes")
 		expect(formData.get("disabledAge")).toBe("64")
 		expect(formData.get("hiddenBirthday")).toBe("1962-02-03")
+		expect(formData.get("disabledStatus")).toBe("archived")
+		expect(formData.get("hiddenStatus")).toBe("draft")
+		expect(formData.get("disabledNewsletter")).toBe("true")
+		expect(formData.get("hiddenNewsletter")).toBe("false")
 	})
 
 	it("keeps read-only text-like controls focusable and successful", async () => {
@@ -323,6 +433,191 @@ describe("nativeControls text-like controls", () => {
 	})
 })
 
+describe("nativeControls choice and file controls", () => {
+	it("renders native attributes, metadata, refs, blur, and supported options", async () => {
+		const user = userEvent.setup()
+		render(
+			<kit.AutoForm
+				defaultValues={defaultValues()}
+				definition={choiceDefinition}
+				id="choice"
+			>
+				<ChoiceProbe />
+				<ValueProbe />
+			</kit.AutoForm>,
+		)
+
+		const status = screen.getByLabelText("Status") as HTMLSelectElement
+		const newsletter = screen.getByLabelText("Newsletter") as HTMLInputElement
+		const avatar = screen.getByLabelText("Avatar") as HTMLInputElement
+
+		expect(status.id).toBe("choice-status")
+		expect(status.name).toBe("status")
+		expect(status.required).toBe(true)
+		expect(status.getAttribute("aria-describedby")).toBe(
+			"choice-status-description",
+		)
+		expect(status.hasAttribute("aria-invalid")).toBe(false)
+		expect([...status.options].map((option) => option.value)).toEqual([
+			"draft",
+			"published",
+			"archived",
+		])
+		expect(status.options[1]?.disabled).toBe(true)
+		expect(newsletter.type).toBe("checkbox")
+		expect(newsletter.name).toBe("newsletter")
+		expect(newsletter.value).toBe("true")
+		expect(newsletter.checked).toBe(true)
+		expect(newsletter.required).toBe(true)
+		expect(newsletter.getAttribute("aria-describedby")).toBe(
+			"choice-newsletter-description",
+		)
+		expect(avatar.type).toBe("file")
+		expect(avatar.name).toBe("avatar")
+		expect(avatar.accept).toBe("image/png")
+		expect(avatar.getAttribute("aria-describedby")).toBe(
+			"choice-avatar-description",
+		)
+		expect(screen.getByTestId("avatar-value").textContent).toBe("undefined")
+
+		await user.click(screen.getByRole("button", { name: "Focus status" }))
+		expect(document.activeElement).toBe(status)
+		await user.click(screen.getByRole("button", { name: "Focus newsletter" }))
+		expect(document.activeElement).toBe(newsletter)
+		await user.click(screen.getByRole("button", { name: "Focus avatar" }))
+		expect(document.activeElement).toBe(avatar)
+
+		fireEvent.blur(status)
+		fireEvent.blur(newsletter)
+		fireEvent.blur(avatar)
+		expect(screen.getByTestId("status-touched").textContent).toBe("true")
+		expect(screen.getByTestId("newsletter-touched").textContent).toBe("true")
+		expect(screen.getByTestId("avatar-touched").textContent).toBe("true")
+
+		await user.click(screen.getByRole("button", { name: "Set choice errors" }))
+		expect(status.getAttribute("aria-invalid")).toBe("true")
+		expect(status.getAttribute("aria-describedby")).toBe(
+			"choice-status-description choice-status-error-0",
+		)
+		expect(newsletter.getAttribute("aria-invalid")).toBe("true")
+		expect(newsletter.getAttribute("aria-describedby")).toBe(
+			"choice-newsletter-description choice-newsletter-error-0",
+		)
+		expect(avatar.getAttribute("aria-invalid")).toBe("true")
+		expect(avatar.getAttribute("aria-describedby")).toBe(
+			"choice-avatar-description choice-avatar-error-0",
+		)
+	})
+
+	it("updates select, checkbox, and single-file values through native events", async () => {
+		const user = userEvent.setup()
+		render(
+			<kit.AutoForm
+				defaultValues={defaultValues()}
+				definition={choiceDefinition}
+				id="choice"
+			>
+				<ValueProbe />
+			</kit.AutoForm>,
+		)
+
+		const status = screen.getByLabelText("Status") as HTMLSelectElement
+		const newsletter = screen.getByLabelText("Newsletter") as HTMLInputElement
+		const avatar = screen.getByLabelText("Avatar") as HTMLInputElement
+		const first = new File(["one"], "one.png", { type: "image/png" })
+		const second = new File(["two"], "two.png", { type: "image/png" })
+
+		await user.selectOptions(status, "archived")
+		await user.click(newsletter)
+		await user.upload(avatar, [first, second])
+
+		expect(screen.getByTestId("status-value").textContent).toBe("archived")
+		expect(screen.getByTestId("newsletter-value").textContent).toBe("false")
+		expect(screen.getByTestId("avatar-value").textContent).toBe("one.png")
+		expect(avatar.files).toHaveLength(1)
+		expect(avatar.files?.item(0)).toBe(first)
+
+		const formData = new FormData(requireForm())
+		expect(formData.get("status")).toBe("archived")
+		expect(formData.has("newsletter")).toBe(false)
+		expect(formData.get("avatar")).toBeInstanceOf(File)
+	})
+
+	it("keeps choice and file values successful when a form becomes read-only", async () => {
+		const user = userEvent.setup()
+		const first = new File(["avatar"], "avatar.png", { type: "image/png" })
+		const replacement = new File(["replacement"], "replacement.png", {
+			type: "image/png",
+		})
+
+		function LockingForm() {
+			const [readOnly, setReadOnly] = useState(false)
+
+			return (
+				<kit.AutoForm
+					defaultValues={defaultValues()}
+					definition={choiceDefinition}
+					id="readonly-choice"
+					readOnly={readOnly}
+				>
+					<ValueProbe />
+					<button type="button" onClick={() => setReadOnly(true)}>
+						Lock form
+					</button>
+				</kit.AutoForm>
+			)
+		}
+
+		render(<LockingForm />)
+		const status = screen.getByLabelText("Status") as HTMLSelectElement
+		const newsletter = screen.getByLabelText("Newsletter") as HTMLInputElement
+		const avatar = screen.getByLabelText("Avatar") as HTMLInputElement
+
+		await user.upload(avatar, first)
+		expect(avatar.files?.item(0)).toBe(first)
+		await user.click(screen.getByRole("button", { name: "Lock form" }))
+
+		expect(status.disabled).toBe(false)
+		expect(newsletter.disabled).toBe(false)
+		expect(avatar.disabled).toBe(false)
+		expect(status.name).toBe("status")
+		expect(newsletter.name).toBe("newsletter")
+		expect(avatar.name).toBe("avatar")
+		expect(status.getAttribute("aria-readonly")).toBe("true")
+		expect(newsletter.getAttribute("aria-readonly")).toBe("true")
+		expect(avatar.getAttribute("aria-readonly")).toBe("true")
+
+		expect(fireEvent.mouseDown(status)).toBe(false)
+		expect(fireEvent.keyDown(status, { key: "ArrowDown" })).toBe(false)
+		fireEvent.change(status, { target: { value: "archived" } })
+		await user.click(newsletter)
+		newsletter.focus()
+		expect(fireEvent.keyDown(newsletter, { key: " " })).toBe(false)
+		expect(fireEvent.keyDown(avatar, { key: "Enter" })).toBe(false)
+		expect(fireEvent.keyDown(avatar, { key: " " })).toBe(false)
+		expect(
+			fireEvent.drop(avatar, {
+				dataTransfer: {
+					files: [replacement],
+				},
+			}),
+		).toBe(false)
+		await user.upload(avatar, replacement)
+
+		expect(status.value).toBe("draft")
+		expect(newsletter.checked).toBe(true)
+		expect(avatar.files?.item(0)).toBe(first)
+		expect(screen.getByTestId("status-value").textContent).toBe("draft")
+		expect(screen.getByTestId("newsletter-value").textContent).toBe("true")
+		expect(screen.getByTestId("avatar-value").textContent).toBe("avatar.png")
+
+		const formData = new FormData(requireForm())
+		expect(formData.get("status")).toBe("draft")
+		expect(formData.get("newsletter")).toBe("true")
+		expect(formData.get("avatar")).toBeInstanceOf(File)
+	})
+})
+
 function FormProbe() {
 	const form = useFormContext<Schema>()
 	const touched = useFormState(
@@ -354,6 +649,58 @@ function FormProbe() {
 	)
 }
 
+function ChoiceProbe() {
+	const form = useFormContext<Schema>()
+	const touched = useFormState(form, (snapshot) => ({
+		status: snapshot.metadata.fieldsByPath.status?.touched ?? false,
+		newsletter: snapshot.metadata.fieldsByPath.newsletter?.touched ?? false,
+		avatar: snapshot.metadata.fieldsByPath.avatar?.touched ?? false,
+	}))
+
+	return (
+		<>
+			<output data-testid="status-touched">{String(touched.status)}</output>
+			<output data-testid="newsletter-touched">
+				{String(touched.newsletter)}
+			</output>
+			<output data-testid="avatar-touched">{String(touched.avatar)}</output>
+			<button type="button" onClick={() => form.focus("status")}>
+				Focus status
+			</button>
+			<button type="button" onClick={() => form.focus("newsletter")}>
+				Focus newsletter
+			</button>
+			<button type="button" onClick={() => form.focus("avatar")}>
+				Focus avatar
+			</button>
+			<button
+				type="button"
+				onClick={() =>
+					form.setErrors([
+						{
+							source: "manual",
+							path: "status",
+							message: "Status is invalid",
+						},
+						{
+							source: "manual",
+							path: "newsletter",
+							message: "Newsletter is invalid",
+						},
+						{
+							source: "manual",
+							path: "avatar",
+							message: "Avatar is invalid",
+						},
+					])
+				}
+			>
+				Set choice errors
+			</button>
+		</>
+	)
+}
+
 function ValueProbe() {
 	const form = useFormContext<Schema>()
 	const values = useFormState(form, (snapshot) => snapshot.values)
@@ -369,6 +716,13 @@ function ValueProbe() {
 				{String(Number.isNaN(values.age))}
 			</output>
 			<output data-testid="birthday-value">{values.birthday}</output>
+			<output data-testid="status-value">{values.status}</output>
+			<output data-testid="newsletter-value">
+				{String(values.newsletter)}
+			</output>
+			<output data-testid="avatar-value">
+				{values.avatar?.name ?? "undefined"}
+			</output>
 		</>
 	)
 }
@@ -379,10 +733,16 @@ function defaultValues(): Values {
 		bio: "First compiler",
 		age: 37,
 		birthday: "1815-12-10",
+		status: "draft",
+		newsletter: true,
 		disabledEmail: "locked@example.test",
 		hiddenBio: "Private notes",
 		disabledAge: 64,
 		hiddenBirthday: "1962-02-03",
+		disabledStatus: "archived",
+		hiddenStatus: "draft",
+		disabledNewsletter: true,
+		hiddenNewsletter: false,
 		readonlyEmail: "readonly@example.test",
 		readonlyBio: "Readonly notes",
 		readonlyAge: 8,
@@ -439,6 +799,33 @@ const dateOptions = {
 	max: "2030-01-01",
 } satisfies NativeDateOptions
 
+const selectOptions = {
+	options: [
+		{ value: "draft", label: "Draft" },
+		{ value: "published", label: "Published", disabled: true },
+	],
+} satisfies NativeSelectOptions<"draft" | "published">
+
+const selectOption = {
+	value: "draft",
+	label: "Draft",
+	disabled: false,
+} satisfies NativeSelectOption<"draft">
+
+const fileOptions = {
+	accept: "image/png",
+} satisfies NativeFileOptions
+
+const badSelectOptions = {
+	options: [
+		{
+			// @ts-expect-error native select option values must be strings
+			value: 1,
+			label: "One",
+		},
+	],
+} satisfies NativeSelectOptions
+
 // @ts-expect-error hidden inputs are not text-like visible controls
 const hiddenTextType: NativeTextType = "hidden"
 // @ts-expect-error checkboxes are not text-like controls
@@ -456,6 +843,10 @@ void textOptions
 void textareaOptions
 void numberOptions
 void dateOptions
+void selectOptions
+void selectOption
+void fileOptions
+void badSelectOptions
 void hiddenTextType
 void checkboxTextType
 void fileTextType

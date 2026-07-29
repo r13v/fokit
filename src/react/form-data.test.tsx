@@ -6,6 +6,8 @@ import userEvent from "@testing-library/user-event"
 import { renderToString } from "react-dom/server"
 import { beforeEach, describe, expect, it } from "vitest"
 
+import { createFormStore } from "../core/index.js"
+import { assertActionFormCompatible } from "../react19/action-form.js"
 import { parseFormData } from "../server/index.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
@@ -67,6 +69,18 @@ type NativeTextLikeValues = {
 	readonly note?: string
 	readonly count?: number
 	readonly birthday?: string
+}
+
+type NativeChoiceFileValues = {
+	readonly status: string
+	readonly subscribed: boolean
+	readonly avatar?: File
+	readonly disabledStatus: string
+	readonly hiddenStatus: string
+	readonly disabledSubscribed: boolean
+	readonly hiddenSubscribed: boolean
+	readonly disabledAvatar?: File
+	readonly hiddenAvatar?: File
 }
 
 type Context = {
@@ -134,6 +148,35 @@ const nativeTextLikeSchema = createSchema<
 			note: optionalString(input.note),
 			count: input.count === undefined ? undefined : Number(input.count),
 			birthday: optionalString(input.birthday),
+		},
+	}
+})
+const nativeChoiceFileSchema = createSchema<
+	NativeChoiceFileValues,
+	NativeChoiceFileValues
+>((value) => {
+	const input = value as Partial<Record<keyof NativeChoiceFileValues, unknown>>
+
+	return {
+		value: {
+			status: String(input.status ?? ""),
+			subscribed:
+				input.subscribed === true ||
+				input.subscribed === "true" ||
+				input.subscribed === "on",
+			avatar: optionalFile(input.avatar),
+			disabledStatus: String(input.disabledStatus ?? ""),
+			hiddenStatus: String(input.hiddenStatus ?? ""),
+			disabledSubscribed:
+				input.disabledSubscribed === true ||
+				input.disabledSubscribed === "true" ||
+				input.disabledSubscribed === "on",
+			hiddenSubscribed:
+				input.hiddenSubscribed === true ||
+				input.hiddenSubscribed === "true" ||
+				input.hiddenSubscribed === "on",
+			disabledAvatar: optionalFile(input.disabledAvatar),
+			hiddenAvatar: optionalFile(input.hiddenAvatar),
 		},
 	}
 })
@@ -600,6 +643,108 @@ const nativeTextLikeDefinition = nativeTextLikeKit.defineForm({
 	],
 })
 
+const nativeChoiceFileDefinition = nativeTextLikeKit.defineForm({
+	schema: nativeChoiceFileSchema,
+	ui: [
+		{
+			kind: "field",
+			path: "status",
+			control: "select",
+			label: "Status",
+			options: {
+				options: [
+					{ value: "draft", label: "Draft" },
+					{ value: "published", label: "Published" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "subscribed",
+			control: "checkbox",
+			label: "Subscribed",
+		},
+		{
+			kind: "field",
+			path: "avatar",
+			control: "file",
+			label: "Avatar",
+		},
+	],
+})
+
+const nativeChoicePreservationDefinition = nativeTextLikeKit.defineForm({
+	schema: nativeChoiceFileSchema,
+	ui: [
+		{
+			kind: "field",
+			path: "disabledStatus",
+			control: "select",
+			label: "Disabled status",
+			disabled: true,
+			options: {
+				options: [
+					{ value: "draft", label: "Draft" },
+					{ value: "published", label: "Published" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "hiddenStatus",
+			control: "select",
+			label: "Hidden status",
+			visible: false,
+			options: {
+				options: [
+					{ value: "draft", label: "Draft" },
+					{ value: "published", label: "Published" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "disabledSubscribed",
+			control: "checkbox",
+			label: "Disabled subscribed",
+			disabled: true,
+		},
+		{
+			kind: "field",
+			path: "hiddenSubscribed",
+			control: "checkbox",
+			label: "Hidden subscribed",
+			visible: false,
+		},
+	],
+})
+
+const disabledNativeFileDefinition = nativeTextLikeKit.defineForm({
+	schema: nativeChoiceFileSchema,
+	ui: [
+		{
+			kind: "field",
+			path: "disabledAvatar",
+			control: "file",
+			label: "Disabled avatar",
+			disabled: true,
+		},
+	],
+})
+
+const hiddenNativeFileDefinition = nativeTextLikeKit.defineForm({
+	schema: nativeChoiceFileSchema,
+	ui: [
+		{
+			kind: "field",
+			path: "hiddenAvatar",
+			control: "file",
+			label: "Hidden avatar",
+			visible: false,
+		},
+	],
+})
+
 describe("native FormData serialization", () => {
 	beforeEach(() => {
 		serializeCalls.length = 0
@@ -856,6 +1001,71 @@ describe("native FormData serialization", () => {
 		})
 	})
 
+	it("uses native FormData protocols for select, checkbox, and file controls", async () => {
+		const user = userEvent.setup()
+		const avatar = new File(["avatar"], "avatar.png", { type: "image/png" })
+		render(
+			<nativeTextLikeKit.AutoForm
+				defaultValues={{
+					status: "draft",
+					subscribed: true,
+					disabledStatus: "published",
+					hiddenStatus: "draft",
+					disabledSubscribed: true,
+					hiddenSubscribed: false,
+				}}
+				definition={nativeChoiceFileDefinition}
+				id="native-choice-file"
+			/>,
+		)
+
+		const form = document.querySelector("form")
+		if (form === null) {
+			throw new Error("Expected a form")
+		}
+		const fileInput = screen.getByLabelText("Avatar") as HTMLInputElement
+
+		await user.upload(fileInput, avatar)
+		expect(fileInput.files?.item(0)?.name).toBe("avatar.png")
+		expect(new FormData(form).get("avatar")).toBeInstanceOf(File)
+		expect(new FormData(form).get("status")).toBe("draft")
+		expect(new FormData(form).get("subscribed")).toBe("true")
+
+		await user.click(screen.getByLabelText("Subscribed"))
+		expect(new FormData(form).has("subscribed")).toBe(false)
+	})
+
+	it("preserves hidden and disabled native select and checkbox values", async () => {
+		const defaultValues = {
+			status: "draft",
+			subscribed: false,
+			disabledStatus: "published",
+			hiddenStatus: "draft",
+			disabledSubscribed: true,
+			hiddenSubscribed: false,
+		} satisfies NativeChoiceFileValues
+		render(
+			<nativeTextLikeKit.AutoForm
+				defaultValues={defaultValues}
+				definition={nativeChoicePreservationDefinition}
+				id="native-choice-preserved"
+			/>,
+		)
+		const form = document.querySelector("form")
+		if (form === null) {
+			throw new Error("Expected a form")
+		}
+
+		const formData = new FormData(form)
+		const parsed = await parseFormData(formData, nativeChoiceFileSchema)
+
+		expect(formData.get("disabledStatus")).toBe("published")
+		expect(formData.get("hiddenStatus")).toBe("draft")
+		expect(formData.get("disabledSubscribed")).toBe("true")
+		expect(formData.get("hiddenSubscribed")).toBe("false")
+		expect(parsed.success).toBe(true)
+	})
+
 	it("updates hidden serializer entries when values change", () => {
 		render(
 			<kit.AutoForm
@@ -887,6 +1097,65 @@ describe("native FormData serialization", () => {
 			'Classic form cannot preserve field "count" while it is invisible or disabled without a serializer',
 		)
 	})
+
+	it.each([
+		{
+			name: "disabled",
+			path: "disabledAvatar",
+			definition: disabledNativeFileDefinition,
+			defaultValues: {
+				disabledAvatar: new File(["avatar"], "avatar.png", {
+					type: "image/png",
+				}),
+			},
+		},
+		{
+			name: "hidden",
+			path: "hiddenAvatar",
+			definition: hiddenNativeFileDefinition,
+			defaultValues: {
+				hiddenAvatar: new File(["avatar"], "avatar.png", {
+					type: "image/png",
+				}),
+			},
+		},
+	])(
+		"rejects $name native file preservation in classic and Action FormData",
+		({ path, definition, defaultValues }) => {
+			const fullDefaultValues = {
+				status: "draft",
+				subscribed: false,
+				disabledStatus: "draft",
+				hiddenStatus: "draft",
+				disabledSubscribed: false,
+				hiddenSubscribed: false,
+				...defaultValues,
+			} satisfies NativeChoiceFileValues
+
+			expect(() => {
+				render(
+					<nativeTextLikeKit.AutoForm
+						defaultValues={fullDefaultValues}
+						definition={definition}
+						id="native-file-incompatible"
+					/>,
+				)
+			}).toThrow(
+				`Classic form cannot preserve field "${path}" while it is invisible or disabled without a serializer`,
+			)
+
+			const snapshot = createFormStore({
+				definition,
+				defaultValues: fullDefaultValues,
+			}).getSnapshot()
+
+			expect(() =>
+				assertActionFormCompatible(snapshot, nativeTextLikeKit.controls),
+			).toThrow(
+				`ActionForm cannot preserve field "${path}" while it is invisible or disabled without a serializer`,
+			)
+		},
+	)
 })
 
 function defaultValues(): Values {
@@ -1003,6 +1272,10 @@ async function normalizeSchemaResult<Output>(
 
 function optionalString(value: unknown): string | undefined {
 	return value === undefined ? undefined : String(value)
+}
+
+function optionalFile(value: unknown): File | undefined {
+	return value instanceof File ? value : undefined
 }
 
 function normalizeDate(value: Date | string | undefined): string {

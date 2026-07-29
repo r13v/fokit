@@ -225,3 +225,11 @@ Pruning unreferenced generated QA screenshots before publishing → the command 
 ## 2026-07-29 10:38 — GPT-5
 
 Opening the draft PR through the connected GitHub app → GitHub returned `403 Resource not accessible by integration` despite the repository being readable and the branch already being pushed. Fall back to the authenticated `gh` session when the connector installation lacks pull-request write access.
+
+## 2026-07-29 13:18 — GPT-5
+
+Adding native choice/file FormData tests → one broad `apply_patch` mixed distant insertion points and missed the exact closing context near the file end. Split multi-region test edits into smaller patches after re-reading local anchors.
+
+## 2026-07-29 13:22 — GPT-5
+
+Implementing read-only native file controls → Biome rejects `aria-readonly` on `input[type=file]` even though the plan requires an explicit exposed read-only state because the element has no native `readOnly`. Keep the suppression local to the file input and include the contract reason.

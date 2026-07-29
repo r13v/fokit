@@ -492,26 +492,26 @@ requires control wrappers. The text-like controls share genuine native
 - Create: `src/react/native-controls.test.tsx`
 - Modify: `src/react/form-data.test.tsx`
 
-- [ ] Write failing component, interaction, and FormData tests for `text`,
+- [x] Write failing component, interaction, and FormData tests for `text`,
       `textarea`, `number`, and `date` before implementing them.
-- [ ] Define `NativeTextType` as the closed text-like union `"text" | "email"
+- [x] Define `NativeTextType` as the closed text-like union `"text" | "email"
       | "password" | "search" | "tel" | "url"`; declaration-test that
       checkbox, file, hidden, number, date, and button types are rejected.
-- [ ] Implement `text` for `string | undefined` with `NativeTextType`,
+- [x] Implement `text` for `string | undefined` with `NativeTextType`,
       placeholder, and autocomplete options.
-- [ ] Implement `textarea` for `string | undefined` with placeholder,
+- [x] Implement `textarea` for `string | undefined` with placeholder,
       autocomplete, and rows options.
-- [ ] Implement `number` for `number | undefined`, mapping an empty input to
+- [x] Implement `number` for `number | undefined`, mapping an empty input to
       `undefined` and never writing `NaN`; support min, max, step, and
       placeholder options.
-- [ ] Implement `date` for `string | undefined` using the native `YYYY-MM-DD`
+- [x] Implement `date` for `string | undefined` using the native `YYYY-MM-DD`
       representation with optional min and max.
-- [ ] Pass the native `readOnly` attribute to all four controls so they remain
+- [x] Pass the native `readOnly` attribute to all four controls so they remain
       focusable and successful FormData controls while rejecting edits.
-- [ ] Preserve input identity, described-by metadata, invalid state, blur,
+- [x] Preserve input identity, described-by metadata, invalid state, blur,
       disabled, required, and supported native options.
-- [ ] Add native serializers for hidden or disabled value preservation.
-- [ ] Run `npm test -- src/react/native-controls.test.tsx
+- [x] Add native serializers for hidden or disabled value preservation.
+- [x] Run `npm test -- src/react/native-controls.test.tsx
       src/react/form-data.test.tsx`.
 
 ### Task 4B: Implement choice and single-file native controls

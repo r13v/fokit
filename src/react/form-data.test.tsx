@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { parseFormData } from "../server/index.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
+import { nativeControls } from "./native-controls.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -59,6 +60,13 @@ type NestedValues = {
 			readonly email: string
 		}[]
 	}[]
+}
+
+type NativeTextLikeValues = {
+	readonly name?: string
+	readonly note?: string
+	readonly count?: number
+	readonly birthday?: string
 }
 
 type Context = {
@@ -114,6 +122,21 @@ const uploadSchema = createSchema<UploadValues, UploadValues>((value) => ({
 const nestedSchema = createSchema<NestedValues, NestedValues>((value) => ({
 	value: value as NestedValues,
 }))
+const nativeTextLikeSchema = createSchema<
+	NativeTextLikeValues,
+	NativeTextLikeValues
+>((value) => {
+	const input = value as Partial<Record<keyof NativeTextLikeValues, unknown>>
+
+	return {
+		value: {
+			name: optionalString(input.name),
+			note: optionalString(input.note),
+			count: input.count === undefined ? undefined : Number(input.count),
+			birthday: optionalString(input.birthday),
+		},
+	}
+})
 
 const nativeText = defineControl<string | undefined, TextOptions, Context>({
 	component({
@@ -382,6 +405,17 @@ const uploadKit = createFormKit({
 	},
 })
 
+const nativeTextLikeKit = createFormKit({
+	controls: nativeControls,
+	slots: {
+		Field: FieldSlot,
+		Section: SectionSlot,
+		Array: ArraySlot,
+		ArrayItem: ArrayItemSlot,
+		ErrorMessage,
+	},
+})
+
 const definition = kit.defineForm<Context>()({
 	schema,
 	ui: [
@@ -528,6 +562,40 @@ const nestedDefinition = kit.defineForm<Context>()({
 					],
 				},
 			],
+		},
+	],
+})
+
+const nativeTextLikeDefinition = nativeTextLikeKit.defineForm({
+	schema: nativeTextLikeSchema,
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: "Name",
+			disabled: true,
+		},
+		{
+			kind: "field",
+			path: "note",
+			control: "textarea",
+			label: "Note",
+			visible: false,
+		},
+		{
+			kind: "field",
+			path: "count",
+			control: "number",
+			label: "Count",
+			disabled: true,
+		},
+		{
+			kind: "field",
+			path: "birthday",
+			control: "date",
+			label: "Birthday",
+			visible: false,
 		},
 	],
 })
@@ -754,6 +822,38 @@ describe("native FormData serialization", () => {
 		expect(parsed.value.avatar?.name).toBe("avatar.txt")
 		expect(parsed.value.avatar?.type).toBe("text/plain")
 		expect(parsed.value.avatar?.size).toBe(avatar.size)
+	})
+
+	it("preserves text-like nativeControls values as hidden FormData entries", async () => {
+		const defaultValues = {
+			name: "Ada",
+			note: "private",
+			count: 7,
+			birthday: "2026-07-28",
+		} satisfies NativeTextLikeValues
+		render(
+			<nativeTextLikeKit.AutoForm
+				defaultValues={defaultValues}
+				definition={nativeTextLikeDefinition}
+				id="native-text-like"
+			/>,
+		)
+		const form = document.querySelector("form")
+		if (form === null) {
+			throw new Error("Expected a form")
+		}
+
+		const formData = new FormData(form)
+		const parsed = await parseFormData(formData, nativeTextLikeSchema)
+
+		expect(formData.get("name")).toBe("Ada")
+		expect(formData.get("note")).toBe("private")
+		expect(formData.get("count")).toBe("7")
+		expect(formData.get("birthday")).toBe("2026-07-28")
+		expect(parsed).toEqual({
+			success: true,
+			value: defaultValues,
+		})
 	})
 
 	it("updates hidden serializer entries when values change", () => {

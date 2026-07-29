@@ -44,6 +44,8 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"404.html",
 		"assets/md/index.md",
 		"assets/md/get-started.md",
+		"assets/md/guides/tutorial.md",
+		"assets/md/guides/validation.md",
 		"llms.txt",
 		"llms-full.txt",
 		"sitemap.xml",
@@ -141,7 +143,30 @@ test("Interactive Lab has meaningful generated Markdown fallbacks", async () => 
 	}
 
 	const llms = await readFile(new URL("llms.txt", publicRoot), "utf8")
-	assert.match(llms, /Interactive Fokit Lab/)
+	assert.match(llms, /Build and submit your first typed Fokit form/)
+	assert.match(llms, /Grow the first Fokit form into a production-ready/)
+	assert.match(llms, /Control when Fokit validates/)
+})
+
+test("overview demo has a meaningful generated Markdown fallback", async () => {
+	const fallbackTerms = [
+		"live overview form is browser-only",
+		"validates with Standard Schema",
+		"createFormKit({ controls: nativeControls })",
+	]
+	const fallbackFiles = ["assets/md/index.md", "llms-full.txt"]
+
+	for (const file of fallbackFiles) {
+		const source = await readFile(new URL(file, publicRoot), "utf8")
+
+		for (const term of fallbackTerms) {
+			assert.match(
+				source,
+				new RegExp(escapeRegExp(term), "i"),
+				`${file} needs ${term}`,
+			)
+		}
+	}
 })
 
 test("Vocs public output does not include route or function artifacts", async () => {

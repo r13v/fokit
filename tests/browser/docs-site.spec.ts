@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test"
 test.describe("Fokit documentation", () => {
 	test("uses clean Vocs routes, sidebar navigation, and direct deep links", async ({
 		page,
-	}) => {
+	}, testInfo) => {
 		await page.setViewportSize({ width: 1280, height: 900 })
 		await page.goto("./get-started")
 
@@ -18,6 +18,9 @@ test.describe("Fokit documentation", () => {
 		await expect(
 			sidebar.getByRole("link", { name: "Get started" }),
 		).toHaveAttribute("data-active", "true")
+		await page.screenshot({
+			path: testInfo.outputPath("fokit-get-started.png"),
+		})
 
 		await sidebar.getByRole("link", { name: "API", exact: true }).click()
 		await expect(page).toHaveURL(/\/fokit\/api$/)
@@ -39,6 +42,127 @@ test.describe("Fokit documentation", () => {
 				),
 			)
 			.toBeLessThanOrEqual(120)
+	})
+
+	test("keeps the learning path ahead of reference pages", async ({
+		page,
+	}, testInfo) => {
+		await page.setViewportSize({ width: 1280, height: 900 })
+		await page.goto("./get-started")
+
+		const sidebar = page.locator("nav[data-v-sidebar]")
+		await sidebar.getByRole("link", { name: "Build a production form" }).click()
+
+		await expect(page).toHaveURL(/\/fokit\/guides\/tutorial$/)
+		await expect(
+			page.getByRole("heading", {
+				level: 1,
+				name: "Build a production form",
+			}),
+		).toBeVisible()
+		await expect(
+			page.getByRole("heading", {
+				level: 2,
+				name: "Model editable input and saved output",
+			}),
+		).toBeVisible()
+		await expect(page.getByRole("button", { name: /Ask AI/ })).toHaveCount(0)
+
+		await page.screenshot({
+			path: testInfo.outputPath("fokit-production-tutorial.png"),
+		})
+
+		await sidebar.getByRole("link", { name: "Validation & errors" }).click()
+		await expect(page).toHaveURL(/\/fokit\/guides\/validation$/)
+		await expect(
+			page.getByRole("heading", {
+				level: 1,
+				name: "Validation and errors",
+			}),
+		).toBeVisible()
+		await expect(
+			page.getByText("setErrors", { exact: true }).first(),
+		).toBeVisible()
+	})
+
+	test("overview leads with the outcome and proves the typed submit loop", async ({
+		page,
+	}, testInfo) => {
+		await page.setViewportSize({ width: 1280, height: 920 })
+		await page.goto("./")
+
+		await expect(
+			page.getByRole("heading", {
+				level: 1,
+				name: "Forms that stay typed, native, and yours",
+			}),
+		).toBeVisible()
+		await expect(
+			page.getByRole("link", { name: "Build your first form" }),
+		).toHaveAttribute("href", "/fokit/get-started")
+		await page.screenshot({
+			fullPage: true,
+			path: testInfo.outputPath("fokit-overview.png"),
+		})
+
+		const demo = page.getByRole("region", {
+			name: "Live Fokit profile form",
+		})
+		await expect(demo).toBeVisible()
+		await expect(demo.getByTestId("overview-output")).toContainText(
+			"Submit the form to see typed output.",
+		)
+
+		await demo.getByRole("button", { name: "Save profile" }).click()
+		await expect(demo.getByTestId("overview-output")).toContainText(
+			'"email": "ada@example.com"',
+		)
+
+		await demo.getByLabel("Email").fill("not-an-email")
+		await demo.getByRole("button", { name: "Save profile" }).click()
+		await expect(
+			demo.locator("[data-fokit-node='error-message']", {
+				hasText: "Enter a valid email",
+			}),
+		).toBeVisible()
+
+		await page.evaluate(() => {
+			document.documentElement.setAttribute("data-vocs-theme", "dark")
+		})
+		const headingContrast = await page
+			.getByRole("heading", {
+				level: 1,
+				name: "Forms that stay typed, native, and yours",
+			})
+			.evaluate((heading) => {
+				const parseRgb = (value: string) =>
+					(value.match(/\d+/g) ?? []).slice(0, 3).map(Number)
+				const luminance = ([red = 0, green = 0, blue = 0]: number[]) => {
+					const channels = [red, green, blue].map((channel) => {
+						const normalized = channel / 255
+						return normalized <= 0.04045
+							? normalized / 12.92
+							: ((normalized + 0.055) / 1.055) ** 2.4
+					})
+
+					return (
+						(channels[0] ?? 0) * 0.2126 +
+						(channels[1] ?? 0) * 0.7152 +
+						(channels[2] ?? 0) * 0.0722
+					)
+				}
+				const foreground = luminance(parseRgb(getComputedStyle(heading).color))
+				const background = luminance(
+					parseRgb(getComputedStyle(document.body).backgroundColor),
+				)
+
+				return (
+					(Math.max(foreground, background) + 0.05) /
+					(Math.min(foreground, background) + 0.05)
+				)
+			})
+
+		expect(headingContrast).toBeGreaterThanOrEqual(4.5)
 	})
 
 	test("keeps skip links under the GitHub Pages base path after hydration", async ({
@@ -100,7 +224,7 @@ test.describe("Fokit documentation", () => {
 		expect(llmsResponse.ok()).toBe(true)
 		await expect
 			.poll(async () => await llmsResponse.text())
-			.toContain("Interactive Fokit Lab")
+			.toContain("Build and submit your first typed Fokit form")
 	})
 
 	test("searches Vocs content under the GitHub Pages base path", async ({
@@ -226,7 +350,7 @@ test.describe("Fokit documentation", () => {
 		await page.getByRole("button", { name: "Open menu" }).click()
 		const dialog = page.getByRole("dialog")
 		await expect(dialog).toBeVisible()
-		await dialog.getByRole("link", { name: "Types" }).click()
+		await dialog.getByRole("link", { name: "TypeScript" }).click()
 		await expect(page).toHaveURL(/\/fokit\/types$/)
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Types" }),

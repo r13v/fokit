@@ -1,0 +1,170 @@
+---
+title: Conditional fields
+description: Derive visibility, interaction state, labels, and options from explicit form dependencies and runtime context.
+showAskAi: false
+---
+
+# Conditional fields
+
+Conditional form UI should be predictable: a field names the values it depends
+on, Fokit recomputes only when those dependencies change, and value retention
+stays an explicit product decision.
+
+## Derive UI with computed
+
+Use `computed()` anywhere a UI node accepts a resolvable value, including
+`visible`, `disabled`, `readOnly`, `required`, labels, descriptions, and control
+options.
+
+```ts twoslash
+import { computed, createFormKit, type FormInput, nativeControls } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({
+	accountType: z.enum(["personal", "company"]),
+	companyName: z.string().optional(),
+})
+type ProfileInput = FormInput<typeof schema>
+
+const kit = createFormKit({ controls: nativeControls })
+
+// ---cut---
+const definition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "accountType",
+			control: "select",
+			label: "Account type",
+			options: {
+				options: [
+					{ value: "personal", label: "Personal" },
+					{ value: "company", label: "Company" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "companyName",
+			control: "text",
+			label: "Company name",
+			visible: computed<
+				readonly ["accountType"],
+				boolean,
+				unknown,
+				ProfileInput
+			>(
+				["accountType"] as const,
+				({ accountType }) => accountType === "company",
+			),
+			valuePolicy: "unset",
+		},
+	],
+})
+```
+
+Dependencies use the same canonical paths as fields. A resolver stays
+synchronous and pure; remote loading belongs in application data flow, not
+inside `computed()`.
+
+## Decide what happens to hidden values
+
+Visibility and stored data are separate:
+
+| Policy | Behavior |
+| --- | --- |
+| `"preserve"` | Keep the current value when a node becomes hidden. This is the default. |
+| `"unset"` | Remove the value through the normal transaction pipeline. |
+
+Use `"preserve"` for temporarily hidden preferences that should return when the
+user reopens a section. Use `"unset"` when a hidden value must no longer be
+submitted or validated.
+
+`"unset"` is available only for optional paths. That type constraint prevents a
+conditional UI change from making the editable input structurally incomplete.
+
+## Pass loaded data through context
+
+Context is runtime-only data. It can drive options and interaction state but
+never becomes form data and never makes the form dirty.
+
+```ts twoslash
+import { computed, createFormKit, type FormInput, nativeControls } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ country: z.string() })
+type ProfileInput = FormInput<typeof schema>
+type ProfileContext = {
+	readonly countries: readonly {
+		readonly value: string
+		readonly label: string
+	}[]
+	readonly locked: boolean
+}
+
+const kit = createFormKit({ controls: nativeControls })
+
+// ---cut---
+const definition = kit.defineForm<ProfileContext>()({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "country",
+			control: "select",
+			label: "Country",
+			readOnly: computed<
+				readonly [],
+				boolean,
+				ProfileContext,
+				ProfileInput
+			>([] as const, (_values, { context }) => context.locked),
+			options: computed<
+				readonly [],
+				{ readonly options: ProfileContext["countries"] },
+				ProfileContext,
+				ProfileInput
+			>([] as const, (_values, { context }) => ({
+				options: context.countries,
+			})),
+		},
+	],
+})
+```
+
+Load countries before rendering the form, then pass them through `context`.
+Replacing context recomputes resolved UI without replacing the form instance.
+
+## Keep conditional validation in the schema
+
+`visible` controls rendering; it does not rewrite validation rules. Use schema
+refinements for cross-field requirements:
+
+```ts twoslash
+import { z } from "zod"
+
+const schema = z
+	.object({
+		accountType: z.enum(["personal", "company"]),
+		companyName: z.string().optional(),
+	})
+	.superRefine((value, context) => {
+		if (
+			value.accountType === "company" &&
+			(value.companyName ?? "").trim() === ""
+		) {
+			context.addIssue({
+				code: "custom",
+				path: ["companyName"],
+				message: "Company name is required",
+			})
+		}
+	})
+```
+
+This keeps the same rule in classic submit, imperative validation, and server
+parsing.
+
+Next, add repeatable data with [array fields](/guides/arrays), or review the
+[validation lifecycle](/guides/validation).

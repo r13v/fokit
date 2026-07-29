@@ -20,15 +20,43 @@ export default defineConfig({
 		text: "Edit this page",
 	},
 	sidebar: [
-		{ text: "Overview", link: "/" },
-		{ text: "Get started", link: "/get-started" },
-		{ text: "API", link: "/api" },
-		{ text: "Types", link: "/types" },
-		{ text: "Advanced", link: "/advanced" },
-		{ text: "FAQs", link: "/faqs" },
-		{ text: "Controls", link: "/guides/controls" },
-		{ text: "Styling", link: "/guides/styling" },
-		{ text: "React 19 Actions", link: "/guides/react-19-actions" },
-		{ text: "Tutorial", link: "/guides/tutorial" },
+		{
+			text: "Start",
+			collapsed: false,
+			items: [
+				{ text: "Overview", link: "/" },
+				{ text: "Get started", link: "/get-started" },
+				{ text: "Build a production form", link: "/guides/tutorial" },
+			],
+		},
+		{
+			text: "Guides",
+			collapsed: false,
+			items: [
+				{ text: "Validation & errors", link: "/guides/validation" },
+				{
+					text: "Conditional fields",
+					link: "/guides/conditional-fields",
+				},
+				{ text: "Arrays", link: "/guides/arrays" },
+				{ text: "Controls & design systems", link: "/guides/controls" },
+				{ text: "Styling", link: "/guides/styling" },
+				{ text: "React 19 Actions", link: "/guides/react-19-actions" },
+				{ text: "Production recipes", link: "/advanced" },
+			],
+		},
+		{
+			text: "Reference",
+			collapsed: false,
+			items: [
+				{ text: "API", link: "/api" },
+				{ text: "TypeScript", link: "/types" },
+			],
+		},
+		{
+			text: "Help",
+			collapsed: false,
+			items: [{ text: "FAQs", link: "/faqs" }],
+		},
 	],
 })

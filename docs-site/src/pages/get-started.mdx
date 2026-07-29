@@ -1,39 +1,46 @@
 ---
 title: Get started
-description: Render a Fokit form with native controls, default structural slots, and the Interactive Fokit Lab.
+description: Build and submit your first typed Fokit form, then see how schema, UI, and controls fit together.
+showAskAi: false
 ---
 
 import { InteractiveLab } from "../components/interactive-lab"
 
 # Get started
 
+Build a working, schema-validated form and receive typed output on submit. The
+path is deliberately explicit: the schema owns validity, the UI definition owns
+structure, and the kit owns rendering.
+
 Fokit works with React 18+, TypeScript 5+, and any schema library that
-implements Standard Schema. The shortest path uses the shipped `nativeControls`
-registry and the English default structural slots resolved by `createFormKit`.
+implements Standard Schema. This guide uses Zod in an existing React
+application.
 
 ## Installation
 
 ```sh
 npm install fokit zod
-npm install react react-dom
 ```
 
-React is a peer dependency with the range `^18.0.0 || ^19.0.0`. The examples
-use Zod because it implements Standard Schema, but the form APIs are not tied
-to Zod.
-
-Use the main `fokit` entry for React 18-compatible forms. Use `fokit/server` in
-server code, `fokit/react19` only for React 19 Actions, and import
-`fokit/layout.css` explicitly only when you want the optional structural CSS.
+React and React DOM are peer dependencies with the range
+`^18.0.0 || ^19.0.0`. Zod is only the example schema library; Fokit does not
+require it or an adapter.
 
 ## Build your first form
 
-Start with a schema, complete editable defaults, and a UI definition that
-selects controls by name.
+Put this component in your application and render `<ProfileForm />`. It starts
+with the same profile shown on the overview page, validates on submit, and shows
+the schema-validated output.
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls, type FormOutput } from "fokit"
+import {
+	createFormKit,
+	type FormInput,
+	type FormOutput,
+	nativeControls,
+} from "fokit"
+import { useState } from "react"
 import { z } from "zod"
 
 const profileSchema = z.object({
@@ -42,11 +49,11 @@ const profileSchema = z.object({
 	newsletter: z.boolean(),
 })
 
-const defaults = {
-	name: "",
-	email: "",
-	newsletter: false,
-}
+const defaultValues = {
+	name: "Ada Lovelace",
+	email: "ada@example.com",
+	newsletter: true,
+} satisfies FormInput<typeof profileSchema>
 
 const kit = createFormKit({
 	controls: nativeControls,
@@ -55,146 +62,127 @@ const kit = createFormKit({
 const profileDefinition = kit.defineForm({
 	schema: profileSchema,
 	ui: [
-		{ kind: "field", path: "name", control: "text", label: "Name" },
-		{ kind: "field", path: "email", control: "text", label: "Email" },
-		{ kind: "field", path: "newsletter", control: "checkbox", label: "News" },
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: "Name",
+			required: true,
+			options: { autoComplete: "name" },
+		},
+		{
+			kind: "field",
+			path: "email",
+			control: "text",
+			label: "Email",
+			required: true,
+			options: { type: "email", autoComplete: "email" },
+		},
+		{
+			kind: "field",
+			path: "newsletter",
+			control: "checkbox",
+			label: "Send me product news",
+		},
 	],
 })
 
-function saveProfile(value: FormOutput<typeof profileSchema>) {
-	void value
-}
-
-// ---cut---
 export function ProfileForm() {
+	const [saved, setSaved] = useState<FormOutput<typeof profileSchema>>()
+
 	return (
-		<kit.AutoForm
-			definition={profileDefinition}
-			defaultValues={defaults}
-			onSubmit={({ value }) => saveProfile(value)}
-		>
-			<kit.Submit>Save profile</kit.Submit>
-		</kit.AutoForm>
+		<>
+			<kit.AutoForm
+				definition={profileDefinition}
+				defaultValues={defaultValues}
+				onSubmit={({ value }) => setSaved(value)}
+			>
+				<kit.Submit>Save profile</kit.Submit>
+			</kit.AutoForm>
+			<pre aria-live="polite">
+				{saved === undefined
+					? "Submit the form to see typed output."
+					: JSON.stringify(saved, null, 2)}
+			</pre>
+		</>
 	)
 }
 ```
 
-## Create a kit with native controls
+Submit once, then replace the email with an invalid value and submit again.
+Fokit exposes the schema issue beside the field and focuses the first invalid
+control. Restore a valid email and the handler receives
+`FormOutput<typeof profileSchema>`.
 
-`createFormKit({ controls: nativeControls })` resolves all five slots once for
-the kit: `Field`, `Section`, `Array`, `ArrayItem`, and `ErrorMessage`. The
-defaults render semantic, accessible, unstyled HTML with English action labels.
+The shipped controls and slots are accessible semantic HTML, not a visual
+theme. Import `fokit/layout.css` in your application entry point when you want
+optional structural spacing, or style the exposed markup yourself.
 
-```ts twoslash
-import { createDefaultSlots, createFormKit, nativeControls } from "fokit"
+## What just happened
 
-const kit = createFormKit({
-	controls: nativeControls,
-	slots: {
-		...createDefaultSlots({
-			i18n: {
-				arrayAdd: "Add contact",
-				arrayRemove: ({ position }) => `Remove contact ${position}`,
-			},
-		}),
-	},
-})
-```
+### Schema owns validity
 
-Every i18n entry can be a string or a function. Missing entries fall back to
-English. `arrayAdd` functions receive `{ label }`; `arrayRemove`,
-`arrayMoveUp`, and `arrayMoveDown` functions receive zero-based `index` and
-one-based `position`.
+`profileSchema` is the only validation language in the example. Fokit stores
+editable `FormInput<typeof profileSchema>` and passes validated
+`FormOutput<typeof profileSchema>` to `onSubmit`, so schema transforms can
+produce a different output type without replacing editable values.
 
-Controls remain explicit. Add product controls by composing the registry:
+### UI definition owns structure
 
-```ts twoslash
-import { createFormKit, defineControl, nativeControls } from "fokit"
+`profileDefinition` explicitly chooses paths, controls, labels, and presentation
+options. Fokit does not infer UI from Zod or other schema metadata. That keeps a
+domain-schema change from silently changing the product experience.
 
-const money = defineControl<number>({
-	component: () => null,
-	formData: { mode: "none" },
-})
+### The kit owns rendering
 
-const kit = createFormKit({
-	controls: {
-		...nativeControls,
-		money,
-	},
-})
-```
+`createFormKit({ controls: nativeControls })` maps control names to shipped
+native renderers and fills in accessible default structural slots.
+`kit.AutoForm` creates the form instance and renders the definition. The same
+definition can later be composed manually with `kit.Form`, `kit.Fields`, and
+granular hooks.
 
-## Render a generated form
+## Try the production loop
 
-`kit.AutoForm` creates a `FormInstance`, renders the normalized definition, and
-coordinates classic native submission. You can leave generated rendering at any
-point and reuse the same instance with `kit.Form`, `kit.Fields`, `useForm`,
-`useField`, `useValue`, or `useArrayField`.
+The lab below uses the same public model with conditions, arrays, reset,
+submit-first validation, stable row identity, and native `FormData`. Edit the
+form and compare its values, exposed issues, and browser submission payload.
 
-Generated fields preserve native names, IDs, descriptions, labels, required
-state, read-only state, disabled state, issue relationships, and focus targets.
-The default slots pass those props through; custom slots must do the same.
-
-## Interactive Fokit Lab
+### Interactive Fokit Lab
 
 <InteractiveLab />
 
-## Validation follows the schema
+## What you get out of the box
 
-Validation defaults to submit-first behavior. Configure `validation.mode`,
-`revalidateMode`, and `asyncDebounceMs` on `useForm` or `kit.AutoForm` when a
-form needs blur or change validation.
+- Schema-owned synchronous or asynchronous validation.
+- Typed editable input and validated submit output.
+- Accessible labels, descriptions, issue relationships, and first-error focus.
+- Stable array commands and explicit hidden-value behavior.
+- Granular subscriptions when generated rendering is not enough.
+- Native names and `FormData` coordination for classic submission.
+- An isolated `fokit/react19` entry for React 19 Actions.
 
-```ts twoslash
-import { createFormKit, nativeControls } from "fokit"
-import { z } from "zod"
+## Make it yours
 
-const schema = z.object({ name: z.string() })
-const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm({
-	schema,
-	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
-})
+`nativeControls` and the default slots are a working baseline, not a design
+system. Replace controls with `defineControl`, override one or more structural
+slots, or call `createDefaultSlots({ i18n })` when the default action labels need
+to change.
 
-// ---cut---
-const options = {
-	definition,
-	defaultValues: { name: "" },
-	validation: {
-		mode: "blur",
-		revalidateMode: "change",
-		asyncDebounceMs: 150,
-	},
-} satisfies Parameters<typeof kit.AutoForm>[0]
-```
+Fokit keeps those choices separate from the reusable form definition. Product
+controls can change without rewriting validation, conditions, arrays, or submit
+behavior.
 
-The store contains editable `FormInput<Schema>`. A successful submission
-returns validated `FormOutput<Schema>`, so schema transforms do not silently
-replace the editable values.
+## Choose your next step
 
-## Submit with native form semantics
-
-Classic submission captures the browser's `FormData`, validates the current
-store snapshot, exposes schema issues, focuses the first issue target, prevents
-duplicate submits, and calls `onSubmit` with typed output.
-
-React 19 Actions use `ActionForm` and `ActionSubmit` from `fokit/react19`.
-Those components keep the server Action on the native form and synchronize the
-serializable `FormResult` returned by `parseFormData`.
-
-## Native FormData caveats
-
-`nativeControls` intentionally follow browser protocol details:
-
-- `text`, `textarea`, and `date` use `string | undefined`; undefined renders as
-  an empty control and hidden preservation omits the entry.
-- `number` stores `number | undefined`, but visible native FormData contains a
-  string.
-- `date` stores the native `YYYY-MM-DD` string, not a JavaScript `Date`.
-- `checkbox` stores `boolean`; a visible unchecked checkbox is absent from
-  native FormData, while hidden preservation serializes the boolean value.
-- `file` stores `File | undefined`; browsers do not allow a default `File` to
-  hydrate an input, and hidden or disabled file values cannot be serialized.
-
-Server code should treat FormData as untrusted input and let the schema coerce
-browser protocol strings into domain values.
+- [Build a production form](/guides/tutorial) to add validation, a conditional
+  field, arrays, and typed output without changing the core model.
+- [Validation and errors](/guides/validation) for timing, visibility, and
+  recoverable server feedback.
+- [Controls and design systems](/guides/controls) to connect product inputs and
+  structural slots.
+- [Styling](/guides/styling) for responsive layout and a copyable visual
+  baseline.
+- [React 19 Actions](/guides/react-19-actions) for Action submission and
+  serializable results.
+- [Production recipes](/advanced) for manual composition, loaded edit forms,
+  server safety, and testing.

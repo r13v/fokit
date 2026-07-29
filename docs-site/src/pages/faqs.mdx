@@ -1,66 +1,107 @@
 ---
 title: FAQs
-description: Common Fokit questions about defaults, themes, servers, and React versions.
+description: Direct answers about when to use Fokit, validation, defaults, design systems, servers, and React versions.
+showAskAi: false
 ---
 
 # FAQs
 
-Fokit is deliberately opinionated about data, state, and native form behavior,
-and deliberately unopinionated about your visual system.
+Fokit is opinionated about data, state, and native form behavior, and
+deliberately unopinionated about your product's visual system.
 
 ## Why use Fokit instead of a smaller form hook?
 
 Use Fokit when a product needs schema-owned validation, typed transformations,
-generated and manual rendering, stable arrays, safe server FormData, and
-explicit React 19 support under one consistent state model. If you only need a
-few uncontrolled inputs and a submit handler, the browser may already be the
-simpler tool.
+generated and manual rendering, stable arrays, safe server FormData, and React
+19 support under one state model.
 
-## Are Fokit controls controlled or uncontrolled?
-
-Custom controls read their value from the store and write through `setValue`,
-so product state is controlled by Fokit. Native FormData behavior is still
-preserved through explicit control serialization. The `file` native control is
-the exception at the DOM display level: browsers own the selected file list,
-while Fokit stores the first selected `File | undefined`.
+If you need a few uncontrolled inputs and a submit handler, the browser may
+already be the simpler tool. See [When to reach for Fokit](/#when-to-reach-for-fokit).
 
 ## Does Fokit require Zod?
 
-No. Fokit accepts any implementation of Standard Schema. The documentation uses
-Zod because it is familiar and implements that contract.
+No. Fokit accepts any implementation of Standard Schema. The documentation
+uses Zod because it is familiar and implements that contract.
+
+## Are Fokit controls controlled or uncontrolled?
+
+Product values are controlled by the Fokit store. Custom controls read `value`
+and write through `setValue`.
+
+Native FormData behavior is still preserved through explicit control
+serialization. The `file` control is the DOM exception: the browser owns the
+selected file list while Fokit stores the first selected `File | undefined`.
+
+Read [Controls and design systems](/guides/controls) for the adapter contract.
 
 ## Why are complete default values required?
 
-Complete editable input gives dirty comparison, reset, array metadata,
-hidden-field policies, and native serialization one deterministic baseline.
-Optional schema fields can still begin as `undefined` when that is part of
-`FormInput`.
+A complete editable baseline makes dirty comparison, reset, array metadata,
+hidden-field policies, and native serialization deterministic.
+
+Optional schema fields can begin as `undefined` when that is part of
+`FormInput`. Use [TypeScript input and output](/types#input-and-output) to see
+the distinction.
+
+## How do I load an existing profile?
+
+Load data before creating the form when possible. When newly loaded or saved
+data should become the clean baseline, call `form.reset(profile)`.
+
+Changing the `defaultValues` prop does not silently overwrite user edits. The
+[loaded edit-form recipe](/advanced#load-an-edit-form-baseline) shows the
+deliberate reset path.
+
+## Does Fokit support async validation?
+
+Yes. Standard Schema validation may return a promise. Fokit exposes
+`isValidating`, ignores stale results, and can debounce change-triggered async
+validation with `asyncDebounceMs`.
+
+Blur, imperative validation, and submit are never debounced. Read
+[Validation and errors](/guides/validation) for the complete lifecycle.
 
 ## Can I use an existing component library?
 
-Yes. Wrap each input component once with `defineControl`, then override any
-slot with the library's layout and feedback components. You can also start with
-`nativeControls` and replace only the controls that need product components.
+Yes. Wrap each product input once with `defineControl`, then replace any
+structural slot that needs design-system markup. You can start with
+`nativeControls` and replace only the product-specific parts.
+
+## Why is there no built-in theme?
+
+Form state should not dictate product styling. `createDefaultSlots()` renders
+accessible unstyled structure, and `fokit/layout.css` adds only responsive
+layout.
+
+Colors, typography, focus rings, density, and control polish stay in the
+application. Start with the copyable [styling baseline](/guides/styling).
 
 ## What happens when a field becomes hidden?
 
 Visibility and value retention are separate. `valuePolicy` preserves the value
-by default; use `"unset"` for optional values that must leave the form when
-hidden. Preserved hidden values need a serializer when they must participate in
-FormData.
+by default. Use `"unset"` for an optional value that must leave the form when
+hidden.
+
+Preserved hidden values need a serializer when they must participate in
+FormData. See [Conditional fields](/guides/conditional-fields).
 
 ## How do I reset a form?
 
 Call `form.reset()` or use a native reset button inside `kit.Form`. Fokit
-prevents the browser from rolling controlled inputs back independently and
-resets the store instead. You can also replace the baseline when a saved server
-value becomes the new starting point.
+prevents controlled inputs from rolling back independently and resets the store
+instead.
+
+`form.reset(nextValues)` replaces the baseline. Both forms clear dirty,
+touched, validation, issue, and submission metadata.
 
 ## How do server errors reach fields?
 
-Return normalized `SubmissionIssue` values from the server. Classic flows can
-call `form.setIssues`; React 19 `ActionForm` consumes `FormResult` directly and
-installs matching field or form issues.
+Classic flows call `form.setErrors()` with normalized server issues. Editing
+the matching path clears a stale server issue.
+
+React 19 `ActionForm` consumes a returned `FormResult` and installs field or
+form issues automatically. Both paths are covered in
+[Validation and errors](/guides/validation#install-server-errors).
 
 ## How do React 18 and React 19 differ?
 
@@ -68,15 +109,23 @@ The main `fokit` entry supports classic submission in both versions. React 19
 Actions live only in `fokit/react19`, so React 18 consumers never load or
 typecheck Action-only APIs.
 
+Use the [submission ownership table](/guides/react-19-actions#choose-the-submission-owner)
+before choosing a mode.
+
 ## Does every field rerender on each change?
 
 No. The store uses external subscriptions. `useValue`, `useField`,
-`useArrayField`, and `useFormState` select focused slices, while `computed`
-declares the paths that can invalidate derived UI.
+`useArrayField`, and `useFormState` select focused slices. `computed` declares
+the paths that can invalidate derived UI.
 
-## Why is there no built-in theme?
+## Does Fokit provide wizards or autosave?
 
-Form state should not dictate product styling. `createDefaultSlots()` renders
-accessible unstyled structure, and `fokit/layout.css` is only optional
-structural CSS. Colors, typography, controls, spacing tokens, and interaction
-polish stay in your application.
+No first-class wizard or autosave abstraction is imposed. Keep page navigation,
+draft persistence, and retry policy in application code while reusing the same
+form instance and typed commands.
+
+The [production recipes](/advanced) show manual composition without introducing
+a second state model.
+
+Still looking for an exact method or type? Use the [API reference](/api) or
+[TypeScript reference](/types).

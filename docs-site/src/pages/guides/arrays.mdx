@@ -1,0 +1,196 @@
+---
+title: Arrays
+description: Render repeatable fields with stable row identity, typed commands, and safe native FormData.
+showAskAi: false
+---
+
+# Arrays
+
+Array fields combine three things that must move together: values, UI metadata,
+and stable row identity. Fokit updates them atomically so inserting or moving a
+row does not attach touched state or visible errors to the wrong item.
+
+## Define an array node
+
+An array node names the array path, provides a new-item value, and describes
+fields relative to each item.
+
+```ts twoslash
+import { createFormKit, nativeControls } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({
+	contacts: z
+		.array(
+			z.object({
+				email: z.string().email("Enter a valid email"),
+				label: z.string().optional(),
+			}),
+		)
+		.min(1, "Add at least one contact"),
+})
+
+const kit = createFormKit({ controls: nativeControls })
+
+// ---cut---
+const definition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "array",
+			path: "contacts",
+			label: "Contacts",
+			itemDefault: {
+				email: "",
+				label: undefined,
+			},
+			children: [
+				{
+					kind: "field",
+					path: "email",
+					control: "text",
+					label: "Email",
+					options: { type: "email" },
+				},
+				{
+					kind: "field",
+					path: "label",
+					control: "text",
+					label: "Label",
+					valuePolicy: "unset",
+				},
+			],
+		},
+	],
+})
+```
+
+Default array slots render accessible add, remove, move-up, and move-down
+buttons. Customize their text once with
+`createDefaultSlots({ i18n: ... })`.
+
+## Choose complete defaults
+
+`defaultValues` includes the array exactly as it should appear on first render:
+
+```ts twoslash
+import type { FormInput } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({
+	contacts: z.array(
+		z.object({
+			email: z.string(),
+			label: z.string().optional(),
+		}),
+	),
+})
+
+// ---cut---
+const defaultValues = {
+	contacts: [{ email: "ada@example.com", label: "primary" }],
+} satisfies FormInput<typeof schema>
+```
+
+Use an empty array when the product starts without rows. Use a schema minimum
+when at least one row is required; the array slot will display the exposed
+array-level issue.
+
+## Add manual commands when the UI needs them
+
+Generated array actions and manual controls operate on the same form instance.
+`useArrayField` exposes typed commands plus stable render keys:
+
+```tsx twoslash
+// @jsx: react-jsx
+import {
+	createFormKit,
+	nativeControls,
+	useArrayField,
+	useForm,
+} from "fokit"
+import { z } from "zod"
+
+const schema = z.object({
+	contacts: z.array(z.object({ email: z.string() })),
+})
+const kit = createFormKit({ controls: nativeControls })
+const definition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "array",
+			path: "contacts",
+			itemDefault: { email: "" },
+			children: [
+				{
+					kind: "field",
+					path: "email",
+					control: "text",
+					label: "Email",
+				},
+			],
+		},
+	],
+})
+
+// ---cut---
+function ContactsEditor() {
+	const form = useForm(definition, {
+		defaultValues: { contacts: [] },
+	})
+	const contacts = useArrayField(form, "contacts")
+
+	return (
+		<kit.Form form={form}>
+			<kit.Fields />
+			<button
+				type="button"
+				onClick={() => contacts.append({ email: "" })}
+			>
+				Add another contact
+			</button>
+		</kit.Form>
+	)
+}
+```
+
+The commands are also available directly on `FormInstance`: `append`,
+`insert`, `remove`, and `move`.
+
+## Preserve identity while values move
+
+`contacts.items` contains `{ key, index }` pairs. Keys stay with logical rows
+across insert, remove, and move, while field paths are reindexed. Touched state,
+visible schema issues, and manual issues follow the same row key.
+
+The stable key is UI metadata. It never enters form values or submitted data.
+
+## Parse arrays from native FormData
+
+Fokit writes `__fokit.array` markers alongside native control entries. Treat
+them as an internal transport detail, and do not replace the protocol with
+`Object.fromEntries`, which loses repeated values and array structure.
+
+```ts twoslash
+import { parseFormData } from "fokit/server"
+import { z } from "zod"
+
+const schema = z.object({
+	contacts: z.array(z.object({ email: z.string().email() })).default([]),
+})
+declare const formData: FormData
+
+// ---cut---
+const result = await parseFormData(formData, schema)
+
+if (result.success) {
+	result.value.contacts.map((contact) => contact.email)
+}
+```
+
+`parseFormData` rejects sparse arrays, oversized indexes, structural
+collisions, and unsafe prototype keys before schema validation.
+
+Next, [build the complete production form](/guides/tutorial) or customize array
+actions through [controls and slots](/guides/controls).

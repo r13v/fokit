@@ -4,9 +4,8 @@ import { z } from "zod"
 const profileActionSchema = z
 	.object({
 		name: z.string().trim().min(1, "Name is required"),
-		kind: z.enum(["person", "company"]),
+		accountType: z.enum(["personal", "company"]),
 		companyName: z.string().optional(),
-		country: z.string().min(2, "Choose a country"),
 		newsletter: z.preprocess(
 			(value) => value === "on" || value === "true",
 			z.boolean(),
@@ -14,20 +13,21 @@ const profileActionSchema = z
 		contacts: z
 			.array(
 				z.object({
-					email: z.string().email("Use a valid email"),
+					email: z.string().email("Enter a valid email"),
 					label: z.string().optional(),
 				}),
 			)
 			.default([]),
 	})
-	.transform((input) => ({
-		...input,
-		contactCount: input.contacts.length,
+	.transform((value) => ({
+		...value,
+		contactCount: value.contacts.length,
 	}))
 
 type SavedProfile = z.output<typeof profileActionSchema>
 
 export async function saveProfileAction(
+	_previousResult: FormResult | undefined,
 	formData: FormData,
 ): Promise<FormResult> {
 	const result = await parseFormData(formData, profileActionSchema)

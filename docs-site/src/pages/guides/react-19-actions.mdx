@@ -1,87 +1,114 @@
 ---
 title: React 19 Actions
-description: How Fokit keeps React 19 server actions aligned with the same form store.
+description: Connect a Fokit definition to a React 19 Action with safe FormData parsing, pending state, and serializable server errors.
+showAskAi: false
 ---
 
 # React 19 Actions
 
-Classic Fokit submission works in React 18 and React 19 through `kit.Form`,
-`kit.AutoForm`, and `onSubmit`. React 19 server-first Actions are isolated in
-`fokit/react19` so the main `fokit` entry stays compatible with React 18 type
+React 19 Actions are a separate, server-first submission mode. The same schema,
+definition, controls, and field errors remain useful, but the server owns
+parsing and validation.
+
+## Choose the submission owner
+
+| Use classic `onSubmit` when… | Use `ActionForm` when… |
+| --- | --- |
+| client validation should run before dispatch; | a React 19 Action owns the request; |
+| a client callback owns persistence or mutation; | the server must parse native `FormData`; |
+| React 18 compatibility is required. | pending state and returned errors follow Action state. |
+
+`ActionForm` does **not** run client validation before dispatch. The Action must
+validate every submission on the server.
+
+Classic forms work in React 18 and 19 from the main `fokit` entry. Action-only
+components live in `fokit/react19`, so React 18 consumers never load their
 declarations.
 
-## Entry point
+## Connect the client form
 
-```tsx twoslash
-import { ActionForm, ActionSubmit } from "fokit/react19"
-```
-
-Do not import `ActionForm` or `ActionSubmit` from `fokit`. Product forms should
-use the main entry for `createFormKit`, `nativeControls`, custom controls, and
-ordinary generated rendering. Use `fokit/react19` only at the Action boundary.
-
-## Client form
-
-`ActionForm` renders the same normalized definition as `kit.AutoForm`, keeps
-the supplied Action directly on the native form, reflects React pending state
-into Fokit, renders fields and hidden serializer inputs, and applies returned
-`FormResult` objects after hydration.
+Keep `createFormKit`, controls, and definitions in the main entry. Import only
+the Action boundary from `fokit/react19`:
 
 ```tsx twoslash
 // @jsx: react-jsx
 import { createFormKit, nativeControls } from "fokit"
 import { ActionForm, ActionSubmit } from "fokit/react19"
 import type { FormResult } from "fokit/server"
-import type { ComponentPropsWithoutRef } from "react"
+import { useActionState } from "react"
 import { z } from "zod"
 
-const profileSchema = z.object({ name: z.string() })
+const schema = z.object({
+	name: z.string().min(1, "Name is required"),
+})
 const kit = createFormKit({ controls: nativeControls })
-const profileDefinition = kit.defineForm({
-	schema: profileSchema,
-	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+const definition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: "Name",
+		},
+	],
 })
 const defaultValues = { name: "" }
-declare const state: FormResult | undefined
-declare const saveProfileAction: NonNullable<
-	ComponentPropsWithoutRef<"form">["action"]
->
+
+type SaveProfile = (
+	previousResult: FormResult | undefined,
+	formData: FormData,
+) => Promise<FormResult>
 
 // ---cut---
-<ActionForm
-	action={saveProfileAction}
-	defaultValues={defaultValues}
-	definition={profileDefinition}
-	kit={kit}
-	result={state}
->
-	<ActionSubmit>Save profile</ActionSubmit>
-</ActionForm>
+function ProfileActionForm({
+	saveProfile,
+}: {
+	readonly saveProfile: SaveProfile
+}) {
+	const [result, action] = useActionState(saveProfile, undefined)
+
+	return (
+		<ActionForm
+			action={action}
+			defaultValues={defaultValues}
+			definition={definition}
+			kit={kit}
+			result={result}
+		>
+			<ActionSubmit>Save profile</ActionSubmit>
+		</ActionForm>
+	)
+}
 ```
 
-`ActionSubmit` is an unstyled native submit button. It combines React
-`useFormStatus` pending state with Fokit's disabled and submitting state.
+`ActionForm` keeps the supplied Action on the native form, renders the same
+definition as `AutoForm`, emits hidden serializer inputs when needed, and
+applies the returned `FormResult` after hydration.
 
-Action forms are server-first. Fokit does not run client validation before
-dispatch; the server Action parses and validates the submitted `FormData`.
+`ActionSubmit` is an unstyled native button. It combines React Action pending
+status with Fokit's disabled and submitting state.
 
-## Server Action
+## Parse on the server
 
-Use `parseFormData` from `fokit/server` on the server. It rejects unsafe paths
-and reserved metadata before running Standard Schema validation.
+Use `parseFormData` from `fokit/server`. It reconstructs repeated and nested
+values, rejects unsafe structures, then runs Standard Schema validation:
 
 ```ts
 // [!include ~/snippets/server-action.ts]
 ```
 
-Do not decode Fokit submissions with `Object.fromEntries`. Repeated values and
-array markers carry structure, and native browser controls keep protocol values
-such as number strings, date strings, absent unchecked checkboxes, and `File`
-objects.
+Do not decode a Fokit submission with `Object.fromEntries`. Repeated values and
+`__fokit.array` markers carry array structure. Browser controls also retain
+protocol values such as number strings, date strings, absent unchecked
+checkboxes, and `File` objects.
 
-## Result transport
+Framework request limits, multipart parsing, file count, and file size checks
+still run before `parseFormData`.
 
-Action results are serializable:
+## Return serializable results
+
+The Action returns one small transport:
 
 ```ts twoslash
 import type { SubmissionIssue } from "fokit/server"
@@ -92,25 +119,26 @@ type FormResult =
 	| { status: "error"; issues: readonly SubmissionIssue[] }
 ```
 
-Schema and server issues can target canonical dot paths. Form-level issues omit
-`path`. On success, reset can keep current values, return to defaults, or reset
-to the submitted server result.
+Field issues use canonical dotted paths. Omit `path` for a form-level error.
+On success:
 
-User edits made while an Action is in flight are not overwritten by stale
-server results. Fokit applies only the result that still belongs to the active
-submission attempt.
+- omit `reset` to keep current values;
+- use `"defaults"` to restore the original baseline;
+- use `"submitted"` to make the submitted server result the new baseline.
 
-## Compatibility failures
+User edits made while an Action is in flight are not overwritten by a stale
+result.
 
-`ActionForm` throws before dispatch when an active value cannot be represented
-in native FormData:
+## Know the compatibility boundary
 
-- the field uses a `mode: "none"` control.
-- a native control is invisible or disabled and has no serializer.
-- a hidden or disabled file field needs preservation, because `File` values
-  cannot be represented by hidden inputs.
-- the current React runtime does not expose React 19 Action support.
+`ActionForm` stops before dispatch when active values cannot be represented in
+native FormData:
 
-Classic `onSubmit` and React 19 `action` are separate modes. Use classic
-submission when client-side validation and a client callback own the boundary.
-Use Actions when server parsing and server validation own it.
+- a control uses `mode: "none"`;
+- a hidden or disabled native control has no serializer;
+- a hidden or disabled file field would need hidden preservation;
+- the current runtime does not expose React 19 Action support.
+
+Use [Controls and design systems](/guides/controls) to choose the right
+serialization mode. Use [Validation and errors](/guides/validation) for the
+classic client-owned lifecycle.

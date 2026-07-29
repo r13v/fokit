@@ -1,51 +1,141 @@
 ---
 title: Fokit
-description: Code-first React forms with native HTML semantics.
+description: Typed, schema-validated React forms that keep native semantics and your design system.
+showAskAi: false
 ---
 
-# Fokit
+import { OverviewDemo } from "../components/overview-demo"
 
-Fokit is a code-first, schema-validated React form library for teams that want
-generated rendering, granular state, and native submission without surrendering
-the application design system.
+# Forms that stay typed, native, and yours
+
+Fokit turns an explicit form definition into a production-ready React form. It
+handles state, validation, dynamic UI, arrays, accessible error relationships,
+and native submission while your application keeps its controls, markup, and
+visual language.
+
+Use it when handwritten field wiring has become the risky part of a form, but
+handing the UI to a theme or schema-to-form generator would be an even bigger
+compromise.
+
+<div className="fokit-overview-actions">
+
+[Build your first form](/get-started)
+
+[Try the live form](#see-it-work)
+
+</div>
+
+## See it work
+
+This form is running the public package with `nativeControls` and the accessible
+default slots. Clear the email to see schema validation, then submit a valid
+profile to see the typed output.
+
+<OverviewDemo />
+
+## One explicit model
+
+The shortest path has three parts: a schema that owns validity, a UI definition
+that owns structure, and a kit that maps control names to renderers.
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createDefaultSlots, createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls, type FormInput } from "fokit"
+import { z } from "zod"
 
-// ---cut---
-const kit = createFormKit({
-	controls: nativeControls,
+const profileSchema = z.object({
+	name: z.string().min(1, "Name is required"),
+	email: z.string().email("Enter a valid email"),
+	newsletter: z.boolean(),
 })
 
-const customSlots = createDefaultSlots({
-	i18n: {
-		arrayAdd: "Add item",
-	},
+const kit = createFormKit({ controls: nativeControls })
+
+const profileDefinition = kit.defineForm({
+	schema: profileSchema,
+	ui: [
+		{ kind: "field", path: "name", control: "text", label: "Name" },
+		{
+			kind: "field",
+			path: "email",
+			control: "text",
+			label: "Email",
+			options: { type: "email" },
+		},
+		{
+			kind: "field",
+			path: "newsletter",
+			control: "checkbox",
+			label: "Send me product news",
+		},
+	],
 })
+
+const defaultValues = {
+	name: "Ada Lovelace",
+	email: "ada@example.com",
+	newsletter: true,
+} satisfies FormInput<typeof profileSchema>
+
+export function ProfileForm() {
+	return (
+		<kit.AutoForm
+			definition={profileDefinition}
+			defaultValues={defaultValues}
+			onSubmit={({ value }) => console.log(value)}
+		>
+			<kit.Submit>Save profile</kit.Submit>
+		</kit.AutoForm>
+	)
+}
 ```
 
-## What Fokit owns
+### Schema owns validity
 
-Fokit owns the typed form store, validation lifecycle, generated rendering,
-array commands, issue exposure, and native FormData coordination. The same
-definition can render with `kit.AutoForm` or be composed manually with
-`kit.Form`, `kit.Fields`, and granular hooks.
+Fokit accepts any Standard Schema implementation. The schema is the single
+source of truth for validation and for the difference between editable input
+and submitted output.
 
-## What stays yours
+### UI definition owns structure
 
-Controls stay explicit because value types and FormData behavior are part of
-the public form contract. Use `nativeControls` for common HTML controls, compose
-custom controls with `defineControl`, and override any structural slot when
-your product needs its own markup. `createDefaultSlots()` provides accessible,
-unstyled English markup; it is not a theme and it imports no CSS.
+Fields, sections, arrays, conditions, and layout stay explicit. Fokit does not
+guess a product UI from validation metadata, so changing a schema never silently
+changes what a user sees.
 
-## Read next
+### Your kit owns rendering
 
-- [Get started](/get-started) for the shortest complete setup.
-- [API](/api) for package entries and React kit APIs.
-- [Types](/types) for the contracts that keep schemas, paths, controls, and
-  slots connected.
-- [Advanced](/advanced) for composition, hidden values, Actions, and testing
-  boundaries.
-- [FAQs](/faqs) for defaults, themes, servers, and React version questions.
+Start with `nativeControls`, then replace controls and structural slots with
+your design-system components. The form definition and state model do not have
+to change when the renderer does.
+
+## The responsibility boundary
+
+| Fokit owns | Your application owns |
+| --- | --- |
+| Typed form state and granular subscriptions | The schema library and domain rules |
+| Validation, issues, focus, and submit lifecycle | Field choice, labels, and product workflow |
+| Stable arrays and dynamic UI resolution | Controls, slots, styling, and layout |
+| Native names and FormData coordination | Server persistence and business effects |
+
+This boundary lets the same definition render through `kit.AutoForm` or be
+composed manually with `kit.Form`, `kit.Fields`, and granular hooks.
+
+## When to reach for Fokit
+
+Fokit is a fit when a product needs schema-owned validation, typed
+transformations, dynamic fields, stable arrays, generated and manual rendering,
+or client and server submission under one state model.
+
+If the form is a handful of uncontrolled inputs and a submit handler, native
+HTML may already be the smaller and better tool.
+
+## Start with the working path
+
+- [Get started](/get-started) to build and submit the profile form.
+- [Build a production form](/guides/tutorial) to add validation, conditional
+  fields, and arrays.
+- [Controls and design systems](/guides/controls) to connect an existing
+  component library.
+- [Styling](/guides/styling) to add structural CSS or replace the markup.
+- [React 19 Actions](/guides/react-19-actions) when the server Action owns the
+  submission boundary.

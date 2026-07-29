@@ -5,10 +5,27 @@
 	--fokit-brand-rust: #bb4a2b;
 	--fokit-brand-paper: #fbfaf6;
 	--fokit-brand-ink: #102e26;
+	--fokit-brand-border: #718078;
+	--fokit-brand-muted: #53665f;
+	--fokit-brand-panel: #f6f4ed;
+	--fokit-brand-surface: #ffffff;
+	--fokit-brand-on-accent: #ffffff;
 	--fokit-display-font:
 		"Newsreader Variable", "Iowan Old Style", "Palatino Linotype", Palatino,
 		Georgia, serif;
 	accent-color: var(--fokit-brand-green);
+}
+
+:root[data-vocs-theme="dark"] {
+	--fokit-brand-green: #79bda8;
+	--fokit-brand-rust: #ff9a78;
+	--fokit-brand-paper: #121815;
+	--fokit-brand-ink: #e8f0ec;
+	--fokit-brand-border: #7e9189;
+	--fokit-brand-muted: #b4c2bc;
+	--fokit-brand-panel: #171f1c;
+	--fokit-brand-surface: #1d2823;
+	--fokit-brand-on-accent: #102e26;
 }
 
 body {
@@ -26,10 +43,43 @@ a {
 	text-underline-offset: 0.18em;
 }
 
+.fokit-overview-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-block: 1.5rem 2rem;
+}
+
+.fokit-overview-actions > p {
+	margin: 0;
+}
+
+.fokit-overview-actions a {
+	background: var(--fokit-brand-green);
+	border: 1px solid var(--fokit-brand-green);
+	border-radius: 6px;
+	color: var(--fokit-brand-on-accent);
+	display: inline-flex;
+	font-weight: 700;
+	padding: 0.62rem 0.85rem;
+	text-decoration: none;
+}
+
+.fokit-overview-actions > p + p a {
+	background: var(--fokit-brand-surface);
+	border-color: var(--fokit-brand-border);
+	color: var(--fokit-brand-ink);
+}
+
+.fokit-overview-actions a:focus-visible {
+	outline: 2px solid var(--fokit-brand-green);
+	outline-offset: 3px;
+}
+
 .fokit-lab {
-	--fokit-lab-border: color-mix(in srgb, var(--fokit-brand-green), white 72%);
-	--fokit-lab-muted: color-mix(in srgb, var(--fokit-brand-ink), white 34%);
-	--fokit-lab-panel: color-mix(in srgb, white, var(--fokit-brand-paper) 45%);
+	--fokit-lab-border: var(--fokit-brand-border);
+	--fokit-lab-muted: var(--fokit-brand-muted);
+	--fokit-lab-panel: var(--fokit-brand-panel);
 	border: 1px solid var(--fokit-lab-border);
 	border-radius: 8px;
 	color: var(--fokit-brand-ink);
@@ -114,7 +164,7 @@ a {
 .fokit-lab input:not([type="checkbox"]),
 .fokit-lab select,
 .fokit-lab textarea {
-	background: white;
+	background: var(--fokit-brand-surface);
 	border: 1px solid var(--fokit-lab-border);
 	border-radius: 6px;
 	color: var(--fokit-brand-ink);
@@ -154,10 +204,10 @@ a {
 .fokit-lab__primary,
 .fokit-lab__secondary {
 	align-items: center;
-	background: white;
-	border: 1px solid var(--fokit-lab-border);
+	background: var(--fokit-lab-button-background, var(--fokit-brand-surface));
+	border: 1px solid var(--fokit-lab-button-border, var(--fokit-lab-border));
 	border-radius: 6px;
-	color: var(--fokit-brand-ink);
+	color: var(--fokit-lab-button-color, var(--fokit-brand-ink));
 	cursor: pointer;
 	display: inline-flex;
 	font: inherit;
@@ -194,9 +244,9 @@ a {
 }
 
 .fokit-lab__primary {
-	background: var(--fokit-brand-green);
-	border-color: var(--fokit-brand-green);
-	color: white;
+	--fokit-lab-button-background: var(--fokit-brand-green);
+	--fokit-lab-button-border: var(--fokit-brand-green);
+	--fokit-lab-button-color: var(--fokit-brand-on-accent);
 }
 
 .fokit-lab__actions {
@@ -230,7 +280,7 @@ a {
 }
 
 .fokit-lab__panel {
-	background: white;
+	background: var(--fokit-brand-surface);
 	border: 1px solid var(--fokit-lab-border);
 	border-radius: 8px;
 	display: grid;
@@ -266,6 +316,44 @@ a {
 
 .fokit-lab__state-list dd {
 	margin: 0;
+}
+
+.fokit-overview-demo {
+	background: var(--fokit-brand-panel);
+}
+
+.fokit-overview-demo__form {
+	display: grid;
+	gap: 1rem;
+}
+
+.fokit-overview-demo__form > button {
+	justify-self: start;
+}
+
+.fokit-overview-demo__result {
+	background: var(--fokit-brand-surface);
+	border: 1px solid var(--fokit-lab-border);
+	border-radius: 8px;
+	display: grid;
+	gap: 0.55rem;
+	padding: 0.85rem;
+}
+
+.fokit-overview-demo__result > span {
+	color: var(--fokit-lab-muted);
+	font-size: 0.82rem;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.fokit-overview-demo__result pre {
+	background: transparent;
+	color: var(--fokit-brand-ink);
+	font-size: 0.82rem;
+	margin: 0;
+	overflow: auto;
+	white-space: pre-wrap;
 }
 
 @media (max-width: 760px) {

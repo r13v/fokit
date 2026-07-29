@@ -360,3 +360,39 @@ Reproducing CI from a `git archive` in a randomly named temporary directory →
 `npm ci --prefix <dir>` with npm 11 misidentified the archived root package by
 the directory name and rejected its lockfile. Run `npm ci` with that directory
 as the process working directory when a local `file:..` dependency is present.
+
+## 2026-07-29 22:14 — GPT-5
+
+Searching documentation concepts across guessed source roots → `rg` reported a
+missing `packages` directory and made an otherwise valid search look partially
+failed. Build search roots from `rg --files` or the repository tree instead of
+assuming a monorepo `packages/` layout.
+
+## 2026-07-29 22:16 — GPT-5
+
+Inspecting the deployed GitHub Pages overview → direct web opening rejected the
+custom GitHub Pages subdomain, and the browser runtime advertised
+`networkidle` while rejecting that load state. Use the in-app browser directly
+for this deployment and wait for `load` before taking a DOM snapshot.
+
+## 2026-07-29 22:28 — GPT-5
+
+Building and previewing the Vocs documentation → every successful command
+emitted Node's experimental “localStorage is not available” warning even though
+the site and browser tests hydrated correctly. Configure a disposable
+`--localstorage-file` for Vocs verification or suppress this known non-actionable
+warning in the docs scripts.
+
+## 2026-07-29 22:43 — GPT-5
+
+Auditing the local Vocs preview under `/fokit` → each browser request for the
+root `/favicon.ico` produced `pathname must start with basePath` server errors.
+Emit or request the favicon under the configured base path, or make the preview
+server ignore the root favicon request.
+
+## 2026-07-29 22:43 — GPT-5
+
+Running the repository gates after a local Vocs preview → Vocs left
+`docs-site/src/pages.gen.ts` behind, so Biome rejected its generated formatting
+and Knip reported it as unused. Keep this preview artifact outside authored
+`src` or ignore and clean it in the preview script.

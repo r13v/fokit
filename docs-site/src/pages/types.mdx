@@ -1,18 +1,19 @@
 ---
 title: Types
-description: The TypeScript contracts that connect schemas, definitions, controls, and slots.
+description: Use the TypeScript contracts that carry schema input and output through definitions, controls, hooks, slots, and server results.
+showAskAi: false
 ---
 
-# Types
+# TypeScript that follows the form
 
-Fokit derives editable input and submitted output from Standard Schema, then
-carries those types through field paths, controls, hooks, commands, slots, and
-server results.
+Most applications need only a few exported types. Start with schema input and
+output, let `kit.defineForm` infer paths and controls, and reach for explicit
+contracts only at component or server boundaries.
 
 ## Input and output
 
-Standard Schema can transform values. Fokit keeps editable input and validated
-output separate.
+Standard Schema may transform submitted values. Fokit keeps the editable input
+and validated output separate:
 
 ```ts twoslash
 import type { FormInput, FormOutput } from "fokit"
@@ -27,86 +28,37 @@ type Draft = FormInput<typeof schema>
 type Saved = FormOutput<typeof schema>
 ```
 
-The store contains `FormInput<Schema>`. A successful submit handler receives
-`FormOutput<Schema>`.
+The form store contains `Draft`. A successful submit handler receives `Saved`.
+Validation output never replaces editable values automatically.
 
-## Definitions and UI nodes
-
-`FormDefinition` combines one schema, a control registry, and a readonly UI
-tree. `kit.defineForm` returns a frozen `NormalizedFormDefinition`.
-
-- `FieldNode`: typed field path, one control discriminator, labels, options,
-  and interaction policies.
-- `SectionNode`: child grouping plus responsive column intent.
-- `ArrayNode`: array path, item defaults, stable row rendering, and nested
-  relative nodes.
-- `RelativeUiNode`: the node shape used inside array items.
-
-## Instance and options
-
-`FormInstance<Schema, Context>` carries schema and context generics through
-selectors and commands. `UseFormOptions<Schema, Context>` configures defaults,
-runtime context, validation, update hooks, submit behavior, disabled state, and
-read-only state.
+Use these aliases at application boundaries:
 
 ```ts twoslash
-import type { FormInstance, UseFormOptions } from "fokit"
+import type { FormInput, FormOutput } from "fokit"
 import { z } from "zod"
 
-const schema = z.object({ name: z.string() })
-type Context = { readonly locked: boolean }
+export const profileSchema = z.object({
+	email: z.string().email(),
+})
 
-type ProfileForm = FormInstance<typeof schema, Context>
-type ProfileOptions = UseFormOptions<typeof schema, Context>
+export type ProfileDraft = FormInput<typeof profileSchema>
+export type SavedProfile = FormOutput<typeof profileSchema>
 ```
 
-## Control inference
+## Typed definitions and paths
 
-`defineControl` validates which value a component accepts. `createFormKit`
-preserves literal control names and option types from the registry.
+`FormDefinition` connects one schema, a control registry, and a readonly UI
+tree. `kit.defineForm` infers the useful version, checks field paths, and
+rejects incompatible controls.
 
-- `ControlProps<Value, Options, Context>`: component props for one registered
-  control.
-- `ControlValueOf`, `ControlOptionsOf`, and `ControlContextOf`: extract
-  inferred types from a control definition.
-- `IsValidControlValue`: rejects unsupported control values at the definition
-  boundary.
-- `NativeTextOptions`, `NativeTextareaOptions`, `NativeSelectOptions`,
-  `NativeNumberOptions`, `NativeDateOptions`, and `NativeFileOptions`: option
-  types for the shipped native controls.
+The UI node families are:
 
-## Structural slot props
+- `FieldNode` for one typed field path and control;
+- `SectionNode` for grouping and responsive columns;
+- `ArrayNode` for repeatable data;
+- `RelativeUiNode` for paths inside an array item.
 
-Every slot receives root props that preserve Fokit's DOM protocol and
-accessible relationships.
-
-- `FieldSlotProps`: label, description, control, errors, and resolved state.
-- `SectionSlotProps`: heading content, layout props, and child nodes.
-- `ArraySlotProps`: label, errors, add command, guards, and row children.
-- `ArrayItemSlotProps`: stable row identity and guarded remove/move commands.
-- `ErrorMessageSlotProps`: one issue plus focusable root props.
-
-`DefaultSlotsI18n`, `DefaultArrayAddI18nData`, `DefaultArrayItemI18nData`, and
-`DefaultSlotI18nValue` describe the message contract accepted by
-`createDefaultSlots({ i18n })`.
-
-## Snapshot and issues
-
-Selectors receive an immutable `FormSnapshot` that separates raw issues from
-display policy.
-
-- `FormSnapshot`: values, metadata, resolved UI, issues, display issues,
-  validation status, and submission state.
-- `FormIssue`: client issue state.
-- `SubmissionIssue`: serializable server issue transport.
-- `DisplayFormErrors`: only form and field issues currently exposed to the
-  user.
-- `ValidationStatus`: unvalidated, valid, invalid, or validating.
-
-## Paths
-
-Deep paths are typed from `FormInput`, while runtime helpers use one canonical
-dotted format.
+Use path types when an application API accepts a reusable form path:
 
 ```ts twoslash
 import type { ArrayFieldPath, FieldPath, PathValue } from "fokit"
@@ -117,20 +69,121 @@ type Draft = {
 }
 
 type AnyField = FieldPath<Draft>
-type ArrayPath = ArrayFieldPath<Draft>
-type Email = PathValue<Draft, "contacts.0.email">
+type AnyArray = ArrayFieldPath<Draft>
+type ContactEmail = PathValue<Draft, "contacts.0.email">
 ```
 
-Core helpers such as `parsePath`, `formatPath`, `isSamePath`, and
-`pathsOverlap` avoid unsafe string-prefix checks.
+At runtime, paths use canonical dotted strings such as
+`contacts.0.email`.
 
-## Result types
+## Form instances and context
 
-Server APIs return discriminated, serializable results.
+`FormInstance<Schema, Context>` carries schema and runtime context through
+commands, selectors, and computed UI. `UseFormOptions<Schema, Context>`
+describes the options accepted by `useForm` and `AutoForm`.
 
-- `ParseResult<Output>`: success with validated output, or failure with
-  normalized issues and `reply()`.
-- `FormResult`: serializable success/error transport understood by
-  `ActionForm`.
-- `ParseFormDataOptions`: safety limits for entries, path length, nesting
-  depth, and array indexes.
+```ts twoslash
+import type { FormInstance, UseFormOptions } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string() })
+type Context = {
+	readonly locked: boolean
+}
+
+type ProfileForm = FormInstance<typeof schema, Context>
+type ProfileOptions = UseFormOptions<typeof schema, Context>
+```
+
+Use context for loaded option lists, permissions, or product state that affects
+UI but must never become submitted form data.
+
+## Custom control inference
+
+`defineControl` establishes the accepted value, options, and optional context.
+`createFormKit` preserves literal registry names and carries those contracts
+into every definition.
+
+The main control types are:
+
+| Type | Purpose |
+| --- | --- |
+| `ControlProps<Value, Options, Context>` | Props delivered to the adapter component |
+| `ControlValueOf` | Extract the registered value type |
+| `ControlOptionsOf` | Extract the options type |
+| `ControlContextOf` | Extract context requirements |
+| `IsValidControlValue` | Reject values outside Fokit's supported form model |
+
+The shipped controls expose `NativeTextOptions`, `NativeTextareaOptions`,
+`NativeSelectOptions`, `NativeNumberOptions`, `NativeDateOptions`, and
+`NativeFileOptions`.
+
+See [Controls and design systems](/guides/controls) for a complete adapter.
+
+## State and validation
+
+Selectors receive an immutable `FormSnapshot`:
+
+| Type | Contains |
+| --- | --- |
+| `FormSnapshot` | Values, resolved UI, metadata, raw and visible errors, validation and submission state |
+| `FormIssue` | Client issue with schema, server, or manual source |
+| `DisplayFormErrors` | Only form and field issues currently exposed to the user |
+| `ValidationStatus` | `unvalidated`, `valid`, or `invalid` |
+| `ValidationOptions` | Mode, revalidation mode, and async debounce |
+
+Read [Validation and errors](/guides/validation) before using issue types
+directly.
+
+## Structural slot props
+
+Design-system adapters usually need one of five contracts:
+
+- `FieldSlotProps`;
+- `SectionSlotProps`;
+- `ArraySlotProps`;
+- `ArrayItemSlotProps`;
+- `ErrorMessageSlotProps`.
+
+Each contract carries root props that preserve Fokit's DOM protocol and
+accessible relationships. The default-slot message contract is described by
+`DefaultSlotsI18n`, `DefaultArrayAddI18nData`,
+`DefaultArrayItemI18nData`, and `DefaultSlotI18nValue`.
+
+## Server results
+
+Server APIs return discriminated serializable results:
+
+| Type | Purpose |
+| --- | --- |
+| `ParseResult<Output>` | Parsed output or normalized issues with `reply()` |
+| `FormResult` | Success or error transport understood by `ActionForm` |
+| `SubmissionIssue` | Serializable schema or server issue |
+| `ParseFormDataOptions` | Safety limits for entry count, paths, depth, and array indexes |
+
+Import server-only types from `fokit/server`:
+
+```ts twoslash
+import type {
+	FormResult,
+	ParseFormDataOptions,
+	SubmissionIssue,
+} from "fokit/server"
+
+const result: FormResult = {
+	status: "error",
+	issues: [
+		{
+			source: "server",
+			message: "Try again",
+		} satisfies SubmissionIssue,
+	],
+}
+
+const limits: ParseFormDataOptions = {
+	maxEntries: 500,
+}
+```
+
+Use the [API reference](/api) for runtime signatures and entry-point
+boundaries.

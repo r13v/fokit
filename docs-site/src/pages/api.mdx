@@ -1,157 +1,290 @@
 ---
 title: API
-description: The public Fokit entry points and React form kit APIs.
+description: Signatures, defaults, and entry-point boundaries for Fokit's public React, core, server, and React 19 APIs.
+showAskAi: false
 ---
 
 # API
 
-Start with the main React entry for product forms. Reach for `fokit/core`,
-`fokit/server`, or `fokit/react19` only when that boundary belongs in your
-architecture.
+Use this page to find an exact public boundary. For the reasoning and complete
+flows behind an API, follow the linked guide.
 
-## Entry-point boundaries
+## Entry points
 
-- `fokit`: React kit APIs, `createDefaultSlots`, `nativeControls`,
-  `defineControl`, generated forms, hooks, classic submit, and shared public
-  types.
-- `fokit/core`: React-free store, paths, definitions, computed UI, validation
-  state, and immutable value helpers.
-- `fokit/server`: safe FormData normalization, Standard Schema validation,
-  `FormResult`, and `SubmissionIssue`.
-- `fokit/react19`: `ActionForm` and `ActionSubmit` for React 19 server-first
-  submissions.
-- `fokit/layout.css`: optional structural CSS. It is never imported by the
-  JavaScript entry.
+| Import | Use it for |
+| --- | --- |
+| `fokit` | React kits, native controls, generated forms, hooks, classic submit, and shared types |
+| `fokit/core` | React-free stores, definitions, computed UI, paths, and immutable value helpers |
+| `fokit/server` | Safe FormData normalization, Standard Schema validation, `FormResult`, and `SubmissionIssue` |
+| `fokit/react19` | `ActionForm` and `ActionSubmit` |
+| `fokit/layout.css` | Optional structural layout |
 
-## useForm
-
-`useForm(definition, options)` creates one stable `FormInstance` from a
-normalized definition. Runtime options update without replacing the store.
-
-- `defaultValues`: required complete editable input. Reset returns to this
-  baseline unless you replace it.
-- `context`: runtime-only data for computed options and UI state. It never
-  becomes form data.
-- `disabled` and `readOnly`: form-wide interaction state.
-- `validation`: mode, revalidation mode, and async debounce configuration.
-- `beforeUpdate` and `onUpdate`: inspect, replace, or observe committed
-  transactions.
-- `onSubmit`: receives validated output, editable input, native FormData, and
-  the `FormInstance`.
+Start product forms from `fokit`. Import a narrower entry only where that
+boundary belongs in the application.
 
 ## createFormKit
 
-`createFormKit` binds a control registry and structural slots into a typed kit.
-`controls` is required. `slots` is optional and partial; omitted entries resolve
+```text
+createFormKit({ controls, slots? }) => FormKit
+```
+
+`controls` is required. `slots` is optional and partial; omitted slots resolve
 from `createDefaultSlots()` when the kit is created.
 
-- `kit.controls`: the registry used by definitions and rendering.
-- `kit.slots`: the fully resolved `Field`, `Section`, `Array`, `ArrayItem`, and
-  `ErrorMessage` components.
-- `kit.defineForm`: normalizes a schema plus UI tree and validates control
-  names.
-- `kit.AutoForm`: creates a `FormInstance` and renders the full definition.
-- `kit.Form`: native form shell for an existing instance.
-- `kit.Fields`: renders generated fields inside `kit.Form`.
-- `kit.Submit`: submit button that follows disabled and pending state.
-- `KitForm`: low-level native form shell when you need controls without a
-  generated kit wrapper.
+```ts twoslash
+import { createFormKit, nativeControls } from "fokit"
 
-## defineControl
+const kit = createFormKit({
+	controls: nativeControls,
+})
+```
 
-`defineControl` declares how one value type renders and how it participates in
-native FormData.
+The returned kit exposes:
 
-- `component`: receives `ControlProps` with `value`, `setValue`, `blur`, native
-  input props, metadata, options, context, disabled, read-only, and required
-  state.
-- `formData.mode`: use `"native"`, `"hidden"`, or `"none"` to make
-  serialization behavior explicit.
-- `formData.serialize`: returns the name/value entries used when Fokit owns
-  hidden serialization.
+| Member | Purpose |
+| --- | --- |
+| `controls` | The exact typed control registry |
+| `slots` | Resolved `Field`, `Section`, `Array`, `ArrayItem`, and `ErrorMessage` slots |
+| `defineForm` | Normalize a schema and typed UI tree |
+| `AutoForm` | Create an instance and render the complete definition |
+| `Form` | Render the native form shell for an existing instance |
+| `Fields` | Render generated fields inside `kit.Form` |
+| `Submit` | Submit button connected to disabled and pending state |
 
-`nativeControls` is an ordinary registry built with `defineControl`. It
-contains `text`, `textarea`, `select`, `checkbox`, `number`, `date`, and
-single-file `file`.
+Read [Controls and design systems](/guides/controls) before replacing controls
+or slots.
 
-## Granular hooks
+## kit.defineForm
 
-Manual controls and generated fields share the same instance. Each hook
-subscribes only to the selected slice.
+```text
+kit.defineForm({ schema, ui }) => NormalizedFormDefinition
+kit.defineForm<Context>()({ schema, ui }) => NormalizedFormDefinition
+```
 
-- `useValue`: reads one typed field path.
-- `useField`: returns value, setter, blur, focus, ref, and visible field
-  metadata.
-- `useArrayField`: returns stable row keys, array metadata, append, insert,
-  remove, and move commands.
-- `useFormState`: runs a selector against `FormSnapshot` with an optional
-  equality function.
-- `useFormContext`: reads the closest `FormInstance` inside `kit.Form` or
-  `FormProvider`.
+The definition validates control names, typed paths, duplicate IDs, layout
+ranges, and value policies. It is frozen and reusable across form instances.
+
+```ts twoslash
+import { createFormKit, nativeControls } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string() })
+const kit = createFormKit({ controls: nativeControls })
+
+// ---cut---
+const definition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: "Name",
+		},
+	],
+})
+```
+
+## AutoForm
+
+`kit.AutoForm` accepts native form props plus:
+
+| Prop | Required | Purpose |
+| --- | --- | --- |
+| `definition` | yes | Normalized definition from this kit |
+| `defaultValues` | yes | Complete editable `FormInput` baseline |
+| `context` | no | Runtime-only data for computed UI |
+| `validation` | no | Partial validation options |
+| `disabled`, `readOnly` | no | Form-wide interaction state |
+| `beforeUpdate`, `onUpdate` | no | Transaction hooks |
+| `onSubmit` | no | Validated classic submit callback |
+
+Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
+`asyncDebounceMs: 0`.
+
+The submit callback receives `{ value, input, form, formData }`. `value` is
+validated `FormOutput`; `input` is the captured editable shape.
+
+## useForm
+
+```text
+useForm(definition, options) => FormInstance
+```
+
+`useForm` creates one stable instance. Runtime options update without replacing
+the store; changing `defaultValues` does not overwrite edits.
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createFormKit, nativeControls, useForm } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string() })
+const kit = createFormKit({ controls: nativeControls })
+const definition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: "Name",
+		},
+	],
+})
+
+// ---cut---
+function ProfileForm() {
+	const form = useForm(definition, {
+		defaultValues: { name: "" },
+		onSubmit({ value }) {
+			value.name.toUpperCase()
+		},
+	})
+
+	return (
+		<kit.Form form={form}>
+			<kit.Fields />
+			<kit.Submit>Save</kit.Submit>
+		</kit.Form>
+	)
+}
+```
+
+Use `form.reset(loadedValues)` when loaded or saved data should become the new
+clean baseline.
+
+## Hooks
+
+Hooks subscribe only to the selected slice:
+
+| Hook | Returns |
+| --- | --- |
+| `useValue(form, path)` | The typed value at one path |
+| `useField(form, path)` | Value, setter, blur, focus, ref, and visible field metadata |
+| `useArrayField(form, path)` | Stable row keys, array metadata, and typed array commands |
+| `useFormState(form, selector, options?)` | A selected snapshot value with optional equality |
+| `useFormContext()` | The nearest instance inside `kit.Form` or `FormProvider` |
+
+See [Arrays](/guides/arrays) for generated and manual array controls.
 
 ## FormInstance
 
-The instance is an external store plus form commands. Use it for workflows that
-do not map cleanly to a hook.
+The instance is an external store plus typed commands.
 
-- `getSnapshot` and `subscribe`: read and observe immutable snapshots.
-- `setValue`, `unsetValue`, and `batch`: apply typed atomic changes through the
-  transaction boundary.
-- `validate`, `blur`, and `focus`: run validation or manage issue exposure and
-  focus.
-- `append`, `insert`, `remove`, and `move`: update array values and row
-  metadata together.
-- `setIssues` and `clearIssues`: install or remove serializable server and
-  imperative issues.
-- `reset` and `submit`: reset baselines or request native submit.
+### Values and transactions
 
-## React-free core
+| Method | Purpose |
+| --- | --- |
+| `getValues()`, `getValue(path)` | Read current input without subscribing |
+| `setValue(path, value)` | Set one typed field path |
+| `setValues(partial)` | Apply a deep partial input update |
+| `unsetValue(path)` | Remove an optional field |
+| `batch(callback)` | Commit several commands as one transaction |
+| `reset(values?)` | Restore or replace the baseline |
 
-Use the core entry in shared packages, non-React runtimes, and focused tests.
+### Arrays
 
-- `createFormStore`: creates the immutable store without React.
-- `computed` and `isComputed`: declare or detect explicit field dependencies.
-- `normalizeDefinition` and `resolveUi`: validate a definition and resolve
-  context-aware interaction state.
-- `parsePath`, `formatPath`, and `parseArrayIndex`: convert canonical deep paths
-  and recognize array indexes.
-- `isSamePath`, `isAncestorPath`, `isDescendantPath`, and `pathsOverlap`:
-  compare canonical paths without string-prefix shortcuts.
-- `getPathValue`, `setPathValue`, `unsetPathValue`, and `mergePathValue`: read
-  and update nested values immutably.
-- `cloneValue` and `isDirtyEqual`: clone supported form values and compare with
-  Fokit's dirty-state semantics.
+`append`, `insert`, `remove`, and `move` update values, row keys, metadata, and
+issues atomically.
+
+### Validation and errors
+
+| Method | Purpose |
+| --- | --- |
+| `validate()` | Validate the form and return transformed output or issues |
+| `validate(path)` | Validate the complete schema and return issues for a subtree |
+| `setErrors(issues)` | Install and expose manual or server issues |
+| `clearErrors(path?)` | Clear imperative issues globally or under a path |
+| `blur(path)`, `touch(path)`, `focus(path)` | Manage interaction and focus |
+
+### Submission and observation
+
+| Method | Purpose |
+| --- | --- |
+| `submit()` | Request classic native submission after `kit.Form` mounts |
+| `getSnapshot()` | Read immutable form state |
+| `subscribe(selector, listener, options?)` | Observe selected state outside React |
+| `replaceContext(context)` | Recompute context-dependent UI |
+
+Read [Validation and errors](/guides/validation) for visibility and stale-result
+rules.
+
+## defineControl
+
+```text
+defineControl({ component, formData }) => ControlDefinition
+```
+
+The component receives typed `ControlProps`: value, `setValue`, `blur`, native
+input wiring, metadata, options, context, and interaction state.
+
+`formData.mode` is `"native"`, `"hidden"`, or `"none"`. A serializer returns
+the entries used when Fokit must represent the value outside a visible native
+control.
+
+`nativeControls` contains `text`, `textarea`, `select`, `checkbox`, `number`,
+`date`, and single-file `file`.
+
+## createDefaultSlots
+
+```text
+createDefaultSlots({ i18n? }) => FormKitSlots
+```
+
+The returned slots render accessible unstyled structure. I18n values for array
+actions can be strings or functions receiving the row position and label
+context.
 
 ## parseFormData
 
-`parseFormData(formData, schema, options)` normalizes native FormData into
-null-prototype objects, rejects unsafe structures, then runs Standard Schema
-validation.
+```text
+parseFormData(formData, schema, options?) => Promise<ParseResult<Output>>
+```
+
+The parser reconstructs nested values and arrays, rejects unsafe structures,
+then validates with Standard Schema.
 
 ```ts twoslash
 import { parseFormData } from "fokit/server"
 import { z } from "zod"
 
-const profileSchema = z.object({ name: z.string().min(1) })
+const schema = z.object({ name: z.string().min(1) })
 const formData = new FormData()
 formData.set("name", "Ada")
 
 // ---cut---
-const parsed = await parseFormData(formData, profileSchema)
-if (parsed.success) {
-	await Promise.resolve(parsed.value.name)
+const result = await parseFormData(formData, schema)
+
+if (result.success) {
+	result.value.name
 } else {
-	parsed.reply()
+	result.reply()
 }
 ```
 
-Safety limits include entry count, path length, nesting depth, and array index
-size. Framework request, multipart, file-count, and file-size limits should run
-before calling `parseFormData`.
+Options limit entry count, path length, nesting depth, and array index size.
+Framework-level request and file limits still run first.
 
-## ActionForm and ActionSubmit
+## React 19
 
-`ActionForm` renders a definition into a native React 19 Action form.
-`ActionSubmit` follows both React pending status and Fokit submission state.
-The server Action should return a serializable `FormResult`, usually from
-`parseFormData(...).reply()` on failure or a success result after saving.
+`ActionForm` renders a normalized definition into a native React 19 Action
+form. `ActionSubmit` follows React pending status and Fokit submission state.
+Both come from `fokit/react19`.
+
+See the end-to-end [React 19 Actions guide](/guides/react-19-actions).
+
+## React-free core
+
+Use `fokit/core` in shared packages, non-React runtimes, and focused tests.
+
+- `createFormStore` creates the immutable external store.
+- `computed` and `isComputed` define explicit UI dependencies.
+- `normalizeDefinition` and `resolveUi` normalize and resolve definitions.
+- `parsePath`, `formatPath`, `parseArrayIndex`, `isSamePath`,
+  `isAncestorPath`, `isDescendantPath`, and `pathsOverlap` work with canonical
+  paths.
+- `getPathValue`, `setPathValue`, `unsetPathValue`, `mergePathValue`,
+  `cloneValue`, and `isDirtyEqual` handle supported values immutably.
+
+Type contracts are grouped in the [TypeScript reference](/types).

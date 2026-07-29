@@ -1,76 +1,52 @@
 ---
 title: Controls
-description: How native controls and custom controls define values, metadata, and FormData.
+description: Connect native inputs or a design system to Fokit's typed values, accessibility wiring, and FormData behavior.
+showAskAi: false
 ---
 
-# Controls
+# Controls and design systems
 
-Fokit controls are the boundary between the typed form store and the actual
-HTML or component-library widgets in your product. The default path uses the
-shipped `nativeControls` registry. Custom controls are still ordinary React
-components declared with `defineControl`.
+A Fokit control is the adapter between one typed value and the input component
+your product already owns. Wrap a component once, then reuse it across every
+generated and manually composed form.
 
-## Native controls
+## Choose the smallest integration
 
-`nativeControls` contains the common HTML controls needed for a working
-generated form:
+| Need | Start with |
+| --- | --- |
+| Working semantic HTML | `nativeControls` |
+| Product input components | Add controls with `defineControl` |
+| Different field or array markup | Override structural slots |
+| Fully bespoke form sections | Compose `kit.Form`, `kit.Fields`, and hooks |
 
-- `text`: `string | undefined` with `type`, `placeholder`, and `autoComplete`
-  options. The `type` option is limited to text-like input types.
-- `textarea`: `string | undefined` with `placeholder`, `autoComplete`, and
-  `rows`.
-- `select`: `string` with an explicit `options` array. Fokit does not inject a
-  placeholder option.
-- `checkbox`: `boolean` with native checked and unchecked submission behavior.
-- `number`: `number | undefined` in the store, with `min`, `max`, `step`, and
-  `placeholder`.
-- `date`: `string | undefined` using the browser's `YYYY-MM-DD` value.
-- `file`: `File | undefined` for a single native file input with optional
-  `accept`.
+Controls own values and native serialization. Slots own labels, descriptions,
+errors, sections, and array structure.
 
-```ts twoslash
-import { createFormKit, nativeControls } from "fokit"
+## Wrap a product input
 
-const kit = createFormKit({
-	controls: nativeControls,
-})
-```
-
-Controls stay explicit because they define value and FormData semantics. Add a
-product control by composing the registry instead of asking the schema to infer
-one:
-
-```ts twoslash
-import { createFormKit, defineControl, nativeControls } from "fokit"
-
-const money = defineControl<number>({
-	component: () => null,
-	formData: { mode: "none" },
-})
-
-const kit = createFormKit({
-	controls: {
-		...nativeControls,
-		money,
-	},
-})
-```
-
-## Custom control contract
-
-`defineControl` binds a value type, option type, optional runtime context type,
-React component, and FormData policy. Fokit passes typed value state, metadata,
-ARIA wiring, and interaction state to the component.
+The adapter forwards Fokit's value, events, native name, ref, and accessible
+relationships into the product component:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { defineControl, type ControlProps } from "fokit"
+import {
+	type ControlProps,
+	createFormKit,
+	defineControl,
+	nativeControls,
+} from "fokit"
+import type { ComponentPropsWithRef } from "react"
 
 type TextOptions = {
 	readonly placeholder?: string
+	readonly autoComplete?: string
 }
 
-export const textControl = defineControl<string | undefined, TextOptions>({
+function ProductTextInput(props: ComponentPropsWithRef<"input">) {
+	return <input {...props} className="product-input" />
+}
+
+const productText = defineControl<string | undefined, TextOptions>({
 	component({
 		value,
 		setValue,
@@ -83,9 +59,10 @@ export const textControl = defineControl<string | undefined, TextOptions>({
 		required,
 	}: ControlProps<string | undefined, TextOptions>) {
 		return (
-			<input
+			<ProductTextInput
 				aria-describedby={input["aria-describedby"]}
 				aria-invalid={meta.invalid || undefined}
+				autoComplete={options.autoComplete}
 				disabled={disabled}
 				id={input.id}
 				name={input.name}
@@ -106,62 +83,97 @@ export const textControl = defineControl<string | undefined, TextOptions>({
 		},
 	},
 })
+
+const kit = createFormKit({
+	controls: {
+		...nativeControls,
+		productText,
+	},
+})
 ```
 
-Custom controls should preserve:
-
-- `input.id`, `input.name`, `input.ref`, and `input["aria-describedby"]`.
-- `blur` on native blur.
-- `setValue` on accepted value changes.
-- `disabled`, `readOnly`, and `required`.
-- `meta.invalid` and `meta.displayErrors` for accessible invalid state.
-
-Text-like native controls use the native `readOnly` attribute. Select,
-checkbox, and file inputs have no native read-only attribute, so the shipped
-controls keep them enabled and named, expose `aria-readonly`, prevent value
-mutations, and guard `onChange`.
-
-## FormData modes
-
-Use `mode: "native"` when the visible element emits a usable native FormData
-entry. Add `serialize` when Fokit also needs to preserve the value while the
-field is hidden or disabled.
-
-Use `mode: "hidden"` when the visible control cannot emit a native entry, such
-as a segmented control or custom date picker. A serializer is required.
-
-Use `mode: "none"` for client-only values. An active `mode: "none"` field works
-with classic React submission but is incompatible with React 19 `ActionForm`.
-
-Serializer entries are name/value pairs or array markers:
+The registry key becomes the definition discriminator:
 
 ```ts twoslash
-const emailEntry = { name: "contacts.0.email", value: "ada@example.test" }
-const arrayMarker = { kind: "array", name: "contacts" }
+import { createFormKit, defineControl, nativeControls } from "fokit"
+import { z } from "zod"
+
+const productText = defineControl<string | undefined>({
+	component: () => null,
+	formData: { mode: "native" },
+})
+const kit = createFormKit({
+	controls: { ...nativeControls, productText },
+})
+const schema = z.object({ name: z.string().optional() })
+
+// ---cut---
+const definition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "productText",
+			label: "Name",
+		},
+	],
+})
 ```
 
-Fokit normalizes paths and renders array markers as `__fokit.array`. Native
-browser protocol still applies: visible unchecked checkboxes are absent,
-visible number and date entries are strings, and `File` objects cannot be
-represented by hidden inputs.
+TypeScript rejects a control whose value contract does not match the selected
+schema path.
 
-## Default structural slots
+## Preserve the control contract
 
-Slots own form structure, not control values. When `slots` is omitted,
-`createFormKit` resolves all five slots from `createDefaultSlots()`:
+Every custom control should forward:
 
-- `Field`
-- `Section`
-- `Array`
-- `ArrayItem`
-- `ErrorMessage`
+- `input.id`, `input.name`, `input.ref`, and
+  `input["aria-describedby"]`;
+- `blur` on native blur and `setValue` on accepted changes;
+- `disabled`, `readOnly`, and `required`;
+- `meta.invalid` or `meta.displayErrors` for invalid state.
 
-The defaults render accessible, semantic, unstyled HTML. They preserve labels,
-descriptions, generated controls, issue messages, array action callbacks,
-disabled state, read-only state, layout props, and focus targets. They do not
-import `fokit/layout.css` or add a visual theme.
+Text-like controls can use native `readOnly`. Widgets without that attribute
+must remain named and focusable while preventing value mutation and exposing
+`aria-readonly`.
 
-Override only the pieces your product needs:
+## Choose a FormData mode
+
+| Mode | Use it when | Serializer |
+| --- | --- | --- |
+| `"native"` | The visible element emits a usable native entry. | Optional, but needed to preserve hidden or disabled values. |
+| `"hidden"` | The widget has no successful native control, such as a segmented picker. | Required. |
+| `"none"` | The value is client-only. | Not used. |
+
+An active `mode: "none"` value works with classic `onSubmit` but is
+incompatible with `ActionForm`.
+
+Serializers return explicit name/value entries or array markers. Browser
+protocol still matters: visible unchecked checkboxes are absent, number and
+date entries are strings, and a `File` cannot be represented by a hidden input.
+
+## Native controls
+
+`nativeControls` is a normal registry built with `defineControl`:
+
+| Control | Store value | Useful options |
+| --- | --- | --- |
+| `text` | `string \| undefined` | `type`, `placeholder`, `autoComplete` |
+| `textarea` | `string \| undefined` | `rows`, `placeholder`, `autoComplete` |
+| `select` | `string` | explicit `options` |
+| `checkbox` | `boolean` | native checked/unchecked behavior |
+| `number` | `number \| undefined` | `min`, `max`, `step`, `placeholder` |
+| `date` | `string \| undefined` | `min`, `max` |
+| `file` | `File \| undefined` | single file and `accept` |
+
+Start with these controls to prove the form model. Replace only the controls
+that need product components.
+
+## Replace structural slots
+
+Slots let the design system own wrappers and feedback without reimplementing
+control state:
 
 ```tsx twoslash
 // @jsx: react-jsx
@@ -182,7 +194,7 @@ function ProductField({
 	errors,
 }: FieldSlotProps) {
 	return (
-		<div {...rootProps} className="profile-field">
+		<div {...rootProps} className="product-field">
 			{label === undefined ? null : <label {...labelProps}>{label}</label>}
 			{description === undefined ? null : (
 				<p {...descriptionProps}>{description}</p>
@@ -207,26 +219,9 @@ const kit = createFormKit({
 })
 ```
 
-Every default-slot i18n value can be a string or a function. `arrayAdd`
-functions receive `{ label }`; `arrayRemove`, `arrayMoveUp`, and
-`arrayMoveDown` functions receive zero-based `index` and one-based `position`.
-Missing entries fall back to English.
+The five slots are `Field`, `Section`, `Array`, `ArrayItem`, and
+`ErrorMessage`. Keep forwarding their public props so labels, focus targets,
+layout data, and errors remain connected.
 
-## Kit creation
-
-The shortest kit is now the explicit native-control registry plus omitted
-slots:
-
-```ts twoslash
-import { createFormKit, nativeControls } from "fokit"
-
-export const kit = createFormKit({
-	controls: nativeControls,
-})
-```
-
-`kit.defineForm` validates control names, paths, duplicate IDs, layout ranges,
-and value policies. `kit.AutoForm` and `kit.Fields` render the same normalized
-definition over the same store contract. Fully custom kits remain supported:
-pass a complete `slots` object when your application owns every structural
-component.
+Next, apply the [styling baseline](/guides/styling), or read
+[Arrays](/guides/arrays) before replacing array actions.

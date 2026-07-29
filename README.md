@@ -9,7 +9,6 @@ Action adapter, and optional structural CSS.
 
 ```sh
 npm install fokit zod
-npm install react react-dom
 ```
 
 React is a peer dependency. Fokit supports React `^18.0.0 || ^19.0.0`; React
@@ -38,7 +37,10 @@ The main JavaScript entry never imports the CSS automatically.
 
 ## Start here
 
+- [Overview](https://r13v.github.io/fokit/)
 - [Get started](https://r13v.github.io/fokit/get-started)
+- [Build a production form](https://r13v.github.io/fokit/guides/tutorial)
+- [Validation and errors](https://r13v.github.io/fokit/guides/validation)
 - [API reference](https://r13v.github.io/fokit/api)
 - [React 19 Actions](https://r13v.github.io/fokit/guides/react-19-actions)
 - [Fokit specification](docs/SPEC.md)

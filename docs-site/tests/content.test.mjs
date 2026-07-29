@@ -25,7 +25,8 @@ const canonicalPages = [
 		path: "src/pages/index.mdx",
 		route: "/",
 		title: "Fokit",
-		description: "Code-first React forms with native HTML semantics.",
+		description:
+			"Typed, schema-validated React forms that keep native semantics and your design system.",
 		navText: "Overview",
 	},
 	{
@@ -33,62 +34,88 @@ const canonicalPages = [
 		route: "/get-started",
 		title: "Get started",
 		description:
-			"Render a Fokit form with native controls, default structural slots, and the Interactive Fokit Lab.",
-	},
-	{
-		path: "src/pages/api.mdx",
-		route: "/api",
-		title: "API",
-		description: "The public Fokit entry points and React form kit APIs.",
-	},
-	{
-		path: "src/pages/types.mdx",
-		route: "/types",
-		title: "Types",
-		description:
-			"The TypeScript contracts that connect schemas, definitions, controls, and slots.",
-	},
-	{
-		path: "src/pages/advanced.mdx",
-		route: "/advanced",
-		title: "Advanced",
-		description:
-			"Generated rendering, composition, submission, and state patterns for production forms.",
-	},
-	{
-		path: "src/pages/faqs.mdx",
-		route: "/faqs",
-		title: "FAQs",
-		description:
-			"Common Fokit questions about defaults, themes, servers, and React versions.",
-	},
-	{
-		path: "src/pages/guides/controls.mdx",
-		route: "/guides/controls",
-		title: "Controls",
-		description:
-			"How native controls and custom controls define values, metadata, and FormData.",
-	},
-	{
-		path: "src/pages/guides/styling.mdx",
-		route: "/guides/styling",
-		title: "Styling",
-		description:
-			"Where Fokit's unstyled defaults end and application-owned styling begins.",
-	},
-	{
-		path: "src/pages/guides/react-19-actions.mdx",
-		route: "/guides/react-19-actions",
-		title: "React 19 Actions",
-		description:
-			"How Fokit keeps React 19 server actions aligned with the same form store.",
+			"Build and submit your first typed Fokit form, then see how schema, UI, and controls fit together.",
 	},
 	{
 		path: "src/pages/guides/tutorial.mdx",
 		route: "/guides/tutorial",
 		title: "Tutorial",
 		description:
-			"Build a generated Fokit form from the shipped defaults to production boundaries.",
+			"Grow the first Fokit form into a production-ready profile editor with validation, conditional fields, arrays, and typed output.",
+		navText: "Build a production form",
+	},
+	{
+		path: "src/pages/guides/validation.mdx",
+		route: "/guides/validation",
+		title: "Validation and errors",
+		description:
+			"Control when Fokit validates, when errors become visible, and how server errors recover after editing.",
+		navText: "Validation & errors",
+	},
+	{
+		path: "src/pages/guides/conditional-fields.mdx",
+		route: "/guides/conditional-fields",
+		title: "Conditional fields",
+		description:
+			"Derive visibility, interaction state, labels, and options from explicit form dependencies and runtime context.",
+	},
+	{
+		path: "src/pages/guides/arrays.mdx",
+		route: "/guides/arrays",
+		title: "Arrays",
+		description:
+			"Render repeatable fields with stable row identity, typed commands, and safe native FormData.",
+	},
+	{
+		path: "src/pages/guides/controls.mdx",
+		route: "/guides/controls",
+		title: "Controls",
+		description:
+			"Connect native inputs or a design system to Fokit's typed values, accessibility wiring, and FormData behavior.",
+		navText: "Controls & design systems",
+	},
+	{
+		path: "src/pages/guides/styling.mdx",
+		route: "/guides/styling",
+		title: "Styling",
+		description:
+			"Add responsive structure and a copyable visual baseline without giving form state ownership of your design system.",
+	},
+	{
+		path: "src/pages/guides/react-19-actions.mdx",
+		route: "/guides/react-19-actions",
+		title: "React 19 Actions",
+		description:
+			"Connect a Fokit definition to a React 19 Action with safe FormData parsing, pending state, and serializable server errors.",
+	},
+	{
+		path: "src/pages/advanced.mdx",
+		route: "/advanced",
+		title: "Production recipes",
+		description:
+			"Focused Fokit patterns for manual composition, loaded edit forms, server safety, accessibility, and public-boundary tests.",
+	},
+	{
+		path: "src/pages/api.mdx",
+		route: "/api",
+		title: "API",
+		description:
+			"Signatures, defaults, and entry-point boundaries for Fokit's public React, core, server, and React 19 APIs.",
+	},
+	{
+		path: "src/pages/types.mdx",
+		route: "/types",
+		title: "Types",
+		description:
+			"Use the TypeScript contracts that carry schema input and output through definitions, controls, hooks, slots, and server results.",
+		navText: "TypeScript",
+	},
+	{
+		path: "src/pages/faqs.mdx",
+		route: "/faqs",
+		title: "FAQs",
+		description:
+			"Direct answers about when to use Fokit, validation, defaults, design systems, servers, and React versions.",
 	},
 ]
 
@@ -107,12 +134,12 @@ const canonicalSnippets = [
 	{
 		target: "src/snippets/form-kit.tsx",
 		include: "~/snippets/form-kit.tsx",
-		terms: ["createFormKit", "defineControl", "profileSchema"],
+		terms: ["createFormKit", "computed", "profileSchema"],
 	},
 	{
 		target: "src/snippets/basic-form.tsx",
 		include: "~/snippets/basic-form.tsx",
-		terms: ["useForm", "kit.Form", "ProfileEditor"],
+		terms: ["kit.AutoForm", "ProfileEditor", "ProfileOutput"],
 	},
 	{
 		target: "src/snippets/server-action.ts",
@@ -133,15 +160,33 @@ const supersededRepositoryFiles = [
 ]
 
 const requiredCorePageContent = {
+	"src/pages/index.mdx": {
+		headings: [
+			"See it work",
+			"One explicit model",
+			"The responsibility boundary",
+			"When to reach for Fokit",
+			"Start with the working path",
+		],
+		terms: [
+			"Forms that stay typed, native, and yours",
+			"Schema owns validity",
+			"UI definition owns structure",
+			"Your kit owns rendering",
+			"OverviewDemo",
+			"nativeControls",
+			"kit.AutoForm",
+		],
+	},
 	"src/pages/get-started.mdx": {
 		headings: [
 			"Installation",
 			"Build your first form",
-			"Create a kit with native controls",
-			"Render a generated form",
-			"Validation follows the schema",
-			"Submit with native form semantics",
-			"Native FormData caveats",
+			"What just happened",
+			"Try the production loop",
+			"What you get out of the box",
+			"Make it yours",
+			"Choose your next step",
 		],
 		terms: [
 			"createFormKit",
@@ -154,15 +199,18 @@ const requiredCorePageContent = {
 	},
 	"src/pages/api.mdx": {
 		headings: [
-			"Entry-point boundaries",
-			"useForm",
+			"Entry points",
 			"createFormKit",
-			"defineControl",
-			"Granular hooks",
+			"kit.defineForm",
+			"AutoForm",
+			"useForm",
+			"Hooks",
 			"FormInstance",
-			"React-free core",
+			"defineControl",
+			"createDefaultSlots",
 			"parseFormData",
-			"ActionForm and ActionSubmit",
+			"React 19",
+			"React-free core",
 		],
 		terms: [
 			"fokit/core",
@@ -176,18 +224,19 @@ const requiredCorePageContent = {
 			"createFormStore",
 			"computed",
 			"resolveUi",
+			"setErrors",
+			"clearErrors",
 		],
 	},
 	"src/pages/types.mdx": {
 		headings: [
 			"Input and output",
-			"Definitions and UI nodes",
-			"Instance and options",
-			"Control inference",
+			"Typed definitions and paths",
+			"Form instances and context",
+			"Custom control inference",
+			"State and validation",
 			"Structural slot props",
-			"Snapshot and issues",
-			"Paths",
-			"Result types",
+			"Server results",
 		],
 		terms: [
 			"FormInput",
@@ -203,40 +252,38 @@ const requiredCorePageContent = {
 	},
 	"src/pages/advanced.mdx": {
 		headings: [
-			"Accessibility",
-			"Generated and manual composition",
-			"Reactive dependencies",
-			"Hidden values",
-			"Stable array identity",
-			"Untrusted FormData",
-			"React 19 Actions",
-			"Structural layout",
-			"Public-boundary testing",
+			"Choose a focused guide",
+			"Compose generated and bespoke UI",
+			"Load an edit-form baseline",
+			"Treat FormData as untrusted",
+			"Preserve the accessibility contract",
+			"Test the public experience",
 		],
 		terms: [
 			"labelProps",
 			"kit.Fields",
-			"computed",
-			"valuePolicy",
-			"useArrayField",
+			"useFormState",
+			"form.reset(profile)",
 			"parseFormData",
-			"ActionForm",
-			"fokit/layout.css",
+			"FormResult",
 		],
 	},
 	"src/pages/faqs.mdx": {
 		headings: [
 			"Why use Fokit instead of a smaller form hook?",
-			"Are Fokit controls controlled or uncontrolled?",
 			"Does Fokit require Zod?",
+			"Are Fokit controls controlled or uncontrolled?",
 			"Why are complete default values required?",
+			"How do I load an existing profile?",
+			"Does Fokit support async validation?",
 			"Can I use an existing component library?",
+			"Why is there no built-in theme?",
 			"What happens when a field becomes hidden?",
 			"How do I reset a form?",
 			"How do server errors reach fields?",
 			"How do React 18 and React 19 differ?",
 			"Does every field rerender on each change?",
-			"Why is there no built-in theme?",
+			"Does Fokit provide wizards or autosave?",
 		],
 		terms: [
 			"nativeControls",
@@ -244,20 +291,84 @@ const requiredCorePageContent = {
 			"defineControl",
 			"Standard Schema",
 			"form.reset()",
-			"SubmissionIssue",
+			"form.setErrors()",
 			"useField",
 		],
 	},
 }
 
 const requiredGuidePageContent = {
+	"src/pages/guides/tutorial.mdx": {
+		headings: [
+			"Model editable input and saved output",
+			"Create one kit",
+			"Describe the product UI",
+			"Render and submit",
+			"Know what is already handled",
+			"Take the right next branch",
+		],
+		terms: [
+			"FormInput",
+			"FormOutput",
+			"computed()",
+			'valuePolicy: "unset"',
+			"contactCount",
+		],
+	},
+	"src/pages/guides/validation.mdx": {
+		headings: [
+			"Start with the default",
+			"Understand error visibility",
+			"Install server errors",
+			"Validate deliberately",
+			"Choose the right ownership boundary",
+		],
+		terms: [
+			'revalidateMode: "change"',
+			"asyncDebounceMs",
+			"setErrors",
+			"clearErrors",
+			"meta.displayErrors",
+		],
+	},
+	"src/pages/guides/conditional-fields.mdx": {
+		headings: [
+			"Derive UI with computed",
+			"Decide what happens to hidden values",
+			"Pass loaded data through context",
+			"Keep conditional validation in the schema",
+		],
+		terms: [
+			"computed",
+			'valuePolicy: "unset"',
+			"Replacing context",
+			"superRefine",
+		],
+	},
+	"src/pages/guides/arrays.mdx": {
+		headings: [
+			"Define an array node",
+			"Choose complete defaults",
+			"Add manual commands when the UI needs them",
+			"Preserve identity while values move",
+			"Parse arrays from native FormData",
+		],
+		terms: [
+			'kind: "array"',
+			"itemDefault",
+			"useArrayField",
+			"__fokit.array",
+			"parseFormData",
+		],
+	},
 	"src/pages/guides/controls.mdx": {
 		headings: [
+			"Choose the smallest integration",
+			"Wrap a product input",
+			"Preserve the control contract",
+			"Choose a FormData mode",
 			"Native controls",
-			"Custom control contract",
-			"FormData modes",
-			"Default structural slots",
-			"Kit creation",
+			"Replace structural slots",
 		],
 		terms: [
 			"nativeControls",
@@ -269,27 +380,27 @@ const requiredGuidePageContent = {
 	},
 	"src/pages/guides/styling.mdx": {
 		headings: [
-			"Import the stylesheet",
-			"What the CSS does",
-			"Custom properties",
-			"Data attributes",
-			"Styling boundary",
+			"Import responsive structure",
+			"Add a product class",
+			"Copy a visual baseline",
+			"Style public states",
+			"Replace markup when selectors are not enough",
 		],
 		terms: [
 			"fokit/layout.css",
-			"@layer fokit",
 			"--fokit-column-gap",
 			"data-fokit-node",
-			"visual theme",
+			":focus-visible",
+			"data-invalid",
 		],
 	},
 	"src/pages/guides/react-19-actions.mdx": {
 		headings: [
-			"Entry point",
-			"Client form",
-			"Server Action",
-			"Result transport",
-			"Compatibility failures",
+			"Choose the submission owner",
+			"Connect the client form",
+			"Parse on the server",
+			"Return serializable results",
+			"Know the compatibility boundary",
 		],
 		terms: [
 			"fokit/react19",
@@ -297,30 +408,7 @@ const requiredGuidePageContent = {
 			"ActionSubmit",
 			"parseFormData",
 			"FormResult",
-		],
-	},
-	"src/pages/guides/tutorial.mdx": {
-		headings: [
-			"Install",
-			"Define the schema",
-			"Create the kit with native controls",
-			"Define fields",
-			"Dynamic options are computed options",
-			"Render AutoForm",
-			"Compose manually when needed",
-			"Use transactions deliberately",
-			"Parse FormData on the server",
-			"Use React 19 Actions separately",
-			"Add layout only when wanted",
-			"Test the examples",
-			"Product boundary",
-		],
-		terms: [
-			"nativeControls",
-			"createDefaultSlots",
-			'valuePolicy: "unset"',
-			"parseFormData",
-			"ActionForm",
+			"does **not** run client validation",
 		],
 	},
 }
@@ -483,6 +571,7 @@ test("docs TypeScript and verification gates are wired", async () => {
 	assert.equal(knipConfig.compilers.mdx, true)
 	assert.deepEqual(knipConfig.ignoreFiles, [])
 	assert.match(gitignore, /^docs-site\/\.vocs\/$/m)
+	assert.match(gitignore, /^docs-site\/src\/pages\.gen\.ts$/m)
 })
 
 test("Interactive Lab uses Vocs components and public Fokit defaults", async () => {
@@ -512,7 +601,27 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 		getStarted,
 		/import \{ InteractiveLab \} from "\.\.\/components\/interactive-lab"/,
 	)
+	assert.match(getStarted, /^### Interactive Fokit Lab$/m)
 	assert.match(getStarted, /<InteractiveLab \/>/)
+})
+
+test("overview proves the public Fokit loop with a live typed form", async () => {
+	const wrapper = await readText("src/components/overview-demo.tsx")
+	const client = await readText("src/components/overview-demo.client.tsx")
+	const overview = await readText("src/pages/index.mdx")
+
+	assert.match(wrapper, /from "\.\/overview-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(wrapper, /live overview form is browser-only/i)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /createFormKit/)
+	assert.match(client, /controls:\s*nativeControls/)
+	assert.match(client, /type:\s*"email"/)
+	assert.match(client, /FormOutput<typeof profileSchema>/)
+	assert.match(client, /onSubmit=\{\(\{ value \}\) => setSaved\(value\)\}/)
+	assert.match(overview, /import \{ OverviewDemo \}/)
+	assert.match(overview, /<OverviewDemo \/>/)
+	assert.match(overview, /Fokit does not\s+guess a product UI/)
 })
 
 test("canonical TypeScript snippets are physical files covered by docs typecheck", async () => {
@@ -618,13 +727,52 @@ test("Vocs config defines the static English documentation shell", async () => {
 	assert.match(source, /codeHighlight:\s*\{[\s\S]*dark:\s*"github-dark"/)
 	assert.match(
 		source,
-		/sidebar:\s*\[[\s\S]*text:\s*"Get started"[\s\S]*link:\s*"\/get-started"/,
+		/sidebar:\s*\[[\s\S]*text:\s*"Start"[\s\S]*text:\s*"Get started"[\s\S]*link:\s*"\/get-started"/,
+	)
+	assert.match(
+		source,
+		/text:\s*"Guides"[\s\S]*text:\s*"Validation & errors"[\s\S]*link:\s*"\/guides\/validation"/,
+	)
+	assert.match(
+		source,
+		/text:\s*"Reference"[\s\S]*text:\s*"API"[\s\S]*link:\s*"\/api"/,
+	)
+	assert.match(
+		source,
+		/text:\s*"Help"[\s\S]*text:\s*"FAQs"[\s\S]*link:\s*"\/faqs"/,
 	)
 	assert.doesNotMatch(source, /mcp\s*:/)
 	assert.doesNotMatch(source, /feedback\s*:/)
 	assert.doesNotMatch(source, /ogImageUrl\s*:/)
 	assert.doesNotMatch(source, /redirects\s*:/)
 	assert.doesNotMatch(source, /#\/|LOCALES|locale-switch|\/en\/|\/ru\//)
+})
+
+test("sidebar follows the learning path before reference material", async () => {
+	const source = await readText("vocs.config.ts")
+	const getStarted = source.indexOf('link: "/get-started"')
+	const tutorial = source.indexOf('link: "/guides/tutorial"')
+	const validation = source.indexOf('link: "/guides/validation"')
+	const controls = source.indexOf('link: "/guides/controls"')
+	const api = source.indexOf('link: "/api"')
+	const types = source.indexOf('link: "/types"')
+
+	for (const index of [
+		getStarted,
+		tutorial,
+		validation,
+		controls,
+		api,
+		types,
+	]) {
+		assert.notEqual(index, -1)
+	}
+
+	assert.ok(getStarted < tutorial)
+	assert.ok(tutorial < validation)
+	assert.ok(validation < controls)
+	assert.ok(controls < api)
+	assert.ok(api < types)
 })
 
 test("Vocs pages expose the canonical English route map", async () => {
@@ -635,7 +783,7 @@ test("Vocs pages expose the canonical English route map", async () => {
 		const frontmatter = new RegExp(
 			`^---\\ntitle: ${escapeRegExp(page.title)}\\ndescription: ${escapeRegExp(
 				page.description,
-			)}\\n---\\n`,
+			)}\\nshowAskAi: false\\n---\\n`,
 		)
 		const navText = page.navText ?? page.title
 		const sidebarEntry = new RegExp(
@@ -702,17 +850,63 @@ test("Vocs guides preserve the migrated public guide sections", async () => {
 	}
 })
 
+test("production docs lead to a deliberate next step", async () => {
+	for (const page of canonicalPages.filter(
+		(page) => page.route !== "/" && page.route !== "/get-started",
+	)) {
+		const source = await readText(page.path)
+
+		assert.match(
+			source,
+			/\[[^\]]+\]\(\/[^)]+\)/,
+			`${page.path} needs an authored internal link`,
+		)
+	}
+})
+
+test("tutorial stays focused on one copyable production form", async () => {
+	const source = await readText("src/pages/guides/tutorial.mdx")
+	const fences = collectCodeFences(source)
+
+	assert.ok(fences.length <= 5, "tutorial should stay below six code blocks")
+	assert.match(source, /# Build a production form/)
+	assert.match(source, /~\/snippets\/form-kit\.tsx:schema/)
+	assert.match(source, /~\/snippets\/basic-form\.tsx/)
+	assert.doesNotMatch(source, /npm install|docs-site\/src\/snippets/)
+	assert.doesNotMatch(source, /npm run (test:docs|check|knip)/)
+	assert.doesNotMatch(source, /Use transactions deliberately/)
+})
+
+test("documentation uses the public imperative error commands", async () => {
+	const paths = [
+		"src/pages/api.mdx",
+		"src/pages/faqs.mdx",
+		"src/pages/guides/validation.mdx",
+	]
+
+	for (const path of paths) {
+		const source = await readText(path)
+
+		assert.doesNotMatch(source, /\bsetIssues\b|\bclearIssues\b/)
+		assert.match(source, /\bsetErrors\b/)
+	}
+})
+
 test("Vocs root page and root CSS replace the custom app shell", async () => {
 	const page = await readText("src/pages/index.mdx")
 	const css = await readText("src/pages/_root.css")
 
 	assert.match(page, /^---\ntitle: Fokit\ndescription: /)
+	assert.match(page, /# Forms that stay typed, native, and yours/)
+	assert.match(page, /<OverviewDemo \/>/)
 	assert.match(page, /createFormKit\(\{\s*controls: nativeControls/)
-	assert.match(page, /createDefaultSlots/)
+	assert.match(page, /kit\.AutoForm/)
 	assert.doesNotMatch(page, /[А-Яа-яЁё]/)
 
 	assert.match(css, /@import "@fontsource-variable\/newsreader"/)
 	assert.match(css, /--fokit-brand-green:/)
+	assert.match(css, /:root\[data-vocs-theme="dark"\]/)
+	assert.match(css, /\.fokit-overview-demo/)
 	assert.match(css, /Newsreader Variable/)
 	assert.doesNotMatch(css, /\.site-shell|\.locale-switch|\.syntax-token/)
 })

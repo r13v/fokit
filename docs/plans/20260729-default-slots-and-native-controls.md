@@ -648,7 +648,7 @@ repository-wide verification and deployment plumbing.
 **Files:**
 
 - Modify: `docs-site/package.json`
-- Modify: `docs-site/package-lock.json`
+- Unchanged: `docs-site/package-lock.json` (no dependency changes)
 - Create: `docs-site/vocs.config.ts`
 - Create: `docs-site/src/pages/index.mdx`
 - Create: `docs-site/src/pages/_root.css`
@@ -702,38 +702,39 @@ verification depend on docs-site installation.
 - Create: `docs-site/tests/build-output.test.mjs`
 - Move: `tsconfig.docs.json` to `docs-site/tsconfig.docs.json`
 - Modify: `package.json`
-- Modify: `knip.json`
+- Move: `knip.json` to `knip.config.js`
 - Modify: `.gitignore`
 
-- [ ] Write failing docs-type and generated-output assertions before changing
+- [x] Write failing docs-type and generated-output assertions before changing
       the verification configuration.
-- [ ] Add docs scripts `typecheck: "tsc --project tsconfig.docs.json"` and
+- [x] Add docs scripts `typecheck: "tsc --project tsconfig.docs.json"` and
       `test:output: "node --test tests/build-output.test.mjs"`.
-- [ ] Change the moved config to `extends: "../tsconfig.json"` and include
+- [x] Change the moved config to `extends: "../tsconfig.json"` and include
       `vocs.config.ts`, `src/components/**/*.ts`,
       `src/components/**/*.tsx`, `src/snippets/**/*.ts`, and
       `src/snippets/**/*.tsx`. Run it with the TypeScript 5.9 compiler pinned
       in `docs-site`.
-- [ ] Update root `test:docs` to build Fokit and invoke the docs-site
+- [x] Update root `test:docs` to build Fokit and invoke the docs-site
       `typecheck` script.
-- [ ] Keep root `verify` package-only by removing `test:docs` from that
+- [x] Keep root `verify` package-only by removing `test:docs` from that
       aggregate. Documentation remains mandatory through `site:verify`, which
       every CI, publish, and Pages path runs after installing docs dependencies.
-- [ ] Update root `site:verify` to run, in order: `site:test`, `test:docs`, the
+- [x] Update root `site:verify` to run, in order: `site:test`, `test:docs`, the
       Vocs build with `BASE_PATH=/fokit`, the Markdown audit,
       generated-output tests, and E2E tests.
-- [ ] Update `knip.json` so the docs workspace scans `vocs.config.ts` and
+- [x] Update Knip configuration so the docs workspace scans `vocs.config.ts` and
       `src/**/*.{ts,tsx,mdx,css}` in addition to its scripts; verify the exact
-      patterns are supported by the installed Knip version.
-- [ ] Add `docs-site/.vocs/` to `.gitignore`; Vocs' filesystem Twoslash cache
+      patterns are supported by the installed Knip version. Use
+      `knip.config.js` because the CSS compiler requires a function.
+- [x] Add `docs-site/.vocs/` to `.gitignore`; Vocs' filesystem Twoslash cache
       and other generated state must remain uncommitted.
-- [ ] Make the initial generated-output test assert `index.md`, `llms.txt`,
+- [x] Make the initial generated-output test assert `index.md`, `llms.txt`,
       `llms-full.txt`, `sitemap.xml`, and `robots.txt`, plus the absence of API,
       server/function, and dynamic OG artifacts.
-- [ ] Run `npm run test:docs`, `npm run site:test`,
+- [x] Run `npm run test:docs`, `npm run site:test`,
       `BASE_PATH=/fokit npm run site:build`, and
       `npm run test:output --prefix docs-site`.
-- [ ] Run `npm run check` and `npm run knip`.
+- [x] Run `npm run check` and `npm run knip`.
 
 ### Task 7C: Integrate Vocs with browser tests and GitHub workflows
 

@@ -4,6 +4,7 @@ import { access, readdir, readFile } from "node:fs/promises"
 import { test } from "node:test"
 
 const siteRoot = new URL("../", import.meta.url)
+const repositoryRoot = new URL("../", siteRoot)
 
 const requiredDependencies = {
 	"@fontsource-variable/newsreader": "5.3.0",
@@ -19,12 +20,24 @@ const requiredDependencies = {
 	zod: "4.4.3",
 }
 
+async function readTextFrom(root, path) {
+	return await readFile(new URL(path, root), "utf8")
+}
+
 async function readText(path) {
-	return await readFile(new URL(path, siteRoot), "utf8")
+	return await readTextFrom(siteRoot, path)
+}
+
+async function readRepositoryText(path) {
+	return await readTextFrom(repositoryRoot, path)
 }
 
 async function readJson(path) {
 	return JSON.parse(await readText(path))
+}
+
+async function readRepositoryJson(path) {
+	return JSON.parse(await readRepositoryText(path))
 }
 
 async function pathExists(path) {
@@ -65,10 +78,52 @@ test("docs package uses the Vocs shell scripts and dependencies", async () => {
 		build: "vocs build",
 		preview: "vocs preview",
 		test: "node --test tests/content.test.mjs",
+		typecheck: "tsc --project tsconfig.docs.json",
+		"test:output": "node --test tests/build-output.test.mjs",
 		"test:markdown": "vocs markdown-audit",
 	})
 	assert.deepEqual(packageJson.dependencies, requiredDependencies)
 	assert.equal(packageJson.devDependencies, undefined)
+})
+
+test("docs TypeScript and verification gates are wired", async () => {
+	const tsconfig = await readJson("tsconfig.docs.json")
+	const rootPackageJson = await readRepositoryJson("package.json")
+	const knipConfig = (
+		await import(new URL("knip.config.js", repositoryRoot).href)
+	).default
+	const gitignore = await readRepositoryText(".gitignore")
+
+	assert.deepEqual(tsconfig, {
+		extends: "../tsconfig.json",
+		include: [
+			"vocs.config.ts",
+			"src/components/**/*.ts",
+			"src/components/**/*.tsx",
+			"src/snippets/**/*.ts",
+			"src/snippets/**/*.tsx",
+		],
+	})
+	assert.equal(
+		rootPackageJson.scripts["test:docs"],
+		"npm run build && npm run typecheck --prefix docs-site",
+	)
+	assert.equal(
+		rootPackageJson.scripts["site:verify"],
+		"npm run site:test && npm run test:docs && BASE_PATH=/fokit npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
+	)
+	assert.equal(rootPackageJson.scripts.verify.includes("test:docs"), false)
+	assert.deepEqual(knipConfig.workspaces["docs-site"].entry, [
+		"vocs.config.ts",
+		"src/pages/**/*.mdx",
+		"src/pages/**/*.css",
+	])
+	assert.deepEqual(knipConfig.workspaces["docs-site"].project, [
+		"src/**/*.{js,jsx,mjs,ts,tsx,mdx,css}",
+	])
+	assert.equal(typeof knipConfig.compilers.css, "function")
+	assert.equal(knipConfig.compilers.mdx, true)
+	assert.match(gitignore, /^docs-site\/\.vocs\/$/m)
 })
 
 test("Vocs config defines the static English documentation shell", async () => {

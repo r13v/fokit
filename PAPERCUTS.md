@@ -253,3 +253,17 @@ Adding root-entry CJS declaration smoke coverage → importing representative `f
 ## 2026-07-29 13:39 — GPT-5
 
 Writing the replacement docs-site source tests → the new Node test file assumed a global `test` binding, but this repo's direct `node --test` run requires importing it from `node:test`. Import `test` explicitly in standalone `.mjs` tests.
+
+## 2026-07-29 13:58 — GPT-5
+
+Inspecting generated Vocs output → an `rg` query over `docs-site/dist/public`
+scanned bundled JavaScript assets and produced megabytes of truncated output.
+Use `find` for generated artifact names or exclude `assets/` before content
+searches.
+
+## 2026-07-29 13:58 — GPT-5
+
+Updating Knip docs-site patterns → `knip.json` could not register the CSS
+compiler needed for `src/**/*.css`, and Knip's compiler hints stayed global
+unless workspaces were explicit. Use an ESM Knip config with compiler functions
+and run Knip with explicit workspace filters.

@@ -12,9 +12,10 @@ const ci = parse(ciWorkflow) as Record<string, unknown>
 const matrixNodeVersionExpression = "$" + "{{ matrix.node-version }}"
 
 describe("release-equivalent CI workflow", () => {
-	it("runs the local release-equivalent package gates on Node 24", () => {
+	it("installs every workspace checked by the release-equivalent gates", () => {
 		const verify = job(ci, "verify")
 		const steps = workflowSteps(verify)
+		const runs = steps.map((step) => step.run).filter(Boolean)
 
 		expect(ci.name).toBe("CI")
 		expect(record(ci.on).pull_request).toBeNull()
@@ -25,6 +26,7 @@ describe("release-equivalent CI workflow", () => {
 			"Checkout",
 			"Setup Node",
 			"Install dependencies",
+			"Install docs dependencies",
 			"Install Chromium",
 			"Verify package",
 			"Dry-run package",
@@ -35,12 +37,16 @@ describe("release-equivalent CI workflow", () => {
 			matrixNodeVersionExpression,
 		)
 		expect(record(steps[1]?.with).cache).toBe("npm")
-		expect(steps.map((step) => step.run).filter(Boolean)).toEqual([
+		expect(runs).toEqual([
 			"npm ci",
+			"npm ci --prefix docs-site",
 			"npx playwright install --with-deps chromium",
 			"npm run verify",
 			"npm pack --dry-run",
 		])
+		expect(runs.indexOf("npm ci --prefix docs-site")).toBeLessThan(
+			runs.indexOf("npm run verify"),
+		)
 	})
 
 	it("runs docs-site verification after installing docs dependencies", () => {

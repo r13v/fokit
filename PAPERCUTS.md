@@ -353,3 +353,10 @@ Squashing repeated review-fix commits during finalize → a noninteractive
 `GIT_SEQUENCE_EDITOR` command used shell-expanded `$1`, stripping hashes from
 the rebase todo file. Use single-quoted editor commands or escape replacement
 backreferences before running interactive rebase automation.
+
+## 2026-07-29 20:38 — GPT-5
+
+Reproducing CI from a `git archive` in a randomly named temporary directory →
+`npm ci --prefix <dir>` with npm 11 misidentified the archived root package by
+the directory name and rejected its lockfile. Run `npm ci` with that directory
+as the process working directory when a local `file:..` dependency is present.

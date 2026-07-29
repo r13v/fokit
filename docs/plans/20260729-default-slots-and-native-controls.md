@@ -664,30 +664,30 @@ repository-wide verification and deployment plumbing.
 - Delete: `docs-site/src/routing.test.mjs`
 - Delete: `docs-site/src/styles.css`
 
-- [ ] Write the replacement shell/content assertions first. They must fail
+- [x] Write the replacement shell/content assertions first. They must fail
       against the bespoke SPA and describe the minimum Vocs shell.
-- [ ] Replace the site scripts with `dev: "vocs dev"`, `build: "vocs build"`,
+- [x] Replace the site scripts with `dev: "vocs dev"`, `build: "vocs build"`,
       `preview: "vocs preview"`, `test: "node --test
       tests/content.test.mjs"`, and `test:markdown: "vocs markdown-audit"`.
-- [ ] Install the exact docs-only dependencies listed in Context and remove
+- [x] Install the exact docs-only dependencies listed in Context and remove
       dependencies used only by the deleted custom SPA.
-- [ ] Configure `title`, description, repository social link, `baseUrl`,
+- [x] Configure `title`, description, repository social link, `baseUrl`,
       environment-driven `basePath`, `renderStrategy: "full-static"`,
       `checkDeadlinks: true`, English navigation, light/dark GitHub code
       themes, and `editLink` in `docs-site/vocs.config.ts`.
-- [ ] Keep the production base path `/fokit` without a trailing slash.
-- [ ] Do not enable Vocs MCP, feedback, dynamic OG, or API routes. Intentionally
+- [x] Keep the production base path `/fokit` without a trailing slash.
+- [x] Do not enable Vocs MCP, feedback, dynamic OG, or API routes. Intentionally
       omit a custom `ogImageUrl`; the deployable output must contain no API
       route, server entry, function artifact, or dynamic OG URL.
-- [ ] Create a minimal English landing page and minimal brand variables so the
+- [x] Create a minimal English landing page and minimal brand variables so the
       new Vocs shell builds before content migration.
-- [ ] Replace stale docs-site guidance with English-only Vocs, clean-route,
+- [x] Replace stale docs-site guidance with English-only Vocs, clean-route,
       static-hosting, physical-snippet, and public-package-import rules.
-- [ ] Remove the bespoke SPA entry, hash router, and handwritten syntax
+- [x] Remove the bespoke SPA entry, hash router, and handwritten syntax
       highlighter from the build. Keep `docs-site/src/content.js` temporarily
       as an unreferenced migration source until Task 8E proves content parity.
-- [ ] Run `npm run site:test`.
-- [ ] Run `BASE_PATH=/fokit npm run site:build`.
+- [x] Run `npm run site:test`.
+- [x] Run `BASE_PATH=/fokit npm run site:build`.
 
 ### Task 7B: Add docs TypeScript and generated-output gates
 

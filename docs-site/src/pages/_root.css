@@ -1,0 +1,27 @@
+@import "@fontsource-variable/newsreader";
+
+:root {
+	--fokit-brand-green: #3c7967;
+	--fokit-brand-rust: #bb4a2b;
+	--fokit-brand-paper: #fbfaf6;
+	--fokit-brand-ink: #102e26;
+	--fokit-display-font:
+		"Newsreader Variable", "Iowan Old Style", "Palatino Linotype", Palatino,
+		Georgia, serif;
+	accent-color: var(--fokit-brand-green);
+}
+
+body {
+	background: var(--fokit-brand-paper);
+}
+
+h1,
+h2,
+h3 {
+	color: var(--fokit-brand-ink);
+	font-family: var(--fokit-display-font);
+}
+
+a {
+	text-underline-offset: 0.18em;
+}

@@ -1,0 +1,30 @@
+---
+title: Get started
+description: Render a Fokit form with native controls and default structural slots.
+---
+
+# Fokit
+
+Fokit is a code-first, schema-validated React form library for teams that want
+the form store and generated rendering without surrendering native HTML
+semantics.
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createDefaultSlots, createFormKit, nativeControls } from "fokit"
+
+// ---cut---
+const kit = createFormKit({
+	controls: nativeControls,
+})
+
+const customSlots = createDefaultSlots({
+	i18n: {
+		arrayAdd: "Add item",
+	},
+})
+```
+
+This page is the initial Vocs shell. The full English guide set, physical
+snippets, and Interactive Fokit Lab move into Vocs in the following migration
+tasks.

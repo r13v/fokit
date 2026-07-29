@@ -249,3 +249,7 @@ Implementing read-only native file controls → Biome rejects `aria-readonly` on
 ## 2026-07-29 13:31 — GPT-5
 
 Adding root-entry CJS declaration smoke coverage → importing representative `fokit` React types from the Node CJS fixture exposed missing React and DOM type prerequisites. Give root-entry type fixtures `@types/react` and DOM libs instead of treating them like core/server-only consumers.
+
+## 2026-07-29 13:39 — GPT-5
+
+Writing the replacement docs-site source tests → the new Node test file assumed a global `test` binding, but this repo's direct `node --test` run requires importing it from `node:test`. Import `test` explicitly in standalone `.mjs` tests.

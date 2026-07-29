@@ -464,21 +464,21 @@ slots resolve automatically, while partial overrides should remain concise.
 - Modify: `tests/types/controls-and-kit.test.ts`
 - Modify: `tests/types/definitions.test.ts`
 
-- [ ] Replace the old missing-slot rejection test with failing omitted-slot and
+- [x] Replace the old missing-slot rejection test with failing omitted-slot and
       partial-override tests; add type tests for omitted, partial, and fully
       custom slots before changing the implementation.
-- [ ] Change `CreateFormKitOptions.slots` to optional
+- [x] Change `CreateFormKitOptions.slots` to optional
       `Partial<FormKitSlots>`.
-- [ ] Resolve slots once per kit by merging `createDefaultSlots()` with the
+- [x] Resolve slots once per kit by merging `createDefaultSlots()` with the
       provided partial overrides.
-- [ ] Preserve a fully resolved `FormKitSlots` object in `kit.slots`.
-- [ ] Pass only the resolved slots to `createFieldsComponent` and
+- [x] Preserve a fully resolved `FormKitSlots` object in `kit.slots`.
+- [x] Pass only the resolved slots to `createFieldsComponent` and
       `createAutoFormComponent`.
-- [ ] Keep a runtime assertion after merging so explicit invalid JavaScript
+- [x] Keep a runtime assertion after merging so explicit invalid JavaScript
       values such as `Field: undefined` fail descriptively.
-- [ ] Verify existing custom kits compile and behave unchanged.
-- [ ] Run `npm test -- src/react/create-form-kit.test.tsx`.
-- [ ] Run `npm run test:types`.
+- [x] Verify existing custom kits compile and behave unchanged.
+- [x] Run `npm test -- src/react/create-form-kit.test.tsx`.
+- [x] Run `npm run test:types`.
 
 ### Task 4A: Implement text-like native controls
 

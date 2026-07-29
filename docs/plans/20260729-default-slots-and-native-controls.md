@@ -837,18 +837,18 @@ review units and must reach parity before their old Markdown sources disappear.
 - Modify: `docs-site/src/pages/guides/tutorial.mdx`
 - Modify: `docs-site/tests/content.test.mjs`
 
-- [ ] Add failing destination-heading assertions for each mapped guide before
+- [x] Add failing destination-heading assertions for each mapped guide before
       migrating it.
-- [ ] Migrate every English section from `docs/controls.md`,
+- [x] Migrate every English section from `docs/controls.md`,
       `docs/styling.md`, `docs/react19-actions.md`, and `docs/tutorial.md` into
       its mapped Vocs guide.
-- [ ] Reconcile tutorial steps that formerly required local controls and all
+- [x] Reconcile tutorial steps that formerly required local controls and all
       five slots with the new native/default baseline while retaining custom
       composition as an advanced path.
-- [ ] Keep `fokit/layout.css` opt-in and keep React 18/19 submission boundaries
+- [x] Keep `fokit/layout.css` opt-in and keep React 18/19 submission boundaries
       explicit.
-- [ ] Run `npm run site:test`.
-- [ ] Run `BASE_PATH=/fokit npm run site:build`.
+- [x] Run `npm run site:test`.
+- [x] Run `BASE_PATH=/fokit npm run site:build`.
 
 ### Task 8D: Make every displayed TypeScript example executable
 

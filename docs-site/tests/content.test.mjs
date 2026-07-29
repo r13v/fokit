@@ -221,6 +221,81 @@ const requiredCorePageContent = {
 	},
 }
 
+const requiredGuidePageContent = {
+	"src/pages/guides/controls.mdx": {
+		headings: [
+			"Native controls",
+			"Custom control contract",
+			"FormData modes",
+			"Default structural slots",
+			"Kit creation",
+		],
+		terms: [
+			"nativeControls",
+			"defineControl",
+			'mode: "native"',
+			"createDefaultSlots",
+			"ArrayItem",
+		],
+	},
+	"src/pages/guides/styling.mdx": {
+		headings: [
+			"Import the stylesheet",
+			"What the CSS does",
+			"Custom properties",
+			"Data attributes",
+			"Styling boundary",
+		],
+		terms: [
+			"fokit/layout.css",
+			"@layer fokit",
+			"--fokit-column-gap",
+			"data-fokit-node",
+			"visual theme",
+		],
+	},
+	"src/pages/guides/react-19-actions.mdx": {
+		headings: [
+			"Entry point",
+			"Client form",
+			"Server Action",
+			"Result transport",
+			"Compatibility failures",
+		],
+		terms: [
+			"fokit/react19",
+			"ActionForm",
+			"ActionSubmit",
+			"parseFormData",
+			"FormResult",
+		],
+	},
+	"src/pages/guides/tutorial.mdx": {
+		headings: [
+			"Install",
+			"Define the schema",
+			"Create the kit with native controls",
+			"Define fields",
+			"Dynamic options are computed options",
+			"Render AutoForm",
+			"Compose manually when needed",
+			"Use transactions deliberately",
+			"Parse FormData on the server",
+			"Use React 19 Actions separately",
+			"Add layout only when wanted",
+			"Test the examples",
+			"Product boundary",
+		],
+		terms: [
+			"nativeControls",
+			"createDefaultSlots",
+			'valuePolicy: "unset"',
+			"parseFormData",
+			"ActionForm",
+		],
+	},
+}
+
 function escapeRegExp(value) {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
@@ -397,6 +472,28 @@ test("API shell keeps public exports discoverable", async () => {
 
 test("core Vocs pages preserve the migrated section groups", async () => {
 	for (const [path, content] of Object.entries(requiredCorePageContent)) {
+		const source = await readText(path)
+
+		for (const heading of content.headings) {
+			assert.match(
+				source,
+				new RegExp(`^## ${escapeRegExp(heading)}$`, "m"),
+				`${path} must expose ${heading}`,
+			)
+		}
+
+		for (const term of content.terms) {
+			assert.match(
+				source,
+				new RegExp(escapeRegExp(term)),
+				`${path} must keep ${term} discoverable`,
+			)
+		}
+	}
+})
+
+test("Vocs guides preserve the migrated public guide sections", async () => {
+	for (const [path, content] of Object.entries(requiredGuidePageContent)) {
 		const source = await readText(path)
 
 		for (const heading of content.headings) {

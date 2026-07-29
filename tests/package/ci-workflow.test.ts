@@ -43,6 +43,38 @@ describe("release-equivalent CI workflow", () => {
 		])
 	})
 
+	it("runs docs-site verification after installing docs dependencies", () => {
+		const docsSite = job(ci, "docs-site")
+		const steps = workflowSteps(docsSite)
+		const runs = steps.map((step) => step.run).filter(Boolean)
+
+		expect(docsSite["runs-on"]).toBe("ubuntu-latest")
+		expect(steps.map((step) => step.name)).toEqual([
+			"Checkout",
+			"Setup Node",
+			"Install dependencies",
+			"Build package",
+			"Install docs dependencies",
+			"Install Chromium",
+			"Verify docs site",
+			"Upload docs Playwright artifacts",
+		])
+		expect(record(steps[1]?.with)["node-version"]).toBe(24)
+		expect(String(record(steps[1]?.with)["cache-dependency-path"])).toContain(
+			"docs-site/package-lock.json",
+		)
+		expect(runs).toEqual([
+			"npm ci",
+			"npm run build",
+			"npm ci --prefix docs-site",
+			"npx playwright install --with-deps chromium",
+			"npm run site:verify",
+		])
+		expect(runs.indexOf("npm ci --prefix docs-site")).toBeLessThan(
+			runs.indexOf("npm run site:verify"),
+		)
+	})
+
 	it("does not publish, mutate source, or require credentials", () => {
 		expect(ciWorkflow).not.toMatch(/\bnpm publish\b/)
 		expect(ciWorkflow).not.toMatch(/\bnpm version\b/)

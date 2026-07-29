@@ -2,7 +2,7 @@
 
 - Status: Normative
 - Supported React versions: 18 and 19
-- Last updated: 2026-07-28
+- Last updated: 2026-07-29
 
 ## Summary
 
@@ -11,7 +11,8 @@ Fokit is a code-first React form library that combines:
 - schema-based validation;
 - type-safe form state;
 - declarative UI generation;
-- a registry of application-specific controls;
+- an explicit registry of native or application-specific controls;
+- accessible default structural slots that can be replaced partially or fully;
 - granular subscriptions;
 - client and server submission flows.
 
@@ -43,6 +44,10 @@ CI.
 - Render a complete form from a typed UI definition.
 - Support custom design systems without coupling the core to a component
   library.
+- Provide an unstyled, accessible structural fallback so a generated form can
+  render before an application replaces every slot.
+- Provide an explicit native HTML control registry for common values without
+  inferring controls from the validation schema.
 - Keep reusable form definitions portable across design systems and page,
   modal, and sidebar containers.
 - Provide a small semantic layout contract without depending on Tailwind or
@@ -82,6 +87,8 @@ Fokit does not:
 - provide a general-purpose middleware, plugin, or effects pipeline;
 - ship adapters for a specific UI component framework;
 - ship a visual theme, control styles, typography, or a CSS reset;
+- infer controls from schema metadata or automatically merge a control
+  registry;
 - require Tailwind or another CSS framework;
 - include a wizard engine, autosave engine, or remote options loader;
 - support both controlled and uncontrolled public modes;
@@ -215,13 +222,18 @@ import {
 
 // React 18 and 19
 import {
+  createDefaultSlots,
   createFormKit,
   defineControl,
+  nativeControls,
   useArrayField,
   useField,
   useForm,
   useFormState,
   useValue,
+  type DefaultSlotsI18n,
+  type NativeSelectOptions,
+  type NativeTextOptions,
 } from 'fokit';
 
 // React 19 only
@@ -348,6 +360,51 @@ used by the main open-source influences. The package name must be reserved
 before the first public publish, and a matching `LICENSE` file must be present.
 The packed tarball contains built artifacts and public documentation, never
 local reference sources.
+
+## Public documentation site
+
+The public documentation site is an English-only Vocs site authored in
+Markdown/MDX under `docs-site/src/pages`. Vocs owns navigation, search, syntax
+highlighting, rich Twoslash output, static rendering, Markdown exports, and
+dead-link checks.
+
+The canonical public route map is locale-free:
+
+- `/`
+- `/get-started`
+- `/api`
+- `/types`
+- `/advanced`
+- `/faqs`
+- `/guides/controls`
+- `/guides/styling`
+- `/guides/react-19-actions`
+- `/guides/tutorial`
+
+Production builds use the `/fokit` base path and
+`https://r13v.github.io` Vocs base URL, producing public URLs under
+`https://r13v.github.io/fokit`. Local development uses `/` unless a caller
+provides an explicit environment override. The site must not preserve old hash
+routes, locale-prefixed routes, locale switching, locale persistence, or
+redirects for removed locale URLs. The retained Russian tutorial remains a
+repository document and is not part of the Vocs page tree or navigation.
+
+The deployable output is fully static and must include HTML, agent-readable
+Markdown, `llms.txt`, `llms-full.txt`, `sitemap.xml`, and `robots.txt`. It must
+not include API routes, server/function artifacts, worker entry points, or
+dynamic Open Graph image routes.
+
+Every displayed TypeScript or TSX code block is checked. Inline lessons use
+Vocs' built-in Twoslash integration. Complete programs are included from
+physical files under `docs-site/src/snippets/` and are covered by
+`docs-site/tsconfig.docs.json`. Twoslash, Shiki, and the docs TypeScript
+compiler are documentation-only dependencies; the published `fokit` package
+does not depend on them or load a browser-side compiler.
+
+The Interactive Fokit Lab is a Vocs client component. It uses the public
+`nativeControls` registry and `createDefaultSlots({ i18n })` rather than local
+control or slot implementations, and its generated Markdown fallback must be
+meaningful in page Markdown and LLM artifacts.
 
 ## Core concepts
 
@@ -543,34 +600,127 @@ file controls therefore cannot preserve a hidden or disabled file value in an
 Action form unless the application supplies another server-compatible
 representation.
 
-### Form kit
+### Native controls
 
-A form kit registers controls and structural slots for one design system:
+The main `fokit` entry exports `nativeControls`, an explicit registry of
+unstyled native HTML controls:
 
 ```tsx
-import { createFormKit } from 'fokit';
+import { createFormKit, nativeControls } from 'fokit';
 
 export const kit = createFormKit({
-  controls: {
-    text,
-    checkbox,
-    select,
-    date,
-  },
+  controls: nativeControls,
+});
+```
 
-  slots: {
-    Field: FieldFrame,
-    Section,
-    Array: ArrayField,
-    ArrayItem: ArrayItemFrame,
-    ErrorMessage,
+The registry is not merged implicitly. Applications compose it with custom
+controls when needed:
+
+```tsx
+const kit = createFormKit({
+  controls: {
+    ...nativeControls,
+    money,
   },
 });
 ```
 
-All five structural slots are required. Core does not silently fall back to a
-built-in design-system wrapper; applications can start from copyable reference
-slots and opt into `fokit/layout.css`.
+The first native registry contains:
+
+- `text`: `string | undefined`, with options
+  `{ type?: NativeTextType; placeholder?: string; autoComplete?: string }`.
+  `NativeTextType` is the closed union `'text' | 'email' | 'password' |
+  'search' | 'tel' | 'url'`.
+- `textarea`: `string | undefined`, with options
+  `{ placeholder?: string; autoComplete?: string; rows?: number }`.
+- `number`: `number | undefined`, with options
+  `{ min?: number; max?: number; step?: number | 'any'; placeholder?: string }`.
+  Empty input updates the store to `undefined`; invalid `NaN` values are not
+  written.
+- `date`: `string | undefined`, with options
+  `{ min?: string; max?: string }`. The value is the native `YYYY-MM-DD`
+  string.
+- `select`: `string`, with options
+  `{ options: readonly NativeSelectOption[] }`, where each option has
+  `{ value: string; label: string; disabled?: boolean }`. No placeholder option
+  is injected.
+- `checkbox`: `boolean`, with no options.
+- `file`: `File | undefined`, with options `{ accept?: string }`. The input is
+  uncontrolled and stores only the first selected file.
+
+The registry and option contracts are exported as `nativeControls`,
+`NativeTextType`, `NativeTextOptions`, `NativeTextareaOptions`,
+`NativeSelectOptions`, `NativeSelectOption`, `NativeNumberOptions`,
+`NativeDateOptions`, and `NativeFileOptions`.
+
+All native controls preserve the supplied `input.id`, `input.name`,
+`input.ref`, `input['aria-describedby']`, `meta.invalid`, `blur`, `disabled`,
+`readOnly`, `required`, and supported native options. Text-like controls use
+the native `readOnly` attribute. `select`, `checkbox`, and `file` expose
+`aria-readonly`, remain enabled when read-only, and guard pointer, keyboard,
+and change paths so the controlled value cannot mutate.
+
+Native controls are a convenience registry, not a design system. They ship no
+visual theme, do not import CSS, and do not add radio groups, checkbox groups,
+multi-selects, or multiple-file controls.
+
+### Form kit
+
+A form kit registers controls and, optionally, structural slots for one
+rendering integration:
+
+```tsx
+import { createFormKit, nativeControls } from 'fokit';
+
+export const kit = createFormKit({
+  controls: nativeControls,
+});
+```
+
+`controls` remains required because controls define value compatibility and
+native `FormData` behavior. Fokit never infers or silently merges controls
+from the Standard Schema.
+
+`slots` is optional and partial. Omitted slots resolve once per kit by merging
+English default slots with the caller-provided overrides:
+
+```tsx
+import {
+  createDefaultSlots,
+  createFormKit,
+  nativeControls,
+} from 'fokit';
+
+export const kit = createFormKit({
+  controls: {
+    ...nativeControls,
+    money,
+  },
+  slots: {
+    ...createDefaultSlots({
+      i18n: {
+        arrayAdd: 'Добавить',
+        arrayRemove: ({ position }) =>
+          `Удалить элемент ${position}`,
+        arrayMoveUp: ({ position }) =>
+          `Поднять элемент ${position}`,
+        arrayMoveDown: ({ position }) =>
+          `Опустить элемент ${position}`,
+      },
+    }),
+    Field: CustomField,
+  },
+});
+```
+
+The resolved `kit.slots` object always contains all five slots. A fully custom
+kit stays source-compatible by passing all five keys. An explicit invalid
+JavaScript value such as `{ Field: undefined }` is rejected after merging.
+
+The default slots are an accessibility baseline, not a design-system wrapper
+or visual theme. They render semantic unstyled HTML, preserve every supplied
+slot prop, and do not import `fokit/layout.css`. Consumers that want the
+optional responsive structure still import the CSS subpath explicitly.
 
 Controls render only the interactive value editor. Structural slots have
 separate responsibilities:
@@ -583,6 +733,45 @@ separate responsibilities:
 
 This boundary lets a design system customize array rows without replacing the
 array state logic or embedding React components in every definition.
+
+`createDefaultSlots()` accepts optional i18n overrides for the array actions:
+
+```ts
+type DefaultSlotI18nValue<Data> =
+  | string
+  | ((data: Readonly<Data>) => string);
+
+type DefaultArrayAddI18nData = {
+  readonly label?: React.ReactNode;
+};
+
+type DefaultArrayItemI18nData = {
+  readonly index: number;
+  readonly position: number;
+};
+
+type DefaultSlotsI18n = {
+  readonly arrayAdd:
+    DefaultSlotI18nValue<DefaultArrayAddI18nData>;
+  readonly arrayRemove:
+    DefaultSlotI18nValue<DefaultArrayItemI18nData>;
+  readonly arrayMoveUp:
+    DefaultSlotI18nValue<DefaultArrayItemI18nData>;
+  readonly arrayMoveDown:
+    DefaultSlotI18nValue<DefaultArrayItemI18nData>;
+};
+```
+
+Each i18n value is either a string or a synchronous function returning a
+string. `arrayAdd` receives the array label as `ReactNode | undefined`.
+`arrayRemove`, `arrayMoveUp`, and `arrayMoveDown` receive zero-based `index`
+and one-based `position`. Partial i18n objects fall back to English for omitted
+keys. Each factory call creates isolated components and does not mutate the
+English defaults or the caller's overrides.
+
+The public default-slot contract is exported as `createDefaultSlots`,
+`DefaultSlotI18nValue`, `DefaultSlotsI18n`, `DefaultArrayAddI18nData`, and
+`DefaultArrayItemI18nData`.
 
 The shared structural contracts are:
 
@@ -804,7 +993,7 @@ export const accountForm = kit.defineForm<AccountContext>()({
           control: 'select',
           label: 'Customer type',
           options: {
-            items: [
+            options: [
               { value: 'person', label: 'Person' },
               { value: 'company', label: 'Company' },
             ],
@@ -1163,9 +1352,11 @@ only its declared form-value dependencies plus the form's read-only runtime
 context:
 
 ```ts
+import type { NativeSelectOption } from 'fokit';
+
 type AddressContext = {
   citiesByCountry: Readonly<
-    Record<string, readonly SelectItem[]>
+    Record<string, readonly NativeSelectOption[]>
   >;
 };
 
@@ -1179,7 +1370,7 @@ const addressForm = kit.defineForm<AddressContext>()({
       options: computed(
         ['country'],
         ({ country }, { context }) => ({
-          items: context.citiesByCountry[country] ?? [],
+          options: context.citiesByCountry[country] ?? [],
         }),
       ),
     },
@@ -1187,7 +1378,7 @@ const addressForm = kit.defineForm<AddressContext>()({
 });
 ```
 
-This is the `dynamicOptions` use case: `options` is a normal computed property,
+This is the dynamic options use case: `options` is a normal computed property,
 not a second options API. Remote data is loaded by the application and supplied
 through context.
 
@@ -2095,6 +2286,26 @@ File controls remain native. Browsers cannot prefill a file input, so its
 initial value must be empty/optional and a selected `File` exists only for the
 current browser session. Reset clears the native file input through its ref.
 
+The shipped `nativeControls` intentionally preserve browser protocols:
+
+- visible `text`, `textarea`, `number`, and `date` fields submit strings;
+- an empty visible optional text-like field submits `""`, while a preserved
+  hidden or disabled `undefined` value emits no serializer entry;
+- `number` stores `number | undefined` but native `FormData` still contains a
+  string such as `"42"`;
+- `date` stores the native `YYYY-MM-DD` string and submits that same string;
+- a checked native checkbox submits `"true"`, and an unchecked visible
+  checkbox is absent from `FormData`;
+- hidden or disabled preserved checkbox values serialize as `"true"` or
+  `"false"` so schema coercion can distinguish both states;
+- a visible file control submits the selected `File`; there is no serializer
+  for hidden or disabled file preservation, because browsers do not expose a
+  portable hidden-file representation.
+
+Server schemas therefore remain responsible for coercing strings to numbers,
+dates, booleans, optional strings, and application-specific file rules. Fokit
+does not decode native control entries from the React registry on the server.
+
 A native control may intentionally follow browser absence semantics, such as
 an unchecked checkbox. Its schema must accept or coerce the resulting
 normalized representation. A control with `formData.mode: 'none'` works in
@@ -2136,7 +2347,9 @@ definition or an internal shared validator used by browser and server flows.
 ### Supported
 
 - custom controls;
-- custom field, section, array, array-item, and error slots;
+- shipped native controls plus custom registry composition;
+- default, custom, or partially overridden field, section, array, array-item,
+  and error slots;
 - native and serialized control `FormData` behavior;
 - reactive and imperative append, insert, remove, and move operations;
 - static root classes and public state/layout data attributes;
@@ -2229,8 +2442,9 @@ registered slots or through the additive `className` escape hatch.
 
 A default visual theme would make the shortest demo attractive but would
 compete with the application's design system and expand Fokit's compatibility
-surface. The optional stylesheet remains structural only and is never imported
-automatically.
+surface. Fokit's default slots deliberately stop at unstyled semantic markup
+and accessible action labels. The optional stylesheet remains structural only
+and is never imported automatically.
 
 ### No stylesheet at all
 
@@ -2286,6 +2500,13 @@ Before the API is considered stable, the implementation must prove:
 - label, description, and error ARIA relationships;
 - `noValidate` on generated forms and `meta.invalid` parity with rendered
   errors;
+- default slots preserve all structural props, render accessible English array
+  action labels, accept string/function i18n overrides, and allow partial slot
+  overrides without changing omitted slots;
+- `createFormKit({ controls: nativeControls })` renders a working generated
+  form while leaving controls explicit;
+- native control types, options, read-only behavior, and hidden/disabled
+  serializer behavior match their documented contracts;
 - native `FormData` parity for control-contract fixtures, empty arrays, absent
   checkboxes, repeated values, dates, numbers, and files;
 - exact `__fokit.array` marker behavior and rejection of malformed or unknown
@@ -2321,7 +2542,10 @@ CI must include at least:
 - packed-tarball smoke projects for Vite, Next.js Server/Client Components,
   ESM import, CommonJS require, `fokit/core`, `fokit/server`, and every package
   export;
-- package checks with `publint` and Are the Types Wrong.
+- package checks with `publint` and Are the Types Wrong;
+- documentation-site verification that runs source-content tests, docs
+  TypeScript checks, the Vocs static build, Markdown audit, generated-output
+  assertions, and documentation E2E coverage.
 
 ## Resolved product decisions
 
@@ -2343,6 +2567,10 @@ The product has no unresolved public-API questions in this specification:
    reset modes.
 8. Every control declares native, serialized, or unavailable `FormData`
    behavior.
+9. Controls remain explicit, while omitted or partial slots resolve from
+   English unstyled defaults.
+10. The shipped native controls cover text, textarea, select, checkbox,
+    number, date, and single-file values only.
 
 Implementation discoveries may refine private algorithms, but changing these
 contracts requires an explicit specification update rather than an implicit

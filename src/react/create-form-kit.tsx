@@ -11,6 +11,7 @@ import {
 } from "../core/index.js"
 import { createAutoFormComponent } from "./auto-form.js"
 import type { ControlDefinitionRegistry } from "./control.js"
+import { createDefaultSlots } from "./default-slots.js"
 import { createFieldsComponent } from "./fields.js"
 import type { NativeFormProps } from "./form.js"
 import {
@@ -38,7 +39,7 @@ export type FormKitSlots = {
 
 export type CreateFormKitOptions<Controls extends ControlDefinitionRegistry> = {
 	readonly controls: Controls
-	readonly slots: FormKitSlots
+	readonly slots?: Partial<FormKitSlots>
 }
 
 export type DefineForm<Controls extends ControlDefinitionRegistry> = {
@@ -86,7 +87,11 @@ export type FormKit<Controls extends ControlDefinitionRegistry> = {
 export function createFormKit<Controls extends ControlDefinitionRegistry>(
 	options: CreateFormKitOptions<Controls>,
 ): FormKit<Controls> {
-	assertSlots(options.slots)
+	const slots = Object.freeze({
+		...createDefaultSlots(),
+		...options.slots,
+	})
+	assertSlots(slots)
 
 	const defineForm = ((definition?: unknown) => {
 		if (definition === undefined) {
@@ -99,12 +104,12 @@ export function createFormKit<Controls extends ControlDefinitionRegistry>(
 
 	return Object.freeze({
 		controls: options.controls,
-		slots: options.slots,
+		slots,
 		defineForm,
 		Form: createFormComponent(options.controls),
 		Submit,
-		Fields: createFieldsComponent(options.controls, options.slots),
-		AutoForm: createAutoFormComponent(options.controls, options.slots),
+		Fields: createFieldsComponent(options.controls, slots),
+		AutoForm: createAutoFormComponent(options.controls, slots),
 	})
 }
 

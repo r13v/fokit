@@ -5,8 +5,9 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import type { FormInput, ImperativeFormIssue } from "../core/index.js"
 import { FieldControl } from "./control.js"
-import { createFormKit } from "./create-form-kit.js"
+import { createFormKit, type FormKitSlots } from "./create-form-kit.js"
 import { useFormState } from "./hooks.js"
+import type { FieldSlotProps } from "./slots.js"
 import { type TestValues, testKit, textControl } from "./test-kit.js"
 import { useForm } from "./use-form.js"
 
@@ -48,7 +49,31 @@ function defaultValues(): FormInput<TestSchema> {
 }
 
 describe("createFormKit", () => {
-	it("requires every structural slot and normalizes definitions with kit controls", () => {
+	it("normalizes definitions with kit controls when slots are omitted", () => {
+		const kit = createFormKit({
+			controls: {
+				text: textControl,
+			},
+		})
+
+		expect(() =>
+			kit.defineForm({
+				schema,
+				ui: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+					},
+				],
+			}),
+		).not.toThrow()
+
+		expectResolvedSlots(kit.slots)
+		expect(Object.isFrozen(kit.slots)).toBe(true)
+	})
+
+	it("preserves custom kits while defaulting omitted slots", () => {
 		expect(() =>
 			testKit.defineForm({
 				schema,
@@ -75,9 +100,50 @@ describe("createFormKit", () => {
 				],
 			}),
 		).not.toThrow()
+
+		const Field = ({ rootProps, label, control }: FieldSlotProps) => (
+			<div {...rootProps} data-custom-field="">
+				{label}
+				{control}
+			</div>
+		)
+		const kit = createFormKit({
+			controls: {
+				text: textControl,
+			},
+			slots: {
+				Field,
+			},
+		})
+		const definition = kit.defineForm({
+			schema,
+			ui: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					label: "Name",
+				},
+			],
+		})
+
+		render(
+			<kit.AutoForm
+				defaultValues={defaultValues()}
+				definition={definition}
+				id="partial"
+			/>,
+		)
+
+		expect(screen.getByText("Name").getAttribute("data-custom-field")).toBe("")
+		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+			"Ada",
+		)
+		expect(kit.slots.Field).toBe(Field)
+		expectResolvedSlots(kit.slots)
 	})
 
-	it("throws when a required structural slot is missing", () => {
+	it("throws when an explicit slot override removes a resolved slot", () => {
 		const create = createFormKit as (options: unknown) => unknown
 
 		expect(() =>
@@ -85,7 +151,9 @@ describe("createFormKit", () => {
 				controls: {
 					text: textControl,
 				},
-				slots: {},
+				slots: {
+					Field: undefined,
+				},
 			}),
 		).toThrow(/Field slot/i)
 	})
@@ -197,4 +265,12 @@ function issue(path: string, message: string): ImperativeFormIssue {
 		path,
 		message,
 	}
+}
+
+function expectResolvedSlots(slots: FormKitSlots) {
+	expect(slots.Field).toBeTypeOf("function")
+	expect(slots.Section).toBeTypeOf("function")
+	expect(slots.Array).toBeTypeOf("function")
+	expect(slots.ArrayItem).toBeTypeOf("function")
+	expect(slots.ErrorMessage).toBeTypeOf("function")
 }

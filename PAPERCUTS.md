@@ -218,6 +218,10 @@ Adding syntax validation for embedded TypeScript examples → the installed Type
 
 Clearing a controlled React input during in-app browser QA → Playwright's `fill("")` left the value intact in this wrapper. Select all, press Backspace, and assert the resulting value before testing validation.
 
+## 2026-07-29 14:23 — GPT-5
+
+Running Knip after adding Vocs physical snippet includes → `docs-site/src/snippets/*.ts(x)` were reported as unused because `// [!include ...]` is not a JavaScript import. Add snippet globs to the docs-site Knip entry list when introducing Vocs physical includes.
+
 ## 2026-07-29 10:37 — GPT-5
 
 Pruning unreferenced generated QA screenshots before publishing → the command guard rejected an explicit `rm -f` even though every target was a known untracked artifact. Move such files to a task-specific `/tmp` backup instead so cleanup remains recoverable.
@@ -225,3 +229,127 @@ Pruning unreferenced generated QA screenshots before publishing → the command 
 ## 2026-07-29 10:38 — GPT-5
 
 Opening the draft PR through the connected GitHub app → GitHub returned `403 Resource not accessible by integration` despite the repository being readable and the branch already being pushed. Fall back to the authenticated `gh` session when the connector installation lacks pull-request write access.
+
+## 2026-07-29 11:34 — GPT-5
+
+Updating the confirmed implementation plan → an `apply_patch` hunk was built from overlapping inspection output and included a duplicated context line that was not present in the file. Re-read the exact numbered lines before patching when adjacent `sed` ranges overlap.
+
+## 2026-07-29 12:12 — GPT-5
+
+Replacing the direct Twoslash plan with the confirmed Vocs migration → a broad `apply_patch` hunk assumed the “Proposed details” line was a Markdown heading, so the otherwise valid patch was rejected. Split large plan rewrites into exact inspected sections before changing unrelated headings.
+
+## 2026-07-29 13:01 — GPT-5
+
+Auditing stale plan terms with `rg` → backticks inside a double-quoted shell pattern were interpreted as command substitutions and produced an invalid multiline regex. Use single-quoted search patterns whenever Markdown code spans appear in shell arguments.
+
+## 2026-07-29 13:18 — GPT-5
+
+Adding native choice/file FormData tests → one broad `apply_patch` mixed distant insertion points and missed the exact closing context near the file end. Split multi-region test edits into smaller patches after re-reading local anchors.
+
+## 2026-07-29 13:22 — GPT-5
+
+Implementing read-only native file controls → Biome rejects `aria-readonly` on `input[type=file]` even though the plan requires an explicit exposed read-only state because the element has no native `readOnly`. Keep the suppression local to the file input and include the contract reason.
+
+## 2026-07-29 13:31 — GPT-5
+
+Adding root-entry CJS declaration smoke coverage → importing representative `fokit` React types from the Node CJS fixture exposed missing React and DOM type prerequisites. Give root-entry type fixtures `@types/react` and DOM libs instead of treating them like core/server-only consumers.
+
+## 2026-07-29 13:39 — GPT-5
+
+Writing the replacement docs-site source tests → the new Node test file assumed a global `test` binding, but this repo's direct `node --test` run requires importing it from `node:test`. Import `test` explicitly in standalone `.mjs` tests.
+
+## 2026-07-29 13:58 — GPT-5
+
+Inspecting generated Vocs output → an `rg` query over `docs-site/dist/public`
+scanned bundled JavaScript assets and produced megabytes of truncated output.
+Use `find` for generated artifact names or exclude `assets/` before content
+searches.
+
+## 2026-07-29 13:58 — GPT-5
+
+Updating Knip docs-site patterns → `knip.json` could not register the CSS
+compiler needed for `src/**/*.css`, and Knip's compiler hints stayed global
+unless workspaces were explicit. Use an ESM Knip config with compiler functions
+and run Knip with explicit workspace filters.
+
+## 2026-07-29 14:06 — GPT-5
+
+Inspecting docs-site source files → `find docs-site -maxdepth 3 -type f`
+traversed `node_modules` and returned truncated output. Exclude
+`node_modules`, `dist`, and generated QA folders when listing authored
+docs-site sources.
+
+## 2026-07-29 14:10 — GPT-5
+
+Building migrated Vocs pages → the inactive legacy `docs-site/src/content.js`
+source still said FormData mode `"unavailable"`, but the implemented public
+API uses `"none"`. Prefer current source/tests over stale migration text when
+copying examples.
+
+## 2026-07-29 14:32 — GPT-5
+
+Running the docs-site Playwright gate → Vocs 2.7.2 rejected the preview
+webServer's `--strictPort` flag before tests could start. Drop the unsupported
+flag or start Vocs preview through a wrapper that owns strict port checks.
+
+## 2026-07-29 14:37 — GPT-5
+
+Testing the Vocs preview build locally → the production `baseUrl` emitted a
+`<base>` tag that sent dynamic imports to GitHub Pages, so the page SSR rendered
+but client components did not hydrate. Let verification builds override
+`baseUrl` with the local preview origin.
+
+## 2026-07-29 14:41 — GPT-5
+
+Testing Vocs' copy-code button in Playwright → `navigator.clipboard` was not
+available reliably enough for the component to flip its copied state. Stub the
+clipboard API in the test and assert the copied command text, not just the
+button attribute.
+
+## 2026-07-29 14:47 — GPT-5
+
+Running the final `npm run knip` gate → Knip passed but emitted a configuration hint that `docs-site` entry pattern `src/components/**/*.ts` has no matches. Remove the stale pattern or add a matching helper file if TypeScript component modules return.
+
+## 2026-07-29 14:50 — GPT-5
+
+Reading changed React source in full context for a review → I tried to inspect a guessed `src/react/field-node.tsx` file that does not exist. Use `rg --files src/react` before probing nearby implementation filenames.
+
+## 2026-07-29 14:53 — GPT-5
+
+Checking generated Vocs metadata during review → `rg` over `docs-site/dist/public` with assets excluded still matched huge generated HTML files and truncated the output. Prefer targeted `grep -n`/`sed` on a single HTML file or search only `sitemap.xml`/`robots.txt` for metadata checks.
+
+## 2026-07-29 14:56 — GPT-5
+
+Verifying review findings with focused commands → I guessed a non-existent
+`src/react/hooks.tsx` path, a missing `tests/package/package-json.test.ts`
+file, the default Vitest config for `tests/package`, and a Jest-only
+`--runInBand` flag for Vitest. Use `rg --files` for test filenames,
+`npm run test:package -- <files>` for package tests, and this repo's plain
+`npm test -- <files>` Vitest form for source tests.
+
+## 2026-07-29 15:11 — GPT-5
+
+Checking Vocs base path behavior during review → `rg` over
+`docs-site/node_modules/vocs` and `docs-site/node_modules/waku` scanned bundled
+assets and returned truncated output. Limit searches to package `src/`
+subtrees or exclude generated `dist` files when inspecting installed packages.
+
+## 2026-07-29 15:11 — GPT-5
+
+Reading multiple MDX and snippet files with line numbers → macOS `nl` rejected
+multiple file operands and printed usage instead of content. Run `nl -ba` once
+per file, or use a small formatter only when grouped output is necessary.
+
+## 2026-07-29 15:46 — GPT-5
+
+Patching the docs-site form-kit snippet during review → a combined
+`apply_patch` hunk carried too much checkbox context and failed twice before
+the exact smaller hunks applied. Split multi-control JSX patches by element
+when handlers have near-identical shapes.
+
+## 2026-07-29 15:58 — GPT-5
+
+Squashing repeated review-fix commits during finalize → a noninteractive
+`GIT_SEQUENCE_EDITOR` command used shell-expanded `$1`, stripping hashes from
+the rebase todo file. Use single-quoted editor commands or escape replacement
+backreferences before running interactive rebase automation.

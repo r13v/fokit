@@ -1,0 +1,136 @@
+---
+title: Types
+description: The TypeScript contracts that connect schemas, definitions, controls, and slots.
+---
+
+# Types
+
+Fokit derives editable input and submitted output from Standard Schema, then
+carries those types through field paths, controls, hooks, commands, slots, and
+server results.
+
+## Input and output
+
+Standard Schema can transform values. Fokit keeps editable input and validated
+output separate.
+
+```ts twoslash
+import type { FormInput, FormOutput } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({
+	name: z.string(),
+	age: z.string().transform(Number),
+})
+
+type Draft = FormInput<typeof schema>
+type Saved = FormOutput<typeof schema>
+```
+
+The store contains `FormInput<Schema>`. A successful submit handler receives
+`FormOutput<Schema>`.
+
+## Definitions and UI nodes
+
+`FormDefinition` combines one schema, a control registry, and a readonly UI
+tree. `kit.defineForm` returns a frozen `NormalizedFormDefinition`.
+
+- `FieldNode`: typed field path, one control discriminator, labels, options,
+  and interaction policies.
+- `SectionNode`: child grouping plus responsive column intent.
+- `ArrayNode`: array path, item defaults, stable row rendering, and nested
+  relative nodes.
+- `RelativeUiNode`: the node shape used inside array items.
+
+## Instance and options
+
+`FormInstance<Schema, Context>` carries schema and context generics through
+selectors and commands. `UseFormOptions<Schema, Context>` configures defaults,
+runtime context, validation, update hooks, submit behavior, disabled state, and
+read-only state.
+
+```ts twoslash
+import type { FormInstance, UseFormOptions } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string() })
+type Context = { readonly locked: boolean }
+
+type ProfileForm = FormInstance<typeof schema, Context>
+type ProfileOptions = UseFormOptions<typeof schema, Context>
+```
+
+## Control inference
+
+`defineControl` validates which value a component accepts. `createFormKit`
+preserves literal control names and option types from the registry.
+
+- `ControlProps<Value, Options, Context>`: component props for one registered
+  control.
+- `ControlValueOf`, `ControlOptionsOf`, and `ControlContextOf`: extract
+  inferred types from a control definition.
+- `IsValidControlValue`: rejects unsupported control values at the definition
+  boundary.
+- `NativeTextOptions`, `NativeTextareaOptions`, `NativeSelectOptions`,
+  `NativeNumberOptions`, `NativeDateOptions`, and `NativeFileOptions`: option
+  types for the shipped native controls.
+
+## Structural slot props
+
+Every slot receives root props that preserve Fokit's DOM protocol and
+accessible relationships.
+
+- `FieldSlotProps`: label, description, control, errors, and resolved state.
+- `SectionSlotProps`: heading content, layout props, and child nodes.
+- `ArraySlotProps`: label, errors, add command, guards, and row children.
+- `ArrayItemSlotProps`: stable row identity and guarded remove/move commands.
+- `ErrorMessageSlotProps`: one issue plus focusable root props.
+
+`DefaultSlotsI18n`, `DefaultArrayAddI18nData`, `DefaultArrayItemI18nData`, and
+`DefaultSlotI18nValue` describe the message contract accepted by
+`createDefaultSlots({ i18n })`.
+
+## Snapshot and issues
+
+Selectors receive an immutable `FormSnapshot` that separates raw issues from
+display policy.
+
+- `FormSnapshot`: values, metadata, resolved UI, issues, display issues,
+  validation status, and submission state.
+- `FormIssue`: client issue state.
+- `SubmissionIssue`: serializable server issue transport.
+- `DisplayFormErrors`: only form and field issues currently exposed to the
+  user.
+- `ValidationStatus`: unvalidated, valid, invalid, or validating.
+
+## Paths
+
+Deep paths are typed from `FormInput`, while runtime helpers use one canonical
+dotted format.
+
+```ts twoslash
+import type { ArrayFieldPath, FieldPath, PathValue } from "fokit"
+
+type Draft = {
+	contacts: readonly { email: string }[]
+	name: string
+}
+
+type AnyField = FieldPath<Draft>
+type ArrayPath = ArrayFieldPath<Draft>
+type Email = PathValue<Draft, "contacts.0.email">
+```
+
+Core helpers such as `parsePath`, `formatPath`, `isSamePath`, and
+`pathsOverlap` avoid unsafe string-prefix checks.
+
+## Result types
+
+Server APIs return discriminated, serializable results.
+
+- `ParseResult<Output>`: success with validated output, or failure with
+  normalized issues and `reply()`.
+- `FormResult`: serializable success/error transport understood by
+  `ActionForm`.
+- `ParseFormDataOptions`: safety limits for entries, path length, nesting
+  depth, and array indexes.

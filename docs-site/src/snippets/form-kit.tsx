@@ -124,8 +124,22 @@ export const selectControl = defineControl<
 				name={input.name}
 				onBlur={blur}
 				onChange={(event) => {
-					if (!readOnly) {
-						setValue(event.currentTarget.value)
+					if (readOnly) {
+						event.preventDefault()
+						event.currentTarget.value = value
+						return
+					}
+
+					setValue(event.currentTarget.value)
+				}}
+				onKeyDown={(event) => {
+					if (readOnly && isSelectMutationKey(event.key)) {
+						preventReadOnlyEvent(event)
+					}
+				}}
+				onMouseDown={(event) => {
+					if (readOnly) {
+						preventReadOnlyEvent(event)
 					}
 				}}
 				ref={input.ref}
@@ -169,8 +183,22 @@ export const checkboxControl = defineControl<boolean>({
 				name={input.name}
 				onBlur={blur}
 				onChange={(event) => {
-					if (!readOnly) {
-						setValue(event.currentTarget.checked)
+					if (readOnly) {
+						event.preventDefault()
+						event.currentTarget.checked = value
+						return
+					}
+
+					setValue(event.currentTarget.checked)
+				}}
+				onClick={(event) => {
+					if (readOnly) {
+						preventReadOnlyEvent(event)
+					}
+				}}
+				onKeyDown={(event) => {
+					if (readOnly && isActivationKey(event.key)) {
+						preventReadOnlyEvent(event)
 					}
 				}}
 				ref={input.ref}
@@ -186,6 +214,31 @@ export const checkboxControl = defineControl<boolean>({
 		},
 	},
 })
+
+function preventReadOnlyEvent(event: {
+	preventDefault(): void
+	stopPropagation(): void
+}) {
+	event.preventDefault()
+	event.stopPropagation()
+}
+
+function isSelectMutationKey(key: string) {
+	return [
+		" ",
+		"Enter",
+		"ArrowDown",
+		"ArrowUp",
+		"End",
+		"Home",
+		"PageDown",
+		"PageUp",
+	].includes(key)
+}
+
+function isActivationKey(key: string) {
+	return key === " " || key === "Enter"
+}
 
 function FieldSlot({
 	rootProps,

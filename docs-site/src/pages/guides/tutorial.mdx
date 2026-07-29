@@ -1,0 +1,431 @@
+---
+title: Tutorial
+description: Build a generated Fokit form from the shipped defaults to production boundaries.
+---
+
+# Tutorial
+
+This tutorial builds one generated profile form with a schema, shipped native
+controls, default structural slots, validation, classic React submission,
+conditional UI, arrays, manual subscriptions, server FormData parsing, React 19
+Actions, and optional layout CSS.
+
+The complete checked code lives in the canonical Vocs snippets:
+
+- `docs-site/src/snippets/form-kit.tsx`
+- `docs-site/src/snippets/basic-form.tsx`
+- `docs-site/src/snippets/server-action.ts`
+
+## Install
+
+```sh
+npm install fokit zod
+npm install react react-dom
+```
+
+## Define the schema
+
+Fokit reads input and output types from Standard Schema. Zod works because it
+implements that contract.
+
+```ts twoslash
+import { z } from "zod"
+
+export const profileSchema = z
+	.object({
+		name: z.string().min(1, "Name is required"),
+		kind: z.enum(["person", "company"]),
+		companyName: z.string().optional(),
+		country: z.string().min(2, "Choose a country"),
+		newsletter: z.boolean(),
+		contacts: z.array(
+			z.object({
+				email: z.string().email("Use a valid email"),
+				label: z.string().optional(),
+			}),
+		),
+	})
+	.transform((input) => ({
+		...input,
+		contactCount: input.contacts.length,
+	}))
+```
+
+`FormInput<typeof profileSchema>` is the editable store shape. The submit
+handler receives the transformed output with `contactCount`.
+
+## Create the kit with native controls
+
+Start with the shipped registry and omitted slots:
+
+```ts twoslash
+import { createFormKit, nativeControls } from "fokit"
+
+export const kit = createFormKit({
+	controls: nativeControls,
+})
+```
+
+`createFormKit` resolves `Field`, `Section`, `Array`, `ArrayItem`, and
+`ErrorMessage` from `createDefaultSlots()` when `slots` is omitted. The default
+slots render English accessible markup and import no CSS.
+
+Customize messages or replace one slot without rebuilding every structural
+component:
+
+```ts twoslash
+import { createDefaultSlots, createFormKit, nativeControls } from "fokit"
+
+export const kit = createFormKit({
+	controls: nativeControls,
+	slots: {
+		...createDefaultSlots({
+			i18n: {
+				arrayAdd: "Add contact",
+				arrayRemove: ({ position }) => `Remove contact ${position}`,
+			},
+		}),
+	},
+})
+```
+
+For product-specific controls, compose `nativeControls` with your own
+`defineControl` entries.
+
+## Define fields
+
+The form definition binds schema paths to registered control names:
+
+```ts twoslash
+import { createFormKit, nativeControls } from "fokit"
+import { z } from "zod"
+
+const profileSchema = z.object({
+	name: z.string(),
+	kind: z.enum(["person", "company"]),
+	companyName: z.string().optional(),
+})
+const kit = createFormKit({ controls: nativeControls })
+type ProfileContext = unknown
+
+// ---cut---
+import { computed, type FormInput, type FormOutput } from "fokit"
+
+export type ProfileInput = FormInput<typeof profileSchema>
+export type ProfileOutput = FormOutput<typeof profileSchema>
+
+export const profileDefinition = kit.defineForm<ProfileContext>()({
+	schema: profileSchema,
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: "Name",
+			required: true,
+			options: {
+				placeholder: "Ada Lovelace",
+				autoComplete: "name",
+			},
+		},
+		{
+			kind: "field",
+			path: "companyName",
+			control: "text",
+			label: "Company name",
+			visible: computed<
+				readonly ["kind"],
+				boolean,
+				ProfileContext,
+				ProfileInput
+			>(["kind"] as const, ({ kind }) => kind === "company"),
+			valuePolicy: "unset",
+		},
+	],
+})
+```
+
+`valuePolicy: "unset"` is allowed only for optional paths. When the field is no
+longer visible, Fokit removes the value through the same transaction model used
+for user edits.
+
+## Dynamic options are computed options
+
+Put a computed value in `options` and read runtime context.
+
+```ts twoslash
+import { computed } from "fokit"
+
+type ProfileContext = {
+	readonly countries: readonly { readonly value: string; readonly label: string }[]
+}
+type ProfileInput = {
+	readonly kind: "person" | "company"
+}
+
+// ---cut---
+const countryField = {
+	kind: "field",
+	path: "country",
+	control: "select",
+	label: "Country",
+	required: true,
+	options: computed<
+		readonly ["kind"],
+		{ readonly options: readonly { readonly value: string; readonly label: string }[] },
+		ProfileContext,
+		ProfileInput
+	>(["kind"] as const, (_values, { context }) => ({
+		options: context.countries,
+	})),
+}
+```
+
+Replacing context recomputes UI without marking the form dirty. If the new UI
+triggers `valuePolicy: "unset"`, Fokit commits that value change separately.
+
+## Render AutoForm
+
+`kit.AutoForm` creates the form store, renders all generated fields, validates
+on submit by default, and calls `onSubmit` with typed output.
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createFormKit, nativeControls } from "fokit"
+import { z } from "zod"
+
+const profileSchema = z.object({ name: z.string() })
+	.transform((input) => ({ ...input, contactCount: 1 }))
+const kit = createFormKit({ controls: nativeControls })
+const profileDefinition = kit.defineForm({
+	schema: profileSchema,
+	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+})
+const defaultValues = { name: "" }
+const context = undefined
+
+// ---cut---
+const generatedForm = (
+	<kit.AutoForm
+		definition={profileDefinition}
+		defaultValues={defaultValues}
+		context={context}
+		validation={{ mode: "blur", revalidateMode: "change" }}
+		onSubmit={({ value, formData }) => {
+			void value.contactCount
+			void formData
+		}}
+	>
+		<kit.Submit>Save profile</kit.Submit>
+	</kit.AutoForm>
+)
+```
+
+Use this for the common generated form path. Generated rendering still exposes
+native names, labels, descriptions, required state, read-only state, disabled
+state, issue relationships, and focus targets.
+
+## Compose manually when needed
+
+Manual composition uses the same instance:
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createFormKit, nativeControls, useForm } from "fokit"
+import { z } from "zod"
+
+const profileSchema = z.object({ name: z.string() })
+	.transform((input) => ({ ...input, contactCount: 1 }))
+const kit = createFormKit({ controls: nativeControls })
+const profileDefinition = kit.defineForm({
+	schema: profileSchema,
+	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+})
+const defaultValues = { name: "" }
+const context = undefined
+
+function ProfileStatus(_props: { readonly form: unknown }) {
+	return null
+}
+
+// ---cut---
+function ProfileEditor() {
+	const form = useForm(profileDefinition, {
+		defaultValues,
+		context,
+		onSubmit({ value }) {
+			void value.contactCount
+		},
+	})
+
+	return (
+		<kit.Form form={form}>
+			<kit.Fields />
+			<ProfileStatus form={form} />
+			<kit.Submit>Save profile</kit.Submit>
+		</kit.Form>
+	)
+}
+```
+
+Use `useValue`, `useField`, `useArrayField`, and `useFormState` for granular
+subscriptions. Array bindings expose stable row keys, so generated rows keep
+identity through append, insert, remove, and move.
+
+## Use transactions deliberately
+
+`beforeUpdate` sees the complete proposed transaction. Return `false` to
+cancel it, return replacement changes to rewrite it, or return `undefined` to
+accept it. `onUpdate` runs once after commit.
+
+```ts twoslash
+type Change = {
+	readonly type: "set" | "unset"
+	readonly path: string
+	readonly value: unknown
+}
+
+const options = {
+	beforeUpdate(event: { readonly changes: readonly Change[] }) {
+		let changed = false
+		const replacement = event.changes.map((change) => {
+			if (
+				change.type !== "set" ||
+				change.path !== "name" ||
+				typeof change.value !== "string"
+			) {
+				return change
+			}
+
+			const value = change.value.trimStart()
+			changed ||= value !== change.value
+			return { ...change, value }
+		})
+
+		return changed ? replacement : undefined
+	},
+}
+```
+
+Value-policy changes, array commands, reset, and manual commands all use the
+same deterministic transaction pipeline.
+
+## Parse FormData on the server
+
+Send native `FormData` to `parseFormData`. It rejects unsafe paths and reserved
+metadata before schema validation.
+
+```ts twoslash
+import { parseFormData } from "fokit/server"
+import { z } from "zod"
+
+const profileActionSchema = z.object({ name: z.string() })
+const formData = new FormData()
+
+// ---cut---
+async function saveProfileAction() {
+	const result = await parseFormData(formData, profileActionSchema)
+
+	if (!result.success) {
+		return result.reply()
+	}
+
+	return { status: "success", reset: "submitted" }
+}
+```
+
+Fokit uses dot paths and array markers named `__fokit.array`. Do not decode
+submission data with `Object.fromEntries`; repeated values and array markers
+carry structure. Server schemas should coerce browser protocol values such as
+number strings, date strings, and absent unchecked checkboxes into the domain
+shape they need.
+
+## Use React 19 Actions separately
+
+React 19 Actions are isolated:
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createFormKit, nativeControls } from "fokit"
+import { ActionForm, ActionSubmit } from "fokit/react19"
+import type { FormResult } from "fokit/server"
+import type { ComponentPropsWithoutRef } from "react"
+import { z } from "zod"
+
+const profileSchema = z.object({ name: z.string() })
+const kit = createFormKit({ controls: nativeControls })
+const profileDefinition = kit.defineForm({
+	schema: profileSchema,
+	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+})
+const defaultValues = { name: "" }
+declare const state: FormResult | undefined
+declare const saveProfileAction: NonNullable<
+	ComponentPropsWithoutRef<"form">["action"]
+>
+
+// ---cut---
+<ActionForm
+	action={saveProfileAction}
+	defaultValues={defaultValues}
+	definition={profileDefinition}
+	kit={kit}
+	result={state}
+>
+	<ActionSubmit>Save profile</ActionSubmit>
+</ActionForm>
+```
+
+Action forms are server-first. Fokit does not run client validation before
+dispatch. The server Action returns a serializable `FormResult`, and the
+hydrated form applies those errors or reset instructions.
+
+`ActionForm` throws before dispatch if an active value cannot be represented in
+FormData: `mode: "none"` controls are active, hidden or disabled native
+controls lack serializers, or a hidden or disabled file field would need hidden
+preservation.
+
+## Add layout only when wanted
+
+```ts twoslash
+// @filename: layout-css.d.ts
+declare module "fokit/layout.css" {}
+// @filename: example.ts
+
+// ---cut---
+import "fokit/layout.css"
+```
+
+The stylesheet uses `@layer fokit`, `:where(...)`, container queries, and four
+spacing variables. It does not style colors, type, borders, focus rings, or
+controls.
+
+## Test the examples
+
+This repository typechecks copyable examples with:
+
+```sh
+npm run test:docs
+```
+
+```tsx
+// [!include ~/snippets/form-kit.tsx]
+```
+
+```tsx
+// [!include ~/snippets/basic-form.tsx]
+```
+
+```ts
+// [!include ~/snippets/server-action.ts]
+```
+
+Run `npm run check` and `npm run knip` before reporting documentation changes
+done.
+
+## Product boundary
+
+Fokit focuses on typed form infrastructure and leaves schema-to-UI inference,
+visual builders, remote JSON form definitions, themes, middleware chains,
+wizards, autosave, async option loading, devtools, and React Native support to
+application code.

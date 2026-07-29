@@ -1,0 +1,89 @@
+---
+title: Styling
+description: Where Fokit's unstyled defaults end and application-owned styling begins.
+---
+
+# Styling
+
+Fokit ships optional structural CSS, not a visual theme. Applications own
+colors, typography, borders, focus rings, spacing rhythm, and control styling.
+The default slots are accessible semantic markup; they do not import CSS or
+carry product visuals.
+
+## Import the stylesheet
+
+Import the layout file explicitly when you want Fokit's responsive structure:
+
+```ts twoslash
+// @filename: layout-css.d.ts
+declare module "fokit/layout.css" {}
+// @filename: example.ts
+
+// ---cut---
+import "fokit/layout.css"
+```
+
+The JavaScript entries never import CSS automatically. That keeps custom kits,
+server bundles, and design-system adapters in charge of their own styling.
+
+## What the CSS does
+
+The stylesheet uses low-specificity `:where(...)` rules in `@layer fokit`. It
+reads public Fokit data attributes and provides:
+
+- stacked form, section, field, array, and array-item structure.
+- section grid layout.
+- one, two, three, and four effective columns through container queries at
+  `40rem` and `64rem`.
+- span handling, including `span: "full"`.
+- independent nested containers.
+
+It works with default slots and with custom slots that preserve the public
+`rootProps` and `layoutProps` they receive.
+
+## Custom properties
+
+Only these variables are public:
+
+```css
+.profile-form {
+	--fokit-column-gap: 1rem;
+	--fokit-row-gap: 0.75rem;
+	--fokit-stack-gap: 0.75rem;
+	--fokit-array-item-gap: 0.75rem;
+}
+```
+
+Fokit does not define colors, fonts, borders, shadows, focus rings, or control
+appearance.
+
+## Data attributes
+
+Generated forms and slots expose stable attributes such as:
+
+- `data-fokit-node="form"`
+- `data-fokit-node="field"`
+- `data-fokit-node="section"`
+- `data-fokit-node="array"`
+- `data-fokit-layout="grid"`
+- `data-fokit-columns="1" | "2" | "3" | "4"`
+- `data-dirty`, `data-touched`, `data-invalid`, `data-disabled`,
+  `data-readonly`, `data-validating`
+
+Boolean data attributes are omitted when false. Use these attributes for
+layout selectors and state styling, then style product classes normally.
+
+## Styling boundary
+
+Fokit does not ship a mandatory visual theme. `createDefaultSlots()` gives a
+semantic fallback so a generated form can render before the application
+customizes structure. `fokit/layout.css` gives optional layout behavior. The
+application still owns the visual system.
+
+Do not depend on private DOM order beyond the slot props you render yourself.
+If a component library needs a different wrapper structure, replace the
+relevant slots or controls and keep forwarding the public props.
+
+Fokit leaves themes, CSS-in-JS adapters, generated tokens, animation presets,
+component libraries, and product-specific density decisions to application
+code.

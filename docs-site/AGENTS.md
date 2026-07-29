@@ -1,12 +1,11 @@
 # Fokit Docs Site
 
-- Keep English and Russian lesson sets in parity unless the maintainer resolves
-  the launch scope differently.
-- Use hash routes such as `#/en/overview` and `#/ru/overview` so the site works
-  as a static GitHub Pages project without server rewrites.
-- The interactive lab must use Fokit's built public package exports, not source
-  imports or mocked APIs.
+- This is an English-only Vocs site with clean path routes for static GitHub Pages.
+- Keep authored pages in `src/pages` and let Vocs own navigation, search,
+  syntax highlighting, Markdown output, and static rendering.
+- Complete copyable TypeScript programs live as physical snippets under
+  `src/snippets` once the snippet migration task creates them.
+- Docs examples and interactive components must use public package imports from
+  `fokit`, not source imports or mocked APIs.
 - Do not add an OpenAI Sites worker, `.openai/hosting.json`, redirects, a custom
-  domain, analytics, or a server runtime.
-- Full copyable programs live in the root `examples/` directory. The docs site
-  imports those files as raw text instead of duplicating complete examples.
+  domain, analytics, API routes, or a server runtime.

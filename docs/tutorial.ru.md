@@ -1,16 +1,19 @@
 # Учебник: форма профиля на Fokit
 
 Этот учебник занимает около 15 минут. В нем собирается форма профиля со
-схемой, контролами приложения, всеми пятью слотами, сгенерированными полями,
-валидацией, классической отправкой React, условным UI, массивами, ручными
-подписками, серверным разбором FormData, React 19 Actions и опциональным CSS
-для раскладки.
+схемой, готовыми `nativeControls`, слотами по умолчанию, сгенерированными
+полями, валидацией, классической отправкой React, условным UI, массивами,
+ручными подписками, серверным разбором FormData, React 19 Actions и
+опциональным CSS для раскладки. Там, где нужен дизайн-системный виджет или
+своя разметка, tutorial показывает, как заменить отдельный control или slot.
 
-Полный код разделен на файлы:
+Публичный English tutorial опубликован как Vocs route:
+`https://r13v.github.io/fokit/guides/tutorial`. Полные проверяемые примеры
+теперь лежат в canonical snippets:
 
-- `examples/form-kit.tsx`
-- `examples/basic-form.tsx`
-- `examples/server-action.ts`
+- `docs-site/src/snippets/form-kit.tsx`
+- `docs-site/src/snippets/basic-form.tsx`
+- `docs-site/src/snippets/server-action.ts`
 
 ## 1. Установка
 
@@ -48,14 +51,52 @@ export const profileSchema = z
 `FormInput<typeof profileSchema>` - редактируемая форма в сторе. Submit
 handler получает преобразованный output с `contactCount`.
 
-## 3. Создайте свои контролы
+## 3. Начните с nativeControls
 
-Контролы - обычные React-компоненты. Fokit передает типизированное значение,
-метаданные, ARIA-связи и политику FormData.
+Для первой формы не нужно писать wrappers вокруг обычных HTML controls:
+
+```tsx
+import { createFormKit, nativeControls } from "fokit"
+
+export const kit = createFormKit({
+	controls: nativeControls,
+})
+```
+
+`nativeControls` - явный registry. Fokit не подбирает controls по Zod-схеме и
+не добавляет их автоматически к вашему registry, потому что control задает тип
+значения и FormData contract.
+
+Доступные controls:
+
+- `text`: `string | undefined`, options `type`, `placeholder`,
+  `autoComplete`;
+- `textarea`: `string | undefined`, options `placeholder`, `autoComplete`,
+  `rows`;
+- `select`: `string`, options `{ options: [{ value, label, disabled? }] }`;
+- `checkbox`: `boolean`;
+- `number`: `number | undefined`, options `min`, `max`, `step`,
+  `placeholder`;
+- `date`: `string | undefined`, options `min`, `max`;
+- `file`: `File | undefined`, option `accept`.
+
+Если нужен свой дизайн-системный control, он остается обычным
+React-компонентом. Fokit передает типизированное значение, metadata,
+ARIA-связи и политику FormData.
 
 ```tsx
 export const textControl = defineControl<string | undefined, TextOptions>({
-	component({ value, setValue, blur, input, meta, options, disabled, readOnly }) {
+	component({
+		value,
+		setValue,
+		blur,
+		input,
+		meta,
+		options,
+		disabled,
+		readOnly,
+		required,
+	}) {
 		return (
 			<input
 				aria-describedby={input["aria-describedby"]}
@@ -68,6 +109,7 @@ export const textControl = defineControl<string | undefined, TextOptions>({
 				placeholder={options.placeholder}
 				readOnly={readOnly}
 				ref={input.ref}
+				required={required}
 				value={value ?? ""}
 			/>
 		)
@@ -82,12 +124,38 @@ export const textControl = defineControl<string | undefined, TextOptions>({
 
 Сохраняйте `input.id`, `input.name`, `input.ref` и
 `input["aria-describedby"]`. Ставьте `aria-invalid` из `meta.invalid`,
-вызывайте `blur` на blur нативного элемента и `setValue` при изменениях.
+вызывайте `blur` на blur нативного элемента, `setValue` при изменениях и
+передавайте `disabled`, `readOnly`, `required` в подходящий DOM element.
 
-## 4. Создайте все пять слотов
+## 4. Используйте default slots или замените нужные
 
-Kit требует `Field`, `Section`, `Array`, `ArrayItem` и `ErrorMessage`. Слоты
-переносят props Fokit в вашу разметку и классы.
+`slots` в `createFormKit` теперь optional и partial. Если вы не передали slot,
+Fokit использует English default slots: доступную semantic HTML-разметку без
+темы, CSS, цветов, шрифтов или borders.
+
+Для русских подписей array actions используйте `createDefaultSlots({ i18n })`.
+Каждое сообщение может быть строкой или функцией:
+
+```tsx
+import { createDefaultSlots } from "fokit"
+
+const russianSlots = createDefaultSlots({
+	i18n: {
+		arrayAdd: "Добавить",
+		arrayRemove: ({ position }) => `Удалить контакт ${position}`,
+		arrayMoveUp: ({ position }) => `Поднять контакт ${position}`,
+		arrayMoveDown: ({ position }) => `Опустить контакт ${position}`,
+	},
+})
+```
+
+`arrayAdd` получает `{ label }`. `arrayRemove`, `arrayMoveUp` и
+`arrayMoveDown` получают `{ index, position }`, где `index` начинается с 0, а
+`position` - с 1. Если указать только часть ключей, остальные останутся
+English defaults.
+
+Заменяйте только те slots, которые нужны дизайну. Custom slot переносит props
+Fokit в вашу разметку и классы:
 
 ```tsx
 function FieldSlot({
@@ -116,24 +184,41 @@ function FieldSlot({
 }
 ```
 
-Полный набор слотов в `examples/form-kit.tsx` сохраняет root props, labels,
-descriptions, errors, кнопки add/remove/move для массивов и layout props.
+Полный набор слотов в `docs-site/src/snippets/form-kit.tsx` сохраняет root
+props, labels, descriptions, errors, кнопки add/remove/move для массивов и
+layout props.
 
 ## 5. Соберите kit и definition
 
 ```ts
+import { createDefaultSlots, createFormKit, nativeControls } from "fokit"
+
+const slots = createDefaultSlots({
+	i18n: {
+		arrayAdd: "Добавить контакт",
+		arrayRemove: ({ position }) => `Удалить контакт ${position}`,
+		arrayMoveUp: ({ position }) => `Поднять контакт ${position}`,
+		arrayMoveDown: ({ position }) => `Опустить контакт ${position}`,
+	},
+})
+
+export const kit = createFormKit({
+	controls: nativeControls,
+	slots,
+})
+```
+
+Если добавляете свой control, compose registry явно:
+
+```ts
 export const kit = createFormKit({
 	controls: {
-		text: textControl,
-		select: selectControl,
-		checkbox: checkboxControl,
+		...nativeControls,
+		money: moneyControl,
 	},
 	slots: {
+		...slots,
 		Field: FieldSlot,
-		Section: SectionSlot,
-		Array: ArraySlotComponent,
-		ArrayItem: ArrayItemSlot,
-		ErrorMessage: ErrorMessageSlot,
 	},
 })
 ```
@@ -169,11 +254,18 @@ export const profileDefinition = kit.defineForm<ProfileContext>()({
 
 ## 6. Dynamic options - это computed options
 
-Отдельного API `dynamicOptions` нет. Положите computed value в `options` и
+Положите computed value в `options` и
 читайте runtime context.
 
 ```ts
-options: computed<readonly ["kind"], SelectOptions, ProfileContext, ProfileInput>(
+import type { NativeSelectOptions } from "fokit"
+
+options: computed<
+	readonly ["kind"],
+	NativeSelectOptions,
+	ProfileContext,
+	ProfileInput
+>(
 	["kind"] as const,
 	(_values, { context }) => ({ options: context.countries }),
 )
@@ -278,6 +370,18 @@ return { status: "success", reset: "submitted" }
 Fokit использует dot paths и array markers с именем `__fokit.array`. Не
 разбирайте отправку через `Object.fromEntries`: repeated values и array markers
 несут структуру.
+
+`nativeControls` следуют browser FormData semantics:
+
+- visible `number` и `date` отправляют строки, schema должна их coercion-ить;
+- empty optional text-like field в visible DOM отправляет `""`, а preserved
+  hidden/disabled `undefined` не создает hidden entry;
+- checked checkbox отправляет `"true"`, unchecked visible checkbox отсутствует
+  в `FormData`;
+- hidden/disabled preserved checkbox сериализуется как `"true"` или `"false"`;
+- file control отправляет настоящий `File`, но browser не разрешает prefill
+  файла, поэтому начальное значение должно быть `undefined`; hidden/disabled
+  preserved file не имеет hidden serializer.
 
 ## 11. React 19 Actions отдельно
 

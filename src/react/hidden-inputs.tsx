@@ -83,6 +83,7 @@ export function assertFormDataCompatible<Context>(
 			continue
 		}
 
+		const value = getPathValue(snapshot.values, field.path)
 		const control = controls[field.control]
 		if (control === undefined) {
 			throw new TypeError(`Unknown control "${field.control}"`)
@@ -97,7 +98,8 @@ export function assertFormDataCompatible<Context>(
 		if (
 			control.formData.mode === "native" &&
 			(!field.visible || field.disabled) &&
-			control.formData.serialize === undefined
+			control.formData.serialize === undefined &&
+			value !== undefined
 		) {
 			throw new TypeError(
 				`${options.owner} cannot preserve field "${field.path}" while it is invisible or disabled without a serializer`,

@@ -1,0 +1,186 @@
+---
+title: Advanced
+description: Generated rendering, composition, submission, and state patterns for production forms.
+---
+
+# Advanced
+
+These patterns keep product markup in your application while using Fokit's
+transaction, validation, and serialization boundaries deliberately.
+
+## Accessibility
+
+Fokit supplies stable IDs, native names, described-by relationships, issue
+focus targets, required state, and native form semantics. Controls and slots
+decide the final markup, so they must forward the props they receive.
+
+- Controls should attach `input.id`, `input.name`, `input.ref`, and
+  `input["aria-describedby"]` to the successful native control.
+- Field slots should connect `labelProps` and `descriptionProps` to visible
+  label and description elements.
+- Error slots should render their root props so submit-time focus reaches the
+  right summary or field issue.
+- Disabled, read-only, and required state should remain semantic, not just
+  visual.
+
+## Generated and manual composition
+
+Use `kit.Fields` for the ordinary generated part of a form, then add bespoke
+controls, previews, summaries, or commands against the same `FormInstance`.
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createFormKit, nativeControls, useForm } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string() })
+const kit = createFormKit({ controls: nativeControls })
+const definition = kit.defineForm({
+	schema,
+	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+})
+
+function AccountPreview() {
+	return null
+}
+
+// ---cut---
+function ProfileEditor() {
+	const form = useForm(definition, {
+		defaultValues: { name: "" },
+	})
+
+	return (
+		<kit.Form form={form}>
+			<kit.Fields />
+			<AccountPreview />
+			<kit.Submit>Save profile</kit.Submit>
+		</kit.Form>
+	)
+}
+```
+
+## Reactive dependencies
+
+Use `computed()` for context-aware or value-aware UI state. Dependencies are
+explicit, so unrelated edits can reuse resolved UI instead of rerunning every
+option and visibility function.
+
+```ts twoslash
+import { computed } from "fokit"
+
+const companyNameField = {
+	kind: "field",
+	path: "companyName",
+	control: "text",
+	label: "Company name",
+	visible: computed(["kind"] as const, ({ kind }) => kind === "company"),
+	valuePolicy: "unset",
+}
+```
+
+Computed functions should stay synchronous and pure. Fetching remote options
+belongs in application data loading; pass the loaded data through form context.
+
+## Hidden values
+
+Hidden fields default to `valuePolicy: "preserve"`. Their value stays in the
+store and can still be represented in FormData when the control has a hidden
+serializer.
+
+Use `valuePolicy: "unset"` only for optional paths. When a field with that
+policy becomes hidden, Fokit removes the value through the same transaction
+pipeline used by direct edits.
+
+Disabled native controls need a serializer if a React 19 Action form must
+preserve their value while they are disabled or invisible.
+
+## Stable array identity
+
+Array commands update values, row keys, field metadata, and issues atomically.
+Keys stay with logical rows across insert, remove, and move.
+
+```ts twoslash
+import type { FormInstance } from "fokit"
+import { useArrayField } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({
+	contacts: z.array(z.object({ email: z.string() })),
+})
+
+declare const form: FormInstance<typeof schema>
+
+// ---cut---
+const contacts = useArrayField(form, "contacts")
+
+contacts.append({ email: "" })
+contacts.move(0, 1)
+contacts.remove(1)
+```
+
+Default array slots render native buttons for add, remove, move up, and move
+down. Caller-provided `createDefaultSlots({ i18n })` messages can customize the
+visible button text and accessible names.
+
+## Untrusted FormData
+
+Treat FormData as untrusted input. `parseFormData` rejects prototype keys,
+structural collisions, sparse arrays, unknown reserved metadata, excessive
+depth, and oversized indexes before schema validation.
+
+Request size, multipart parsing, file count, and file size limits still belong
+in your framework before calling `parseFormData`. Native controls preserve
+browser protocol values, so server schemas should coerce number and date
+strings when they need domain values.
+
+## React 19 Actions
+
+`ActionForm` does not wrap or replace the server Action. It observes pending
+state, validates compatibility, and synchronizes the returned `FormResult`.
+
+- Server issues can be installed without losing client field metadata.
+- Success can retain values, reset to the submitted result, or reset to
+  defaults.
+- User edits made during an in-flight Action are not overwritten by stale
+  server results.
+- File fields that cannot be represented by hidden preservation fail
+  compatibility checks before dispatch.
+
+## Structural layout
+
+`fokit/layout.css` owns responsive grids, spans, gaps, and structural data
+attributes. It deliberately does not theme colors, typography, controls, or
+product surfaces.
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createFormKit, nativeControls } from "fokit"
+
+const kit = createFormKit({ controls: nativeControls })
+declare const form: Parameters<typeof kit.Form>[0]["form"]
+
+// ---cut---
+;<kit.Form
+	form={form}
+	style={{
+		"--fokit-column-gap": "1.25rem",
+		"--fokit-row-gap": "1rem",
+	}}
+/>
+```
+
+The stylesheet is opt-in. The main `fokit` entry never imports it
+automatically, and default slots remain useful without it.
+
+## Public-boundary testing
+
+Test forms through labels, native submit, and visible issues. Typecheck
+examples from built package exports so documentation cannot drift away from
+the package.
+
+- Test store invariants without React through `fokit/core`.
+- Test controls and slots through the DOM they own.
+- Test package exports from packed ESM, CJS, React 18, and React 19 consumers.
+- Test Action flows with serialized `FormResult` values rather than private
+  store internals.

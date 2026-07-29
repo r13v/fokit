@@ -1,0 +1,82 @@
+---
+title: FAQs
+description: Common Fokit questions about defaults, themes, servers, and React versions.
+---
+
+# FAQs
+
+Fokit is deliberately opinionated about data, state, and native form behavior,
+and deliberately unopinionated about your visual system.
+
+## Why use Fokit instead of a smaller form hook?
+
+Use Fokit when a product needs schema-owned validation, typed transformations,
+generated and manual rendering, stable arrays, safe server FormData, and
+explicit React 19 support under one consistent state model. If you only need a
+few uncontrolled inputs and a submit handler, the browser may already be the
+simpler tool.
+
+## Are Fokit controls controlled or uncontrolled?
+
+Custom controls read their value from the store and write through `setValue`,
+so product state is controlled by Fokit. Native FormData behavior is still
+preserved through explicit control serialization. The `file` native control is
+the exception at the DOM display level: browsers own the selected file list,
+while Fokit stores the first selected `File | undefined`.
+
+## Does Fokit require Zod?
+
+No. Fokit accepts any implementation of Standard Schema. The documentation uses
+Zod because it is familiar and implements that contract.
+
+## Why are complete default values required?
+
+Complete editable input gives dirty comparison, reset, array metadata,
+hidden-field policies, and native serialization one deterministic baseline.
+Optional schema fields can still begin as `undefined` when that is part of
+`FormInput`.
+
+## Can I use an existing component library?
+
+Yes. Wrap each input component once with `defineControl`, then override any
+slot with the library's layout and feedback components. You can also start with
+`nativeControls` and replace only the controls that need product components.
+
+## What happens when a field becomes hidden?
+
+Visibility and value retention are separate. `valuePolicy` preserves the value
+by default; use `"unset"` for optional values that must leave the form when
+hidden. Preserved hidden values need a serializer when they must participate in
+FormData.
+
+## How do I reset a form?
+
+Call `form.reset()` or use a native reset button inside `kit.Form`. Fokit
+prevents the browser from rolling controlled inputs back independently and
+resets the store instead. You can also replace the baseline when a saved server
+value becomes the new starting point.
+
+## How do server errors reach fields?
+
+Return normalized `SubmissionIssue` values from the server. Classic flows can
+call `form.setIssues`; React 19 `ActionForm` consumes `FormResult` directly and
+installs matching field or form issues.
+
+## How do React 18 and React 19 differ?
+
+The main `fokit` entry supports classic submission in both versions. React 19
+Actions live only in `fokit/react19`, so React 18 consumers never load or
+typecheck Action-only APIs.
+
+## Does every field rerender on each change?
+
+No. The store uses external subscriptions. `useValue`, `useField`,
+`useArrayField`, and `useFormState` select focused slices, while `computed`
+declares the paths that can invalidate derived UI.
+
+## Why is there no built-in theme?
+
+Form state should not dictate product styling. `createDefaultSlots()` renders
+accessible unstyled structure, and `fokit/layout.css` is only optional
+structural CSS. Colors, typography, controls, spacing tokens, and interaction
+polish stay in your application.

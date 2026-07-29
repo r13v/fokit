@@ -10,6 +10,7 @@ import {
 	type FieldSlotProps,
 	type FokitCssVariable,
 	type FokitStyle,
+	type FormKitSlots,
 	type SectionSlotProps,
 	type StructuralRootProps,
 } from "../../src/index.js"
@@ -140,6 +141,31 @@ const kit = createFormKit({
 	},
 	slots,
 })
+
+const omittedSlotsKit = createFormKit({
+	controls: {
+		text,
+	},
+})
+
+type _omittedSlotsResolve = Expect<
+	Equal<typeof omittedSlotsKit.slots, FormKitSlots>
+>
+
+const partialSlotsKit = createFormKit({
+	controls: {
+		text,
+	},
+	slots: {
+		Field,
+	},
+})
+
+type _partialSlotsResolve = Expect<
+	Equal<typeof partialSlotsKit.slots, FormKitSlots>
+>
+
+type _customSlotsResolve = Expect<Equal<typeof kit.slots, FormKitSlots>>
 
 const exampleDefinition = kit.defineForm<ExampleContext>()({
 	schema,

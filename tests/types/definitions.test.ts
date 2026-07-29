@@ -61,6 +61,23 @@ const kit = createFormKit({
 	},
 })
 
+const omittedSlotsKit = createFormKit({
+	controls: {
+		optionalObject,
+		text,
+	},
+})
+
+const partialSlotsKit = createFormKit({
+	controls: {
+		optionalObject,
+		text,
+	},
+	slots: {
+		Field,
+	},
+})
+
 kit.defineForm({
 	schema,
 	ui: [
@@ -87,6 +104,30 @@ kit.defineForm({
 			path: "requiredName",
 			control: "text",
 			valuePolicy: "preserve",
+		},
+	],
+})
+
+omittedSlotsKit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "optionalName",
+			control: "text",
+			valuePolicy: "unset",
+		},
+	],
+})
+
+partialSlotsKit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "nested",
+			control: "optionalObject",
+			valuePolicy: "unset",
 		},
 	],
 })

@@ -1,0 +1,9 @@
+{
+	"extends": "../tsconfig.json",
+	"include": [
+		"vocs.config.ts",
+		"src/components/**/*.tsx",
+		"src/snippets/**/*.ts",
+		"src/snippets/**/*.tsx"
+	]
+}

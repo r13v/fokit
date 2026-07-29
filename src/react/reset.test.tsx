@@ -9,6 +9,7 @@ import { defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import { useFormContext } from "./form-context.js"
 import { useField, useFormState } from "./hooks.js"
+import { nativeControls } from "./native-controls.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -59,33 +60,10 @@ const textControl = defineControl<string>({
 	},
 })
 
-const fileControl = defineControl<File | undefined>({
-	component({ path, setValue, blur, input, disabled, readOnly }) {
-		return (
-			<input
-				aria-label={path}
-				disabled={disabled}
-				id={input.id}
-				name={input.name}
-				onBlur={blur}
-				onChange={(event) =>
-					setValue(event.currentTarget.files?.item(0) ?? undefined)
-				}
-				readOnly={readOnly}
-				ref={input.ref}
-				type="file"
-			/>
-		)
-	},
-	formData: {
-		mode: "native",
-	},
-})
-
 const kit = createFormKit({
 	controls: {
 		text: textControl,
-		file: fileControl,
+		file: nativeControls.file,
 	},
 	slots: {
 		Field: FieldSlot,
@@ -279,7 +257,7 @@ describe("classic React reset", () => {
 		const file = new File(["avatar"], "avatar.png", {
 			type: "image/png",
 		})
-		const input = screen.getByLabelText("avatar") as HTMLInputElement
+		const input = screen.getByLabelText("Avatar") as HTMLInputElement
 
 		await userEvent.upload(input, file)
 		expect(input.files).toHaveLength(1)

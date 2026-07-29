@@ -1,0 +1,161 @@
+---
+title: UI definitions
+description: Describe fields, sections, arrays, layout, and computed interaction state in one typed UI tree.
+showAskAi: false
+---
+
+# Design the form UI
+
+The schema decides whether data is valid. The `ui` tree decides what a person
+sees, how fields are grouped, and which control edits each value. Keeping those
+decisions separate lets a domain schema evolve without silently redesigning the
+form.
+
+`kit.defineForm({ schema, ui })` validates the tree once, freezes it, and keeps
+the result reusable across form instances.
+
+## Read the tree at a glance
+
+Every node has one of three jobs:
+
+| Node | Owns | Children |
+| --- | --- | --- |
+| `field` | One typed value path, its control, copy, and interaction state | none |
+| `section` | A semantic group and an optional one-to-four-column layout | other UI nodes |
+| `array` | One repeatable value path and the editor for each item | relative UI nodes |
+
+A section can contain fields, nested sections, and arrays. An array repeats its
+children for every item, resolving their paths relative to that item.
+
+<details>
+<summary>Open a complete section, conditional field, and array</summary>
+
+```tsx
+// [!include ~/snippets/form-kit.tsx:definition]
+```
+
+</details>
+
+## Connect paths to controls
+
+A field joins the data model to the rendering kit:
+
+| Property | Purpose |
+| --- | --- |
+| `path` | A canonical typed path such as `"name"` or `"address.city"` |
+| `control` | A key from the kit's control registry |
+| `options` | Options inferred from the selected control |
+| `label`, `description` | Accessible product copy rendered by the field slot |
+| `required` | Required presentation, native state, and ARIA |
+| `valuePolicy` | What happens to an optional value when the field becomes hidden |
+
+TypeScript rejects unknown paths, incompatible controls, and options that do not
+belong to the selected control. For example, a number path accepts the shipped
+`number` control but not `date`.
+
+`required` does not add a validation rule. Generated forms use the Standard
+Schema as the source of truth, so required validation belongs in the schema.
+
+## Group fields and describe layout
+
+A section has a required `id`, optional `title` and `description`, and a
+`children` array. Set `columns` to `1`, `2`, `3`, or `4`; the default is `1`.
+
+Direct children can set `span` to a column count or `"full"`. Inside a section,
+fields default to one column while nested sections and arrays default to the
+full row. Import `fokit/layout.css` for the shipped responsive grid, or forward
+the same layout props through a custom `Section` slot.
+
+`className` is static escape-hatch metadata for product styling. It does not
+change the form state model.
+
+## Derive UI from explicit dependencies
+
+Properties described as resolvable accept either a value or `computed(...)`.
+The dependency list makes invalidation explicit, and the resolver can read
+runtime `context` without adding that data to form values.
+
+| Node | Computed properties |
+| --- | --- |
+| `field` | `label`, `description`, `required`, `visible`, `disabled`, `readOnly`, `options` |
+| `section` | `title`, `description`, `visible`, `disabled`, `readOnly` |
+| `array` | `label`, `description`, `visible`, `disabled`, `readOnly` |
+
+Structure stays static: paths, controls, children, layout, classes, and array
+defaults are not computed. Change resolvable properties for dynamic UI; compose
+manually when the product needs a different tree.
+
+Resolvers are synchronous and pure. Fetch remote options in application data
+flow, pass them through `context`, and let `computed()` select the relevant
+result.
+
+See [Conditional fields](/guides/conditional-fields) for dependency and context
+examples.
+
+## Let interaction state flow through the tree
+
+Visibility and interaction state inherit from their parents:
+
+```text
+visible  = parent visible  AND node visible
+disabled = form disabled   OR parent disabled OR node disabled
+readOnly = form readOnly   OR parent readOnly OR node readOnly
+```
+
+Hiding a section hides its complete subtree. Disabling or making a section
+read-only also affects every descendant; arrays apply those states to add,
+remove, and reorder actions. `required` is field-only and does not inherit.
+
+`disabled` and `readOnly` retain values in the form store and validated output.
+They are interaction policies, not data-removal policies.
+
+## Choose what hidden means for data
+
+Visibility and stored values are separate decisions:
+
+| `valuePolicy` | Result when a field becomes hidden |
+| --- | --- |
+| `"preserve"` | Keep the value so it returns when the field is shown again. This is the default. |
+| `"unset"` | Remove the value through the normal transaction pipeline. |
+
+`"unset"` is available only for paths that can be absent or contain
+`undefined`. That keeps a UI transition from violating the editable input type.
+
+Hidden values still follow schema validation. If visibility changes whether a
+value is required, express that rule in the schema as well as in the UI.
+
+## Repeat relative fields with arrays
+
+An array node names an array `path`, provides `itemDefault`, and describes one
+item with relative child paths:
+
+| Property | Purpose |
+| --- | --- |
+| `path` | A typed path whose value is an array |
+| `itemDefault` | A complete new item or a function that creates one |
+| `children` | Fields, sections, or nested arrays relative to the item |
+| `label`, `description` | Copy for the complete repeatable group |
+
+Object defaults are cloned for every append, so rows do not share mutable
+containers. Stable row keys remain internal UI metadata and never enter form
+values or submitted data.
+
+Read [Arrays](/guides/arrays) for commands, row identity, array errors, and
+native `FormData`.
+
+## Know the generated boundary
+
+Generated definitions deliberately keep a narrow contract:
+
+- each data path appears once within its scope;
+- explicit node IDs are unique;
+- fields and arrays derive an ID from their path, while sections require one;
+- the tree contains fields, sections, and arrays—not arbitrary content nodes.
+
+Render actions, summaries, previews, and workflow content as `AutoForm`
+children. When product layout needs exact placement, compose `kit.Form`,
+`kit.Fields`, and granular hooks around the same definition and form instance.
+
+Continue with [Controls and design systems](/guides/controls) to change
+renderers, [Styling](/guides/styling) to apply the structural grid, or
+[Production recipes](/advanced) for manual composition.

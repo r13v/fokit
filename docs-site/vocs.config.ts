@@ -33,6 +33,7 @@ export default defineConfig({
 			text: "Guides",
 			collapsed: false,
 			items: [
+				{ text: "UI definitions", link: "/guides/ui-definitions" },
 				{ text: "Validation & errors", link: "/guides/validation" },
 				{
 					text: "Conditional fields",

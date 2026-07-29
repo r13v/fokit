@@ -396,3 +396,10 @@ Running the repository gates after a local Vocs preview → Vocs left
 `docs-site/src/pages.gen.ts` behind, so Biome rejected its generated formatting
 and Knip reported it as unused. Keep this preview artifact outside authored
 `src` or ignore and clean it in the preview script.
+
+## 2026-07-29 23:47 — GPT-5
+
+Capturing a deep-linked documentation section in the in-app browser →
+`waitForURL` timed out because GitHub Pages normalized `/fokit/api#…` to
+`/fokit/api/#…` even though navigation had succeeded. Read the resulting tab
+URL after direct navigation or include the canonical trailing slash.

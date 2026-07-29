@@ -85,6 +85,73 @@ const definition = kit.defineForm({
 })
 ```
 
+### UI node families
+
+The `ui` array is a typed tree:
+
+| `kind` | Data path | Purpose |
+| --- | --- | --- |
+| `"field"` | required | Connect one typed value to one registered control |
+| `"section"` | none | Group nodes and provide a responsive grid |
+| `"array"` | required | Repeat relative child nodes for every array item |
+
+All three node families accept `visible`, `disabled`, and `readOnly` as either
+booleans or `computed(...)` values. Those states inherit through sections and
+arrays. They also accept static `className` and `span`; the shipped layout uses
+`span` for direct children of a section grid.
+
+#### Field node
+
+| Property | Required | Type or default |
+| --- | --- | --- |
+| `path` | yes | Typed `FieldPath<FormInput<Schema>>` |
+| `control` | yes | A compatible key from this kit's control registry |
+| `id` | no | Derived from `path` |
+| `label`, `description` | no | `string` or `computed(...)` |
+| `required` | no | `boolean` or `computed(...)`; default `false` |
+| `visible` | no | `boolean` or `computed(...)`; default `true` |
+| `disabled`, `readOnly` | no | `boolean` or `computed(...)`; default `false` |
+| `valuePolicy` | no | `"preserve"` or `"unset"`; default `"preserve"` |
+| `options` | no | Options inferred from `control`, or `computed(...)` |
+| `className`, `span` | no | Static styling and grid metadata |
+
+`required` configures presentation, native state, and ARIA; validation still
+belongs to the Standard Schema. `"unset"` is available only for paths that can
+be absent or contain `undefined`.
+
+#### Section node
+
+| Property | Required | Type or default |
+| --- | --- | --- |
+| `id` | yes | Unique non-empty string without ASCII whitespace |
+| `children` | yes | Nested `field`, `section`, or `array` nodes |
+| `title`, `description` | no | `string` or `computed(...)` |
+| `columns` | no | `1`, `2`, `3`, or `4`; default `1` |
+| `visible` | no | `boolean` or `computed(...)`; default `true` |
+| `disabled`, `readOnly` | no | `boolean` or `computed(...)`; default `false` |
+| `className`, `span` | no | Static styling and grid metadata |
+
+Inside a section, fields default to `span: 1`; nested sections and arrays
+default to `span: "full"`.
+
+#### Array node
+
+| Property | Required | Type or default |
+| --- | --- | --- |
+| `path` | yes | Typed `ArrayFieldPath<FormInput<Schema>>` |
+| `itemDefault` | yes | A complete item or a function returning one |
+| `children` | yes | UI nodes with paths relative to one item |
+| `id` | no | Derived from `path` |
+| `label`, `description` | no | `string` or `computed(...)` |
+| `visible` | no | `boolean` or `computed(...)`; default `true` |
+| `disabled`, `readOnly` | no | `boolean` or `computed(...)`; default `false` |
+| `className`, `span` | no | Static styling and grid metadata |
+
+Definitions reject unknown controls, duplicate paths within one scope,
+duplicate node IDs, invalid layout ranges, and unsupported value policies.
+Read [UI definitions](/guides/ui-definitions) for inheritance, hidden-value
+behavior, arrays, layout, and manual-composition boundaries.
+
 ## AutoForm
 
 `kit.AutoForm` accepts native form props plus:
@@ -225,6 +292,34 @@ control.
 
 `nativeControls` contains `text`, `textarea`, `select`, `checkbox`, `number`,
 `date`, and single-file `file`.
+
+### nativeControls
+
+The shipped registry uses native HTML controls and preserves their value,
+accessibility, read-only, and `FormData` behavior:
+
+| Control | Store value | `options` |
+| --- | --- | --- |
+| `text` | `string \| undefined` | `type?: NativeTextType`, `placeholder?: string`, `autoComplete?: string` |
+| `textarea` | `string \| undefined` | `placeholder?: string`, `autoComplete?: string`, `rows?: number` |
+| `select` | `string` | `options: readonly { value: string; label: string; disabled?: boolean }[]` |
+| `checkbox` | `boolean` | none |
+| `number` | `number \| undefined` | `min?: number`, `max?: number`, `step?: number \| "any"`, `placeholder?: string` |
+| `date` | `string \| undefined` | `min?: string`, `max?: string` |
+| `file` | `File \| undefined` | `accept?: string`; one file |
+
+`NativeTextType` is `"text"`, `"email"`, `"password"`, `"search"`, `"tel"`,
+or `"url"`; omitted `type` renders `"text"`. `select.options` is required and
+has no separate placeholder property—represent a prompt as a real option when
+the product needs one.
+
+The exported option contracts are `NativeTextOptions`,
+`NativeTextareaOptions`, `NativeSelectOptions`, `NativeSelectOption`,
+`NativeNumberOptions`, `NativeDateOptions`, and `NativeFileOptions`. A field's
+`options` can also be computed from form dependencies or runtime context.
+
+See [Controls and design systems](/guides/controls) for adapter and serializer
+contracts.
 
 ## createDefaultSlots
 

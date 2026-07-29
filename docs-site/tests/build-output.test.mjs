@@ -45,6 +45,7 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/index.md",
 		"assets/md/get-started.md",
 		"assets/md/guides/tutorial.md",
+		"assets/md/guides/ui-definitions.md",
 		"assets/md/guides/validation.md",
 		"llms.txt",
 		"llms-full.txt",
@@ -145,6 +146,7 @@ test("Interactive Lab has meaningful generated Markdown fallbacks", async () => 
 	const llms = await readFile(new URL("llms.txt", publicRoot), "utf8")
 	assert.match(llms, /Build and submit your first typed Fokit form/)
 	assert.match(llms, /Grow the first Fokit form into a production-ready/)
+	assert.match(llms, /Describe fields, sections, arrays, layout/)
 	assert.match(llms, /Control when Fokit validates/)
 })
 

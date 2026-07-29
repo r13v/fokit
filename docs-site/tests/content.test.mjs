@@ -45,6 +45,13 @@ const canonicalPages = [
 		navText: "Build a production form",
 	},
 	{
+		path: "src/pages/guides/ui-definitions.mdx",
+		route: "/guides/ui-definitions",
+		title: "UI definitions",
+		description:
+			"Describe fields, sections, arrays, layout, and computed interaction state in one typed UI tree.",
+	},
+	{
 		path: "src/pages/guides/validation.mdx",
 		route: "/guides/validation",
 		title: "Validation and errors",
@@ -221,6 +228,12 @@ const requiredCorePageContent = {
 			"kit.Fields",
 			"useArrayField",
 			"useFormState",
+			"FieldPath",
+			"ArrayFieldPath",
+			"valuePolicy",
+			"NativeTextOptions",
+			"NativeSelectOptions",
+			"NativeFileOptions",
 			"createFormStore",
 			"computed",
 			"resolveUi",
@@ -298,6 +311,26 @@ const requiredCorePageContent = {
 }
 
 const requiredGuidePageContent = {
+	"src/pages/guides/ui-definitions.mdx": {
+		headings: [
+			"Read the tree at a glance",
+			"Connect paths to controls",
+			"Group fields and describe layout",
+			"Derive UI from explicit dependencies",
+			"Let interaction state flow through the tree",
+			"Choose what hidden means for data",
+			"Repeat relative fields with arrays",
+			"Know the generated boundary",
+		],
+		terms: [
+			"relative child paths",
+			"itemDefault",
+			"computed(...)",
+			"valuePolicy",
+			"fokit/layout.css",
+			"kit.Fields",
+		],
+	},
 	"src/pages/guides/tutorial.mdx": {
 		headings: [
 			"Model editable input and saved output",
@@ -731,7 +764,7 @@ test("Vocs config defines the static English documentation shell", async () => {
 	)
 	assert.match(
 		source,
-		/text:\s*"Guides"[\s\S]*text:\s*"Validation & errors"[\s\S]*link:\s*"\/guides\/validation"/,
+		/text:\s*"Guides"[\s\S]*text:\s*"UI definitions"[\s\S]*link:\s*"\/guides\/ui-definitions"[\s\S]*text:\s*"Validation & errors"[\s\S]*link:\s*"\/guides\/validation"/,
 	)
 	assert.match(
 		source,
@@ -752,6 +785,7 @@ test("sidebar follows the learning path before reference material", async () => 
 	const source = await readText("vocs.config.ts")
 	const getStarted = source.indexOf('link: "/get-started"')
 	const tutorial = source.indexOf('link: "/guides/tutorial"')
+	const uiDefinitions = source.indexOf('link: "/guides/ui-definitions"')
 	const validation = source.indexOf('link: "/guides/validation"')
 	const controls = source.indexOf('link: "/guides/controls"')
 	const api = source.indexOf('link: "/api"')
@@ -760,6 +794,7 @@ test("sidebar follows the learning path before reference material", async () => 
 	for (const index of [
 		getStarted,
 		tutorial,
+		uiDefinitions,
 		validation,
 		controls,
 		api,
@@ -769,7 +804,8 @@ test("sidebar follows the learning path before reference material", async () => 
 	}
 
 	assert.ok(getStarted < tutorial)
-	assert.ok(tutorial < validation)
+	assert.ok(tutorial < uiDefinitions)
+	assert.ok(uiDefinitions < validation)
 	assert.ok(validation < controls)
 	assert.ok(controls < api)
 	assert.ok(api < types)

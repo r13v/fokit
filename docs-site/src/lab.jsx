@@ -77,6 +77,7 @@ const copy = {
 		accountDescription: "A compact account form rendered from AutoForm.",
 		name: "Name",
 		nameDescription: "Required before a classic submit can succeed.",
+		namePlaceholder: "Enter your name",
 		accountType: "Account type",
 		companyName: "Company name",
 		country: "Country",
@@ -121,6 +122,7 @@ const copy = {
 		accountDescription: "Компактная account form, отрендеренная AutoForm.",
 		name: "Имя",
 		nameDescription: "Обязательно для успешной classic submit.",
+		namePlaceholder: "Введите имя",
 		accountType: "Тип аккаунта",
 		companyName: "Название компании",
 		country: "Страна",
@@ -312,6 +314,7 @@ export function Lab({ locale }) {
 			aria-labelledby="lab-title"
 			className="lab-section"
 			data-testid="lab"
+			id="live-lab"
 		>
 			<div className="lab-heading">
 				<p>{t.kicker}</p>
@@ -376,7 +379,7 @@ function createDefinition(t) {
 						description: t.nameDescription,
 						required: true,
 						options: {
-							placeholder: "Ada Lovelace",
+							placeholder: t.namePlaceholder,
 							autoComplete: "name",
 						},
 					},
@@ -636,6 +639,7 @@ function ErrorMessageSlot({ rootProps, issue }) {
 		<p
 			{...rootProps}
 			className={joinClassNames("lab-error", rootProps.className)}
+			role="alert"
 		>
 			{issue.message}
 		</p>

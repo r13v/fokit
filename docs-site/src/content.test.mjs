@@ -1,77 +1,139 @@
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import { test } from "node:test"
+import { transformWithOxc } from "vite"
 import { z } from "zod"
 
 import {
-	curriculum,
 	exampleFiles,
-	getAdjacentLessons,
-	LESSON_IDS,
+	getAdjacentPages,
 	LOCALES,
+	PAGE_IDS,
+	pages,
 } from "./content.js"
 
 const repositoryRoot = new URL("../../", import.meta.url)
-const lessonSchema = z.object({
-	id: z.string(),
+const codeSchema = z.object({
+	id: z.string().min(1),
+	label: z.string().min(1),
+	source: z.string().min(1),
+})
+const metaItemSchema = z.union([
+	z.string().min(1),
+	z.object({
+		label: z.string().min(1),
+		href: z.string().min(1),
+	}),
+])
+const sectionSchema = z.object({
+	id: z.string().min(1),
+	navLabel: z.string().min(1),
 	title: z.string().min(1),
-	summary: z.string().min(1),
-	sections: z.array(z.string().min(1)).min(1),
-	links: z.array(z.object({ lessonId: z.string() })),
-	exampleIds: z.array(z.string()),
+	paragraphs: z.array(z.string().min(1)).min(1),
+	bullets: z.array(z.string().min(1)),
+	items: z.array(
+		z.object({
+			name: z.string().min(1),
+			description: z.string().min(1),
+		}),
+	),
+	code: codeSchema.optional(),
+	callout: z
+		.object({
+			title: z.string().min(1),
+			text: z.string().min(1),
+		})
+		.optional(),
+	exampleId: z.string().optional(),
+})
+const pageSchema = z.object({
+	id: z.string().min(1),
+	title: z.string().min(1),
+	subtitle: z.string().min(1),
+	lead: z.string().min(1),
+	metaGroups: z
+		.array(
+			z.object({
+				label: z.string().min(1),
+				items: z.array(metaItemSchema).min(1),
+			}),
+		)
+		.min(1),
+	sections: z.array(sectionSchema).min(1),
+	showLab: z.boolean().optional(),
 })
 
-test("curriculum keeps equivalent English and Russian lesson sets", () => {
+test("documentation keeps complete equivalent English and Russian page maps", () => {
 	assert.deepEqual(LOCALES, ["en", "ru"])
+	assert.deepEqual(PAGE_IDS, [
+		"get-started",
+		"api",
+		"types",
+		"advanced",
+		"faqs",
+	])
 
 	for (const locale of LOCALES) {
-		const lessons = curriculum[locale]
-		assert.ok(Array.isArray(lessons), `${locale} lessons must be an array`)
+		const localePages = pages[locale]
 		assert.deepEqual(
-			lessons.map((lesson) => lesson.id),
-			LESSON_IDS,
-			`${locale} lesson IDs must match the shared curriculum order`,
+			localePages.map((page) => page.id),
+			PAGE_IDS,
+			`${locale} page IDs must match the public navigation order`,
 		)
 
-		for (const lesson of lessons) {
-			lessonSchema.parse(lesson)
-			assert.equal(Object.hasOwn(lesson, "code"), false)
+		for (const page of localePages) {
+			pageSchema.parse(page)
+			const oppositeLocale = locale === "en" ? "ru" : "en"
+			const translatedPage = pages[oppositeLocale].find(
+				(item) => item.id === page.id,
+			)
+			assert.ok(translatedPage)
+			assert.deepEqual(
+				page.sections.map((section) => section.id),
+				translatedPage.sections.map((section) => section.id),
+				`${page.id} must keep section parity across locales`,
+			)
 		}
 	}
 })
 
-test("internal lesson links, adjacent links, and cross-locale pairs are valid", () => {
-	const lessonSet = new Set(LESSON_IDS)
+test("the five reference-equivalent sections are deep enough to be useful", () => {
+	const englishPages = Object.fromEntries(
+		pages.en.map((page) => [page.id, page]),
+	)
 
+	assert.ok(englishPages["get-started"].sections.length >= 6)
+	assert.ok(englishPages.api.sections.length >= 8)
+	assert.ok(englishPages.types.sections.length >= 7)
+	assert.ok(englishPages.advanced.sections.length >= 8)
+	assert.ok(englishPages.faqs.sections.length >= 10)
+
+	assert.equal(englishPages["get-started"].showLab, true)
+	assert.ok(
+		englishPages.api.sections.some((section) => section.id === "use-form"),
+	)
+	assert.ok(
+		englishPages.types.sections.some(
+			(section) => section.id === "input-output",
+		),
+	)
+	assert.ok(
+		englishPages.advanced.sections.some(
+			(section) => section.id === "react-19-actions",
+		),
+	)
+	assert.ok(
+		englishPages.faqs.sections.some((section) => section.id === "performance"),
+	)
+})
+
+test("adjacent page links follow the public top-level navigation", () => {
 	for (const locale of LOCALES) {
-		for (const lesson of curriculum[locale]) {
-			for (const link of lesson.links) {
-				assert.ok(
-					lessonSet.has(link.lessonId),
-					`${locale}/${lesson.id} links to missing ${link.lessonId}`,
-				)
-			}
-
-			const adjacent = getAdjacentLessons(locale, lesson.id)
-			if (lesson.id === LESSON_IDS[0]) {
-				assert.equal(adjacent.previous, undefined)
-			} else {
-				assert.ok(adjacent.previous)
-				assert.ok(lessonSet.has(adjacent.previous.id))
-			}
-
-			if (lesson.id === LESSON_IDS.at(-1)) {
-				assert.equal(adjacent.next, undefined)
-			} else {
-				assert.ok(adjacent.next)
-				assert.ok(lessonSet.has(adjacent.next.id))
-			}
-
-			const oppositeLocale = locale === "en" ? "ru" : "en"
-			assert.equal(
-				curriculum[oppositeLocale].some((item) => item.id === lesson.id),
-				true,
-			)
+		for (const pageId of PAGE_IDS) {
+			const adjacent = getAdjacentPages(locale, pageId)
+			const index = PAGE_IDS.indexOf(pageId)
+			assert.equal(adjacent.previous?.id, PAGE_IDS[index - 1])
+			assert.equal(adjacent.next?.id, PAGE_IDS[index + 1])
 		}
 	}
 })
@@ -83,12 +145,14 @@ test("full copyable examples come only from executable root example files", asyn
 	)
 	const declaredIds = new Set(Object.keys(exampleFiles))
 
-	for (const lesson of Object.values(curriculum).flat()) {
-		for (const exampleId of lesson.exampleIds) {
-			assert.ok(
-				declaredIds.has(exampleId),
-				`${lesson.id} references missing example ${exampleId}`,
-			)
+	for (const page of Object.values(pages).flat()) {
+		for (const section of page.sections) {
+			if (section.exampleId !== undefined) {
+				assert.ok(
+					declaredIds.has(section.exampleId),
+					`${page.id}/${section.id} references missing ${section.exampleId}`,
+				)
+			}
 		}
 	}
 
@@ -102,5 +166,55 @@ test("full copyable examples come only from executable root example files", asyn
 			new RegExp(`${example.path.replaceAll("/", "\\/")}\\?raw`),
 			`${exampleId} must be imported as raw text by examples.js`,
 		)
+	}
+})
+
+test("every root runtime export is discoverable in both API languages", async () => {
+	const rootEntrySource = await readFile(
+		new URL("../../src/index.ts", import.meta.url),
+		"utf8",
+	)
+	const runtimeExportNames = [
+		...rootEntrySource.matchAll(
+			/export\s*\{([\s\S]*?)\}\s*from\s*["'][^"']+["']/g,
+		),
+	].flatMap((match) =>
+		match[1]
+			.split(",")
+			.map((name) => name.trim())
+			.filter(Boolean),
+	)
+
+	assert.ok(runtimeExportNames.length > 0)
+
+	for (const locale of LOCALES) {
+		const documentation = JSON.stringify(pages[locale])
+		for (const exportName of runtimeExportNames) {
+			assert.match(
+				documentation,
+				new RegExp(`\\b${exportName}\\b`),
+				`${locale} docs must mention the public ${exportName} export`,
+			)
+		}
+	}
+})
+
+test("inline TypeScript examples remain syntactically executable", async () => {
+	for (const page of Object.values(pages).flat()) {
+		for (const section of page.sections) {
+			if (!section.code || section.code.label === "Shell") {
+				continue
+			}
+
+			await assert.doesNotReject(
+				() =>
+					transformWithOxc(
+						section.code.source,
+						`${page.id}-${section.id}.tsx`,
+						{ lang: "tsx" },
+					),
+				`${page.id}/${section.id} must remain valid TypeScript or TSX`,
+			)
+		}
 	}
 })

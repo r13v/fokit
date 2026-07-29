@@ -161,3 +161,67 @@ Removing the old product-version framing → one large `apply_patch` failed beca
 ## 2026-07-28 22:44 — GPT-5
 
 Resolving the PR for a failing GitHub Actions run → this `gh` version rejected `gh pr view --head <branch>`. Pass the branch as the positional argument (`gh pr view <branch>`) or use the current branch instead.
+
+## 2026-07-28 23:32 — GPT-5
+
+Starting the user-requested `/goal` redesign → the goal was already auto-created from the prompt, so an explicit `create_goal` call failed. Check `get_goal` first when `/goal` may have initialized thread state automatically.
+
+## 2026-07-28 23:35 — GPT-5
+
+Capturing the current documentation site in the in-app browser → `waitForLoadState` rejected `networkidle`, and the failed cell did not preserve bindings declared after that await. Use the documented `load` state and declare fresh bindings after a yielded browser error.
+
+## 2026-07-28 23:44 — GPT-5
+
+Grounding Product Design ideation in the current Fokit screen plus all five supplied React Hook Form pages → ImageGen rejected six reference paths because the built-in limit is five. Inspect all sources, then attach the current product plus the four most structurally distinct reference screens.
+
+## 2026-07-29 00:07 — GPT-5
+
+Reading the public React API before rebuilding its documentation → the inspection command guessed `src/react/hooks.tsx`, but the hook implementation is `src/react/hooks.ts`, so the remaining chained reads did not run. Resolve source paths with `rg --files src/react` before batching exact file reads.
+
+## 2026-07-29 00:08 — GPT-5
+
+Running the docs Playwright suite directly → `site:test:e2e` previewed a bundle built for `/`, while its configured URL lives under `/fokit/`, so every page appeared empty because the assets resolved from the wrong base. Build with `BASE_PATH=/fokit/` first (as `site:verify` does), or make the standalone E2E script own that prerequisite.
+
+## 2026-07-29 00:09 — GPT-5
+
+Keeping the docs dev preview open while rebuilding the linked root package → `tsdown` briefly removed and recreated `dist`, so Vite HMR reloaded incompatible module instances and the lab lost its React context. Restart the docs dev server after root package builds before doing browser QA.
+
+## 2026-07-29 00:10 — GPT-5
+
+Composing the required side-by-side design QA evidence → the system `python3` did not include Pillow. Load the Codex workspace dependencies first and use the bundled Python runtime for image operations.
+
+## 2026-07-29 00:12 — GPT-5
+
+Verifying mobile navigation in the in-app browser → its `waitForURL` wrapper rejected a Playwright-style regular expression and requires a literal URL shape. Use the tab URL read after a short bounded wait when validating hash-route changes.
+
+## 2026-07-29 00:14 — GPT-5
+
+Running the mandatory final check after visual QA → Biome flagged a high-specificity compact-code label selector as descending against unrelated later `span` rules, plus one test formatting drift. Drive the compact label through a CSS custom property on the block and keep the leaf selector low-specificity.
+
+## 2026-07-29 00:36 — GPT-5
+
+Returning the in-app browser preview to its desktop start state after the audit → the tab wrapper does not expose Playwright’s `setViewportSize` directly. Use the browser-scoped `viewport` capability (after reading its documentation) or reset the temporary viewport override during finalization.
+
+## 2026-07-29 00:36 — GPT-5
+
+Re-reading the Product Design overrides before handoff → the remembered path placed `critical-overrides.md` under `skills/`, but this plugin version stores it under `references/`. Resolve plugin references with `rg --files` instead of reconstructing their paths from memory.
+
+## 2026-07-29 01:01 — GPT-5
+
+Searching documentation content with a nested quoted shell expression → an unmatched quote aborted the command before any files were inspected. Prefer a single-quoted `rg` pattern or a small direct Node projection when the search text contains mixed quote characters.
+
+## 2026-07-29 01:01 — GPT-5
+
+Adding syntax validation for embedded TypeScript examples → the installed TypeScript 7 package did not expose the expected compiler API, while Vite's old esbuild transform path was unavailable. Use Vite's bundled `transformWithOxc` for dependency-aligned inline TS/TSX parsing.
+
+## 2026-07-29 01:01 — GPT-5
+
+Clearing a controlled React input during in-app browser QA → Playwright's `fill("")` left the value intact in this wrapper. Select all, press Backspace, and assert the resulting value before testing validation.
+
+## 2026-07-29 10:37 — GPT-5
+
+Pruning unreferenced generated QA screenshots before publishing → the command guard rejected an explicit `rm -f` even though every target was a known untracked artifact. Move such files to a task-specific `/tmp` backup instead so cleanup remains recoverable.
+
+## 2026-07-29 10:38 — GPT-5
+
+Opening the draft PR through the connected GitHub app → GitHub returned `403 Resource not accessible by integration` despite the repository being readable and the branch already being pushed. Fall back to the authenticated `gh` session when the connector installation lacks pull-request write access.

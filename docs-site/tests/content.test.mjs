@@ -20,6 +20,93 @@ const requiredDependencies = {
 	zod: "4.4.3",
 }
 
+const canonicalPages = [
+	{
+		path: "src/pages/index.mdx",
+		route: "/",
+		title: "Fokit",
+		description: "Code-first React forms with native HTML semantics.",
+		navText: "Overview",
+	},
+	{
+		path: "src/pages/get-started.mdx",
+		route: "/get-started",
+		title: "Get started",
+		description:
+			"Render a Fokit form with native controls and default structural slots.",
+	},
+	{
+		path: "src/pages/api.mdx",
+		route: "/api",
+		title: "API",
+		description: "The public Fokit entry points and React form kit APIs.",
+	},
+	{
+		path: "src/pages/types.mdx",
+		route: "/types",
+		title: "Types",
+		description:
+			"The TypeScript contracts that connect schemas, definitions, controls, and slots.",
+	},
+	{
+		path: "src/pages/advanced.mdx",
+		route: "/advanced",
+		title: "Advanced",
+		description:
+			"Generated rendering, composition, submission, and state patterns for production forms.",
+	},
+	{
+		path: "src/pages/faqs.mdx",
+		route: "/faqs",
+		title: "FAQs",
+		description:
+			"Common Fokit questions about defaults, themes, servers, and React versions.",
+	},
+	{
+		path: "src/pages/guides/controls.mdx",
+		route: "/guides/controls",
+		title: "Controls",
+		description:
+			"How native controls and custom controls define values, metadata, and FormData.",
+	},
+	{
+		path: "src/pages/guides/styling.mdx",
+		route: "/guides/styling",
+		title: "Styling",
+		description:
+			"Where Fokit's unstyled defaults end and application-owned styling begins.",
+	},
+	{
+		path: "src/pages/guides/react-19-actions.mdx",
+		route: "/guides/react-19-actions",
+		title: "React 19 Actions",
+		description:
+			"How Fokit keeps React 19 server actions aligned with the same form store.",
+	},
+	{
+		path: "src/pages/guides/tutorial.mdx",
+		route: "/guides/tutorial",
+		title: "Tutorial",
+		description:
+			"Build a generated Fokit form from the shipped defaults to production boundaries.",
+	},
+]
+
+const publicApiTerms = [
+	"createFormKit",
+	"createDefaultSlots",
+	"nativeControls",
+	"defineControl",
+	"useForm",
+	"FormInstance",
+	"parseFormData",
+	"ActionForm",
+]
+
+function escapeRegExp(value) {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
 async function readTextFrom(root, path) {
 	return await readFile(new URL(path, root), "utf8")
 }
@@ -149,19 +236,52 @@ test("Vocs config defines the static English documentation shell", async () => {
 	assert.match(source, /codeHighlight:\s*\{[\s\S]*dark:\s*"github-dark"/)
 	assert.match(
 		source,
-		/sidebar:\s*\[[\s\S]*text:\s*"Get started"[\s\S]*link:\s*"\/"/,
+		/sidebar:\s*\[[\s\S]*text:\s*"Get started"[\s\S]*link:\s*"\/get-started"/,
 	)
 	assert.doesNotMatch(source, /mcp\s*:/)
 	assert.doesNotMatch(source, /feedback\s*:/)
 	assert.doesNotMatch(source, /ogImageUrl\s*:/)
 	assert.doesNotMatch(source, /redirects\s*:/)
+	assert.doesNotMatch(source, /#\/|LOCALES|locale-switch|\/en\/|\/ru\//)
 })
 
-test("minimal Vocs page and root CSS replace the custom app shell", async () => {
+test("Vocs pages expose the canonical English route map", async () => {
+	const config = await readText("vocs.config.ts")
+
+	for (const page of canonicalPages) {
+		const source = await readText(page.path)
+		const frontmatter = new RegExp(
+			`^---\\ntitle: ${escapeRegExp(page.title)}\\ndescription: ${escapeRegExp(
+				page.description,
+			)}\\n---\\n`,
+		)
+		const navText = page.navText ?? page.title
+		const sidebarEntry = new RegExp(
+			`text:\\s*"${escapeRegExp(navText)}"\\s*,\\s*link:\\s*"${escapeRegExp(
+				page.route,
+			)}"`,
+		)
+
+		assert.match(source, frontmatter, `${page.path} needs English metadata`)
+		assert.doesNotMatch(source, /[А-Яа-яЁё]/, `${page.path} must stay English`)
+		assert.doesNotMatch(source, /#\/|LOCALES|locale-switch/)
+		assert.match(config, sidebarEntry, `${page.route} must be in the sidebar`)
+	}
+})
+
+test("API shell keeps public exports discoverable", async () => {
+	const source = await readText("src/pages/api.mdx")
+
+	for (const term of publicApiTerms) {
+		assert.match(source, new RegExp(`\\b${term}\\b`))
+	}
+})
+
+test("Vocs root page and root CSS replace the custom app shell", async () => {
 	const page = await readText("src/pages/index.mdx")
 	const css = await readText("src/pages/_root.css")
 
-	assert.match(page, /^---\ntitle: Get started\ndescription: /)
+	assert.match(page, /^---\ntitle: Fokit\ndescription: /)
 	assert.match(page, /createFormKit\(\{\s*controls: nativeControls/)
 	assert.match(page, /createDefaultSlots/)
 	assert.doesNotMatch(page, /[А-Яа-яЁё]/)

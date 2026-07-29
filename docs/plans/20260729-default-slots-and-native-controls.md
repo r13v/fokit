@@ -782,17 +782,17 @@ explicit destination and the canonical page/navigation shell exists.
 - Modify: `docs-site/vocs.config.ts`
 - Modify: `docs-site/tests/content.test.mjs`
 
-- [ ] Confirm the old-section-to-new-page inventory in “Documentation content
+- [x] Confirm the old-section-to-new-page inventory in “Documentation content
       parity map” below before writing or deleting content.
-- [ ] Extend source tests first for the complete route list, English
+- [x] Extend source tests first for the complete route list, English
       `title`/`description` frontmatter, and sidebar discoverability.
-- [ ] Create every canonical page shell and add every route to the English
+- [x] Create every canonical page shell and add every route to the English
       Vocs navigation.
-- [ ] Keep source checks narrow: required paths/frontmatter, absence of
+- [x] Keep source checks narrow: required paths/frontmatter, absence of
       locale/hash routing from the active Vocs config and pages, and API-export
       discoverability. Add the typed code-fence invariant with the snippet
       migration in Task 8D. Do not build a second Markdown parser.
-- [ ] Run `npm run site:test`.
+- [x] Run `npm run site:test`.
 
 ### Task 8B: Migrate the landing and core reference pages
 

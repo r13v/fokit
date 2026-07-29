@@ -19,5 +19,16 @@ export default defineConfig({
 		link: "https://github.com/r13v/fokit/edit/main/docs-site/:path",
 		text: "Edit this page",
 	},
-	sidebar: [{ text: "Get started", link: "/" }],
+	sidebar: [
+		{ text: "Overview", link: "/" },
+		{ text: "Get started", link: "/get-started" },
+		{ text: "API", link: "/api" },
+		{ text: "Types", link: "/types" },
+		{ text: "Advanced", link: "/advanced" },
+		{ text: "FAQs", link: "/faqs" },
+		{ text: "Controls", link: "/guides/controls" },
+		{ text: "Styling", link: "/guides/styling" },
+		{ text: "React 19 Actions", link: "/guides/react-19-actions" },
+		{ text: "Tutorial", link: "/guides/tutorial" },
+	],
 })

@@ -267,3 +267,10 @@ Updating Knip docs-site patterns → `knip.json` could not register the CSS
 compiler needed for `src/**/*.css`, and Knip's compiler hints stayed global
 unless workspaces were explicit. Use an ESM Knip config with compiler functions
 and run Knip with explicit workspace filters.
+
+## 2026-07-29 14:06 — GPT-5
+
+Inspecting docs-site source files → `find docs-site -maxdepth 3 -type f`
+traversed `node_modules` and returned truncated output. Exclude
+`node_modules`, `dist`, and generated QA folders when listing authored
+docs-site sources.

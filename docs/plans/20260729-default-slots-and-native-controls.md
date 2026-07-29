@@ -969,34 +969,34 @@ documentation application.
 
 ### Task 10: Verify acceptance criteria and package quality
 
-- [ ] Verify `createFormKit({ controls: nativeControls })` renders a working
+- [x] Verify `createFormKit({ controls: nativeControls })` renders a working
       English form.
-- [ ] Verify custom i18n can mix strings and functions.
-- [ ] Verify a partial custom slot object replaces only specified slots.
-- [ ] Verify a fully custom existing kit retains its DOM and behavior.
-- [ ] Verify native controls work with classic submission and their documented
+- [x] Verify custom i18n can mix strings and functions.
+- [x] Verify a partial custom slot object replaces only specified slots.
+- [x] Verify a fully custom existing kit retains its DOM and behavior.
+- [x] Verify native controls work with classic submission and their documented
       FormData representations.
-- [ ] Verify Vocs pages contain the public API, customization path, i18n
+- [x] Verify Vocs pages contain the public API, customization path, i18n
       contract, native FormData caveats, all migrated public English guides,
       and no Russian content.
-- [ ] Verify the old SPA, language switcher, Russian page map, saved-locale
+- [x] Verify the old SPA, language switcher, Russian page map, saved-locale
       behavior, hash router, and handwritten highlighter are absent.
-- [ ] Verify canonical site URLs are clean Vocs paths under `/fokit`, with no
+- [x] Verify canonical site URLs are clean Vocs paths under `/fokit`, with no
       compatibility handling for old locale-prefixed hashes.
-- [ ] Verify every inline TS/TSX block is Twoslash-checked and every complete
+- [x] Verify every inline TS/TSX block is Twoslash-checked and every complete
       physical example is included by `docs-site/tsconfig.docs.json`.
-- [ ] Verify Vocs produces static HTML, `index.md`, at least one nested page
+- [x] Verify Vocs produces static HTML, `index.md`, at least one nested page
       such as `get-started.md`, `llms.txt`, `llms-full.txt`, `sitemap.xml`, and
       `robots.txt` without a server runtime.
-- [ ] Verify the Interactive Fokit Lab imports `nativeControls` and
+- [x] Verify the Interactive Fokit Lab imports `nativeControls` and
       `createDefaultSlots`, with no local control or slot implementations.
-- [ ] Verify no JavaScript entry imports CSS automatically.
-- [ ] Run `npm run verify` once as the final package aggregate; it must still
+- [x] Verify no JavaScript entry imports CSS automatically.
+- [x] Run `npm run verify` once as the final package aggregate; it must still
       include the mandatory `npm run check` and `npm run knip` gates.
-- [ ] Run `npm run site:verify` once as the final documentation aggregate; it
+- [x] Run `npm run site:verify` once as the final documentation aggregate; it
       must include docs TypeScript, generated-output, Markdown-audit, and E2E
       gates.
-- [ ] Run `git diff --check`.
+- [x] Run `git diff --check`.
 
 ### Task 11: Final documentation and plan completion
 

@@ -103,6 +103,24 @@ const publicApiTerms = [
 	"ActionForm",
 ]
 
+const canonicalSnippets = [
+	{
+		source: "examples/form-kit.tsx",
+		target: "src/snippets/form-kit.tsx",
+		include: "~/snippets/form-kit.tsx",
+	},
+	{
+		source: "examples/basic-form.tsx",
+		target: "src/snippets/basic-form.tsx",
+		include: "~/snippets/basic-form.tsx",
+	},
+	{
+		source: "examples/server-action.ts",
+		target: "src/snippets/server-action.ts",
+		include: "~/snippets/server-action.ts",
+	},
+]
+
 const requiredCorePageContent = {
 	"src/pages/get-started.mdx": {
 		headings: [
@@ -300,6 +318,29 @@ function escapeRegExp(value) {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
+function collectCodeFences(source) {
+	return [...source.matchAll(/^```([^\n]*)\n([\s\S]*?)^```$/gm)].map(
+		(match) => {
+			const info = match[1]?.trim() ?? ""
+			const code = match[2] ?? ""
+
+			return {
+				info,
+				language: info.split(/\s+/)[0] ?? "",
+				code,
+			}
+		},
+	)
+}
+
+function collectIncludes(source) {
+	return [
+		...source.matchAll(
+			/\/\/ \[!include ([^\]\s:]+)(?::[^\]\s]+)?(?: [^\]]+)?\]/g,
+		),
+	].map((match) => match[1])
+}
+
 async function readTextFrom(root, path) {
 	return await readFile(new URL(path, root), "utf8")
 }
@@ -397,6 +438,8 @@ test("docs TypeScript and verification gates are wired", async () => {
 		"vocs.config.ts",
 		"src/pages/**/*.mdx",
 		"src/pages/**/*.css",
+		"src/snippets/**/*.ts",
+		"src/snippets/**/*.tsx",
 	])
 	assert.deepEqual(knipConfig.workspaces["docs-site"].project, [
 		"src/**/*.{js,jsx,mjs,ts,tsx,mdx,css}",
@@ -404,6 +447,80 @@ test("docs TypeScript and verification gates are wired", async () => {
 	assert.equal(typeof knipConfig.compilers.css, "function")
 	assert.equal(knipConfig.compilers.mdx, true)
 	assert.match(gitignore, /^docs-site\/\.vocs\/$/m)
+})
+
+test("canonical TypeScript snippets are physical files covered by docs typecheck", async () => {
+	const tsconfig = await readJson("tsconfig.docs.json")
+	const includeSet = new Set(tsconfig.include)
+
+	assert.equal(includeSet.has("src/snippets/**/*.ts"), true)
+	assert.equal(includeSet.has("src/snippets/**/*.tsx"), true)
+
+	for (const snippet of canonicalSnippets) {
+		const source = await readRepositoryText(snippet.source)
+		const target = await readText(snippet.target)
+
+		assert.equal(
+			target,
+			source,
+			`${snippet.target} must mirror ${snippet.source} until the examples move`,
+		)
+	}
+})
+
+test("TypeScript documentation fences are checked or backed by physical snippets", async () => {
+	const pages = (await listFiles("src/pages/")).filter((file) =>
+		file.endsWith(".mdx"),
+	)
+	const expectedIncludes = new Set(
+		canonicalSnippets.map((snippet) => snippet.include),
+	)
+	const seenIncludes = new Set()
+
+	for (const page of pages) {
+		const source = await readText(page)
+
+		assert.doesNotMatch(source, /@noErrors/)
+		assert.doesNotMatch(source, /@errors:/)
+
+		for (const fence of collectCodeFences(source)) {
+			if (fence.language !== "ts" && fence.language !== "tsx") {
+				continue
+			}
+
+			const includes = collectIncludes(fence.code)
+
+			if (includes.length === 0) {
+				assert.match(
+					fence.info,
+					/(^|\s)twoslash(\s|$)/,
+					`${page} has an inline ${fence.language} fence without twoslash`,
+				)
+				continue
+			}
+
+			for (const include of includes) {
+				assert.match(
+					include,
+					/^~\/snippets\/[^/]+\.(ts|tsx)$/,
+					`${page} includes ${include} outside src/snippets`,
+				)
+				assert.equal(
+					expectedIncludes.has(include),
+					true,
+					`${page} includes unexpected snippet ${include}`,
+				)
+				seenIncludes.add(include)
+				assert.equal(
+					await pathExists(include.replace(/^~\//, "src/")),
+					true,
+					`${page} includes missing snippet ${include}`,
+				)
+			}
+		}
+	}
+
+	assert.deepEqual(seenIncludes, expectedIncludes)
 })
 
 test("Vocs config defines the static English documentation shell", async () => {

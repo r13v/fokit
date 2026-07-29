@@ -28,7 +28,7 @@ generated form:
 - `file`: `File | undefined` for a single native file input with optional
   `accept`.
 
-```ts
+```ts twoslash
 import { createFormKit, nativeControls } from "fokit"
 
 const kit = createFormKit({
@@ -40,7 +40,7 @@ Controls stay explicit because they define value and FormData semantics. Add a
 product control by composing the registry instead of asking the schema to infer
 one:
 
-```ts
+```ts twoslash
 import { createFormKit, defineControl, nativeControls } from "fokit"
 
 const money = defineControl<number>({
@@ -62,7 +62,8 @@ const kit = createFormKit({
 React component, and FormData policy. Fokit passes typed value state, metadata,
 ARIA wiring, and interaction state to the component.
 
-```tsx
+```tsx twoslash
+// @jsx: react-jsx
 import { defineControl, type ControlProps } from "fokit"
 
 type TextOptions = {
@@ -134,9 +135,9 @@ with classic React submission but is incompatible with React 19 `ActionForm`.
 
 Serializer entries are name/value pairs or array markers:
 
-```ts
-{ name: "contacts.0.email", value: "ada@example.test" }
-{ kind: "array", name: "contacts" }
+```ts twoslash
+const emailEntry = { name: "contacts.0.email", value: "ada@example.test" }
+const arrayMarker = { kind: "array", name: "contacts" }
 ```
 
 Fokit normalizes paths and renders array markers as `__fokit.array`. Native
@@ -162,7 +163,8 @@ import `fokit/layout.css` or add a visual theme.
 
 Override only the pieces your product needs:
 
-```tsx
+```tsx twoslash
+// @jsx: react-jsx
 import {
 	createDefaultSlots,
 	createFormKit,
@@ -215,7 +217,7 @@ Missing entries fall back to English.
 The shortest kit is now the explicit native-control registry plus omitted
 slots:
 
-```ts
+```ts twoslash
 import { createFormKit, nativeControls } from "fokit"
 
 export const kit = createFormKit({

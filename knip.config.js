@@ -27,7 +27,13 @@ export default {
 			project: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 		},
 		"docs-site": {
-			entry: ["vocs.config.ts", "src/pages/**/*.mdx", "src/pages/**/*.css"],
+			entry: [
+				"vocs.config.ts",
+				"src/pages/**/*.mdx",
+				"src/pages/**/*.css",
+				"src/snippets/**/*.ts",
+				"src/snippets/**/*.tsx",
+			],
 			project: ["src/**/*.{js,jsx,mjs,ts,tsx,mdx,css}"],
 		},
 	},

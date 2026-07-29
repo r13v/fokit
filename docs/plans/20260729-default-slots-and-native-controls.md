@@ -865,22 +865,22 @@ includes.
 - Modify: `docs-site/tests/content.test.mjs`
 - Modify: `docs-site/tsconfig.docs.json`
 
-- [ ] Extend the source tests first so every inline `ts`/`tsx` fence requires
+- [x] Extend the source tests first so every inline `ts`/`tsx` fence requires
       `twoslash`, while every physical include must resolve inside
       `docs-site/src/snippets/` and be covered by the docs TypeScript config.
-- [ ] Copy the three complete programs from `examples/` into the canonical
+- [x] Copy the three complete programs from `examples/` into the canonical
       snippet paths without deleting the originals yet.
-- [ ] Include complete files or named regions through Vocs physical includes
+- [x] Include complete files or named regions through Vocs physical includes
       such as `// [!include ~/snippets/form-kit.tsx]`; never paste a second copy
       of a complete program into MDX.
-- [ ] Mark every inline `ts` and `tsx` fence with `twoslash`. Use
+- [x] Mark every inline `ts` and `tsx` fence with `twoslash`. Use
       `// @jsx: react-jsx`, virtual files, external package types, and
       `// ---cut---` where required to keep the visible lesson concise while
       compiling a complete program.
-- [ ] Do not use `@noErrors` to hide a broken documentation example. Use
+- [x] Do not use `@noErrors` to hide a broken documentation example. Use
       `// @errors: <code>` only on a page intentionally teaching that exact
       error.
-- [ ] Run `npm run test:docs`, `npm run site:test`, and
+- [x] Run `npm run test:docs`, `npm run site:test`, and
       `BASE_PATH=/fokit npm run site:build`.
 
 ### Task 8E: Delete superseded public guides and example copies

@@ -218,6 +218,10 @@ Adding syntax validation for embedded TypeScript examples → the installed Type
 
 Clearing a controlled React input during in-app browser QA → Playwright's `fill("")` left the value intact in this wrapper. Select all, press Backspace, and assert the resulting value before testing validation.
 
+## 2026-07-29 14:23 — GPT-5
+
+Running Knip after adding Vocs physical snippet includes → `docs-site/src/snippets/*.ts(x)` were reported as unused because `// [!include ...]` is not a JavaScript import. Add snippet globs to the docs-site Knip entry list when introducing Vocs physical includes.
+
 ## 2026-07-29 10:37 — GPT-5
 
 Pruning unreferenced generated QA screenshots before publishing → the command guard rejected an explicit `rm -f` even though every target was a known untracked artifact. Move such files to a task-specific `/tmp` backup instead so cleanup remains recoverable.

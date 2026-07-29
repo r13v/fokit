@@ -12,7 +12,7 @@ declarations.
 
 ## Entry point
 
-```tsx
+```tsx twoslash
 import { ActionForm, ActionSubmit } from "fokit/react19"
 ```
 
@@ -27,7 +27,27 @@ the supplied Action directly on the native form, reflects React pending state
 into Fokit, renders fields and hidden serializer inputs, and applies returned
 `FormResult` objects after hydration.
 
-```tsx
+```tsx twoslash
+// @jsx: react-jsx
+import { createFormKit, nativeControls } from "fokit"
+import { ActionForm, ActionSubmit } from "fokit/react19"
+import type { FormResult } from "fokit/server"
+import type { ComponentPropsWithoutRef } from "react"
+import { z } from "zod"
+
+const profileSchema = z.object({ name: z.string() })
+const kit = createFormKit({ controls: nativeControls })
+const profileDefinition = kit.defineForm({
+	schema: profileSchema,
+	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+})
+const defaultValues = { name: "" }
+declare const state: FormResult | undefined
+declare const saveProfileAction: NonNullable<
+	ComponentPropsWithoutRef<"form">["action"]
+>
+
+// ---cut---
 <ActionForm
 	action={saveProfileAction}
 	defaultValues={defaultValues}
@@ -51,19 +71,7 @@ Use `parseFormData` from `fokit/server` on the server. It rejects unsafe paths
 and reserved metadata before running Standard Schema validation.
 
 ```ts
-import { parseFormData, type FormResult } from "fokit/server"
-
-export async function saveProfileAction(
-	formData: FormData,
-): Promise<FormResult> {
-	const result = await parseFormData(formData, profileActionSchema)
-
-	if (!result.success) {
-		return result.reply()
-	}
-
-	return { status: "success", reset: "submitted" }
-}
+// [!include ~/snippets/server-action.ts]
 ```
 
 Do not decode Fokit submissions with `Object.fromEntries`. Repeated values and
@@ -75,7 +83,10 @@ objects.
 
 Action results are serializable:
 
-```ts
+```ts twoslash
+import type { SubmissionIssue } from "fokit/server"
+
+// ---cut---
 type FormResult =
 	| { status: "success"; reset?: "defaults" | "submitted" }
 	| { status: "error"; issues: readonly SubmissionIssue[] }

@@ -14,7 +14,12 @@ carry product visuals.
 
 Import the layout file explicitly when you want Fokit's responsive structure:
 
-```ts
+```ts twoslash
+// @filename: layout-css.d.ts
+declare module "fokit/layout.css" {}
+// @filename: example.ts
+
+// ---cut---
 import "fokit/layout.css"
 ```
 

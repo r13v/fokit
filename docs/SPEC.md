@@ -361,6 +361,50 @@ before the first public publish, and a matching `LICENSE` file must be present.
 The packed tarball contains built artifacts and public documentation, never
 local reference sources.
 
+## Public documentation site
+
+The public documentation site is an English-only Vocs site authored in
+Markdown/MDX under `docs-site/src/pages`. Vocs owns navigation, search, syntax
+highlighting, rich Twoslash output, static rendering, Markdown exports, and
+dead-link checks.
+
+The canonical public route map is locale-free:
+
+- `/`
+- `/get-started`
+- `/api`
+- `/types`
+- `/advanced`
+- `/faqs`
+- `/guides/controls`
+- `/guides/styling`
+- `/guides/react-19-actions`
+- `/guides/tutorial`
+
+Production builds use the `/fokit` base path and
+`https://r13v.github.io/fokit` base URL. Local development uses `/` unless a
+caller provides an explicit environment override. The site must not preserve
+old hash routes, locale-prefixed routes, locale switching, locale persistence,
+or redirects for removed locale URLs. The retained Russian tutorial remains a
+repository document and is not part of the Vocs page tree or navigation.
+
+The deployable output is fully static and must include HTML, agent-readable
+Markdown, `llms.txt`, `llms-full.txt`, `sitemap.xml`, and `robots.txt`. It must
+not include API routes, server/function artifacts, worker entry points, or
+dynamic Open Graph image routes.
+
+Every displayed TypeScript or TSX code block is checked. Inline lessons use
+Vocs' built-in Twoslash integration. Complete programs are included from
+physical files under `docs-site/src/snippets/` and are covered by
+`docs-site/tsconfig.docs.json`. Twoslash, Shiki, and the docs TypeScript
+compiler are documentation-only dependencies; the published `fokit` package
+does not depend on them or load a browser-side compiler.
+
+The Interactive Fokit Lab is a Vocs client component. It uses the public
+`nativeControls` registry and `createDefaultSlots({ i18n })` rather than local
+control or slot implementations, and its generated Markdown fallback must be
+meaningful in page Markdown and LLM artifacts.
+
 ## Core concepts
 
 ### Control
@@ -2497,7 +2541,10 @@ CI must include at least:
 - packed-tarball smoke projects for Vite, Next.js Server/Client Components,
   ESM import, CommonJS require, `fokit/core`, `fokit/server`, and every package
   export;
-- package checks with `publint` and Are the Types Wrong.
+- package checks with `publint` and Are the Types Wrong;
+- documentation-site verification that runs source-content tests, docs
+  TypeScript checks, the Vocs static build, Markdown audit, generated-output
+  assertions, and documentation E2E coverage.
 
 ## Resolved product decisions
 

@@ -305,3 +305,7 @@ Testing Vocs' copy-code button in Playwright → `navigator.clipboard` was not
 available reliably enough for the component to flip its copied state. Stub the
 clipboard API in the test and assert the copied command text, not just the
 button attribute.
+
+## 2026-07-29 14:47 — GPT-5
+
+Running the final `npm run knip` gate → Knip passed but emitted a configuration hint that `docs-site` entry pattern `src/components/**/*.ts` has no matches. Remove the stale pattern or add a matching helper file if TypeScript component modules return.

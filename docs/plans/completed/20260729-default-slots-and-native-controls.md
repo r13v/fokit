@@ -1000,13 +1000,13 @@ documentation application.
 
 ### Task 11: Final documentation and plan completion
 
-- [ ] Reconcile `docs/SPEC.md` explicitly against the finalized default-slot,
+- [x] Reconcile `docs/SPEC.md` explicitly against the finalized default-slot,
       native-control, read-only/FormData, and documentation-routing contracts;
       do not add unrelated discoveries.
-- [ ] Record non-duplicate workflow friction in `PAPERCUTS.md`.
-- [ ] Confirm no implementation task expanded into visual theming, schema
+- [x] Record non-duplicate workflow friction in `PAPERCUTS.md`.
+- [x] Confirm no implementation task expanded into visual theming, schema
       inference, group controls, or server registry coupling.
-- [ ] Move this plan to
+- [x] Move this plan to
       `docs/plans/completed/20260729-default-slots-and-native-controls.md`.
 
 ## Technical Details

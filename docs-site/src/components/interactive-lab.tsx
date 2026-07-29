@@ -2,33 +2,12 @@ import type { ReactElement } from "react"
 
 import { InteractiveLabClient } from "./interactive-lab.client"
 
-type MarkdownText = {
-	readonly type: "text"
-	readonly value: string
-}
-
-type MarkdownNode =
-	| {
-			readonly type: "paragraph"
-			readonly children: readonly MarkdownText[]
-	  }
-	| {
-			readonly type: "code"
-			readonly lang: string
-			readonly value: string
-	  }
-
-type InteractiveLabComponent = {
-	(): ReactElement
-	toMarkdown(): readonly MarkdownNode[]
-}
-
 export const InteractiveLab = Object.assign(
 	function InteractiveLab(): ReactElement {
 		return <InteractiveLabClient />
 	},
 	{
-		toMarkdown(): readonly MarkdownNode[] {
+		toMarkdown() {
 			return [
 				{
 					type: "paragraph",
@@ -49,4 +28,4 @@ export const InteractiveLab = Object.assign(
 			]
 		},
 	},
-) satisfies InteractiveLabComponent
+)

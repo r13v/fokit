@@ -1,6 +1,12 @@
 "use client"
 
-import type { ChangeEvent, ReactElement } from "react"
+import {
+	type ChangeEvent,
+	type ReactElement,
+	useEffect,
+	useRef,
+	useState,
+} from "react"
 
 import { type ControlProps, defineControl } from "./control.js"
 
@@ -205,6 +211,11 @@ function NativeSelectControl({
 	readOnly,
 	required,
 }: ControlProps<string, NativeSelectOptions>): ReactElement {
+	const selectOptions = options.options
+	if (!Array.isArray(selectOptions)) {
+		throw new TypeError("nativeControls.select requires options.options")
+	}
+
 	return (
 		<select
 			aria-describedby={input["aria-describedby"]}
@@ -237,7 +248,7 @@ function NativeSelectControl({
 			required={required}
 			value={value}
 		>
-			{options.options.map((option) => (
+			{selectOptions.map((option) => (
 				<option
 					disabled={option.disabled}
 					key={option.value}
@@ -285,7 +296,7 @@ function NativeCheckboxControl({
 				}
 			}}
 			onKeyDown={(event) => {
-				if (readOnly && isCheckboxMutationKey(event.key)) {
+				if (readOnly && isActivationKey(event.key)) {
 					preventReadOnlyEvent(event)
 				}
 			}}
@@ -298,6 +309,7 @@ function NativeCheckboxControl({
 }
 
 function NativeFileControl({
+	value,
 	setValue,
 	blur,
 	input,
@@ -307,6 +319,22 @@ function NativeFileControl({
 	readOnly,
 	required,
 }: ControlProps<File | undefined, NativeFileOptions>): ReactElement {
+	const fileInputRef = useRef<HTMLInputElement | null>(null)
+	const [nativeFile, setNativeFile] = useState<File | undefined>(undefined)
+	const hasSubmittableNativeFile =
+		nativeFile !== undefined && Object.is(value, nativeFile)
+
+	useEffect(() => {
+		if (hasSubmittableNativeFile || fileInputRef.current === null) {
+			return
+		}
+
+		fileInputRef.current.value = ""
+		if (nativeFile !== undefined) {
+			setNativeFile(undefined)
+		}
+	}, [hasSubmittableNativeFile, nativeFile])
+
 	return (
 		// biome-ignore lint/a11y/useAriaPropsSupportedByRole: File inputs have no native readOnly state, so the control exposes the locked state explicitly.
 		<input
@@ -316,7 +344,7 @@ function NativeFileControl({
 			accept={options.accept}
 			disabled={disabled}
 			id={input.id}
-			name={input.name}
+			name={hasSubmittableNativeFile ? input.name : undefined}
 			onBlur={blur}
 			onChange={(event) => {
 				if (readOnly) {
@@ -324,7 +352,9 @@ function NativeFileControl({
 					return
 				}
 
-				setValue(event.currentTarget.files?.item(0) ?? undefined)
+				const nextFile = event.currentTarget.files?.item(0) ?? undefined
+				setNativeFile(nextFile)
+				setValue(nextFile)
 			}}
 			onClick={(event) => {
 				if (readOnly) {
@@ -337,11 +367,14 @@ function NativeFileControl({
 				}
 			}}
 			onKeyDown={(event) => {
-				if (readOnly && isFileActivationKey(event.key)) {
+				if (readOnly && isActivationKey(event.key)) {
 					preventReadOnlyEvent(event)
 				}
 			}}
-			ref={input.ref}
+			ref={(element) => {
+				fileInputRef.current = element
+				input.ref(element)
+			}}
 			required={required}
 			type="file"
 		/>
@@ -471,10 +504,6 @@ function isSelectMutationKey(key: string): boolean {
 	].includes(key)
 }
 
-function isCheckboxMutationKey(key: string): boolean {
-	return key === " " || key === "Enter"
-}
-
-function isFileActivationKey(key: string): boolean {
+function isActivationKey(key: string): boolean {
 	return key === " " || key === "Enter"
 }

@@ -1,17 +1,7 @@
 const docsStyleCompiler = (source) => {
-	const imports = []
-	const importPattern =
-		/@import\s+(?:url\(\s*)?(?:"([^"]+)"|'([^']+)'|([^"')\s;]+))/g
-
-	for (const match of source.matchAll(importPattern)) {
-		const specifier = match[1] ?? match[2] ?? match[3]
-
-		if (specifier && !/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(specifier)) {
-			imports.push(`import ${JSON.stringify(specifier)}`)
-		}
-	}
-
-	return imports.join("\n")
+	return source.includes("@fontsource-variable/newsreader")
+		? 'import "@fontsource-variable/newsreader"'
+		: ""
 }
 
 export default {
@@ -31,7 +21,6 @@ export default {
 				"vocs.config.ts",
 				"src/pages/**/*.mdx",
 				"src/pages/**/*.css",
-				"src/components/**/*.ts",
 				"src/components/**/*.tsx",
 				"src/snippets/**/*.ts",
 				"src/snippets/**/*.tsx",

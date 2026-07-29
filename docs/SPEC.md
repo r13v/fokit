@@ -382,10 +382,11 @@ The canonical public route map is locale-free:
 - `/guides/tutorial`
 
 Production builds use the `/fokit` base path and
-`https://r13v.github.io/fokit` base URL. Local development uses `/` unless a
-caller provides an explicit environment override. The site must not preserve
-old hash routes, locale-prefixed routes, locale switching, locale persistence,
-or redirects for removed locale URLs. The retained Russian tutorial remains a
+`https://r13v.github.io` Vocs base URL, producing public URLs under
+`https://r13v.github.io/fokit`. Local development uses `/` unless a caller
+provides an explicit environment override. The site must not preserve old hash
+routes, locale-prefixed routes, locale switching, locale persistence, or
+redirects for removed locale URLs. The retained Russian tutorial remains a
 repository document and is not part of the Vocs page tree or navigation.
 
 The deployable output is fully static and must include HTML, agent-readable

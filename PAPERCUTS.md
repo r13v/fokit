@@ -309,3 +309,47 @@ button attribute.
 ## 2026-07-29 14:47 — GPT-5
 
 Running the final `npm run knip` gate → Knip passed but emitted a configuration hint that `docs-site` entry pattern `src/components/**/*.ts` has no matches. Remove the stale pattern or add a matching helper file if TypeScript component modules return.
+
+## 2026-07-29 14:50 — GPT-5
+
+Reading changed React source in full context for a review → I tried to inspect a guessed `src/react/field-node.tsx` file that does not exist. Use `rg --files src/react` before probing nearby implementation filenames.
+
+## 2026-07-29 14:53 — GPT-5
+
+Checking generated Vocs metadata during review → `rg` over `docs-site/dist/public` with assets excluded still matched huge generated HTML files and truncated the output. Prefer targeted `grep -n`/`sed` on a single HTML file or search only `sitemap.xml`/`robots.txt` for metadata checks.
+
+## 2026-07-29 14:56 — GPT-5
+
+Verifying review findings with focused commands → I guessed a non-existent
+`src/react/hooks.tsx` path, a missing `tests/package/package-json.test.ts`
+file, the default Vitest config for `tests/package`, and a Jest-only
+`--runInBand` flag for Vitest. Use `rg --files` for test filenames,
+`npm run test:package -- <files>` for package tests, and this repo's plain
+`npm test -- <files>` Vitest form for source tests.
+
+## 2026-07-29 15:11 — GPT-5
+
+Checking Vocs base path behavior during review → `rg` over
+`docs-site/node_modules/vocs` and `docs-site/node_modules/waku` scanned bundled
+assets and returned truncated output. Limit searches to package `src/`
+subtrees or exclude generated `dist` files when inspecting installed packages.
+
+## 2026-07-29 15:11 — GPT-5
+
+Reading multiple MDX and snippet files with line numbers → macOS `nl` rejected
+multiple file operands and printed usage instead of content. Run `nl -ba` once
+per file, or use a small formatter only when grouped output is necessary.
+
+## 2026-07-29 15:46 — GPT-5
+
+Patching the docs-site form-kit snippet during review → a combined
+`apply_patch` hunk carried too much checkbox context and failed twice before
+the exact smaller hunks applied. Split multi-control JSX patches by element
+when handlers have near-identical shapes.
+
+## 2026-07-29 15:58 — GPT-5
+
+Squashing repeated review-fix commits during finalize → a noninteractive
+`GIT_SEQUENCE_EDITOR` command used shell-expanded `$1`, stripping hashes from
+the rebase todo file. Use single-quoted editor commands or escape replacement
+backreferences before running interactive rebase automation.

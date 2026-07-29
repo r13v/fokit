@@ -152,6 +152,18 @@ const choiceDefinition = kit.defineForm({
 	],
 })
 
+const missingSelectOptionsDefinition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "field",
+			path: "status",
+			control: "select",
+			label: "Status",
+		},
+	],
+})
+
 const preservationDefinition = kit.defineForm({
 	schema,
 	ui: [
@@ -356,9 +368,33 @@ describe("nativeControls text-like controls", () => {
 		expect(new FormData(requireForm()).get("age")).toBe("42")
 		expect(new FormData(requireForm()).get("birthday")).toBe("2030-05-06")
 
+		Object.defineProperties(age, {
+			value: {
+				configurable: true,
+				get() {
+					return "1e"
+				},
+			},
+			valueAsNumber: {
+				configurable: true,
+				get() {
+					return Number.NaN
+				},
+			},
+		})
+		fireEvent.change(age)
+		Reflect.deleteProperty(age, "value")
+		Reflect.deleteProperty(age, "valueAsNumber")
+		expect(screen.getByTestId("age-value").textContent).toBe("42")
+		expect(screen.getByTestId("age-is-nan").textContent).toBe("false")
+
 		await user.clear(age)
 		expect(screen.getByTestId("age-value").textContent).toBe("undefined")
 		expect(screen.getByTestId("age-is-nan").textContent).toBe("false")
+
+		fireEvent.change(birthday, { target: { value: "" } })
+		expect(screen.getByTestId("birthday-value").textContent).toBe("")
+		expect(new FormData(requireForm()).get("birthday")).toBe("")
 	})
 
 	it("preserves hidden and disabled values with hidden serializers", () => {
@@ -434,6 +470,18 @@ describe("nativeControls text-like controls", () => {
 })
 
 describe("nativeControls choice and file controls", () => {
+	it("fails clearly when a select field omits its option list", () => {
+		expect(() =>
+			render(
+				<kit.AutoForm
+					defaultValues={defaultValues()}
+					definition={missingSelectOptionsDefinition}
+					id="missing-select-options"
+				/>,
+			),
+		).toThrow("nativeControls.select requires options.options")
+	})
+
 	it("renders native attributes, metadata, refs, blur, and supported options", async () => {
 		const user = userEvent.setup()
 		render(
@@ -473,12 +521,13 @@ describe("nativeControls choice and file controls", () => {
 			"choice-newsletter-description",
 		)
 		expect(avatar.type).toBe("file")
-		expect(avatar.name).toBe("avatar")
+		expect(avatar.hasAttribute("name")).toBe(false)
 		expect(avatar.accept).toBe("image/png")
 		expect(avatar.getAttribute("aria-describedby")).toBe(
 			"choice-avatar-description",
 		)
 		expect(screen.getByTestId("avatar-value").textContent).toBe("undefined")
+		expect(new FormData(requireForm()).has("avatar")).toBe(false)
 
 		await user.click(screen.getByRole("button", { name: "Focus status" }))
 		expect(document.activeElement).toBe(status)
@@ -518,6 +567,8 @@ describe("nativeControls choice and file controls", () => {
 				id="choice"
 			>
 				<ValueProbe />
+				<SetAvatarButton />
+				<ClearAvatarButton />
 			</kit.AutoForm>,
 		)
 
@@ -526,6 +577,16 @@ describe("nativeControls choice and file controls", () => {
 		const avatar = screen.getByLabelText("Avatar") as HTMLInputElement
 		const first = new File(["one"], "one.png", { type: "image/png" })
 		const second = new File(["two"], "two.png", { type: "image/png" })
+
+		await user.click(
+			screen.getByRole("button", { name: "Set avatar programmatically" }),
+		)
+		expect(screen.getByTestId("avatar-value").textContent).toBe(
+			"programmatic.png",
+		)
+		expect(avatar.files).toHaveLength(0)
+		expect(avatar.hasAttribute("name")).toBe(false)
+		expect(new FormData(requireForm()).has("avatar")).toBe(false)
 
 		await user.selectOptions(status, "archived")
 		await user.click(newsletter)
@@ -536,11 +597,28 @@ describe("nativeControls choice and file controls", () => {
 		expect(screen.getByTestId("avatar-value").textContent).toBe("one.png")
 		expect(avatar.files).toHaveLength(1)
 		expect(avatar.files?.item(0)).toBe(first)
+		expect(avatar.name).toBe("avatar")
 
 		const formData = new FormData(requireForm())
 		expect(formData.get("status")).toBe("archived")
 		expect(formData.has("newsletter")).toBe(false)
 		expect(formData.get("avatar")).toBeInstanceOf(File)
+
+		await user.click(
+			screen.getByRole("button", { name: "Set avatar programmatically" }),
+		)
+		expect(screen.getByTestId("avatar-value").textContent).toBe(
+			"programmatic.png",
+		)
+		expect(avatar.files).toHaveLength(0)
+		expect(avatar.hasAttribute("name")).toBe(false)
+		expect(new FormData(requireForm()).has("avatar")).toBe(false)
+
+		await user.click(screen.getByRole("button", { name: "Clear avatar" }))
+		expect(screen.getByTestId("avatar-value").textContent).toBe("undefined")
+		expect(avatar.files).toHaveLength(0)
+		expect(avatar.hasAttribute("name")).toBe(false)
+		expect(new FormData(requireForm()).has("avatar")).toBe(false)
 	})
 
 	it("keeps choice and file values successful when a form becomes read-only", async () => {
@@ -724,6 +802,36 @@ function ValueProbe() {
 				{values.avatar?.name ?? "undefined"}
 			</output>
 		</>
+	)
+}
+
+function ClearAvatarButton() {
+	const form = useFormContext<Schema>()
+
+	return (
+		<button type="button" onClick={() => form.setValue("avatar", undefined)}>
+			Clear avatar
+		</button>
+	)
+}
+
+function SetAvatarButton() {
+	const form = useFormContext<Schema>()
+
+	return (
+		<button
+			type="button"
+			onClick={() =>
+				form.setValue(
+					"avatar",
+					new File(["programmatic"], "programmatic.png", {
+						type: "image/png",
+					}),
+				)
+			}
+		>
+			Set avatar programmatically
+		</button>
 	)
 }
 

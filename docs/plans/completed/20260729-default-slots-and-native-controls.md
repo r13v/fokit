@@ -297,8 +297,9 @@ Key decisions:
 - Replace hash routes with Vocs path routes such as `/get-started` and `/api`.
   Do not preserve or redirect old locale-prefixed hashes.
 - Configure Vocs with `renderStrategy: "full-static"`, `basePath: "/fokit"` in
-  production, `baseUrl: "https://r13v.github.io/fokit"`, and
-  `checkDeadlinks: true` for GitHub Pages.
+  production, `baseUrl: "https://r13v.github.io"`, and `checkDeadlinks: true`
+  for GitHub Pages so generated public URLs land under
+  `https://r13v.github.io/fokit`.
 - Use ordinary Vocs fenced code blocks for shell and static source. Mark every
   inline TypeScript/TSX block with `twoslash`, add compiler-only setup above
   `// ---cut---`, and use explicit expected-error annotations only when an
@@ -1161,7 +1162,7 @@ import { defineConfig } from "vocs/config"
 
 export default defineConfig({
 	basePath: process.env.BASE_PATH ?? "/",
-	baseUrl: "https://r13v.github.io/fokit",
+	baseUrl: "https://r13v.github.io",
 	checkDeadlinks: true,
 	renderStrategy: "full-static",
 	title: "Fokit",

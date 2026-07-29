@@ -20,6 +20,14 @@ const profileSchema = z
 		companyName: z.string().optional(),
 		country: z.string().min(2, "Choose a country"),
 		newsletter: z.boolean(),
+		avatar: z
+			.custom<File | undefined>(
+				(value) =>
+					value === undefined ||
+					(typeof File !== "undefined" && value instanceof File),
+				"Choose a browser File",
+			)
+			.optional(),
 		contacts: z
 			.array(
 				z.object({
@@ -148,6 +156,16 @@ const profileDefinition = kit.defineForm({
 					path: "newsletter",
 					control: "checkbox",
 					label: "Receive product news",
+				},
+				{
+					kind: "field",
+					path: "avatar",
+					control: "file",
+					label: "Avatar",
+					description: "PNG files stay native in FormData.",
+					options: {
+						accept: "image/png",
+					},
 				},
 			],
 		},

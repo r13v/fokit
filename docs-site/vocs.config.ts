@@ -4,7 +4,7 @@ export default defineConfig({
 	title: "Fokit",
 	description:
 		"Code-first, schema-validated React forms without giving up native HTML semantics.",
-	baseUrl: process.env.BASE_URL ?? "https://r13v.github.io/fokit",
+	baseUrl: process.env.BASE_URL ?? "https://r13v.github.io",
 	basePath: process.env.BASE_PATH ?? "/",
 	renderStrategy: "full-static",
 	checkDeadlinks: true,

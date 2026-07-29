@@ -5,6 +5,7 @@
 	"scripts": {
 		"dev": "vocs dev",
 		"build": "vocs build",
+		"postbuild": "node ../scripts/fix-vocs-skip-links.mjs",
 		"preview": "vocs preview",
 		"test": "node --test tests/content.test.mjs",
 		"typecheck": "tsc --project tsconfig.docs.json",

@@ -5,6 +5,7 @@ import { basename } from "node:path"
 import { test } from "node:test"
 
 const publicRoot = new URL("../dist/public/", import.meta.url)
+const expectProductionUrl = process.env.EXPECT_PRODUCTION_URL === "true"
 
 async function pathExists(path) {
 	try {
@@ -39,6 +40,8 @@ async function listFiles(path = "") {
 
 test("Vocs public output includes the static Markdown and indexing artifacts", async () => {
 	const requiredFiles = [
+		"index.html",
+		"404.html",
 		"assets/md/index.md",
 		"assets/md/get-started.md",
 		"llms.txt",
@@ -49,6 +52,71 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 
 	for (const file of requiredFiles) {
 		assert.equal(await pathExists(file), true, `${file} should be generated`)
+	}
+})
+
+test("production output uses GitHub Pages metadata URLs when requested", async () => {
+	if (!expectProductionUrl) {
+		return
+	}
+
+	const html = await readFile(new URL("get-started/index.html", publicRoot), {
+		encoding: "utf8",
+	})
+
+	assert.doesNotMatch(html, /http:\/\/127\.0\.0\.1/)
+	assert.match(
+		html,
+		/<link rel="canonical" href="https:\/\/r13v\.github\.io\/fokit\/get-started"/,
+	)
+	assert.match(
+		html,
+		/<meta property="og:url" content="https:\/\/r13v\.github\.io\/fokit\/get-started"/,
+	)
+	assert.match(html, /"url":"https:\/\/r13v\.github\.io\/fokit\/get-started"/)
+	assert.match(html, /<base href="https:\/\/r13v\.github\.io"/)
+})
+
+test("production output keeps Vocs skip links under the GitHub Pages base path", async () => {
+	if (!expectProductionUrl) {
+		return
+	}
+
+	const files = (await listFiles()).filter((file) => file.endsWith(".html"))
+	const skipLinks = []
+
+	for (const file of files) {
+		const html = await readFile(new URL(file, publicRoot), "utf8")
+		const skipTags =
+			html.match(/<a\b(?=[^>]*data-v-skip-to-content(?:="true")?)[^>]*>/g) ?? []
+
+		for (const tag of skipTags) {
+			const href = /\bhref="([^"]*)"/.exec(tag)?.[1]
+			assert.equal(typeof href, "string", `${file} skip link should have href`)
+			skipLinks.push({ file, href })
+		}
+
+		if (skipTags.length > 0) {
+			assert.match(
+				html,
+				/data-fokit-vocs-skip-link-base="true"/,
+				`${file} should patch hydrated Vocs skip links`,
+			)
+		}
+	}
+
+	assert.notEqual(
+		skipLinks.length,
+		0,
+		"production output should include skip links",
+	)
+
+	for (const { file, href } of skipLinks) {
+		assert.match(
+			href,
+			/^\/fokit(?:\/|#)/,
+			`${file} skip link should stay under /fokit`,
+		)
 	}
 })
 

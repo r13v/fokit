@@ -1025,8 +1025,12 @@ describe("native FormData serialization", () => {
 		}
 		const fileInput = screen.getByLabelText("Avatar") as HTMLInputElement
 
+		expect(new FormData(form).has("avatar")).toBe(false)
 		await user.upload(fileInput, avatar)
-		expect(fileInput.files?.item(0)?.name).toBe("avatar.png")
+		const selected = fileInput.files?.item(0)
+		expect(selected?.name).toBe("avatar.png")
+		expect(selected?.type).toBe("image/png")
+		expect(selected?.size).toBe(avatar.size)
 		expect(new FormData(form).get("avatar")).toBeInstanceOf(File)
 		expect(new FormData(form).get("status")).toBe("draft")
 		expect(new FormData(form).get("subscribed")).toBe("true")
@@ -1154,6 +1158,58 @@ describe("native FormData serialization", () => {
 			).toThrow(
 				`ActionForm cannot preserve field "${path}" while it is invisible or disabled without a serializer`,
 			)
+		},
+	)
+
+	it.each([
+		{
+			name: "disabled",
+			path: "disabledAvatar",
+			definition: disabledNativeFileDefinition,
+			defaultValues: {
+				disabledAvatar: undefined,
+			},
+		},
+		{
+			name: "hidden",
+			path: "hiddenAvatar",
+			definition: hiddenNativeFileDefinition,
+			defaultValues: {
+				hiddenAvatar: undefined,
+			},
+		},
+	])(
+		"allows undefined $name native file values in classic and Action FormData",
+		({ path, definition, defaultValues }) => {
+			const fullDefaultValues = {
+				status: "draft",
+				subscribed: false,
+				disabledStatus: "draft",
+				hiddenStatus: "draft",
+				disabledSubscribed: false,
+				hiddenSubscribed: false,
+				...defaultValues,
+			} satisfies NativeChoiceFileValues
+
+			expect(() => {
+				render(
+					<nativeTextLikeKit.AutoForm
+						defaultValues={fullDefaultValues}
+						definition={definition}
+						id="native-file-undefined"
+					/>,
+				)
+			}).not.toThrow()
+			expect(hiddenInputs(path)).toHaveLength(0)
+
+			const snapshot = createFormStore({
+				definition,
+				defaultValues: fullDefaultValues,
+			}).getSnapshot()
+
+			expect(() =>
+				assertActionFormCompatible(snapshot, nativeTextLikeKit.controls),
+			).not.toThrow()
 		},
 	)
 })

@@ -75,14 +75,16 @@ describe("GitHub Pages workflow", () => {
 		expect(docsVerifyRunIndex).toBeGreaterThan(-1)
 		expect(artifactIndex).toBeGreaterThan(docsVerifyIndex)
 		expect(buildSteps[artifactIndex]?.if).toBeUndefined()
-		expect(record(buildSteps[artifactIndex]?.with).path).toBe("docs-site/dist")
+		expect(record(buildSteps[artifactIndex]?.with).path).toBe(
+			"docs-site/dist/public",
+		)
 		expect(deploy.needs).toBe("build")
 		expect(record(deploy.environment)).toEqual({
 			name: "github-pages",
 			url: pagesUrlExpression,
 		})
 		expect(deploySteps[0]?.uses).toBe("actions/deploy-pages@v4")
-		expect(pagesWorkflow).not.toContain("run: npm run site:build")
+		expect(pagesWorkflow).not.toContain("path: docs-site/dist\n")
 	})
 
 	it("previews the Vocs build without overriding its base path", () => {

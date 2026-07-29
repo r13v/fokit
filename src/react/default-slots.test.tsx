@@ -69,6 +69,25 @@ describe("createDefaultSlots i18n", () => {
 		expect(button("Move item 1 down").disabled).toBe(false)
 	})
 
+	it("keeps English defaults when i18n entries are explicitly undefined", () => {
+		const slots = createDefaultSlots({
+			i18n: {
+				arrayAdd: undefined,
+				arrayRemove: undefined,
+			},
+		})
+
+		render(
+			<>
+				<slots.Array {...arrayProps({ label: "Contacts" })}>Rows</slots.Array>
+				<slots.ArrayItem {...arrayItemProps({ index: 0 })}>Row</slots.ArrayItem>
+			</>,
+		)
+
+		expect(button("Add item").disabled).toBe(false)
+		expect(button("Remove item 1").disabled).toBe(false)
+	})
+
 	it("passes readonly add and one-based array-item action data", () => {
 		const actionData: {
 			add?: Readonly<DefaultArrayAddI18nData>

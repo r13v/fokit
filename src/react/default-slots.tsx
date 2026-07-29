@@ -42,8 +42,13 @@ export function createDefaultSlots(options?: {
 	readonly i18n?: Partial<DefaultSlotsI18n>
 }): FormKitSlots {
 	const i18n = Object.freeze({
-		...englishDefaultSlotsI18n,
-		...options?.i18n,
+		arrayAdd: options?.i18n?.arrayAdd ?? englishDefaultSlotsI18n.arrayAdd,
+		arrayRemove:
+			options?.i18n?.arrayRemove ?? englishDefaultSlotsI18n.arrayRemove,
+		arrayMoveUp:
+			options?.i18n?.arrayMoveUp ?? englishDefaultSlotsI18n.arrayMoveUp,
+		arrayMoveDown:
+			options?.i18n?.arrayMoveDown ?? englishDefaultSlotsI18n.arrayMoveDown,
 	})
 
 	function DefaultArraySlot({

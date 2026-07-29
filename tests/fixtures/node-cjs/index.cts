@@ -3,6 +3,7 @@ import type {
 	NativeSelectOptions,
 	NativeTextOptions,
 } from "fokit"
+import { createDefaultSlots, nativeControls } from "fokit"
 import {
 	type ControlMetadata,
 	createFormStore,
@@ -90,8 +91,15 @@ const slotI18n = {
 	arrayRemove: ({ position }) => `Remove item ${position}`,
 } satisfies Partial<DefaultSlotsI18n>
 
+const defaultSlots = createDefaultSlots()
+
+if (nativeControls.text.formData.mode !== "native") {
+	throw new Error("CommonJS declarations did not expose nativeControls values")
+}
+
 void store
 void result
 void textOptions
 void selectOptions
 void slotI18n
+void defaultSlots

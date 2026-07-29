@@ -416,6 +416,7 @@ test("docs package uses the Vocs shell scripts and dependencies", async () => {
 	assert.deepEqual(packageJson.scripts, {
 		dev: "vocs dev",
 		build: "vocs build",
+		postbuild: "node ../scripts/fix-vocs-skip-links.mjs",
 		preview: "vocs preview",
 		test: "node --test tests/content.test.mjs",
 		typecheck: "tsc --project tsconfig.docs.json",
@@ -424,6 +425,21 @@ test("docs package uses the Vocs shell scripts and dependencies", async () => {
 	})
 	assert.deepEqual(packageJson.dependencies, requiredDependencies)
 	assert.equal(packageJson.devDependencies, undefined)
+})
+
+test("Vocs skip-link runtime escapes base paths before injecting HTML", async () => {
+	const { runtimePatch } = await import(
+		new URL("scripts/fix-vocs-skip-links.mjs", repositoryRoot).href
+	)
+	const patch = runtimePatch(
+		'/</script><script>alert("x")</script>&\u2028\u2029',
+	)
+
+	assert.equal((patch.match(/<script/g) ?? []).length, 1)
+	assert.equal((patch.match(/<\/script>/g) ?? []).length, 1)
+	assert.match(patch, /\\u003c\/script\\u003e\\u003cscript\\u003e/)
+	assert.match(patch, /\\u0026/)
+	assert.match(patch, /\\u2028\\u2029/)
 })
 
 test("docs TypeScript and verification gates are wired", async () => {
@@ -438,7 +454,6 @@ test("docs TypeScript and verification gates are wired", async () => {
 		extends: "../tsconfig.json",
 		include: [
 			"vocs.config.ts",
-			"src/components/**/*.ts",
 			"src/components/**/*.tsx",
 			"src/snippets/**/*.ts",
 			"src/snippets/**/*.tsx",
@@ -450,14 +465,13 @@ test("docs TypeScript and verification gates are wired", async () => {
 	)
 	assert.equal(
 		rootPackageJson.scripts["site:verify"],
-		"npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/fokit npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
+		"npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/fokit npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e && BASE_PATH=/fokit npm run site:build && EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
 	)
 	assert.equal(rootPackageJson.scripts.verify.includes("test:docs"), false)
 	assert.deepEqual(knipConfig.workspaces["docs-site"].entry, [
 		"vocs.config.ts",
 		"src/pages/**/*.mdx",
 		"src/pages/**/*.css",
-		"src/components/**/*.ts",
 		"src/components/**/*.tsx",
 		"src/snippets/**/*.ts",
 		"src/snippets/**/*.tsx",
@@ -589,7 +603,7 @@ test("Vocs config defines the static English documentation shell", async () => {
 	)
 	assert.match(
 		source,
-		/baseUrl:\s*process\.env\.BASE_URL\s*\?\?\s*"https:\/\/r13v\.github\.io\/fokit"/,
+		/baseUrl:\s*process\.env\.BASE_URL\s*\?\?\s*"https:\/\/r13v\.github\.io"/,
 	)
 	assert.match(source, /basePath:\s*process\.env\.BASE_PATH\s*\?\?\s*"\/"/)
 	assert.match(source, /renderStrategy:\s*"full-static"/)

@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer"
+
 import { expect, test } from "@playwright/test"
 
 test.describe("Fokit documentation", () => {
@@ -37,6 +39,23 @@ test.describe("Fokit documentation", () => {
 				),
 			)
 			.toBeLessThanOrEqual(120)
+	})
+
+	test("keeps skip links under the GitHub Pages base path after hydration", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 900 })
+		await page.goto("./get-started", { waitUntil: "networkidle" })
+
+		const skipLink = page.locator("a[data-v-skip-to-content]")
+		await expect(skipLink).toHaveAttribute(
+			"href",
+			/\/fokit\/get-started#vocs-content$/,
+		)
+
+		await skipLink.focus()
+		await page.keyboard.press("Enter")
+		await expect(page).toHaveURL(/\/fokit\/get-started#vocs-content$/)
 	})
 
 	test("renders copyable code, rich Twoslash hovers, and static AI Markdown", async ({
@@ -82,6 +101,31 @@ test.describe("Fokit documentation", () => {
 		await expect
 			.poll(async () => await llmsResponse.text())
 			.toContain("Interactive Fokit Lab")
+	})
+
+	test("searches Vocs content under the GitHub Pages base path", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1120, height: 840 })
+		await page.goto("./get-started", { waitUntil: "networkidle" })
+
+		await page
+			.getByRole("button", { name: /Search/ })
+			.first()
+			.click()
+		const dialog = page.getByRole("dialog")
+		await expect(dialog).toBeVisible()
+		await dialog.getByRole("combobox").fill("nativeControls")
+
+		const nativeControlsResult = dialog.locator(
+			'a[href="/fokit/guides/controls#native-controls"]',
+		)
+		await expect(nativeControlsResult).toContainText("nativeControls")
+		await nativeControlsResult.click()
+		await expect(page).toHaveURL(/\/fokit\/guides\/controls#native-controls$/)
+		await expect(
+			page.getByRole("heading", { level: 2, name: "Native controls" }),
+		).toBeVisible()
 	})
 
 	test("runs the Fokit lab through validation, conditions, reset, and classic submit", async ({
@@ -146,6 +190,15 @@ test.describe("Fokit documentation", () => {
 		await lab.getByLabel("Email").nth(1).fill("support@example.com")
 		await expect(lab.getByTestId("lab-form-data")).toContainText(
 			"contacts.1.email=support@example.com",
+		)
+
+		await lab.getByLabel("Avatar").setInputFiles({
+			name: "avatar.png",
+			mimeType: "image/png",
+			buffer: Buffer.from("avatar"),
+		})
+		await expect(lab.getByTestId("lab-form-data")).toContainText(
+			"avatar=File(avatar.png)",
 		)
 
 		await lab.getByRole("button", { name: "Move contact 2 up" }).click()

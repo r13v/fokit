@@ -1,3 +1,4 @@
+import { createDefaultSlots, nativeControls } from "fokit"
 import { createFormStore, normalizeDefinition, parsePath } from "fokit/core"
 import { parseFormData } from "fokit/server"
 
@@ -38,6 +39,28 @@ const store = createFormStore({
 })
 
 store.setValue("name", "Grace")
+
+if (typeof createDefaultSlots().Field !== "function") {
+	throw new Error("ESM root export did not expose createDefaultSlots")
+}
+
+if (nativeControls.text.formData.mode !== "native") {
+	throw new Error("ESM root export did not expose nativeControls")
+}
+
+const coreExports = await import("fokit/core")
+const serverExports = await import("fokit/server")
+
+if ("createDefaultSlots" in coreExports || "nativeControls" in coreExports) {
+	throw new Error("ESM core entry leaked React defaults")
+}
+
+if (
+	"createDefaultSlots" in serverExports ||
+	"nativeControls" in serverExports
+) {
+	throw new Error("ESM server entry leaked React defaults")
+}
 
 if (parsePath("tags.0").length !== 2) {
 	throw new Error("ESM path parser returned the wrong segment count")

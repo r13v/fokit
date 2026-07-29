@@ -226,6 +226,18 @@ Pruning unreferenced generated QA screenshots before publishing → the command 
 
 Opening the draft PR through the connected GitHub app → GitHub returned `403 Resource not accessible by integration` despite the repository being readable and the branch already being pushed. Fall back to the authenticated `gh` session when the connector installation lacks pull-request write access.
 
+## 2026-07-29 11:34 — GPT-5
+
+Updating the confirmed implementation plan → an `apply_patch` hunk was built from overlapping inspection output and included a duplicated context line that was not present in the file. Re-read the exact numbered lines before patching when adjacent `sed` ranges overlap.
+
+## 2026-07-29 12:12 — GPT-5
+
+Replacing the direct Twoslash plan with the confirmed Vocs migration → a broad `apply_patch` hunk assumed the “Proposed details” line was a Markdown heading, so the otherwise valid patch was rejected. Split large plan rewrites into exact inspected sections before changing unrelated headings.
+
+## 2026-07-29 13:01 — GPT-5
+
+Auditing stale plan terms with `rg` → backticks inside a double-quoted shell pattern were interpreted as command substitutions and produced an invalid multiline regex. Use single-quoted search patterns whenever Markdown code spans appear in shell arguments.
+
 ## 2026-07-29 13:18 — GPT-5
 
 Adding native choice/file FormData tests → one broad `apply_patch` mixed distant insertion points and missed the exact closing context near the file end. Split multi-region test edits into smaller patches after re-reading local anchors.
@@ -233,3 +245,7 @@ Adding native choice/file FormData tests → one broad `apply_patch` mixed dista
 ## 2026-07-29 13:22 — GPT-5
 
 Implementing read-only native file controls → Biome rejects `aria-readonly` on `input[type=file]` even though the plan requires an explicit exposed read-only state because the element has no native `readOnly`. Keep the suppression local to the file input and include the contract reason.
+
+## 2026-07-29 13:31 — GPT-5
+
+Adding root-entry CJS declaration smoke coverage → importing representative `fokit` React types from the Node CJS fixture exposed missing React and DOM type prerequisites. Give root-entry type fixtures `@types/react` and DOM libs instead of treating them like core/server-only consumers.

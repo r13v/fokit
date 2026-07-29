@@ -1,3 +1,8 @@
+import type {
+	DefaultSlotsI18n,
+	NativeSelectOptions,
+	NativeTextOptions,
+} from "fokit"
 import {
 	type ControlMetadata,
 	createFormStore,
@@ -71,5 +76,22 @@ const result: Promise<ParseResult<ProfileInput>> = parseFormData(
 	schema,
 )
 
+const textOptions = {
+	type: "email",
+	placeholder: "ada@example.test",
+} satisfies NativeTextOptions
+
+const selectOptions = {
+	options: [{ value: "draft", label: "Draft" }],
+} satisfies NativeSelectOptions<"draft">
+
+const slotI18n = {
+	arrayAdd: "Add item",
+	arrayRemove: ({ position }) => `Remove item ${position}`,
+} satisfies Partial<DefaultSlotsI18n>
+
 void store
 void result
+void textOptions
+void selectOptions
+void slotI18n

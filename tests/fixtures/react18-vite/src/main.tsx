@@ -20,6 +20,7 @@ import {
 	KitForm,
 	mergePathValue,
 	type NormalizedFormDefinition,
+	nativeControls,
 	normalizeDefinition,
 	parseArrayIndex,
 	parsePath,
@@ -177,6 +178,10 @@ const kit = createFormKit({
 	},
 })
 
+const nativeKit = createFormKit({
+	controls: nativeControls,
+})
+
 const description = computed(["name"] as const, ({ name }) =>
 	typeof name === "string" && name.length > 0 ? `Editing ${name}` : "Profile",
 )
@@ -225,6 +230,7 @@ void [
 	pathsOverlap("name", "name"),
 	resolveUi(definition, snapshot.values, undefined),
 	unsetPathValue(mergedValues, "name"),
+	nativeKit.slots.Field,
 	KitForm,
 	Submit,
 	normalizeDefinition,

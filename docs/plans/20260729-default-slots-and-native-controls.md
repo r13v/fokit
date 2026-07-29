@@ -580,29 +580,29 @@ entry with complete type inference in React 18 and React 19 projects.
 - Modify: `tests/fixtures/node-cjs/index.cjs`
 - Modify: `tests/fixtures/node-cjs/index.cts`
 
-- [ ] Write failing public declaration and built-export tests before adding the
+- [x] Write failing public declaration and built-export tests before adding the
       root exports.
-- [ ] Export `createDefaultSlots`, `DefaultSlotI18nValue`,
+- [x] Export `createDefaultSlots`, `DefaultSlotI18nValue`,
       `DefaultSlotsI18n`, action data types, `nativeControls`,
       `NativeTextType`, `NativeTextOptions`, `NativeTextareaOptions`,
       `NativeSelectOptions`, `NativeSelectOption`, `NativeNumberOptions`,
       `NativeDateOptions`, and `NativeFileOptions` from `fokit`.
-- [ ] Keep the new React API out of `fokit/core` and `fokit/server`.
-- [ ] Verify control-name inference and each native control's compatible path
+- [x] Keep the new React API out of `fokit/core` and `fokit/server`.
+- [x] Verify control-name inference and each native control's compatible path
       value types.
-- [ ] Declaration-test the closed `NativeTextType` union and reject non-text
+- [x] Declaration-test the closed `NativeTextType` union and reject non-text
       input types.
-- [ ] Verify mixed custom/native registries preserve literal control names and
+- [x] Verify mixed custom/native registries preserve literal control names and
       options.
-- [ ] Extend the existing packed-package ESM runtime and CJS runtime/typecheck
+- [x] Extend the existing packed-package ESM runtime and CJS runtime/typecheck
       fixtures; verify both module systems expose `createDefaultSlots` and
       `nativeControls`, and that the CJS declaration condition exposes
       representative option/i18n types.
-- [ ] Verify React 18 and React 19 package fixtures can build a kit with
+- [x] Verify React 18 and React 19 package fixtures can build a kit with
       `nativeControls` and omitted slots.
-- [ ] Run `npm run test:types`.
-- [ ] Run `npm run test:package`.
-- [ ] Run `npm run test:smoke`.
+- [x] Run `npm run test:types`.
+- [x] Run `npm run test:package`.
+- [x] Run `npm run test:smoke`.
 
 ### Task 6: Update repository contracts and retained Markdown
 

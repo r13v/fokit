@@ -115,6 +115,13 @@ export type {
 	SubmitProps,
 } from "./react/create-form-kit.js"
 export { createFormKit } from "./react/create-form-kit.js"
+export type {
+	DefaultArrayAddI18nData,
+	DefaultArrayItemI18nData,
+	DefaultSlotI18nValue,
+	DefaultSlotsI18n,
+} from "./react/default-slots.js"
+export { createDefaultSlots } from "./react/default-slots.js"
 export type { NativeFormProps } from "./react/form.js"
 export { KitForm } from "./react/form.js"
 export type { FormProviderProps } from "./react/form-context.js"
@@ -131,6 +138,17 @@ export {
 	useFormState,
 	useValue,
 } from "./react/hooks.js"
+export type {
+	NativeDateOptions,
+	NativeFileOptions,
+	NativeNumberOptions,
+	NativeSelectOption,
+	NativeSelectOptions,
+	NativeTextareaOptions,
+	NativeTextOptions,
+	NativeTextType,
+} from "./react/native-controls.js"
+export { nativeControls } from "./react/native-controls.js"
 export type {
 	ArrayItemSlotProps,
 	ArraySlotProps,

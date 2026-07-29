@@ -1281,7 +1281,7 @@ introducing the full contract.
   package boundaries.
 - [x] Provide copyable reference controls and all five structural slots,
   including accessible label/error wiring and class/root prop preservation.
-- [x] Document `dynamicOptions` as computed `options` backed by runtime context.
+- [x] Document dynamic options as computed `options` backed by runtime context.
 - [x] Document visible/disabled/read-only/value-policy behavior and
   `beforeUpdate`/`onUpdate` with one deterministic transaction example.
 - [x] Document React 18 classic submission separately from server-first React

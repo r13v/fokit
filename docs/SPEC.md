@@ -1187,7 +1187,7 @@ const addressForm = kit.defineForm<AddressContext>()({
 });
 ```
 
-This is the `dynamicOptions` use case: `options` is a normal computed property,
+This is the dynamic options use case: `options` is a normal computed property,
 not a second options API. Remote data is loaded by the application and supplied
 through context.
 

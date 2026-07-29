@@ -169,7 +169,7 @@ export const profileDefinition = kit.defineForm<ProfileContext>()({
 
 ## 6. Dynamic options - это computed options
 
-Отдельного API `dynamicOptions` нет. Положите computed value в `options` и
+Положите computed value в `options` и
 читайте runtime context.
 
 ```ts

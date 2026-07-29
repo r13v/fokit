@@ -70,7 +70,7 @@ export function ProfileForm() {
 
 ## Runtime context and dynamic options
 
-`dynamicOptions` is not a separate API. Use a computed `options` value and read
+Use a computed `options` value and read
 runtime context:
 
 ```ts

@@ -169,7 +169,7 @@ edits.
 
 ## 6. Dynamic options are computed options
 
-There is no separate `dynamicOptions` API. Put a computed value in `options`
+Put a computed value in `options`
 and read runtime context.
 
 ```ts

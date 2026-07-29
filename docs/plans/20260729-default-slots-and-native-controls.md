@@ -433,23 +433,23 @@ retain complete control over markup.
 - Modify: `src/react/default-slots.test.tsx`
 - Modify: `src/react/accessibility.test.tsx`
 
-- [ ] Extend the DOM and accessibility tests first for all five slot contracts,
+- [x] Extend the DOM and accessibility tests first for all five slot contracts,
       callbacks, conditional content, disabled states, ARIA relationships, and
       error focus props.
-- [ ] Implement default `Field`, `Section`, `Array`, `ArrayItem`, and
+- [x] Implement default `Field`, `Section`, `Array`, `ArrayItem`, and
       `ErrorMessage` components using their public slot props.
-- [ ] Spread each `rootProps` object on exactly one root.
-- [ ] Preserve `labelProps`, `descriptionProps`, `layoutProps`, controls,
+- [x] Spread each `rootProps` object on exactly one root.
+- [x] Preserve `labelProps`, `descriptionProps`, `layoutProps`, controls,
       errors, issue messages, and all action callbacks.
-- [ ] Render default error messages with `role="alert"` while preserving the
+- [x] Render default error messages with `role="alert"` while preserving the
       supplied focus and identification props.
-- [ ] Render native `button type="button"` elements for add, remove, move up,
+- [x] Render native `button type="button"` elements for add, remove, move up,
       and move down.
-- [ ] Respect `canAdd`, `disabled`, `readOnly`, `canMoveUp`, and `canMoveDown`
+- [x] Respect `canAdd`, `disabled`, `readOnly`, `canMoveUp`, and `canMoveDown`
       when disabling actions.
-- [ ] Resolve English or caller-provided i18n values during render.
-- [ ] Keep markup unstyled and free of imported CSS.
-- [ ] Run `npm test -- src/react/default-slots.test.tsx
+- [x] Resolve English or caller-provided i18n values during render.
+- [x] Keep markup unstyled and free of imported CSS.
+- [x] Run `npm test -- src/react/default-slots.test.tsx
       src/react/accessibility.test.tsx`.
 
 ### Task 3: Make default slots the `createFormKit` fallback

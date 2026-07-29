@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest"
 
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
+import { createDefaultSlots } from "./default-slots.js"
 import { useFormContext } from "./form-context.js"
 import type {
 	ArrayItemSlotProps,
@@ -74,6 +75,13 @@ const text = defineControl<string>({
 	},
 })
 
+const defaultSlotsKit = createFormKit({
+	controls: {
+		text,
+	},
+	slots: createDefaultSlots(),
+})
+
 const kit = createFormKit({
 	controls: {
 		text,
@@ -88,6 +96,33 @@ const kit = createFormKit({
 })
 
 const definition = kit.defineForm({
+	schema,
+	ui: [
+		{
+			kind: "section",
+			id: "identity",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					label: "Name",
+				},
+				{
+					kind: "field",
+					path: "email",
+					control: "text",
+					label: "Email",
+					description: "Used for receipts",
+					required: true,
+				},
+			],
+		},
+	],
+})
+
+const defaultSlotsDefinition = defaultSlotsKit.defineForm({
 	schema,
 	ui: [
 		{
@@ -162,6 +197,54 @@ describe("generated field accessibility", () => {
 		expect(email.getAttribute("aria-invalid")).toBe("true")
 		expect(error.getAttribute("data-fokit-node")).toBe("error-message")
 		expect(error.getAttribute("data-fokit-path")).toBe("email")
+	})
+
+	it("preserves generated label, description, error, and focus props with the default slots", async () => {
+		render(
+			<defaultSlotsKit.AutoForm
+				defaultValues={{
+					name: "Ada",
+					email: "invalid",
+				}}
+				definition={defaultSlotsDefinition}
+				id="profile"
+			>
+				<ValidateEmail />
+			</defaultSlotsKit.AutoForm>,
+		)
+
+		const email = screen.getByLabelText("Email") as HTMLInputElement
+		const fieldRoot = email.closest("[data-fokit-node='field']")
+		if (!(fieldRoot instanceof HTMLElement)) {
+			throw new Error("Expected default field root")
+		}
+
+		expect(fieldRoot.getAttribute("data-fokit-path")).toBe("email")
+		expect(fieldRoot.hasAttribute("data-required")).toBe(true)
+		expect(screen.getByText("Email").id).toBe("profile-email-label")
+		expect(screen.getByText("Used for receipts").id).toBe(
+			"profile-email-description",
+		)
+		expect(email.id).toBe("profile-email")
+		expect(email.getAttribute("aria-describedby")).toBe(
+			"profile-email-description",
+		)
+
+		fireEvent.click(screen.getByRole("button", { name: "Validate email" }))
+
+		await waitFor(() => {
+			expect(email.getAttribute("aria-invalid")).toBe("true")
+		})
+
+		const error = screen.getByRole("alert")
+
+		expect(error.textContent).toBe("Email is invalid")
+		expect(error.id).toBe("profile-email-error-0")
+		expect(error.getAttribute("data-fokit-node")).toBe("error-message")
+		expect(error.getAttribute("data-fokit-path")).toBe("email")
+		expect(email.getAttribute("aria-describedby")).toBe(
+			"profile-email-description profile-email-error-0",
+		)
 	})
 })
 

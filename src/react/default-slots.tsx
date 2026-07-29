@@ -168,7 +168,11 @@ function DefaultSectionSlot({
 }
 
 function DefaultErrorMessageSlot({ rootProps, issue }: ErrorMessageSlotProps) {
-	return <p {...rootProps}>{issue.message}</p>
+	return (
+		<p {...rootProps} role="alert">
+			{issue.message}
+		</p>
+	)
 }
 
 function resolveMessage<Data>(

@@ -748,18 +748,18 @@ installed and all site gates pass before `docs-site/dist` is uploaded.
 - Modify: `tests/package/ci-workflow.test.ts`
 - Modify: `tests/package/workflows.test.ts`
 
-- [ ] Add failing workflow assertions first for CI, publish, and Pages:
+- [x] Add failing workflow assertions first for CI, publish, and Pages:
       docs dependencies must be installed before `site:verify`, and Pages may
       upload only after that command succeeds.
-- [ ] Remove the preview `--base` CLI override from
+- [x] Remove the preview `--base` CLI override from
       `playwright.docs.config.ts`; use the base path baked into the Vocs build.
-- [ ] Keep all workflows on `docs-site/dist` and remove the redundant trailing
+- [x] Keep all workflows on `docs-site/dist` and remove the redundant trailing
       slash `BASE_PATH` override from the Pages workflow.
-- [ ] Preserve the existing package-only `verify` ordering in primary CI and
+- [x] Preserve the existing package-only `verify` ordering in primary CI and
       publish; assert the independent docs job/publish step installs
       `docs-site` before running the mandatory `site:verify`.
-- [ ] Run `npm run test:package`.
-- [ ] Do not run the complete `site:verify` until Task 9 migrates its E2E
+- [x] Run `npm run test:package`.
+- [x] Do not run the complete `site:verify` until Task 9 migrates its E2E
       expectations to Vocs; Tasks 7A–8E use their focused site gates.
 
 ### Task 8A: Lock the Vocs page map and migration inventory

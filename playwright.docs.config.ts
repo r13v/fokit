@@ -16,7 +16,7 @@ export default defineConfig({
 		...devices["Desktop Chrome"],
 	},
 	webServer: {
-		command: `npm run preview --prefix docs-site -- --host ${host} --port ${port} --strictPort --base /fokit/`,
+		command: `npm run preview --prefix docs-site -- --host ${host} --port ${port} --strictPort`,
 		url: baseURL,
 		reuseExistingServer: !process.env.CI,
 		timeout: 60_000,

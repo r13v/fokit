@@ -8,6 +8,7 @@ import { parse } from "yaml"
 const rootDirectory = fileURLToPath(new URL("../..", import.meta.url))
 const pagesWorkflow = await readOptionalFile(".github/workflows/pages.yml")
 const publishWorkflow = await readOptionalFile(".github/workflows/publish.yml")
+const docsPlaywrightConfig = await readOptionalFile("playwright.docs.config.ts")
 const pages = parse(pagesWorkflow) as Record<string, unknown>
 const publish = parse(publishWorkflow) as Record<string, unknown>
 const pagesUrlExpression = "$" + "{{ steps.deployment.outputs.page_url }}"
@@ -19,6 +20,19 @@ describe("GitHub Pages workflow", () => {
 		const deploy = job(pages, "deploy")
 		const buildSteps = workflowSteps(build)
 		const deploySteps = workflowSteps(deploy)
+		const buildRuns = buildSteps.map((step) => step.run).filter(Boolean)
+		const docsInstallIndex = buildSteps.findIndex(
+			(step) => step.run === "npm ci --prefix docs-site",
+		)
+		const docsVerifyIndex = buildSteps.findIndex(
+			(step) => step.run === "BASE_PATH=/fokit npm run site:verify",
+		)
+		const docsVerifyRunIndex = buildRuns.indexOf(
+			"BASE_PATH=/fokit npm run site:verify",
+		)
+		const artifactIndex = buildSteps.findIndex(
+			(step) => step.uses === "actions/upload-pages-artifact@v4",
+		)
 
 		expect(pages.name).toBe("Deploy Pages")
 		expect(record(record(pages.on).push).branches).toEqual(["main"])
@@ -51,14 +65,17 @@ describe("GitHub Pages workflow", () => {
 			String(record(buildSteps[1]?.with)["cache-dependency-path"]),
 		).toContain("docs-site/package-lock.json")
 		expect(buildSteps[2]?.uses).toBe("actions/configure-pages@v5")
-		expect(buildSteps.map((step) => step.run).filter(Boolean)).toEqual([
+		expect(buildRuns).toEqual([
 			"npm ci",
 			"npm ci --prefix docs-site",
 			"npx playwright install --with-deps chromium",
-			"BASE_PATH=/fokit/ npm run site:verify",
+			"BASE_PATH=/fokit npm run site:verify",
 		])
-		expect(buildSteps[7]?.uses).toBe("actions/upload-pages-artifact@v4")
-		expect(record(buildSteps[7]?.with).path).toBe("docs-site/dist")
+		expect(docsInstallIndex).toBeLessThan(docsVerifyIndex)
+		expect(docsVerifyRunIndex).toBeGreaterThan(-1)
+		expect(artifactIndex).toBeGreaterThan(docsVerifyIndex)
+		expect(buildSteps[artifactIndex]?.if).toBeUndefined()
+		expect(record(buildSteps[artifactIndex]?.with).path).toBe("docs-site/dist")
 		expect(deploy.needs).toBe("build")
 		expect(record(deploy.environment)).toEqual({
 			name: "github-pages",
@@ -66,6 +83,11 @@ describe("GitHub Pages workflow", () => {
 		})
 		expect(deploySteps[0]?.uses).toBe("actions/deploy-pages@v4")
 		expect(pagesWorkflow).not.toContain("run: npm run site:build")
+	})
+
+	it("previews the Vocs build without overriding its base path", () => {
+		expect(docsPlaywrightConfig).toContain("/fokit/")
+		expect(docsPlaywrightConfig).not.toMatch(/\s--base(?:\s|=)/)
 	})
 
 	it("does not add non-Pages hosting artifacts", async () => {
@@ -107,11 +129,12 @@ describe("trusted npm publishing workflow", () => {
 	it("verifies the release completely before publishing", () => {
 		const steps = workflowSteps(job(publish, "publish"))
 		const releaseGuard = steps[2]
+		const runs = steps.map((step) => step.run).filter(Boolean)
 
 		expect(record(releaseGuard?.env).FOKIT_RELEASE_TAG).toBe(
 			releaseTagExpression,
 		)
-		expect(steps.map((step) => step.run).filter(Boolean)).toEqual([
+		expect(runs).toEqual([
 			"node scripts/verify-release.mjs",
 			"npm ci",
 			"npx playwright install --with-deps chromium",
@@ -121,6 +144,9 @@ describe("trusted npm publishing workflow", () => {
 			"npm pack --dry-run",
 			"npm publish --access public",
 		])
+		expect(runs.indexOf("npm ci --prefix docs-site")).toBeLessThan(
+			runs.indexOf("npm run site:verify"),
+		)
 	})
 
 	it("does not configure branch publishing or long-lived npm credentials", () => {

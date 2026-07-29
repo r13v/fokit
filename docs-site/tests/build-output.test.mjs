@@ -40,6 +40,7 @@ async function listFiles(path = "") {
 test("Vocs public output includes the static Markdown and indexing artifacts", async () => {
 	const requiredFiles = [
 		"assets/md/index.md",
+		"assets/md/get-started.md",
 		"llms.txt",
 		"llms-full.txt",
 		"sitemap.xml",
@@ -51,10 +52,34 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 	}
 })
 
+test("Interactive Lab has meaningful generated Markdown fallbacks", async () => {
+	const fallbackTerms = [
+		"Interactive Fokit Lab",
+		"browser-only lab",
+		"createFormKit({ controls: nativeControls })",
+	]
+	const fallbackFiles = ["assets/md/get-started.md", "llms-full.txt"]
+
+	for (const file of fallbackFiles) {
+		const source = await readFile(new URL(file, publicRoot), "utf8")
+
+		for (const term of fallbackTerms) {
+			assert.match(
+				source,
+				new RegExp(escapeRegExp(term)),
+				`${file} needs ${term}`,
+			)
+		}
+	}
+
+	const llms = await readFile(new URL("llms.txt", publicRoot), "utf8")
+	assert.match(llms, /Interactive Fokit Lab/)
+})
+
 test("Vocs public output does not include route or function artifacts", async () => {
 	const files = await listFiles()
 	const forbiddenRouteFiles = files.filter((file) =>
-		/(^|\/)(api|server|functions|_functions)(\/|$)|(^|\/)_worker\.[cm]?js$/i.test(
+		/(^|\/)(server|functions|_functions)(\/|$)|(^|\/)api\/(server|functions|_functions)(\/|$)|(^|\/)_worker\.[cm]?js$/i.test(
 			file,
 		),
 	)
@@ -70,3 +95,7 @@ test("Vocs public output does not include route or function artifacts", async ()
 		assert.doesNotMatch(html, /property="og:image"|name="twitter:image"/)
 	}
 })
+
+function escapeRegExp(value) {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}

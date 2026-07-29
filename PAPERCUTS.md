@@ -285,3 +285,23 @@ Building migrated Vocs pages → the inactive legacy `docs-site/src/content.js`
 source still said FormData mode `"unavailable"`, but the implemented public
 API uses `"none"`. Prefer current source/tests over stale migration text when
 copying examples.
+
+## 2026-07-29 14:32 — GPT-5
+
+Running the docs-site Playwright gate → Vocs 2.7.2 rejected the preview
+webServer's `--strictPort` flag before tests could start. Drop the unsupported
+flag or start Vocs preview through a wrapper that owns strict port checks.
+
+## 2026-07-29 14:37 — GPT-5
+
+Testing the Vocs preview build locally → the production `baseUrl` emitted a
+`<base>` tag that sent dynamic imports to GitHub Pages, so the page SSR rendered
+but client components did not hydrate. Let verification builds override
+`baseUrl` with the local preview origin.
+
+## 2026-07-29 14:41 — GPT-5
+
+Testing Vocs' copy-code button in Playwright → `navigator.clipboard` was not
+available reliably enough for the component to flip its copied state. Stub the
+clipboard API in the test and assert the copied command text, not just the
+button attribute.

@@ -33,7 +33,7 @@ const canonicalPages = [
 		route: "/get-started",
 		title: "Get started",
 		description:
-			"Render a Fokit form with native controls and default structural slots.",
+			"Render a Fokit form with native controls, default structural slots, and the Interactive Fokit Lab.",
 	},
 	{
 		path: "src/pages/api.mdx",
@@ -450,13 +450,15 @@ test("docs TypeScript and verification gates are wired", async () => {
 	)
 	assert.equal(
 		rootPackageJson.scripts["site:verify"],
-		"npm run site:test && npm run test:docs && BASE_PATH=/fokit npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
+		"npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/fokit npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
 	)
 	assert.equal(rootPackageJson.scripts.verify.includes("test:docs"), false)
 	assert.deepEqual(knipConfig.workspaces["docs-site"].entry, [
 		"vocs.config.ts",
 		"src/pages/**/*.mdx",
 		"src/pages/**/*.css",
+		"src/components/**/*.ts",
+		"src/components/**/*.tsx",
 		"src/snippets/**/*.ts",
 		"src/snippets/**/*.tsx",
 	])
@@ -465,8 +467,38 @@ test("docs TypeScript and verification gates are wired", async () => {
 	])
 	assert.equal(typeof knipConfig.compilers.css, "function")
 	assert.equal(knipConfig.compilers.mdx, true)
-	assert.deepEqual(knipConfig.ignoreFiles, ["docs-site/src/lab.jsx"])
+	assert.deepEqual(knipConfig.ignoreFiles, [])
 	assert.match(gitignore, /^docs-site\/\.vocs\/$/m)
+})
+
+test("Interactive Lab uses Vocs components and public Fokit defaults", async () => {
+	const wrapper = await readText("src/components/interactive-lab.tsx")
+	const client = await readText("src/components/interactive-lab.client.tsx")
+	const getStarted = await readText("src/pages/get-started.mdx")
+
+	assert.match(wrapper, /from "\.\/interactive-lab\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(wrapper, /browser-only lab/)
+	assert.match(wrapper, /createFormKit\(\{ controls: nativeControls \}\)/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /createDefaultSlots/)
+	assert.match(client, /nativeControls/)
+	assert.match(client, /controls:\s*nativeControls/)
+	assert.match(client, /slots:\s*createDefaultSlots\(\{\s*i18n:/)
+	assert.match(client, /arrayAdd:\s*"Add contact"/)
+	assert.match(client, /arrayRemove:\s*\(\{ position \}\) =>/)
+	assert.match(client, /arrayMoveUp:\s*\(\{ position \}\) =>/)
+	assert.match(client, /arrayMoveDown:\s*\(\{ position \}\) =>/)
+	assert.doesNotMatch(
+		client,
+		/defineControl|fokit\/layout\.css|locale|localStorage/,
+	)
+	assert.doesNotMatch(client, /[А-Яа-яЁё]/)
+	assert.match(
+		getStarted,
+		/import \{ InteractiveLab \} from "\.\.\/components\/interactive-lab"/,
+	)
+	assert.match(getStarted, /<InteractiveLab \/>/)
 })
 
 test("canonical TypeScript snippets are physical files covered by docs typecheck", async () => {
@@ -555,7 +587,10 @@ test("Vocs config defines the static English documentation shell", async () => {
 		source,
 		/description:\s*"Code-first, schema-validated React forms without giving up native HTML semantics\."/,
 	)
-	assert.match(source, /baseUrl:\s*"https:\/\/r13v\.github\.io\/fokit"/)
+	assert.match(
+		source,
+		/baseUrl:\s*process\.env\.BASE_URL\s*\?\?\s*"https:\/\/r13v\.github\.io\/fokit"/,
+	)
 	assert.match(source, /basePath:\s*process\.env\.BASE_PATH\s*\?\?\s*"\/"/)
 	assert.match(source, /renderStrategy:\s*"full-static"/)
 	assert.match(source, /checkDeadlinks:\s*true/)
@@ -686,12 +721,8 @@ test("bespoke SPA files and temporary migration content are removed", async () =
 		assert.equal(await pathExists(file), false, `${file} should be removed`)
 	}
 
-	const inactiveMigrationFiles = new Set(["src/lab.jsx"])
 	const sourceFiles = await listFiles("src/")
-	const activeFiles = sourceFiles.filter(
-		(file) => !inactiveMigrationFiles.has(file),
-	)
-	for (const file of activeFiles) {
+	for (const file of sourceFiles) {
 		const source = await readText(file)
 		assert.doesNotMatch(
 			source,

@@ -74,7 +74,7 @@
 		"site:build": "npm run build && npm run build --prefix docs-site",
 		"site:test": "npm run test --prefix docs-site",
 		"site:test:e2e": "playwright test --config playwright.docs.config.ts",
-		"site:verify": "npm run site:test && npm run test:docs && BASE_PATH=/fokit npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
+		"site:verify": "npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/fokit npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
 		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./react19 ./server",
 		"knip": "knip --workspace . --workspace docs-site",
 		"verify": "npm run check && npm run typecheck && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:smoke && npm run package:check && npm run knip"

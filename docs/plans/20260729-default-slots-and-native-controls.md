@@ -933,39 +933,39 @@ documentation application.
 - Delete: `docs-site/src/lab.jsx`
 - Modify: `tests/browser/docs-site.spec.ts`
 
-- [ ] Rewrite the lab E2E expectations and generated Markdown fallback
+- [x] Rewrite the lab E2E expectations and generated Markdown fallback
       assertion first; confirm they fail before replacing the old lab.
-- [ ] Move only the lab's form definition, default values, result display, and
+- [x] Move only the lab's form definition, default values, result display, and
       interaction-specific UI into `interactive-lab.client.tsx`; add
       `"use client"` because it uses hooks and browser events.
-- [ ] Remove all local `defineControl` wrappers and configure the kit with
+- [x] Remove all local `defineControl` wrappers and configure the kit with
       `controls: nativeControls`.
-- [ ] Remove all five local slot implementations and configure the kit with
+- [x] Remove all five local slot implementations and configure the kit with
       `slots: createDefaultSlots({ i18n })`.
-- [ ] Map English Lab copy to `arrayAdd`, `arrayRemove`, `arrayMoveUp`, and
+- [x] Map English Lab copy to `arrayAdd`, `arrayRemove`, `arrayMoveUp`, and
       `arrayMoveDown`; use `{ position }` functions for row-specific accessible
       names.
-- [ ] Remove Russian Lab copy, Russian country options, locale props, and
+- [x] Remove Russian Lab copy, Russian country options, locale props, and
       locale-dependent memoization.
-- [ ] Export a server-side wrapper from `interactive-lab.tsx` with a `toMarkdown`
+- [x] Export a server-side wrapper from `interactive-lab.tsx` with a `toMarkdown`
       representation that explains the browser-only lab and includes the
       equivalent shortest setup, so `vocs markdown-audit` passes.
-- [ ] Import the wrapper into `get-started.mdx` and preserve validation,
+- [x] Import the wrapper into `get-started.mdx` and preserve validation,
       conditional fields, reset, classic submit, array add/move/remove, and
       native FormData behavior.
-- [ ] Style only the lab through a scoped root class, public
+- [x] Style only the lab through a scoped root class, public
       `data-fokit-node`/`data-fokit-layout` attributes, state attributes, and
       native descendants in `_root.css`; keep general navigation, typography,
       search, and code UI owned by Vocs.
-- [ ] Rewrite documentation E2E URLs and assertions for clean Vocs paths under
+- [x] Rewrite documentation E2E URLs and assertions for clean Vocs paths under
       `/fokit`, and remove all locale/hash/localStorage assertions.
-- [ ] Preserve lab behavior coverage and add assertions for Vocs sidebar
+- [x] Preserve lab behavior coverage and add assertions for Vocs sidebar
       navigation, direct deep links, code copy, a rich Twoslash hover, static
       `llms.txt`, and responsive navigation.
-- [ ] Extend generated-output assertions to cover `get-started.md` and confirm
+- [x] Extend generated-output assertions to cover `get-started.md` and confirm
       the lab fallback is meaningful in `get-started.md`, `llms.txt`, and
       `llms-full.txt`.
-- [ ] Run `npm run site:verify`.
+- [x] Run `npm run site:verify`.
 
 ### Task 10: Verify acceptance criteria and package quality
 

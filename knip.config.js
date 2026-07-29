@@ -21,7 +21,7 @@ export default {
 	},
 	ignore: ["tests/fixtures/**"],
 	ignoreDependencies: ["fokit", "zod"],
-	ignoreFiles: ["docs-site/src/lab.jsx"],
+	ignoreFiles: [],
 	workspaces: {
 		".": {
 			project: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
@@ -31,6 +31,8 @@ export default {
 				"vocs.config.ts",
 				"src/pages/**/*.mdx",
 				"src/pages/**/*.css",
+				"src/components/**/*.ts",
+				"src/components/**/*.tsx",
 				"src/snippets/**/*.ts",
 				"src/snippets/**/*.tsx",
 			],

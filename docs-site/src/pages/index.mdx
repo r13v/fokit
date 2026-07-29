@@ -6,8 +6,8 @@ description: Code-first React forms with native HTML semantics.
 # Fokit
 
 Fokit is a code-first, schema-validated React form library for teams that want
-the form store and generated rendering without surrendering native HTML
-semantics.
+generated rendering, granular state, and native submission without surrendering
+the application design system.
 
 ```tsx twoslash
 // @jsx: react-jsx
@@ -25,5 +25,27 @@ const customSlots = createDefaultSlots({
 })
 ```
 
-The full English guide set, physical snippets, and Interactive Fokit Lab move
-into Vocs in the following migration tasks.
+## What Fokit owns
+
+Fokit owns the typed form store, validation lifecycle, generated rendering,
+array commands, issue exposure, and native FormData coordination. The same
+definition can render with `kit.AutoForm` or be composed manually with
+`kit.Form`, `kit.Fields`, and granular hooks.
+
+## What stays yours
+
+Controls stay explicit because value types and FormData behavior are part of
+the public form contract. Use `nativeControls` for common HTML controls, compose
+custom controls with `defineControl`, and override any structural slot when
+your product needs its own markup. `createDefaultSlots()` provides accessible,
+unstyled English markup; it is not a theme and it imports no CSS.
+
+## Read next
+
+- [Get started](/get-started) for the shortest complete setup.
+- [API](/api) for package entries and React kit APIs.
+- [Types](/types) for the contracts that keep schemas, paths, controls, and
+  slots connected.
+- [Advanced](/advanced) for composition, hidden values, Actions, and testing
+  boundaries.
+- [FAQs](/faqs) for defaults, themes, servers, and React version questions.

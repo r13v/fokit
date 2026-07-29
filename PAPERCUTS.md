@@ -274,3 +274,10 @@ Inspecting docs-site source files → `find docs-site -maxdepth 3 -type f`
 traversed `node_modules` and returned truncated output. Exclude
 `node_modules`, `dist`, and generated QA folders when listing authored
 docs-site sources.
+
+## 2026-07-29 14:10 — GPT-5
+
+Building migrated Vocs pages → the inactive legacy `docs-site/src/content.js`
+source still said FormData mode `"unavailable"`, but the implemented public
+API uses `"none"`. Prefer current source/tests over stale migration text when
+copying examples.

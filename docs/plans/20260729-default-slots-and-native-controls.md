@@ -809,19 +809,19 @@ and reviewable before the longer guides move.
 - Modify: `docs-site/src/pages/faqs.mdx`
 - Modify: `docs-site/tests/content.test.mjs`
 
-- [ ] Add failing destination-heading/export-discoverability assertions for
+- [x] Add failing destination-heading/export-discoverability assertions for
       every section group listed for Get started, API, Types, Advanced, and
       FAQs before migrating the content.
-- [ ] Migrate the English landing, get-started, API, types, advanced, and FAQ
+- [x] Migrate the English landing, get-started, API, types, advanced, and FAQ
       sections from `docs-site/src/content.js` and the mapped repository
       guides; do not copy Russian page variants.
-- [ ] Update onboarding for `nativeControls`, omitted English default slots,
+- [x] Update onboarding for `nativeControls`, omitted English default slots,
       partial slot overrides, `createDefaultSlots({ i18n })`, array-prefixed
       message keys, and native FormData caveats.
-- [ ] Preserve the complete public boundary and FAQ coverage recorded in the
+- [x] Preserve the complete public boundary and FAQ coverage recorded in the
       parity map rather than reducing the site to navigation labels.
-- [ ] Run `npm run site:test`.
-- [ ] Run `BASE_PATH=/fokit npm run site:build` and treat Twoslash or dead-link
+- [x] Run `npm run site:test`.
+- [x] Run `BASE_PATH=/fokit npm run site:build` and treat Twoslash or dead-link
       diagnostics as failures.
 
 ### Task 8C: Migrate the public English guides

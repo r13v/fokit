@@ -103,6 +103,124 @@ const publicApiTerms = [
 	"ActionForm",
 ]
 
+const requiredCorePageContent = {
+	"src/pages/get-started.mdx": {
+		headings: [
+			"Installation",
+			"Build your first form",
+			"Create a kit with native controls",
+			"Render a generated form",
+			"Validation follows the schema",
+			"Submit with native form semantics",
+			"Native FormData caveats",
+		],
+		terms: [
+			"createFormKit",
+			"nativeControls",
+			"createDefaultSlots",
+			"kit.AutoForm",
+			"Standard Schema",
+			"FormData",
+		],
+	},
+	"src/pages/api.mdx": {
+		headings: [
+			"Entry-point boundaries",
+			"useForm",
+			"createFormKit",
+			"defineControl",
+			"Granular hooks",
+			"FormInstance",
+			"React-free core",
+			"parseFormData",
+			"ActionForm and ActionSubmit",
+		],
+		terms: [
+			"fokit/core",
+			"fokit/server",
+			"fokit/react19",
+			"kit.defineForm",
+			"kit.AutoForm",
+			"kit.Fields",
+			"useArrayField",
+			"useFormState",
+			"createFormStore",
+			"computed",
+			"resolveUi",
+		],
+	},
+	"src/pages/types.mdx": {
+		headings: [
+			"Input and output",
+			"Definitions and UI nodes",
+			"Instance and options",
+			"Control inference",
+			"Structural slot props",
+			"Snapshot and issues",
+			"Paths",
+			"Result types",
+		],
+		terms: [
+			"FormInput",
+			"FormOutput",
+			"FormDefinition",
+			"ControlProps",
+			"NativeSelectOptions",
+			"FieldSlotProps",
+			"FormSnapshot",
+			"FieldPath",
+			"FormResult",
+		],
+	},
+	"src/pages/advanced.mdx": {
+		headings: [
+			"Accessibility",
+			"Generated and manual composition",
+			"Reactive dependencies",
+			"Hidden values",
+			"Stable array identity",
+			"Untrusted FormData",
+			"React 19 Actions",
+			"Structural layout",
+			"Public-boundary testing",
+		],
+		terms: [
+			"labelProps",
+			"kit.Fields",
+			"computed",
+			"valuePolicy",
+			"useArrayField",
+			"parseFormData",
+			"ActionForm",
+			"fokit/layout.css",
+		],
+	},
+	"src/pages/faqs.mdx": {
+		headings: [
+			"Why use Fokit instead of a smaller form hook?",
+			"Are Fokit controls controlled or uncontrolled?",
+			"Does Fokit require Zod?",
+			"Why are complete default values required?",
+			"Can I use an existing component library?",
+			"What happens when a field becomes hidden?",
+			"How do I reset a form?",
+			"How do server errors reach fields?",
+			"How do React 18 and React 19 differ?",
+			"Does every field rerender on each change?",
+			"Why is there no built-in theme?",
+		],
+		terms: [
+			"nativeControls",
+			"createDefaultSlots",
+			"defineControl",
+			"Standard Schema",
+			"form.reset()",
+			"SubmissionIssue",
+			"useField",
+		],
+	},
+}
+
 function escapeRegExp(value) {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
@@ -274,6 +392,28 @@ test("API shell keeps public exports discoverable", async () => {
 
 	for (const term of publicApiTerms) {
 		assert.match(source, new RegExp(`\\b${term}\\b`))
+	}
+})
+
+test("core Vocs pages preserve the migrated section groups", async () => {
+	for (const [path, content] of Object.entries(requiredCorePageContent)) {
+		const source = await readText(path)
+
+		for (const heading of content.headings) {
+			assert.match(
+				source,
+				new RegExp(`^## ${escapeRegExp(heading)}$`, "m"),
+				`${path} must expose ${heading}`,
+			)
+		}
+
+		for (const term of content.terms) {
+			assert.match(
+				source,
+				new RegExp(escapeRegExp(term)),
+				`${path} must keep ${term} discoverable`,
+			)
+		}
 	}
 })
 

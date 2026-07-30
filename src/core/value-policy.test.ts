@@ -58,7 +58,6 @@ function createDefinition() {
 				path: "companyName",
 				control: "text",
 				visible: computed(
-					["kind"] as const,
 					(
 						{ kind }: { readonly kind: AccountValues["kind"] },
 						{ context }: { readonly context: AccountContext },
@@ -71,7 +70,6 @@ function createDefinition() {
 				path: "taxId",
 				control: "text",
 				visible: computed(
-					["companyName"] as const,
 					({ companyName }: { readonly companyName?: string }) =>
 						companyName !== undefined,
 				),

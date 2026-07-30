@@ -65,12 +65,10 @@ function createDefinition() {
 				control: "text",
 				label: "Company name",
 				visible: computed(
-					[] as const,
 					(_values, { context }: { readonly context: AccountContext }) =>
 						context.showCompany,
 				),
 				disabled: computed(
-					[] as const,
 					(_values, { context }: { readonly context: AccountContext }) =>
 						context.locked,
 				),

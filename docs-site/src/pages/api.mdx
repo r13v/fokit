@@ -67,7 +67,8 @@ The definition validates control names, typed paths, duplicate IDs, layout
 ranges, and value policies. Passing the schema first lets TypeScript infer the
 input type before it checks the UI tree. Use the direct object form for static
 UI. When derived UI is needed, the callback receives a schema-bound
-`computed()` with dependency-path autocomplete and inferred resolver values.
+`computed()` with path autocomplete and inferred resolver values. Paths read
+during the resolver call are tracked automatically.
 The normalized result is frozen and reusable across form instances.
 
 ```ts twoslash
@@ -89,6 +90,57 @@ const definition = kit.defineForm(schema)({
 	],
 })
 ```
+
+### computed
+
+```text
+computed((values, { context }) => result) => Computed<Result>
+```
+
+`values` is a readonly map of canonical form paths to their typed values.
+Destructuring reads and tracks only the named paths:
+
+```ts twoslash
+import { createFormKit, nativeControls } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({
+	accountType: z.enum(["personal", "company"]),
+	address: z.object({ country: z.string() }),
+})
+const kit = createFormKit({ controls: nativeControls })
+
+// ---cut---
+kit.defineForm(schema)((computed) => ({
+	ui: [
+		{
+			kind: "field",
+			path: "accountType",
+			control: "select",
+			options: {
+				options: [
+					{ value: "personal", label: "Personal" },
+					{ value: "company", label: "Company" },
+				],
+			},
+			visible: computed(({ accountType }) => accountType === "company"),
+		},
+		{
+			kind: "field",
+			path: "address.country",
+			control: "text",
+			visible: computed(
+				({ "address.country": country }) => country === "GB",
+			),
+		},
+	],
+}))
+```
+
+The cached result is reused until a tracked value or the `context` reference
+changes. The values proxy exists only for the synchronous resolver call. Rest
+destructuring, spread, and enumeration are rejected; remote data should be
+loaded outside the resolver and passed through `context`.
 
 ### UI node families
 
@@ -326,7 +378,7 @@ the product needs one.
 The exported option contracts are `NativeTextOptions`,
 `NativeTextareaOptions`, `NativeSelectOptions`, `NativeSelectOption`,
 `NativeNumberOptions`, `NativeDateOptions`, and `NativeFileOptions`. A field's
-`options` can also be computed from form dependencies or runtime context.
+`options` can also be computed from tracked form values or runtime context.
 
 See [Controls and design systems](/guides/controls) for adapter and serializer
 contracts.
@@ -384,7 +436,7 @@ See the end-to-end [React 19 Actions guide](/guides/react-19-actions).
 Use `fokit/core` in shared packages, non-React runtimes, and focused tests.
 
 - `createFormStore` creates the immutable external store.
-- `computed` and `isComputed` define explicit UI dependencies.
+- `computed` and `isComputed` define derived UI with tracked value reads.
 - `normalizeDefinition` and `resolveUi` normalize and resolve definitions.
 - `parsePath`, `formatPath`, `parseArrayIndex`, `isSamePath`,
   `isAncestorPath`, `isDescendantPath`, and `pathsOverlap` work with canonical

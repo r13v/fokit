@@ -58,18 +58,12 @@ function normalize(ui: readonly unknown[]) {
 
 describe("form definition normalization", () => {
 	it("normalizes fields, sections, arrays, computed values, and immutable indexes", () => {
-		const companyVisible = computed<
-			readonly ["kind"],
-			boolean,
-			ExampleContext,
-			ExampleValues
-		>(["kind"], ({ kind }) => kind === "company")
-		const companyDisabled = computed<
-			readonly [],
-			boolean,
-			ExampleContext,
-			ExampleValues
-		>([], (_values, { context }) => !context.canEditCompanyName)
+		const companyVisible = computed<boolean, ExampleValues, ExampleContext>(
+			({ kind }) => kind === "company",
+		)
+		const companyDisabled = computed<boolean, ExampleValues, ExampleContext>(
+			(_values, { context }) => !context.canEditCompanyName,
+		)
 
 		const definition = normalize([
 			{
@@ -147,7 +141,6 @@ describe("form definition normalization", () => {
 		expect(Object.isFrozen(definition.fieldsByPath)).toBe(true)
 		expect(Object.isFrozen(definition.arraysByPath)).toBe(true)
 		expect(Object.isFrozen(definition.fieldsByPath.name)).toBe(true)
-		expect(Object.isFrozen(companyVisible.dependencies)).toBe(true)
 		expect(Object.isFrozen(companyVisible)).toBe(true)
 	})
 
@@ -255,18 +248,12 @@ describe("form definition normalization", () => {
 		).toThrow(/valuePolicy/i)
 	})
 
-	it("stores computed resolvers as explicit synchronous dependencies", () => {
-		const visible = computed<
-			readonly ["kind"],
-			boolean,
-			unknown,
-			ExampleValues
-		>(["kind"], ({ kind }) => kind === "person")
-
-		expect(visible.dependencies).toEqual(["kind"])
-		expect(visible.resolver({ kind: "person" }, { context: {} })).toBe(true)
-		expect(() => computed([] as const, async () => true)).toThrow(
-			/synchronous/i,
+	it("stores synchronous computed resolvers", () => {
+		const visible = computed<boolean, ExampleValues>(
+			({ kind }) => kind === "person",
 		)
+
+		expect(visible.resolver).toBeTypeOf("function")
+		expect(() => computed(async () => true)).toThrow(/synchronous/i)
 	})
 })

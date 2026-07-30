@@ -1,14 +1,14 @@
 ---
 title: Conditional fields
-description: Derive visibility, interaction state, labels, and options from explicit form dependencies and runtime context.
+description: Derive visibility, interaction state, labels, and options from automatically tracked form values and runtime context.
 showAskAi: false
 ---
 
 # Conditional fields
 
-Conditional form UI should be predictable: a field names the values it depends
-on, Fokit recomputes only when those dependencies change, and value retention
-stays an explicit product decision.
+Conditional form UI should be predictable: a resolver reads the values it
+needs, Fokit recomputes only when those values change, and value retention stays
+an explicit product decision.
 
 ## Derive UI with computed
 
@@ -47,7 +47,6 @@ const definition = kit.defineForm(schema)((computed) => ({
 			control: "text",
 			label: "Company name",
 			visible: computed(
-				["accountType"],
 				({ accountType }) => accountType === "company",
 			),
 			valuePolicy: "unset",
@@ -56,14 +55,21 @@ const definition = kit.defineForm(schema)((computed) => ({
 }))
 ```
 
-Dependencies use the same canonical paths as fields. A resolver stays
-synchronous and pure; remote loading belongs in application data flow, not
-inside `computed()`.
+Fokit tracks every canonical path read during the synchronous resolver call.
+The cached result is reused until one of those values or the runtime `context`
+reference changes. If a resolver takes a different branch next time, its
+tracked paths change with that branch.
 
 The callback receives a schema-bound `computed`. Because `defineForm` binds the
-schema first, TypeScript autocompletes dependency paths and infers every
-resolver value. Invalid paths and incompatible return values fail type
-checking; imports, explicit type arguments, and `as const` are not needed.
+schema first, TypeScript autocompletes destructured paths and infers every
+resolver value. Nested canonical paths use an alias such as
+`({ "address.country": country })`. Invalid paths and incompatible return
+values fail type checking; imports and explicit type arguments are not needed.
+
+Read paths explicitly through the resolver's first argument. Rest
+destructuring, spread, and enumeration with `Object.keys()` are rejected because
+they would hide which values affect the result. Resolvers stay synchronous and
+pure; remote loading belongs in application data flow, not inside `computed()`.
 
 ## Decide what happens to hidden values
 
@@ -111,8 +117,8 @@ const definition = kit
 				path: "country",
 				control: "select",
 				label: "Country",
-				readOnly: computed([], (_values, { context }) => context.locked),
-				options: computed([], (_values, { context }) => ({
+				readOnly: computed((_values, { context }) => context.locked),
+				options: computed((_values, { context }) => ({
 					options: context.countries,
 				})),
 			},

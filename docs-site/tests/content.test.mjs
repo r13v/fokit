@@ -64,7 +64,7 @@ const canonicalPages = [
 		route: "/guides/conditional-fields",
 		title: "Conditional fields",
 		description:
-			"Derive visibility, interaction state, labels, and options from explicit form dependencies and runtime context.",
+			"Derive visibility, interaction state, labels, and options from automatically tracked form values and runtime context.",
 	},
 	{
 		path: "src/pages/guides/arrays.mdx",
@@ -316,7 +316,7 @@ const requiredGuidePageContent = {
 			"Read the tree at a glance",
 			"Connect paths to controls",
 			"Group fields and describe layout",
-			"Derive UI from explicit dependencies",
+			"Derive UI from tracked values",
 			"Let interaction state flow through the tree",
 			"Choose what hidden means for data",
 			"Repeat relative fields with arrays",

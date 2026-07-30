@@ -30,6 +30,9 @@ type ExampleInput = {
 	age: number
 	nickname?: string
 	maybeNull: string | null
+	profile: {
+		country: string
+	}
 }
 
 type ExampleContext = {
@@ -175,13 +178,17 @@ const exampleDefinition = kit
 				kind: "field",
 				path: "name",
 				control: "text",
-				disabled: computed([], (_values, { context }) => {
+				label: computed(({ "profile.country": country }) => {
+					type _country = Expect<Equal<typeof country, string>>
+					return country
+				}),
+				disabled: computed((_values, { context }) => {
 					type _context = Expect<
 						Equal<typeof context, Readonly<ExampleContext>>
 					>
 					return context.locked
 				}),
-				visible: computed(["status"], ({ status }) => {
+				visible: computed(({ status }) => {
 					type _status = Expect<Equal<typeof status, ExampleInput["status"]>>
 					return status === "published"
 				}),
@@ -211,6 +218,9 @@ kit.AutoForm({
 		status: "draft",
 		age: 37,
 		maybeNull: null,
+		profile: {
+			country: "GB",
+		},
 	},
 	context: {
 		locale: "en",
@@ -275,7 +285,7 @@ kit.defineForm(schema)((computed) => ({
 			kind: "field",
 			path: "name",
 			control: "text",
-			visible: computed([], () => "visible"),
+			visible: computed(() => "visible"),
 		},
 	],
 }))
@@ -287,9 +297,8 @@ kit.defineForm(schema)((computed) => ({
 			path: "name",
 			control: "text",
 			visible: computed(
-				// @ts-expect-error computed dependencies must be valid schema paths
-				["missing"],
-				() => true,
+				// @ts-expect-error computed values must use valid schema paths
+				({ missing }) => Boolean(missing),
 			),
 		},
 	],

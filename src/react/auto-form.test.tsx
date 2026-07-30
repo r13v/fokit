@@ -110,7 +110,7 @@ function createDefinition(
 					description: "Profile settings",
 					columns: 2,
 					className: "account-section",
-					disabled: computed([], (_values, { context }) => context.locked),
+					disabled: computed((_values, { context }) => context.locked),
 					children: [
 						{
 							kind: "field",
@@ -129,14 +129,14 @@ function createDefinition(
 							path: "email",
 							control: "text",
 							label: "Email",
-							options: computed(["kind"], optionsResolver),
+							options: computed(optionsResolver),
 						},
 						{
 							kind: "field",
 							path: "companyName",
 							control: "text",
 							label: "Company",
-							visible: computed(["kind"], ({ kind }) => kind === "company"),
+							visible: computed(({ kind }) => kind === "company"),
 						},
 					],
 				},
@@ -145,7 +145,7 @@ function createDefinition(
 					path: "hiddenNote",
 					control: "text",
 					label: "Hidden note",
-					visible: computed([], (_values, { context }) => context.showHidden),
+					visible: computed((_values, { context }) => context.showHidden),
 				},
 			],
 		}))
@@ -219,7 +219,7 @@ describe("kit.AutoForm and kit.Fields", () => {
 		).toBeTruthy()
 	})
 
-	it("updates computed UI from declared dependencies and inherited context state", async () => {
+	it("updates computed UI from tracked values and inherited context state", async () => {
 		const optionsResolver = vi.fn(
 			({ kind }: { readonly kind: ProfileValues["kind"] }) => ({
 				placeholder: kind === "company" ? "Work email" : "Personal email",

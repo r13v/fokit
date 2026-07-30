@@ -78,7 +78,6 @@ function createDefinition() {
 				path: "hiddenNote",
 				control: "text",
 				visible: computed(
-					[] as const,
 					(_values, { context }: { readonly context: AccountContext }) =>
 						context.showHidden,
 				),

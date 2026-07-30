@@ -66,7 +66,6 @@ const definition = normalizeDefinition<
 			path: "companyName",
 			control: "text",
 			disabled: computed(
-				[] as const,
 				(_values, { context }: { readonly context: ProfileContext }) =>
 					context.locked,
 			),

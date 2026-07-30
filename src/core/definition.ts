@@ -1,5 +1,4 @@
 import type { Computed } from "./computed.js"
-import { isComputed } from "./computed.js"
 import type { ControlRegistry } from "./control-types.js"
 import type { PathSegments } from "./path.js"
 import { formatPath, parsePath } from "./path.js"
@@ -270,16 +269,16 @@ function normalizeField(
 		path,
 		pathSegments: parsePath(path),
 		control,
-		label: validateResolvable<string>(node.label, "label"),
-		description: validateResolvable<string>(node.description, "description"),
-		required: validateResolvable<boolean>(node.required, "required"),
-		disabled: validateResolvable<boolean>(node.disabled, "disabled"),
-		readOnly: validateResolvable<boolean>(node.readOnly, "readOnly"),
-		visible: validateResolvable<boolean>(node.visible, "visible"),
+		label: asResolvable<string>(node.label),
+		description: asResolvable<string>(node.description),
+		required: asResolvable<boolean>(node.required),
+		disabled: asResolvable<boolean>(node.disabled),
+		readOnly: asResolvable<boolean>(node.readOnly),
+		visible: asResolvable<boolean>(node.visible),
 		valuePolicy,
 		className: normalizeClassName(node.className),
 		span,
-		options: validateResolvable<unknown>(node.options, "options"),
+		options: asResolvable<unknown>(node.options),
 	})
 
 	state.nodes.push(normalized)
@@ -314,11 +313,11 @@ function normalizeSection(
 		kind: "section",
 		parentId,
 		scopePath: scope.pathScope,
-		title: validateResolvable<string>(node.title, "title"),
-		description: validateResolvable<string>(node.description, "description"),
-		disabled: validateResolvable<boolean>(node.disabled, "disabled"),
-		readOnly: validateResolvable<boolean>(node.readOnly, "readOnly"),
-		visible: validateResolvable<boolean>(node.visible, "visible"),
+		title: asResolvable<string>(node.title),
+		description: asResolvable<string>(node.description),
+		disabled: asResolvable<boolean>(node.disabled),
+		readOnly: asResolvable<boolean>(node.readOnly),
+		visible: asResolvable<boolean>(node.visible),
 		className: normalizeClassName(node.className),
 		columns,
 		span,
@@ -360,11 +359,11 @@ function normalizeArray(
 		scopePath: scope.pathScope,
 		path,
 		pathSegments: parsePath(path),
-		label: validateResolvable<string>(node.label, "label"),
-		description: validateResolvable<string>(node.description, "description"),
-		disabled: validateResolvable<boolean>(node.disabled, "disabled"),
-		readOnly: validateResolvable<boolean>(node.readOnly, "readOnly"),
-		visible: validateResolvable<boolean>(node.visible, "visible"),
+		label: asResolvable<string>(node.label),
+		description: asResolvable<string>(node.description),
+		disabled: asResolvable<boolean>(node.disabled),
+		readOnly: asResolvable<boolean>(node.readOnly),
+		visible: asResolvable<boolean>(node.visible),
 		className: normalizeClassName(node.className),
 		span,
 		itemDefault:
@@ -499,27 +498,9 @@ function normalizeValuePolicy(valuePolicy: unknown): ValuePolicy {
 	throw new TypeError(`Unsupported valuePolicy "${String(valuePolicy)}"`)
 }
 
-function validateResolvable<Value>(
+function asResolvable<Value>(
 	value: unknown,
-	property: string,
 ): Value | Computed<Value> | undefined {
-	if (value === undefined) {
-		return undefined
-	}
-
-	if (isComputed(value)) {
-		for (const dependency of value.dependencies) {
-			try {
-				parsePath(dependency)
-			} catch (error) {
-				throw new TypeError(
-					`Computed ${property} dependency "${dependency}" is not a valid path`,
-					{ cause: error },
-				)
-			}
-		}
-	}
-
 	return value as Value
 }
 

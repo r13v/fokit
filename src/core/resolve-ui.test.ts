@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
-import type { ControlMetadata, StandardSchema, UiNode } from "./index.js"
+import type {
+	Computed,
+	ComputedValues,
+	ControlMetadata,
+	StandardSchema,
+	UiNode,
+} from "./index.js"
 import { computed, normalizeDefinition, resolveUi } from "./index.js"
 
 type ExampleValues = {
@@ -9,6 +15,9 @@ type ExampleValues = {
 	country: "ca" | "us"
 	city: string
 	unrelated: string
+	address?: {
+		country: string
+	}
 	companyName?: string
 }
 
@@ -68,11 +77,10 @@ describe("resolveUi", () => {
 				kind: "section",
 				id: "account",
 				title: "Account",
-				description: computed([] as const, () => "Profile settings"),
+				description: computed(() => "Profile settings"),
 				columns: 2,
 				className: "account-section",
-				disabled: computed<readonly [], boolean, ExampleContext, ExampleValues>(
-					[] as const,
+				disabled: computed<boolean, ExampleValues, ExampleContext>(
 					(_values, { context }: { context: ExampleContext }) => context.locked,
 				),
 				children: [
@@ -92,22 +100,10 @@ describe("resolveUi", () => {
 						kind: "field",
 						path: "city",
 						control: "select",
-						label: computed<
-							readonly ["country"],
-							string,
-							ExampleContext,
-							ExampleValues
-						>(
-							["country"] as const,
+						label: computed<string, ExampleValues, ExampleContext>(
 							({ country }) => `City in ${country.toUpperCase()}`,
 						),
-						options: computed<
-							readonly ["country"],
-							SelectOptions,
-							ExampleContext,
-							ExampleValues
-						>(
-							["country"] as const,
+						options: computed<SelectOptions, ExampleValues, ExampleContext>(
 							({ country }, { context }: { context: ExampleContext }) => ({
 								items: context.citiesByCountry[country] ?? [],
 							}),
@@ -214,23 +210,15 @@ describe("resolveUi", () => {
 				kind: "field",
 				path: "name",
 				control: "text",
-				label: computed<
-					readonly ["name"],
-					string,
-					ExampleContext,
-					ExampleValues
-				>(["name"] as const, label),
+				label: computed<string, ExampleValues, ExampleContext>(label),
 			},
 			{
 				kind: "field",
 				path: "city",
 				control: "select",
-				options: computed<
-					readonly ["country"],
-					SelectOptions,
-					ExampleContext,
-					ExampleValues
-				>(["country"] as const, options),
+				options: computed<SelectOptions, ExampleValues, ExampleContext>(
+					options,
+				),
 			},
 		])
 		const context = {
@@ -288,5 +276,219 @@ describe("resolveUi", () => {
 			unrelatedChange.fieldsByPath.city.options,
 		)
 		expect(contextChange.fieldsByPath.name.label).toBe("Name: Ada")
+	})
+
+	it("tracks conditional dependencies again after the active branch changes", () => {
+		const label = vi.fn((values: ComputedValues<ExampleValues>) =>
+			values.kind === "company"
+				? `Company: ${values.companyName ?? ""}`
+				: `Person: ${values.name}`,
+		)
+		const definition = normalize([
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: computed<string, ExampleValues, ExampleContext>(label),
+			},
+		])
+		const context = {
+			locked: false,
+			citiesByCountry: {},
+		} satisfies ExampleContext
+		const values = {
+			name: "Ada",
+			kind: "person",
+			country: "us",
+			city: "nyc",
+			unrelated: "same",
+			companyName: "Analytical Engines",
+		} satisfies ExampleValues
+
+		const first = resolveUi(definition, values, context)
+		const inactiveChange = resolveUi(
+			definition,
+			{ ...values, companyName: "Difference Engines" },
+			context,
+			{ previous: first },
+		)
+		const branchChange = resolveUi(
+			definition,
+			{ ...values, kind: "company", companyName: "Difference Engines" },
+			context,
+			{ previous: inactiveChange },
+		)
+		const previousBranchChange = resolveUi(
+			definition,
+			{
+				...values,
+				kind: "company",
+				name: "Grace",
+				companyName: "Difference Engines",
+			},
+			context,
+			{ previous: branchChange },
+		)
+		const activeChange = resolveUi(
+			definition,
+			{ ...values, kind: "company", companyName: "Fokit" },
+			context,
+			{ previous: previousBranchChange },
+		)
+
+		expect(first.computedCache["name:label"]?.dependencies).toEqual([
+			{ path: "kind", value: "person" },
+			{ path: "name", value: "Ada" },
+		])
+		expect(branchChange.computedCache["name:label"]?.dependencies).toEqual([
+			{ path: "kind", value: "company" },
+			{ path: "companyName", value: "Difference Engines" },
+		])
+		expect(inactiveChange.fieldsByPath.name.label).toBe("Person: Ada")
+		expect(branchChange.fieldsByPath.name.label).toBe(
+			"Company: Difference Engines",
+		)
+		expect(previousBranchChange.fieldsByPath.name.label).toBe(
+			"Company: Difference Engines",
+		)
+		expect(activeChange.fieldsByPath.name.label).toBe("Company: Fokit")
+		expect(label).toHaveBeenCalledTimes(3)
+	})
+
+	it("tracks canonical nested paths and rejects enumerating the values proxy", () => {
+		const definition = normalize([
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: computed<string, ExampleValues>(
+					({ "address.country": country }) => country ?? "Unknown",
+				),
+			},
+		])
+		const values = {
+			name: "Ada",
+			kind: "person",
+			country: "us",
+			city: "nyc",
+			unrelated: "same",
+			address: { country: "GB" },
+		} satisfies ExampleValues
+		const context = {}
+
+		const first = resolveUi(definition, values, context)
+		const changed = resolveUi(
+			definition,
+			{ ...values, address: { country: "FR" } },
+			context,
+			{ previous: first },
+		)
+
+		expect(first.fieldsByPath.name.label).toBe("GB")
+		expect(first.computedCache["name:label"]?.dependencies).toEqual([
+			{ path: "address.country", value: "GB" },
+		])
+		expect(changed.fieldsByPath.name.label).toBe("FR")
+
+		const enumeratingDefinition = normalize([
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: computed<string, ExampleValues>((computedValues) =>
+					Object.keys(computedValues).join(","),
+				),
+			},
+		])
+
+		expect(() => resolveUi(enumeratingDefinition, values, {})).toThrow(
+			/cannot be enumerated/i,
+		)
+	})
+
+	it("revokes computed values after the synchronous resolver returns", () => {
+		let captured: ComputedValues<ExampleValues> | undefined
+		const definition = normalize([
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: computed<string, ExampleValues>((values) => {
+					captured = values
+					return values.name
+				}),
+			},
+		])
+
+		resolveUi(
+			definition,
+			{
+				name: "Ada",
+				kind: "person",
+				country: "us",
+				city: "nyc",
+				unrelated: "same",
+			},
+			{},
+		)
+
+		expect(() => captured?.name).toThrow(/revoked/i)
+	})
+
+	it("rejects mutations through the computed values proxy", () => {
+		const definition = normalize([
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: computed<string, ExampleValues>((values) => {
+					const mutableValues = values as Record<string, unknown>
+					mutableValues.name = "Grace"
+					return "unreachable"
+				}),
+			},
+		])
+
+		expect(() =>
+			resolveUi(
+				definition,
+				{
+					name: "Ada",
+					kind: "person",
+					country: "us",
+					city: "nyc",
+					unrelated: "same",
+				},
+				{},
+			),
+		).toThrow(/read-only/i)
+	})
+
+	it("rejects promise results from resolvers that are not native async functions", () => {
+		const promiseLabel = computed(() =>
+			Promise.resolve("Profile"),
+		) as unknown as Computed<string, ExampleValues>
+		const definition = normalize([
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: promiseLabel,
+			},
+		])
+
+		expect(() =>
+			resolveUi(
+				definition,
+				{
+					name: "Ada",
+					kind: "person",
+					country: "us",
+					city: "nyc",
+					unrelated: "same",
+				},
+				{},
+			),
+		).toThrow(/synchronous/i)
 	})
 })

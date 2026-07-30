@@ -560,9 +560,9 @@ control metadata remains independent of React components.
   `valuePolicy`.
 - [x] Define React-free control registry metadata, `FormDataEntrySpec`,
   `ControlFormData`, field/section/array nodes, layout enums, and
-  `computed(dependencies, resolver)`.
-- [x] Keep computed resolvers synchronous, explicitly dependent, typed by
-  context, and unable to access form commands.
+  `computed(resolver)`.
+- [x] Keep computed resolvers synchronous, automatically tracked, typed by
+  schema input and context, and unable to access form commands.
 - [x] Implement definition normalization and immutable indexing by node ID and
   canonical path.
 - [x] Run
@@ -585,7 +585,7 @@ before the store starts reacting to context and value changes.
   layout, context, and inherited visible/disabled/read-only precedence.
 - [x] Implement `resolveUi` as a synchronous, React-free operation over a
   normalized definition, input values, and read-only context.
-- [x] Test that computed resolvers rerun only when a declared dependency or
+- [x] Test that computed resolvers rerun only when a tracked value or
   runtime-context reference changes.
 - [x] Test that unrelated value changes reuse resolved computed results.
 - [x] Run
@@ -938,7 +938,7 @@ arrays and serialization add their own behavior.
 - [x] Add public type tests proving `kit.AutoForm` also requires complete
   `defaultValues`.
 - [x] Resolve computed visible/disabled/read-only/required/options/context
-  values with inherited state and declared dependencies only.
+  values with inherited state and automatically tracked value reads.
 - [x] Pass mandatory `rootProps` to exactly one slot root and `layoutProps` to
   the section grid descendant without hidden wrappers.
 - [x] Render direct field errors locally and form-level/unowned invisible

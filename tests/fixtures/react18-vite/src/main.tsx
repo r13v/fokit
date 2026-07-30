@@ -185,9 +185,8 @@ const nativeKit = createFormKit({
 	controls: nativeControls,
 })
 
-const description = computed<readonly ["name"], string, unknown, ProfileInput>(
-	["name"],
-	({ name }) => (name.length > 0 ? `Editing ${name}` : "Profile"),
+const description = computed<string, ProfileInput>(({ name }) =>
+	name.length > 0 ? `Editing ${name}` : "Profile",
 )
 
 const ui = [

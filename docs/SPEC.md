@@ -138,19 +138,23 @@ Fokit must not introduce overlapping `type` and `display` discriminators.
 Value compatibility is checked between the selected path and the registered
 control.
 
-### Explicit reactive dependencies
+### Automatically tracked reactive dependencies
 
-Computed UI properties declare the paths they depend on:
+Computed UI properties read the paths they depend on:
 
 ```ts
-visible: computed(['kind'], ({ kind }) => kind === 'company')
+visible: computed(({ kind }) => kind === 'company')
 ```
 
-This makes dependency tracking deterministic, enables granular subscriptions,
-and keeps UI resolution testable as a pure operation.
+The resolver receives a read-only proxy whose properties are canonical form
+paths. Fokit records each property read and reuses the result until one of
+those values or the runtime context reference changes. When a resolver takes a
+different branch, the next evaluation replaces its tracked path set.
 
-Computed functions are synchronous and pure. Fetching remote data belongs to an
-application data layer or to a control component.
+Computed functions are synchronous and pure. The values proxy is valid only
+during the resolver call. Rest destructuring, spread, and property enumeration
+are rejected because they do not identify a finite dependency set. Fetching
+remote data belongs to an application data layer or to a control component.
 
 ### One store mode
 
@@ -1007,11 +1011,9 @@ export const accountForm = kit
             control: 'text',
             label: 'Company name',
             visible: computed(
-              ['kind'],
               ({ kind }) => kind === 'company',
             ),
             disabled: computed(
-              [],
               (_, { context }) => !context.canEditCompanyName,
             ),
             valuePolicy: 'unset',
@@ -1040,9 +1042,9 @@ export const accountForm = kit
 Static forms use `kit.defineForm(schema)({ ui })`. When a definition needs
 derived UI, pass a factory:
 `kit.defineForm(schema)((computed) => ({ ui }))`. The callback's `computed` is
-already bound to the schema input, so TypeScript autocompletes dependency paths
-and infers resolver values without imports, explicit type arguments, or
-`as const`. `withContext<Context>` binds runtime context in the same step.
+already bound to the schema input, so TypeScript autocompletes destructured
+paths and infers resolver values without imports or explicit type arguments.
+`withContext<Context>` binds runtime context in the same step.
 
 Default values are complete instance state and do not belong to a reusable
 definition. A create page and an edit page can reuse the same definition with
@@ -1345,9 +1347,9 @@ Static and computed configuration share the same public shape:
 type Resolvable<T> = T | Computed<T>;
 ```
 
-The dependency tuple, dependency values, runtime context, and resolver result
-are inferred inside a form definition. The resolver receives only its declared
-form-value dependencies plus the form's read-only runtime context:
+Form paths, their values, runtime context, and the resolver result are inferred
+inside a form definition. The resolver receives a read-only path-value proxy
+plus the form's read-only runtime context:
 
 ```ts
 import type { NativeSelectOption } from 'fokit';
@@ -1367,7 +1369,6 @@ const addressForm = kit
         path: 'city',
         control: 'select',
         options: computed(
-          ['country'],
           ({ country }, { context }) => ({
             options: context.citiesByCountry[country] ?? [],
           }),
@@ -1386,8 +1387,12 @@ Computed values:
 - are synchronous;
 - must be pure;
 - cannot call form commands;
-- are recalculated only when a declared dependency or the runtime context
-  reference changes;
+- track every canonical path read through the resolver's first argument;
+- are recalculated only when a tracked value or the runtime context reference
+  changes;
+- replace their tracked paths after each recalculation, so conditional
+  dependencies follow the active branch;
+- reject rest destructuring, spread, and enumeration of the values proxy;
 - can be evaluated by `resolveUi` outside React.
 
 An asynchronous option list should be loaded by application code and passed to
@@ -2465,7 +2470,11 @@ Before the API is considered stable, the implementation must prove:
 - stable array row identity through hook, slot, and imperative append, insert,
   remove, and move operations;
 - one-field updates do not rerender unrelated controls;
-- computed properties rerun only for declared dependencies;
+- computed properties rerun only for tracked value reads;
+- conditional computed properties replace their tracked paths when their active
+  branch changes;
+- computed value proxies reject enumeration and cannot escape the synchronous
+  resolver call;
 - replacing runtime context reruns computed UI without changing values or
   dirty state when no `valuePolicy` change is produced;
 - a context-aware control is rejected when the form context does not satisfy

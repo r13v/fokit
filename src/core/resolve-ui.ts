@@ -21,7 +21,12 @@ import { getPathValue, isDirtyEqual } from "./value.js"
 export type ResolvedComputedEntry = {
 	readonly computed: Computed<unknown>
 	readonly context: unknown
-	readonly dependencies: readonly unknown[]
+	readonly dependencies: readonly ResolvedComputedDependency[]
+	readonly value: unknown
+}
+
+type ResolvedComputedDependency = {
+	readonly path: string
 	readonly value: unknown
 }
 
@@ -410,36 +415,48 @@ function resolveResolvable<Value, Context>(
 		return value as Value
 	}
 
-	const dependencyValues = value.dependencies.map((dependency) =>
-		getPathValue(state.values, joinScopedPath(scope.pathPrefix, dependency)),
-	)
 	const previous = state.previousCache[key]
 	if (
 		previous !== undefined &&
 		previous.computed === value &&
 		Object.is(previous.context, state.context) &&
-		dependenciesEqual(previous.dependencies, dependencyValues)
+		dependenciesEqual(previous.dependencies, state, scope)
 	) {
 		state.computedCache[key] = previous
 		return previous.value as Value
-	}
-
-	const values = Object.create(null) as Record<string, unknown>
-	for (const [index, dependency] of value.dependencies.entries()) {
-		values[dependency] = dependencyValues[index]
 	}
 
 	const resolver = value.resolver as (
 		values: Readonly<Record<string, unknown>>,
 		details: { readonly context: Readonly<Context> },
 	) => Value
-	const resolved = resolver(Object.freeze(values), {
-		context: state.context as Readonly<Context>,
-	})
+	const tracker = createComputedTracker(state, scope)
+	let resolved: Value
+	try {
+		const candidate = resolver(tracker.values, {
+			context: state.context as Readonly<Context>,
+		})
+		if (isPromiseLike(candidate)) {
+			throw new TypeError("Computed resolvers must be synchronous")
+		}
+		resolved = candidate
+	} finally {
+		tracker.revoke()
+	}
 	const entry = Object.freeze({
 		computed: value as Computed<unknown>,
 		context: state.context,
-		dependencies: Object.freeze([...dependencyValues]),
+		dependencies: Object.freeze(
+			tracker.paths.map((path) =>
+				Object.freeze({
+					path,
+					value: getPathValue(
+						state.values,
+						joinScopedPath(scope.pathPrefix, path),
+					),
+				}),
+			),
+		),
 		value: resolved,
 	})
 	state.computedCache[key] = entry
@@ -447,13 +464,87 @@ function resolveResolvable<Value, Context>(
 	return resolved as Value
 }
 
-function dependenciesEqual(
-	previous: readonly unknown[],
-	next: readonly unknown[],
-): boolean {
+function createComputedTracker<Context>(
+	state: ResolveState<Context>,
+	scope: ResolveScope,
+): {
+	readonly values: Readonly<Record<string, unknown>>
+	readonly paths: readonly string[]
+	readonly revoke: () => void
+} {
+	const paths: string[] = []
+	const seen = new Set<string>()
+	const rejectMutation = (): never => {
+		throw new TypeError("Computed values are read-only")
+	}
+	const read = (property: PropertyKey): unknown => {
+		if (typeof property !== "string") {
+			throw new TypeError("Computed values must be accessed by a field path")
+		}
+
+		const path = formatPath(property)
+		if (!seen.has(path)) {
+			seen.add(path)
+			paths.push(path)
+		}
+
+		return getPathValue(state.values, joinScopedPath(scope.pathPrefix, path))
+	}
+	const { proxy, revoke } = Proxy.revocable(
+		Object.create(null) as Record<string, unknown>,
+		{
+			defineProperty: rejectMutation,
+			deleteProperty: rejectMutation,
+			get: (_target, property) => read(property),
+			getOwnPropertyDescriptor: (_target, property) => ({
+				configurable: true,
+				enumerable: true,
+				value: read(property),
+				writable: false,
+			}),
+			has: (_target, property) => {
+				read(property)
+				return true
+			},
+			ownKeys: () => {
+				throw new TypeError(
+					"Computed values cannot be enumerated; read field paths explicitly",
+				)
+			},
+			preventExtensions: rejectMutation,
+			set: rejectMutation,
+			setPrototypeOf: rejectMutation,
+		},
+	)
+
+	return {
+		values: proxy,
+		paths,
+		revoke,
+	}
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
 	return (
-		previous.length === next.length &&
-		previous.every((value, index) => isDirtyEqual(value, next[index]))
+		((typeof value === "object" && value !== null) ||
+			typeof value === "function") &&
+		typeof (value as { readonly then?: unknown }).then === "function"
+	)
+}
+
+function dependenciesEqual<Context>(
+	previous: readonly ResolvedComputedDependency[],
+	state: ResolveState<Context>,
+	scope: ResolveScope,
+): boolean {
+	return previous.every((dependency) =>
+		isDirtyEqual(
+			dependency.value,
+			getPathValue(
+				state.values,
+				joinScopedPath(scope.pathPrefix, dependency.path),
+			),
+		),
 	)
 }
 

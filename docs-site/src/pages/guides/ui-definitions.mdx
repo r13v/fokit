@@ -69,11 +69,12 @@ the same layout props through a custom `Section` slot.
 `className` is static escape-hatch metadata for product styling. It does not
 change the form state model.
 
-## Derive UI from explicit dependencies
+## Derive UI from tracked values
 
 Properties described as resolvable accept either a value or `computed(...)`.
-The dependency list makes invalidation explicit, and the resolver can read
-runtime `context` without adding that data to form values.
+Fokit tracks the paths read by the resolver and invalidates its cached result
+only when one of those values changes. The resolver can also read runtime
+`context` without adding that data to form values.
 
 | Node | Computed properties |
 | --- | --- |
@@ -89,7 +90,7 @@ Resolvers are synchronous and pure. Fetch remote options in application data
 flow, pass them through `context`, and let `computed()` select the relevant
 result.
 
-See [Conditional fields](/guides/conditional-fields) for dependency and context
+See [Conditional fields](/guides/conditional-fields) for tracked-value and context
 examples.
 
 ## Let interaction state flow through the tree

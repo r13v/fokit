@@ -6,8 +6,8 @@ export type {
 } from "./array-state.js"
 export type {
 	Computed,
-	ComputedDependencyValues,
 	ComputedDetails,
+	ComputedValues,
 	FormComputed,
 } from "./computed.js"
 export {

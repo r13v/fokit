@@ -179,10 +179,7 @@ const nestedDefinition = kit.defineForm(schema)({
 				{
 					kind: "array",
 					path: "members",
-					label: computed<readonly ["name"], string, unknown, GroupValue>(
-						["name"],
-						({ name }) => `${name} members`,
-					),
+					label: computed<string, GroupValue>(({ name }) => `${name} members`),
 					itemDefault: {
 						name: "New member",
 					},
@@ -191,8 +188,7 @@ const nestedDefinition = kit.defineForm(schema)({
 							kind: "field",
 							path: "name",
 							control: "text",
-							label: computed<readonly ["name"], string, unknown, MemberValue>(
-								["name"],
+							label: computed<string, MemberValue>(
 								({ name }) => `Member ${name}`,
 							),
 						},
@@ -346,6 +342,14 @@ describe("generated arrays", () => {
 		expect(screen.getByText("Docs members")).toBeTruthy()
 		expect(screen.getByText("Member Ada")).toBeTruthy()
 		expect(input("groups.0.members.0.name").value).toBe("Ada")
+
+		fireEvent.change(input("groups.1.name"), {
+			target: { value: "Guides" },
+		})
+
+		expect(screen.getByText("Core members")).toBeTruthy()
+		expect(screen.queryByText("Docs members")).toBeNull()
+		expect(screen.getByText("Guides members")).toBeTruthy()
 
 		fireEvent.click(screen.getByTestId("add-groups.0.members"))
 

@@ -247,7 +247,7 @@ export const profileDefinition = kit
 				path: "companyName",
 				control: "text",
 				label: "Company name",
-				visible: computed(["kind"], ({ kind }) => kind === "company"),
+				visible: computed(({ kind }) => kind === "company"),
 				valuePolicy: "unset",
 			},
 		],
@@ -256,8 +256,9 @@ export const profileDefinition = kit
 
 `computed` здесь не импортируется: `defineForm` передает в callback функцию,
 уже привязанную к input схемы и `ProfileContext`. Поэтому редактор дополняет
-пути зависимостей, а типы аргументов resolver выводятся без generic-параметров
-и `as const`.
+деструктурируемые пути, а типы аргументов resolver выводятся без
+generic-параметров. Fokit автоматически запоминает прочитанные пути и
+пересчитывает значение только при их изменении.
 
 `valuePolicy: "unset"` разрешен только для optional путей. Когда поле
 становится невидимым, Fokit удаляет значение через тот же механизм
@@ -269,10 +270,9 @@ export const profileDefinition = kit
 читайте runtime context.
 
 ```ts
-options: computed(
-	["kind"],
-	(_values, { context }) => ({ options: context.countries }),
-)
+options: computed((_values, { context }) => ({
+	options: context.countries,
+}))
 ```
 
 Замена context пересчитывает UI и не делает форму dirty. Если новый UI

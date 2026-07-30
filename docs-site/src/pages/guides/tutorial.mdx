@@ -62,8 +62,9 @@ decisions explicit:
 
 </details>
 
-The schema-bound `computed()` passed to the definition callback lists the exact
-paths that can invalidate derived UI. The resolver is synchronous and pure.
+The schema-bound `computed()` passed to the definition callback infers every
+value the resolver reads. Fokit tracks those paths automatically and reuses the
+result until a tracked value changes. The resolver is synchronous and pure.
 `valuePolicy: "unset"` is allowed because `companyName` is optional in
 editable input.
 

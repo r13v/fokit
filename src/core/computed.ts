@@ -1,4 +1,3 @@
-import { parsePath } from "./path.js"
 import type { FieldPath, PathValue } from "./path-types.js"
 
 declare const computedTypes: unique symbol
@@ -9,76 +8,48 @@ export type ComputedDetails<Context = unknown> = {
 	readonly context: Readonly<Context>
 }
 
-export type ComputedDependencyValues<
-	Input,
-	Dependencies extends readonly string[],
-> = {
-	readonly [Dependency in Dependencies[number]]: Dependency extends FieldPath<Input>
-		? PathValue<Input, Dependency>
-		: unknown
-}
+export type ComputedValues<Input> = [unknown] extends [Input]
+	? Readonly<Record<string, unknown>>
+	: {
+			readonly [Path in FieldPath<Input>]: PathValue<Input, Path>
+		}
 
-export type Computed<
-	Result,
-	Input = unknown,
-	Context = unknown,
-	Dependencies extends readonly string[] = readonly string[],
-> = {
+export type Computed<Result, Input = unknown, Context = unknown> = {
 	readonly __fokitComputed: true
 	// Phantom metadata carries the form types without adding runtime state.
 	readonly [computedTypes]?: {
 		readonly context: Context
 		readonly input: Input
 	}
-	readonly dependencies: Dependencies
-	// Construction checks the resolver strictly. Stored resolvers are bivariant so
-	// a concrete dependency tuple remains assignable to Resolvable's erased tuple.
+	// Construction checks the resolver strictly. The stored resolver is bivariant
+	// so schema-bound computed values remain assignable to Resolvable's erased type.
 	readonly resolver: {
 		bivarianceHack(
-			values: ComputedDependencyValues<Input, Dependencies>,
+			values: ComputedValues<Input>,
 			details: ComputedDetails<Context>,
 		): Result
 	}["bivarianceHack"]
 }
 
-export type FormComputed<Input, Context = unknown> = <
-	const Dependencies extends readonly FieldPath<Input>[],
-	Result,
->(
-	dependencies: Dependencies,
+export type FormComputed<Input, Context = unknown> = <Result>(
 	resolver: (
-		values: ComputedDependencyValues<Input, Dependencies>,
+		values: ComputedValues<Input>,
 		details: ComputedDetails<Context>,
 	) => Result,
-) => Computed<Result, Input, Context, Dependencies>
+) => Computed<Result, Input, Context>
 
-export function computed<
-	const Dependencies extends readonly string[],
-	Result,
-	Context = unknown,
-	Input = unknown,
->(
-	dependencies: Dependencies & readonly FieldPath<NoInferComputed<Input>>[],
+export function computed<Result, Input = unknown, Context = unknown>(
 	resolver: (
-		values: ComputedDependencyValues<NoInferComputed<Input>, Dependencies>,
+		values: ComputedValues<NoInferComputed<Input>>,
 		details: ComputedDetails<NoInferComputed<Context>>,
 	) => Result,
-): Computed<Result, Input, Context, Dependencies> {
+): Computed<Result, Input, Context> {
 	if (isAsyncFunction(resolver)) {
 		throw new TypeError("Computed resolvers must be synchronous")
 	}
 
-	for (const dependency of dependencies) {
-		parsePath(dependency)
-	}
-
-	const normalizedDependencies = Object.freeze([...dependencies]) as unknown as
-		| Dependencies
-		| readonly string[]
-
 	return Object.freeze({
 		__fokitComputed: true,
-		dependencies: normalizedDependencies as Dependencies,
 		resolver,
 	})
 }

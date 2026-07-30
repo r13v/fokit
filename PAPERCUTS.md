@@ -430,3 +430,10 @@ verification instead of invoking a fixture script in place.
 Searching build configuration with an unmatched zsh glob → the shell rejected
 `vite.config.*` before `rg` could run. Use `rg --files -g 'vite.config.*'` or
 quote optional glob patterns when a matching file may not exist.
+
+## 2026-07-30 20:08 — GPT-5
+
+Adding the new `computed` API example to the reference page → the docs content
+gate rejected a plain TypeScript fence even though docs typecheck passed. Mark
+every inline TypeScript example as `twoslash`, or move complete programs into a
+physical snippet covered by `tsconfig.docs.json`.

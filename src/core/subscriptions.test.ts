@@ -51,12 +51,10 @@ function createProfileForm() {
 				path: "companyName",
 				control: "text",
 				visible: computed(
-					[] as const,
 					(_values, { context }: { readonly context: ProfileContext }) =>
 						context.showCompany,
 				),
 				disabled: computed(
-					[] as const,
 					(_values, { context }: { readonly context: ProfileContext }) =>
 						context.locked,
 				),

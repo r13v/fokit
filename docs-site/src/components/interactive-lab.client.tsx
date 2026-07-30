@@ -122,10 +122,7 @@ const profileDefinition = kit.defineForm(profileSchema)((computed) => ({
 					path: "companyName",
 					control: "text",
 					label: "Company name",
-					visible: computed(
-						["accountType"],
-						({ accountType }) => accountType === "company",
-					),
+					visible: computed(({ accountType }) => accountType === "company"),
 					valuePolicy: "unset",
 					options: {
 						placeholder: "Compiler Labs",

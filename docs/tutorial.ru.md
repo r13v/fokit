@@ -233,7 +233,7 @@ Definition связывает пути схемы с контролами:
 ```ts
 export const profileDefinition = kit
 	.defineForm(profileSchema)
-	.withContext<ProfileContext>((computed) => ({
+	.withContext<ProfileContext>({
 		ui: [
 			{
 				kind: "field",
@@ -247,33 +247,36 @@ export const profileDefinition = kit
 				path: "companyName",
 				control: "text",
 				label: "Company name",
-				visible: computed(({ kind }) => kind === "company"),
+				visible: ({ kind }) => kind === "company",
 				valuePolicy: "unset",
 			},
 		],
-	}))
+		})
 ```
 
-`computed` здесь не импортируется: `defineForm` передает в callback функцию,
-уже привязанную к input схемы и `ProfileContext`. Поэтому редактор дополняет
-деструктурируемые пути, а типы аргументов resolver выводятся без
-generic-параметров. Fokit автоматически запоминает прочитанные пути и
-пересчитывает значение только при их изменении.
+Resolver пишется обычной функцией прямо в свойстве. Поскольку `defineForm`
+сначала получает схему, TypeScript контекстно типизирует функцию, дополняет
+деструктурируемые пути и выводит `ProfileContext` без generic-параметров на
+resolver. Fokit автоматически запоминает прочитанные пути и пересчитывает
+значение только при их изменении.
 
 `valuePolicy: "unset"` разрешен только для optional путей. Когда поле
 становится невидимым, Fokit удаляет значение через тот же механизм
 транзакций, что и пользовательские изменения.
 
-## 6. Dynamic options - это computed options
+## 6. Dynamic options — это resolver
 
-Положите computed value в `options` и
-читайте runtime context.
+Положите resolver-функцию в `options` и читайте runtime context.
 
 ```ts
-options: computed((_values, { context }) => ({
+options: (_values, { context }) => ({
 	options: context.countries,
-}))
+})
 ```
+
+Функция, переданная непосредственно в resolvable-свойство, всегда считается
+resolver. Если опции контрола сами содержат callbacks, храните их внутри
+объекта `options`.
 
 Замена context пересчитывает UI и не делает форму dirty. Если новый UI
 запускает `valuePolicy: "unset"`, Fokit коммитит это изменение отдельно.

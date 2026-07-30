@@ -22,7 +22,7 @@ Zod implements the Standard Schema contract.
 
 - `fokit`: React kit APIs, default slots, native controls, hooks, generated
   forms, and shared public types.
-- `fokit/core`: React-free store, path, definition, computed UI, and value
+- `fokit/core`: React-free store, path, definition, derived UI, and value
   helpers.
 - `fokit/server`: safe FormData normalization, Standard Schema validation,
   `FormResult`, and `SubmissionIssue`.

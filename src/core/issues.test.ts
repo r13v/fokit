@@ -6,7 +6,7 @@ import type {
 	StandardSchema,
 	UiNode,
 } from "./index.js"
-import { computed, createFormStore, normalizeDefinition } from "./index.js"
+import { createFormStore, normalizeDefinition } from "./index.js"
 import {
 	createIssueState,
 	deriveFormErrors,
@@ -77,10 +77,7 @@ function createDefinition() {
 				kind: "field",
 				path: "hiddenNote",
 				control: "text",
-				visible: computed(
-					(_values, { context }: { readonly context: AccountContext }) =>
-						context.showHidden,
-				),
+				visible: (_values, { context }) => context.showHidden,
 			},
 		] satisfies readonly UiNode<
 			AccountValues,

@@ -437,3 +437,31 @@ Adding the new `computed` API example to the reference page → the docs content
 gate rejected a plain TypeScript fence even though docs typecheck passed. Mark
 every inline TypeScript example as `twoslash`, or move complete programs into a
 physical snippet covered by `tsconfig.docs.json`.
+
+## 2026-07-30 21:56 — GPT-5
+
+Running `npm run check` after removing the `computed` wrapper → Biome reported
+only formatter drift plus a shorthand-function suggestion created by the
+simplified overload. Run the project formatter after structural API edits, then
+rerun the check for semantic findings.
+
+## 2026-07-30 21:57 — GPT-5
+
+Running focused tests after replacing the `computed` wrapper with plain
+functions → an immutability assertion still expected the removed wrapper object
+to be frozen. Assert resolver identity instead; freezing a caller-owned function
+during definition normalization would be an unexpected side effect.
+
+## 2026-07-30 21:58 — GPT-5
+
+Adding a negative type test for callable options → TypeScript attached the
+resolver return-type error to the returned expression rather than the variable
+declaration, leaving `@ts-expect-error` unused. Put the directive immediately
+before the expression that produces the incompatible return value.
+
+## 2026-07-30 21:59 — GPT-5
+
+Combining formatter, diff validation, and an `rg` import regex in one zsh
+command → nested single-quote matching made the shell reject the command before
+anything ran. Keep regex-heavy searches in separate tool calls with simple
+quoting.

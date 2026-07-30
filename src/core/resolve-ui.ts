@@ -1,5 +1,3 @@
-import type { Computed } from "./computed.js"
-import { isComputed } from "./computed.js"
 import type {
 	NormalizedArrayNode,
 	NormalizedFieldNode,
@@ -14,12 +12,13 @@ import type {
 	GridColumns,
 	GridSpan,
 	Resolvable,
+	UiResolver,
 	ValuePolicy,
 } from "./ui-types.js"
 import { getPathValue, isDirtyEqual } from "./value.js"
 
 export type ResolvedComputedEntry = {
-	readonly computed: Computed<unknown>
+	readonly resolver: UiResolver<unknown>
 	readonly context: unknown
 	readonly dependencies: readonly ResolvedComputedDependency[]
 	readonly value: unknown
@@ -411,14 +410,14 @@ function resolveResolvable<Value, Context>(
 	state: ResolveState<Context>,
 	scope: ResolveScope,
 ): Value {
-	if (!isComputed(value)) {
+	if (typeof value !== "function") {
 		return value as Value
 	}
 
 	const previous = state.previousCache[key]
 	if (
 		previous !== undefined &&
-		previous.computed === value &&
+		previous.resolver === value &&
 		Object.is(previous.context, state.context) &&
 		dependenciesEqual(previous.dependencies, state, scope)
 	) {
@@ -426,25 +425,25 @@ function resolveResolvable<Value, Context>(
 		return previous.value as Value
 	}
 
-	const resolver = value.resolver as (
+	const resolver = value as (
 		values: Readonly<Record<string, unknown>>,
 		details: { readonly context: Readonly<Context> },
 	) => Value
-	const tracker = createComputedTracker(state, scope)
+	const tracker = createUiResolverTracker(state, scope)
 	let resolved: Value
 	try {
 		const candidate = resolver(tracker.values, {
 			context: state.context as Readonly<Context>,
 		})
 		if (isPromiseLike(candidate)) {
-			throw new TypeError("Computed resolvers must be synchronous")
+			throw new TypeError("UI resolvers must be synchronous")
 		}
 		resolved = candidate
 	} finally {
 		tracker.revoke()
 	}
 	const entry = Object.freeze({
-		computed: value as Computed<unknown>,
+		resolver: value as UiResolver<unknown>,
 		context: state.context,
 		dependencies: Object.freeze(
 			tracker.paths.map((path) =>
@@ -464,7 +463,7 @@ function resolveResolvable<Value, Context>(
 	return resolved as Value
 }
 
-function createComputedTracker<Context>(
+function createUiResolverTracker<Context>(
 	state: ResolveState<Context>,
 	scope: ResolveScope,
 ): {
@@ -475,11 +474,11 @@ function createComputedTracker<Context>(
 	const paths: string[] = []
 	const seen = new Set<string>()
 	const rejectMutation = (): never => {
-		throw new TypeError("Computed values are read-only")
+		throw new TypeError("UI resolver values are read-only")
 	}
 	const read = (property: PropertyKey): unknown => {
 		if (typeof property !== "string") {
-			throw new TypeError("Computed values must be accessed by a field path")
+			throw new TypeError("UI resolver values must be accessed by a field path")
 		}
 
 		const path = formatPath(property)
@@ -508,7 +507,7 @@ function createComputedTracker<Context>(
 			},
 			ownKeys: () => {
 				throw new TypeError(
-					"Computed values cannot be enumerated; read field paths explicitly",
+					"UI resolver values cannot be enumerated; read field paths explicitly",
 				)
 			},
 			preventExtensions: rejectMutation,

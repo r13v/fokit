@@ -3,8 +3,6 @@
 import type { ComponentType, ReactElement, ReactNode } from "react"
 
 import {
-	computed,
-	type FormComputed,
 	type FormDefinition,
 	type FormInput,
 	type NormalizedFormDefinition,
@@ -44,14 +42,6 @@ export type CreateFormKitOptions<Controls extends ControlDefinitionRegistry> = {
 	readonly slots?: Partial<FormKitSlots>
 }
 
-type FormDefinitionFactory<
-	Schema extends StandardSchema,
-	Controls extends ControlDefinitionRegistry,
-	Context,
-> = (
-	computed: FormComputed<FormInput<Schema>, Context>,
-) => FormDefinitionInput<Schema, Controls, Context>
-
 type FormDefinitionInput<
 	Schema extends StandardSchema,
 	Controls extends ControlDefinitionRegistry,
@@ -61,22 +51,14 @@ type FormDefinitionInput<
 type DefineFormWithContext<
 	Schema extends StandardSchema,
 	Controls extends ControlDefinitionRegistry,
-> = {
-	<Context>(
-		createDefinition: FormDefinitionFactory<Schema, Controls, Context>,
-	): NormalizedFormDefinition<Schema>
-	<Context>(
-		definition: FormDefinitionInput<Schema, Controls, Context>,
-	): NormalizedFormDefinition<Schema>
-}
+> = <Context>(
+	definition: FormDefinitionInput<Schema, Controls, Context>,
+) => NormalizedFormDefinition<Schema>
 
 type DefineFormForSchema<
 	Schema extends StandardSchema,
 	Controls extends ControlDefinitionRegistry,
 > = {
-	(
-		createDefinition: FormDefinitionFactory<Schema, Controls, unknown>,
-	): NormalizedFormDefinition<Schema>
 	(
 		definition: FormDefinitionInput<Schema, Controls, unknown>,
 	): NormalizedFormDefinition<Schema>
@@ -156,15 +138,7 @@ function normalizeKitDefinition(
 	definitionSource: unknown,
 	controls: ControlDefinitionRegistry,
 ): NormalizedFormDefinition<StandardSchema> {
-	const definition =
-		typeof definitionSource === "function"
-			? (
-					definitionSource as (createComputed: typeof computed) => {
-						readonly ui: readonly unknown[]
-					}
-				)(computed)
-			: definitionSource
-	const input = definition as {
+	const input = definitionSource as {
 		readonly ui: readonly unknown[]
 	}
 	const normalize = normalizeDefinition as (input: {

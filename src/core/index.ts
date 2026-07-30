@@ -5,16 +5,6 @@ export type {
 	ArrayRowsState,
 } from "./array-state.js"
 export type {
-	Computed,
-	ComputedDetails,
-	ComputedValues,
-	FormComputed,
-} from "./computed.js"
-export {
-	computed,
-	isComputed,
-} from "./computed.js"
-export type {
 	AnyControlMetadata,
 	ControlContextOf,
 	ControlFormData,
@@ -113,6 +103,9 @@ export type {
 	Resolvable,
 	SectionNode,
 	UiNode,
+	UiResolver,
+	UiResolverDetails,
+	UiResolverValues,
 	ValuePolicy,
 } from "./ui-types.js"
 export type {

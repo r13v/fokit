@@ -1,4 +1,3 @@
-import type { Computed } from "./computed.js"
 import type { ControlRegistry } from "./control-types.js"
 import type { PathSegments } from "./path.js"
 import { formatPath, parsePath } from "./path.js"
@@ -498,10 +497,8 @@ function normalizeValuePolicy(valuePolicy: unknown): ValuePolicy {
 	throw new TypeError(`Unsupported valuePolicy "${String(valuePolicy)}"`)
 }
 
-function asResolvable<Value>(
-	value: unknown,
-): Value | Computed<Value> | undefined {
-	return value as Value
+function asResolvable<Value>(value: unknown): Resolvable<Value> | undefined {
+	return value as Resolvable<Value> | undefined
 }
 
 function normalizeClassName(className: unknown): string | undefined {

@@ -12,7 +12,6 @@ import {
 	formatPath,
 	getPathValue,
 	isAncestorPath,
-	isComputed,
 	isDescendantPath,
 	isDirtyEqual,
 	isSamePath,
@@ -30,6 +29,7 @@ import {
 	Submit,
 	setPathValue,
 	type UiNode,
+	type UiResolver,
 	unsetPathValue,
 	useArrayField,
 	useField,
@@ -38,12 +38,12 @@ import {
 	useFormState,
 	useValue,
 } from "fokit"
-import { computed } from "fokit/core"
 import type { ReactNode } from "react"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
 type MainExports = typeof import("fokit")
+type CoreExports = typeof import("fokit/core")
 
 // @ts-expect-error React 19 Action APIs must stay isolated under fokit/react19.
 type _NoActionForm = MainExports["ActionForm"]
@@ -51,8 +51,14 @@ type _NoActionForm = MainExports["ActionForm"]
 // @ts-expect-error React 19 Action APIs must stay isolated under fokit/react19.
 type _NoActionSubmit = MainExports["ActionSubmit"]
 
-// @ts-expect-error computed is schema-bound through kit.defineForm in the React API.
+// @ts-expect-error derived UI uses plain resolver functions, not a helper export.
 type _NoStandaloneComputed = MainExports["computed"]
+
+// @ts-expect-error the React-free core no longer exposes a computed helper.
+type _NoCoreComputed = CoreExports["computed"]
+
+// @ts-expect-error plain resolver functions do not need a runtime type guard.
+type _NoComputedGuard = CoreExports["isComputed"]
 
 type ProfileInput = {
 	readonly name: string
@@ -185,9 +191,8 @@ const nativeKit = createFormKit({
 	controls: nativeControls,
 })
 
-const description = computed<string, ProfileInput>(({ name }) =>
-	name.length > 0 ? `Editing ${name}` : "Profile",
-)
+const description: UiResolver<string, ProfileInput> = ({ name }) =>
+	name.length > 0 ? `Editing ${name}` : "Profile"
 
 const ui = [
 	{
@@ -195,6 +200,7 @@ const ui = [
 		path: "name",
 		control: "text",
 		label: "Name",
+		description,
 		required: true,
 	},
 ] satisfies readonly UiNode<ProfileInput, typeof kit.controls>[]
@@ -225,7 +231,7 @@ void [
 	formatPath(namePath),
 	getPathValue(snapshot.values, "name"),
 	isAncestorPath("name", "name"),
-	isComputed(description),
+	description,
 	isDescendantPath("name", "name"),
 	isDirtyEqual(defaultValues(), snapshot.values),
 	isSamePath("name", ["name"]),

@@ -548,7 +548,6 @@ control metadata remains independent of React components.
 
 **Files:**
 
-- Create: `src/core/computed.ts`
 - Create: `src/core/control-types.ts`
 - Create: `src/core/ui-types.ts`
 - Create: `src/core/definition.ts`
@@ -560,8 +559,8 @@ control metadata remains independent of React components.
   `valuePolicy`.
 - [x] Define React-free control registry metadata, `FormDataEntrySpec`,
   `ControlFormData`, field/section/array nodes, layout enums, and
-  `computed(resolver)`.
-- [x] Keep computed resolvers synchronous, automatically tracked, typed by
+  direct UI resolver functions.
+- [x] Keep UI resolvers synchronous, automatically tracked, typed by
   schema input and context, and unable to access form commands.
 - [x] Implement definition normalization and immutable indexing by node ID and
   canonical path.
@@ -569,7 +568,7 @@ control metadata remains independent of React components.
   `npm run test -- --project node src/core/definition.test.ts`,
   `npm run typecheck`, `npm run check`, and `npm run knip` before Task 3C.
 
-### Task 3C: Resolve computed and inherited UI state
+### Task 3C: Resolve derived and inherited UI state
 
 **Why:** Transactions and rendering need deterministic pure UI resolution
 before the store starts reacting to context and value changes.
@@ -578,16 +577,16 @@ before the store starts reacting to context and value changes.
 
 - Create: `src/core/resolve-ui.ts`
 - Create: `src/core/resolve-ui.test.ts`
-- Modify: `src/core/computed.ts`
+- Modify: `src/core/ui-types.ts`
 - Modify: `src/core/index.ts`
 
 - [x] Write failing tests for labels, descriptions, options, required state,
   layout, context, and inherited visible/disabled/read-only precedence.
 - [x] Implement `resolveUi` as a synchronous, React-free operation over a
   normalized definition, input values, and read-only context.
-- [x] Test that computed resolvers rerun only when a tracked value or
+- [x] Test that UI resolvers rerun only when a tracked value or
   runtime-context reference changes.
-- [x] Test that unrelated value changes reuse resolved computed results.
+- [x] Test that unrelated value changes reuse resolved UI results.
 - [x] Run
   `npm run test -- --project node src/core/resolve-ui.test.ts`,
   `npm run test:types`, `npm run check`, and `npm run knip` before Task 4.
@@ -937,7 +936,7 @@ arrays and serialization add their own behavior.
 - [x] Implement `kit.Fields` and `kit.AutoForm` over the same form instance.
 - [x] Add public type tests proving `kit.AutoForm` also requires complete
   `defaultValues`.
-- [x] Resolve computed visible/disabled/read-only/required/options/context
+- [x] Resolve derived visible/disabled/read-only/required/options/context
   values with inherited state and automatically tracked value reads.
 - [x] Pass mandatory `rootProps` to exactly one slot root and `layoutProps` to
   the section grid descendant without hidden wrappers.
@@ -1281,7 +1280,7 @@ introducing the full contract.
   package boundaries.
 - [x] Provide copyable reference controls and all five structural slots,
   including accessible label/error wiring and class/root prop preservation.
-- [x] Document dynamic options as computed `options` backed by runtime context.
+- [x] Document dynamic `options` resolver functions backed by runtime context.
 - [x] Document visible/disabled/read-only/value-policy behavior and
   `beforeUpdate`/`onUpdate` with one deterministic transaction example.
 - [x] Document React 18 classic submission separately from server-first React
@@ -1679,7 +1678,7 @@ Forbidden edges:
 ### React invariants
 
 - React components/hooks live behind `"use client"` entries.
-- Store creation and computed resolution do not call lifecycle hooks during
+- Store creation and derived UI resolution do not call lifecycle hooks during
   render.
 - Server and first client snapshots are semantically equal.
 - Each hook subscribes to the smallest required slice.

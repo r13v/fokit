@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import type { ControlMetadata, StandardSchema, UiNode } from "./index.js"
 import {
-	computed,
 	createFormStore,
 	type FormStore,
 	normalizeDefinition,
@@ -64,14 +63,8 @@ function createDefinition() {
 				path: "companyName",
 				control: "text",
 				label: "Company name",
-				visible: computed(
-					(_values, { context }: { readonly context: AccountContext }) =>
-						context.showCompany,
-				),
-				disabled: computed(
-					(_values, { context }: { readonly context: AccountContext }) =>
-						context.locked,
-				),
+				visible: (_values, { context }) => context.showCompany,
+				disabled: (_values, { context }) => context.locked,
 			},
 		] satisfies readonly UiNode<
 			AccountValues,

@@ -7,7 +7,6 @@ import { renderToString } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 import {
 	type ControlMetadata,
-	computed,
 	type ImperativeFormIssue,
 	normalizeDefinition,
 	type StandardSchema,
@@ -65,10 +64,7 @@ const definition = normalizeDefinition<
 			kind: "field",
 			path: "companyName",
 			control: "text",
-			disabled: computed(
-				(_values, { context }: { readonly context: ProfileContext }) =>
-					context.locked,
-			),
+			disabled: (_values, { context }) => context.locked,
 		},
 		{
 			kind: "array",

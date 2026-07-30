@@ -11,6 +11,7 @@ import {
 	type FokitCssVariable,
 	type FokitStyle,
 	type FormKitSlots,
+	type Resolvable,
 	type SectionSlotProps,
 	type StructuralRootProps,
 } from "../../src/index.js"
@@ -43,6 +44,16 @@ type ExampleContext = {
 type ExampleSchema = StandardSchemaV1<ExampleInput>
 
 declare const schema: ExampleSchema
+
+type CallableOptions = () => string
+
+const staticCallableOptions: Resolvable<CallableOptions, ExampleInput> = () =>
+	// @ts-expect-error a top-level function is a resolver and must return the callable value
+	"callback"
+
+const derivedCallableOptions: Resolvable<CallableOptions, ExampleInput> =
+	() => () =>
+		"callback"
 
 const Field = (_props: FieldSlotProps) => null
 const Section = (_props: SectionSlotProps) => null
@@ -170,46 +181,42 @@ type _partialSlotsResolve = Expect<
 
 type _customSlotsResolve = Expect<Equal<typeof kit.slots, FormKitSlots>>
 
-const exampleDefinition = kit
-	.defineForm(schema)
-	.withContext<ExampleContext>((computed) => ({
-		ui: [
-			{
-				kind: "field",
-				path: "name",
-				control: "text",
-				label: computed(({ "profile.country": country }) => {
-					type _country = Expect<Equal<typeof country, string>>
-					return country
-				}),
-				disabled: computed((_values, { context }) => {
-					type _context = Expect<
-						Equal<typeof context, Readonly<ExampleContext>>
-					>
-					return context.locked
-				}),
-				visible: computed(({ status }) => {
-					type _status = Expect<Equal<typeof status, ExampleInput["status"]>>
-					return status === "published"
-				}),
+const exampleDefinition = kit.defineForm(schema).withContext<ExampleContext>({
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: ({ "profile.country": country }) => {
+				type _country = Expect<Equal<typeof country, string>>
+				return country
 			},
-			{
-				kind: "field",
-				path: "status",
-				control: "text",
+			disabled: (_values, { context }) => {
+				type _context = Expect<Equal<typeof context, Readonly<ExampleContext>>>
+				return context.locked
 			},
-			{
-				kind: "field",
-				path: "age",
-				control: "number",
+			visible: ({ status }) => {
+				type _status = Expect<Equal<typeof status, ExampleInput["status"]>>
+				return status === "published"
 			},
-			{
-				kind: "field",
-				path: "maybeNull",
-				control: "nullableText",
-			},
-		],
-	}))
+		},
+		{
+			kind: "field",
+			path: "status",
+			control: "text",
+		},
+		{
+			kind: "field",
+			path: "age",
+			control: "number",
+		},
+		{
+			kind: "field",
+			path: "maybeNull",
+			control: "nullableText",
+		},
+	],
+})
 
 kit.AutoForm({
 	definition: exampleDefinition,
@@ -278,31 +285,29 @@ kit.defineForm(schema).withContext<ExampleContext>({
 	],
 })
 
-// @ts-expect-error visible computed resolvers must return booleans
-kit.defineForm(schema)((computed) => ({
+kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
 			path: "name",
 			control: "text",
-			visible: computed(() => "visible"),
+			// @ts-expect-error visible resolvers must return booleans
+			visible: () => "visible",
 		},
 	],
-}))
+})
 
-kit.defineForm(schema)((computed) => ({
+kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
 			path: "name",
 			control: "text",
-			visible: computed(
-				// @ts-expect-error computed values must use valid schema paths
-				({ missing }) => Boolean(missing),
-			),
+			// @ts-expect-error resolver values must use valid schema paths
+			visible: ({ missing }) => Boolean(missing),
 		},
 	],
-}))
+})
 
 kit.defineForm(schema).withContext<ExampleContext>({
 	ui: [
@@ -373,3 +378,5 @@ const rootProps = {
 } satisfies StructuralRootProps
 
 void rootProps
+void staticCallableOptions
+void derivedCallableOptions

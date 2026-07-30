@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import type { ControlMetadata, StandardSchema, UiNode } from "./index.js"
-import { computed, normalizeDefinition } from "./index.js"
+import type {
+	ControlMetadata,
+	StandardSchema,
+	UiNode,
+	UiResolver,
+} from "./index.js"
+import { normalizeDefinition } from "./index.js"
 
 type ExampleValues = {
 	kind: "person" | "company"
@@ -57,13 +62,17 @@ function normalize(ui: readonly unknown[]) {
 }
 
 describe("form definition normalization", () => {
-	it("normalizes fields, sections, arrays, computed values, and immutable indexes", () => {
-		const companyVisible = computed<boolean, ExampleValues, ExampleContext>(
-			({ kind }) => kind === "company",
-		)
-		const companyDisabled = computed<boolean, ExampleValues, ExampleContext>(
-			(_values, { context }) => !context.canEditCompanyName,
-		)
+	it("normalizes fields, sections, arrays, UI resolvers, and immutable indexes", () => {
+		const companyVisible: UiResolver<
+			boolean,
+			ExampleValues,
+			ExampleContext
+		> = ({ kind }) => kind === "company"
+		const companyDisabled: UiResolver<
+			boolean,
+			ExampleValues,
+			ExampleContext
+		> = (_values, { context }) => !context.canEditCompanyName
 
 		const definition = normalize([
 			{
@@ -141,7 +150,6 @@ describe("form definition normalization", () => {
 		expect(Object.isFrozen(definition.fieldsByPath)).toBe(true)
 		expect(Object.isFrozen(definition.arraysByPath)).toBe(true)
 		expect(Object.isFrozen(definition.fieldsByPath.name)).toBe(true)
-		expect(Object.isFrozen(companyVisible)).toBe(true)
 	})
 
 	it("rejects duplicate paths and node IDs before rendering can become ambiguous", () => {
@@ -248,12 +256,18 @@ describe("form definition normalization", () => {
 		).toThrow(/valuePolicy/i)
 	})
 
-	it("stores synchronous computed resolvers", () => {
-		const visible = computed<boolean, ExampleValues>(
-			({ kind }) => kind === "person",
-		)
+	it("stores UI resolver functions unchanged", () => {
+		const visible: UiResolver<boolean, ExampleValues> = ({ kind }) =>
+			kind === "person"
+		const definition = normalize([
+			{
+				kind: "field",
+				path: "companyName",
+				control: "text",
+				visible,
+			},
+		])
 
-		expect(visible.resolver).toBeTypeOf("function")
-		expect(() => computed(async () => true)).toThrow(/synchronous/i)
+		expect(definition.fieldsByPath.companyName?.visible).toBe(visible)
 	})
 })

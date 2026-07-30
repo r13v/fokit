@@ -49,7 +49,7 @@ const canonicalPages = [
 		route: "/guides/ui-definitions",
 		title: "UI definitions",
 		description:
-			"Describe fields, sections, arrays, layout, and computed interaction state in one typed UI tree.",
+			"Describe fields, sections, arrays, layout, and derived interaction state in one typed UI tree.",
 	},
 	{
 		path: "src/pages/guides/validation.mdx",
@@ -141,7 +141,7 @@ const canonicalSnippets = [
 	{
 		target: "src/snippets/form-kit.tsx",
 		include: "~/snippets/form-kit.tsx",
-		terms: ["createFormKit", "computed", "profileSchema"],
+		terms: ["createFormKit", "visible:", "profileSchema"],
 	},
 	{
 		target: "src/snippets/basic-form.tsx",
@@ -235,7 +235,7 @@ const requiredCorePageContent = {
 			"NativeSelectOptions",
 			"NativeFileOptions",
 			"createFormStore",
-			"computed",
+			"resolver functions",
 			"resolveUi",
 			"setErrors",
 			"clearErrors",
@@ -325,7 +325,7 @@ const requiredGuidePageContent = {
 		terms: [
 			"relative child paths",
 			"itemDefault",
-			"computed(...)",
+			"resolver function",
 			"valuePolicy",
 			"fokit/layout.css",
 			"kit.Fields",
@@ -343,7 +343,7 @@ const requiredGuidePageContent = {
 		terms: [
 			"FormInput",
 			"FormOutput",
-			"computed()",
+			"resolver function",
 			'valuePolicy: "unset"',
 			"contactCount",
 		],
@@ -366,13 +366,13 @@ const requiredGuidePageContent = {
 	},
 	"src/pages/guides/conditional-fields.mdx": {
 		headings: [
-			"Derive UI with computed",
+			"Derive UI with resolver functions",
 			"Decide what happens to hidden values",
 			"Pass loaded data through context",
 			"Keep conditional validation in the schema",
 		],
 		terms: [
-			"computed",
+			"resolver",
 			'valuePolicy: "unset"',
 			"Replacing context",
 			"superRefine",

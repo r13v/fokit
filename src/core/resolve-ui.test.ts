@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
 
 import type {
-	Computed,
-	ComputedValues,
 	ControlMetadata,
 	StandardSchema,
 	UiNode,
+	UiResolver,
+	UiResolverValues,
 } from "./index.js"
-import { computed, normalizeDefinition, resolveUi } from "./index.js"
+import { normalizeDefinition, resolveUi } from "./index.js"
 
 type ExampleValues = {
 	name: string
@@ -62,11 +62,13 @@ const controls = {
 	},
 } satisfies ExampleControls
 
-function normalize(ui: readonly unknown[]) {
+function normalize(
+	ui: readonly UiNode<ExampleValues, ExampleControls, ExampleContext>[],
+) {
 	return normalizeDefinition<typeof schema, ExampleControls, ExampleContext>({
 		schema,
 		controls,
-		ui: ui as readonly UiNode<ExampleValues, ExampleControls, ExampleContext>[],
+		ui,
 	})
 }
 
@@ -77,12 +79,10 @@ describe("resolveUi", () => {
 				kind: "section",
 				id: "account",
 				title: "Account",
-				description: computed(() => "Profile settings"),
+				description: () => "Profile settings",
 				columns: 2,
 				className: "account-section",
-				disabled: computed<boolean, ExampleValues, ExampleContext>(
-					(_values, { context }: { context: ExampleContext }) => context.locked,
-				),
+				disabled: (_values, { context }) => context.locked,
 				children: [
 					{
 						kind: "field",
@@ -100,14 +100,10 @@ describe("resolveUi", () => {
 						kind: "field",
 						path: "city",
 						control: "select",
-						label: computed<string, ExampleValues, ExampleContext>(
-							({ country }) => `City in ${country.toUpperCase()}`,
-						),
-						options: computed<SelectOptions, ExampleValues, ExampleContext>(
-							({ country }, { context }: { context: ExampleContext }) => ({
-								items: context.citiesByCountry[country] ?? [],
-							}),
-						),
+						label: ({ country }) => `City in ${country.toUpperCase()}`,
+						options: ({ country }, { context }) => ({
+							items: context.citiesByCountry[country] ?? [],
+						}),
 						span: 2,
 					},
 				],
@@ -193,7 +189,7 @@ describe("resolveUi", () => {
 		expect(Object.isFrozen(resolved.nodesById)).toBe(true)
 	})
 
-	it("reruns computed resolvers only when a dependency or context reference changes", () => {
+	it("reruns UI resolvers only when a dependency or context reference changes", () => {
 		const label = vi.fn(
 			({ name }: { readonly name: string }) => `Name: ${name}`,
 		)
@@ -210,15 +206,13 @@ describe("resolveUi", () => {
 				kind: "field",
 				path: "name",
 				control: "text",
-				label: computed<string, ExampleValues, ExampleContext>(label),
+				label,
 			},
 			{
 				kind: "field",
 				path: "city",
 				control: "select",
-				options: computed<SelectOptions, ExampleValues, ExampleContext>(
-					options,
-				),
+				options,
 			},
 		])
 		const context = {
@@ -279,7 +273,7 @@ describe("resolveUi", () => {
 	})
 
 	it("tracks conditional dependencies again after the active branch changes", () => {
-		const label = vi.fn((values: ComputedValues<ExampleValues>) =>
+		const label = vi.fn((values: UiResolverValues<ExampleValues>) =>
 			values.kind === "company"
 				? `Company: ${values.companyName ?? ""}`
 				: `Person: ${values.name}`,
@@ -289,7 +283,7 @@ describe("resolveUi", () => {
 				kind: "field",
 				path: "name",
 				control: "text",
-				label: computed<string, ExampleValues, ExampleContext>(label),
+				label,
 			},
 		])
 		const context = {
@@ -361,9 +355,7 @@ describe("resolveUi", () => {
 				kind: "field",
 				path: "name",
 				control: "text",
-				label: computed<string, ExampleValues>(
-					({ "address.country": country }) => country ?? "Unknown",
-				),
+				label: ({ "address.country": country }) => country ?? "Unknown",
 			},
 		])
 		const values = {
@@ -395,9 +387,7 @@ describe("resolveUi", () => {
 				kind: "field",
 				path: "name",
 				control: "text",
-				label: computed<string, ExampleValues>((computedValues) =>
-					Object.keys(computedValues).join(","),
-				),
+				label: (resolverValues) => Object.keys(resolverValues).join(","),
 			},
 		])
 
@@ -406,17 +396,17 @@ describe("resolveUi", () => {
 		)
 	})
 
-	it("revokes computed values after the synchronous resolver returns", () => {
-		let captured: ComputedValues<ExampleValues> | undefined
+	it("revokes resolver values after the synchronous resolver returns", () => {
+		let captured: UiResolverValues<ExampleValues> | undefined
 		const definition = normalize([
 			{
 				kind: "field",
 				path: "name",
 				control: "text",
-				label: computed<string, ExampleValues>((values) => {
+				label: (values) => {
 					captured = values
 					return values.name
-				}),
+				},
 			},
 		])
 
@@ -435,17 +425,17 @@ describe("resolveUi", () => {
 		expect(() => captured?.name).toThrow(/revoked/i)
 	})
 
-	it("rejects mutations through the computed values proxy", () => {
+	it("rejects mutations through the resolver values proxy", () => {
 		const definition = normalize([
 			{
 				kind: "field",
 				path: "name",
 				control: "text",
-				label: computed<string, ExampleValues>((values) => {
+				label: (values) => {
 					const mutableValues = values as Record<string, unknown>
 					mutableValues.name = "Grace"
 					return "unreachable"
-				}),
+				},
 			},
 		])
 
@@ -465,9 +455,11 @@ describe("resolveUi", () => {
 	})
 
 	it("rejects promise results from resolvers that are not native async functions", () => {
-		const promiseLabel = computed(() =>
-			Promise.resolve("Profile"),
-		) as unknown as Computed<string, ExampleValues>
+		const promiseLabel = (() =>
+			Promise.resolve("Profile")) as unknown as UiResolver<
+			string,
+			ExampleValues
+		>
 		const definition = normalize([
 			{
 				kind: "field",

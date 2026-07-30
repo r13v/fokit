@@ -6,7 +6,7 @@ import type {
 	StandardSchema,
 	UiNode,
 } from "./index.js"
-import { computed, createFormStore, normalizeDefinition } from "./index.js"
+import { createFormStore, normalizeDefinition } from "./index.js"
 
 type AccountValues = {
 	kind: "person" | "company"
@@ -57,22 +57,15 @@ function createDefinition() {
 				kind: "field",
 				path: "companyName",
 				control: "text",
-				visible: computed(
-					(
-						{ kind }: { readonly kind: AccountValues["kind"] },
-						{ context }: { readonly context: AccountContext },
-					) => context.showCompany && kind === "company",
-				),
+				visible: ({ kind }, { context }) =>
+					context.showCompany && kind === "company",
 				valuePolicy: "unset",
 			},
 			{
 				kind: "field",
 				path: "taxId",
 				control: "text",
-				visible: computed(
-					({ companyName }: { readonly companyName?: string }) =>
-						companyName !== undefined,
-				),
+				visible: ({ companyName }) => companyName !== undefined,
 				valuePolicy: "unset",
 			},
 		] satisfies readonly UiNode<

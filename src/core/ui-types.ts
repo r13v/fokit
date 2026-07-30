@@ -1,4 +1,3 @@
-import type { Computed } from "./computed.js"
 import type {
 	ControlContextOf,
 	ControlName,
@@ -14,9 +13,28 @@ export type GridColumns = 1 | 2 | 3 | 4
 export type GridSpan = 1 | 2 | 3 | 4 | "full"
 export type ValuePolicy = "preserve" | "unset"
 
+export type UiResolverDetails<Context = unknown> = {
+	readonly context: Readonly<Context>
+}
+
+export type UiResolverValues<Input> = [unknown] extends [Input]
+	? Readonly<Record<string, unknown>>
+	: {
+			readonly [Path in FieldPath<Input>]: PathValue<Input, Path>
+		}
+
+export type UiResolver<Result, Input = unknown, Context = unknown> = (
+	values: UiResolverValues<Input>,
+	details: UiResolverDetails<Context>,
+) => Result
+
+type StaticResolvableValue<Value> = Value extends (...args: never[]) => unknown
+	? never
+	: Value
+
 export type Resolvable<Value, Input = unknown, Context = unknown> =
-	| Value
-	| Computed<Value, Input, Context>
+	| StaticResolvableValue<Value>
+	| UiResolver<Value, Input, Context>
 
 type FieldNodeBase<Input, Context> = {
 	readonly kind: "field"

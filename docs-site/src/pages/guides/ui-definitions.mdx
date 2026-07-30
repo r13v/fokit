@@ -1,6 +1,6 @@
 ---
 title: UI definitions
-description: Describe fields, sections, arrays, layout, and computed interaction state in one typed UI tree.
+description: Describe fields, sections, arrays, layout, and derived interaction state in one typed UI tree.
 showAskAi: false
 ---
 
@@ -71,24 +71,23 @@ change the form state model.
 
 ## Derive UI from tracked values
 
-Properties described as resolvable accept either a value or `computed(...)`.
+Properties described as resolvable accept either a value or a resolver function.
 Fokit tracks the paths read by the resolver and invalidates its cached result
 only when one of those values changes. The resolver can also read runtime
 `context` without adding that data to form values.
 
-| Node | Computed properties |
+| Node | Resolvable properties |
 | --- | --- |
 | `field` | `label`, `description`, `required`, `visible`, `disabled`, `readOnly`, `options` |
 | `section` | `title`, `description`, `visible`, `disabled`, `readOnly` |
 | `array` | `label`, `description`, `visible`, `disabled`, `readOnly` |
 
 Structure stays static: paths, controls, children, layout, classes, and array
-defaults are not computed. Change resolvable properties for dynamic UI; compose
-manually when the product needs a different tree.
+defaults are not resolvable. Change resolvable properties for dynamic UI;
+compose manually when the product needs a different tree.
 
 Resolvers are synchronous and pure. Fetch remote options in application data
-flow, pass them through `context`, and let `computed()` select the relevant
-result.
+flow, pass them through `context`, and let a resolver select the relevant result.
 
 See [Conditional fields](/guides/conditional-fields) for tracked-value and context
 examples.

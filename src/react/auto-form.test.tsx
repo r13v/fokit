@@ -99,56 +99,54 @@ function createDefinition(
 		readonly kind: ProfileValues["kind"]
 	}) => TextOptions = () => ({ placeholder: "" }),
 ) {
-	return profileKit
-		.defineForm(schema)
-		.withContext<ProfileContext>((computed) => ({
-			ui: [
-				{
-					kind: "section",
-					id: "account",
-					title: "Account",
-					description: "Profile settings",
-					columns: 2,
-					className: "account-section",
-					disabled: computed((_values, { context }) => context.locked),
-					children: [
-						{
-							kind: "field",
-							path: "name",
-							control: "text",
-							label: "Name",
-							description: "Legal name",
-							required: true,
-							className: "name-field",
-							options: {
-								placeholder: "Full name",
-							},
+	return profileKit.defineForm(schema).withContext<ProfileContext>({
+		ui: [
+			{
+				kind: "section",
+				id: "account",
+				title: "Account",
+				description: "Profile settings",
+				columns: 2,
+				className: "account-section",
+				disabled: (_values, { context }) => context.locked,
+				children: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						label: "Name",
+						description: "Legal name",
+						required: true,
+						className: "name-field",
+						options: {
+							placeholder: "Full name",
 						},
-						{
-							kind: "field",
-							path: "email",
-							control: "text",
-							label: "Email",
-							options: computed(optionsResolver),
-						},
-						{
-							kind: "field",
-							path: "companyName",
-							control: "text",
-							label: "Company",
-							visible: computed(({ kind }) => kind === "company"),
-						},
-					],
-				},
-				{
-					kind: "field",
-					path: "hiddenNote",
-					control: "text",
-					label: "Hidden note",
-					visible: computed((_values, { context }) => context.showHidden),
-				},
-			],
-		}))
+					},
+					{
+						kind: "field",
+						path: "email",
+						control: "text",
+						label: "Email",
+						options: optionsResolver,
+					},
+					{
+						kind: "field",
+						path: "companyName",
+						control: "text",
+						label: "Company",
+						visible: ({ kind }) => kind === "company",
+					},
+				],
+			},
+			{
+				kind: "field",
+				path: "hiddenNote",
+				control: "text",
+				label: "Hidden note",
+				visible: (_values, { context }) => context.showHidden,
+			},
+		],
+	})
 }
 
 function defaultValues(): ProfileValues {
@@ -219,7 +217,7 @@ describe("kit.AutoForm and kit.Fields", () => {
 		).toBeTruthy()
 	})
 
-	it("updates computed UI from tracked values and inherited context state", async () => {
+	it("updates derived UI from tracked values and inherited context state", async () => {
 		const optionsResolver = vi.fn(
 			({ kind }: { readonly kind: ProfileValues["kind"] }) => ({
 				placeholder: kind === "company" ? "Work email" : "Personal email",

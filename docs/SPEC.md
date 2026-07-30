@@ -61,7 +61,7 @@ CI.
 - Support both high-level generated forms and low-level manual composition.
 - Route every value change through one transactional mutation pipeline.
 - Support instance-level update interception without a middleware framework.
-- Provide typed runtime context for computed UI and controls without mixing it
+- Provide typed runtime context for derived UI and controls without mixing it
   into submitted form values.
 - Keep imperative and reactive APIs visibly distinct.
 - Preserve native HTML names, labels, ARIA relationships, focus, and
@@ -140,10 +140,10 @@ control.
 
 ### Automatically tracked reactive dependencies
 
-Computed UI properties read the paths they depend on:
+Derived UI properties use resolver functions that read the paths they depend on:
 
 ```ts
-visible: computed(({ kind }) => kind === 'company')
+visible: ({ kind }) => kind === 'company'
 ```
 
 The resolver receives a read-only proxy whose properties are canonical form
@@ -151,7 +151,7 @@ paths. Fokit records each property read and reuses the result until one of
 those values or the runtime context reference changes. When a resolver takes a
 different branch, the next evaluation replaces its tracked path set.
 
-Computed functions are synchronous and pure. The values proxy is valid only
+Resolver functions are synchronous and pure. The values proxy is valid only
 during the resolver call. Rest destructuring, spread, and property enumeration
 are rejected because they do not identify a finite dependency set. Fetching
 remote data belongs to an application data layer or to a control component.
@@ -176,7 +176,7 @@ pipeline is used regardless of where an update originated.
 
 ### Runtime context is not form data
 
-Applications may pass typed runtime context to a form instance. Computed UI
+Applications may pass typed runtime context to a form instance. Derived UI
 resolvers and controls can read it, but context is not copied into `values`,
 validated by the Standard Schema, marked dirty, serialized to `FormData`, or
 included in submission output.
@@ -220,7 +220,6 @@ Fokit ships as one npm package with subpath exports:
 ```ts
 // React-free core
 import {
-  computed,
   resolveUi,
 } from 'fokit/core';
 
@@ -348,7 +347,7 @@ declaration entry points have no CSS side effect.
 The supported subpaths are:
 
 - `fokit` for React hooks, components, controls, and convenience re-exports;
-- `fokit/core` for `computed`, `resolveUi`, path utilities, and other
+- `fokit/core` for `resolveUi`, path utilities, and other
   DOM-free, React-free operations;
 - `fokit/react19` for React 19 Action components;
 - `fokit/server` for safe `FormData` normalization and validation;
@@ -921,9 +920,7 @@ The returned kit provides:
 
 ```ts
 kit.defineForm(schema)({ ui });
-kit.defineForm(schema)((computed) => ({ ui }));
 kit.defineForm(schema).withContext<Context>({ ui });
-kit.defineForm(schema).withContext<Context>((computed) => ({ ui }));
 
 kit.Form;
 kit.AutoForm;
@@ -967,7 +964,7 @@ const accountSchema = z.object({
 
 export const accountForm = kit
   .defineForm(accountSchema)
-  .withContext<AccountContext>((computed) => ({
+  .withContext<AccountContext>({
     ui: [
       {
         kind: 'section',
@@ -1010,12 +1007,8 @@ export const accountForm = kit
             path: 'companyName',
             control: 'text',
             label: 'Company name',
-            visible: computed(
-              ({ kind }) => kind === 'company',
-            ),
-            disabled: computed(
-              (_, { context }) => !context.canEditCompanyName,
-            ),
+            visible: ({ kind }) => kind === 'company',
+            disabled: (_, { context }) => !context.canEditCompanyName,
             valuePolicy: 'unset',
           },
         ],
@@ -1036,15 +1029,14 @@ export const accountForm = kit
         ],
       },
     ],
-  }));
+  });
 ```
 
-Static forms use `kit.defineForm(schema)({ ui })`. When a definition needs
-derived UI, pass a factory:
-`kit.defineForm(schema)((computed) => ({ ui }))`. The callback's `computed` is
-already bound to the schema input, so TypeScript autocompletes destructured
-paths and infers resolver values without imports or explicit type arguments.
-`withContext<Context>` binds runtime context in the same step.
+Static and derived UI both use `kit.defineForm(schema)({ ui })`. Resolver
+functions assigned to resolvable properties are contextually typed from the
+schema input, so TypeScript autocompletes destructured paths and infers values
+without imports or explicit type arguments. `withContext<Context>` binds
+runtime context in the same step.
 
 Default values are complete instance state and do not belong to a reusable
 definition. A create page and an edit page can reuse the same definition with
@@ -1095,7 +1087,7 @@ type FieldNode = {
   valuePolicy?: 'preserve' | 'unset';
   className?: string;
   span?: GridSpan;
-  options?: ControlOptions | Computed<ControlOptions>;
+  options?: Resolvable<ControlOptions>;
 };
 ```
 
@@ -1339,12 +1331,14 @@ Breakpoint values are stylesheet policy, not part of `FormDefinition`; an
 application that needs different thresholds may replace or override the
 structural stylesheet.
 
-### Computed values
+### UI resolver functions
 
-Static and computed configuration share the same public shape:
+Static and derived configuration share the same public shape:
 
 ```ts
-type Resolvable<T> = T | Computed<T>;
+type Resolvable<T, Input, Context> =
+  | T
+  | UiResolver<T, Input, Context>;
 ```
 
 Form paths, their values, runtime context, and the resolver result are inferred
@@ -1362,27 +1356,27 @@ type AddressContext = {
 
 const addressForm = kit
   .defineForm(addressSchema)
-  .withContext<AddressContext>((computed) => ({
+  .withContext<AddressContext>({
     ui: [
       {
         kind: 'field',
         path: 'city',
         control: 'select',
-        options: computed(
-          ({ country }, { context }) => ({
-            options: context.citiesByCountry[country] ?? [],
-          }),
-        ),
+        options: ({ country }, { context }) => ({
+          options: context.citiesByCountry[country] ?? [],
+        }),
       },
     ],
-  }));
+  });
 ```
 
-This is the dynamic options use case: `options` is a normal computed property,
+This is the dynamic options use case: `options` is a normal resolvable property,
 not a second options API. Remote data is loaded by the application and supplied
-through context.
+through context. A function assigned directly to a resolvable property is
+always a resolver; callbacks that are themselves control options belong inside
+an options object.
 
-Computed values:
+Resolver functions:
 
 - are synchronous;
 - must be pure;
@@ -1397,7 +1391,7 @@ Computed values:
 
 An asynchronous option list should be loaded by application code and passed to
 the form or resolved by a control-specific data integration. It is not a
-computed UI value.
+UI resolver.
 
 ## Form state
 
@@ -1763,7 +1757,7 @@ This includes `id`, `className`, `style`, `autoComplete`, `aria-*`, and custom
 `data-fokit-*`, `data-validation-status`, and documented state attributes
 cannot be replaced. `style` may set the public Fokit CSS variables for one
 form. Reactive styling should use public state data attributes rather than a
-computed class-name API.
+resolver-based class-name API.
 
 After hydration, Fokit intercepts a native reset event, prevents a DOM-only
 reset, and calls `form.reset()` so a `<button type="reset">` keeps the
@@ -1808,7 +1802,7 @@ same instance and hooks.
 `context`, `disabled`, `readOnly`, `validation`, `beforeUpdate`, and `onUpdate`
 are instance-level options accepted by both `useForm` and `kit.AutoForm`.
 Replacing the context reference updates context-dependent controls and
-computed UI without itself marking the form dirty or calling the value-update
+derived UI without itself marking the form dirty or calling the value-update
 hooks. Any resulting hidden-field `valuePolicy` is a separate value change and
 follows the documented transaction pipeline. Applications should keep the
 context reference stable when its contents have not changed.
@@ -1823,7 +1817,7 @@ The external store returns cached immutable snapshots. `useSyncExternalStore`
 receives a `getServerSnapshot` based on the same initial `defaultValues` and
 resolved UI as the first client render. Consumers must supply semantically
 equivalent `defaultValues` and context on server and client. Store creation,
-computed resolution, and deterministic ID generation do not call lifecycle
+derived UI resolution, and deterministic ID generation do not call lifecycle
 hooks during render or React Strict Mode replay.
 
 ## Reactive API
@@ -2359,8 +2353,8 @@ definition or an internal shared validator used by browser and server flows.
 - static root classes and public state/layout data attributes;
 - safe native form-prop passthrough;
 - optional responsive structure through `fokit/layout.css`;
-- static and computed control options;
-- typed runtime context for computed UI and controls;
+- static and derived control options;
+- typed runtime context for derived UI and controls;
 - inherited visibility, disabled, and read-only state;
 - one instance-level `beforeUpdate` and `onUpdate` pair;
 - manual composition around generated fields;
@@ -2470,12 +2464,12 @@ Before the API is considered stable, the implementation must prove:
 - stable array row identity through hook, slot, and imperative append, insert,
   remove, and move operations;
 - one-field updates do not rerender unrelated controls;
-- computed properties rerun only for tracked value reads;
-- conditional computed properties replace their tracked paths when their active
+- UI resolvers rerun only for tracked value reads;
+- conditional UI resolvers replace their tracked paths when their active
   branch changes;
-- computed value proxies reject enumeration and cannot escape the synchronous
+- resolver value proxies reject enumeration and cannot escape the synchronous
   resolver call;
-- replacing runtime context reruns computed UI without changing values or
+- replacing runtime context reruns derived UI without changing values or
   dirty state when no `valuePolicy` change is produced;
 - a context-aware control is rejected when the form context does not satisfy
   its declared requirement;
@@ -2630,7 +2624,7 @@ The specification borrows individual ideas, not APIs, from:
   components, additive classes, and state data attributes;
 - [CSS container queries](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Containment/Container_queries)
   for container-relative responsive layout;
-- the referenced AutoForm implementation for computed field configuration,
+- the referenced AutoForm implementation for derived field configuration,
   dynamic options, hidden-value policies, and update lifecycle hooks;
 - [React form Actions](https://react.dev/reference/react-dom/components/form)
   for the optional React 19 integration;

@@ -5,7 +5,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react"
 import { useRef } from "react"
 import { describe, expect, it } from "vitest"
 
-import { computed, type ImperativeFormIssue } from "../core/index.js"
+import type { ImperativeFormIssue } from "../core/index.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import { useFormContext } from "./form-context.js"
@@ -32,9 +32,6 @@ type Values = {
 		}[]
 	}[]
 }
-
-type GroupValue = Values["groups"][number]
-type MemberValue = GroupValue["members"][number]
 
 type Schema = StandardSchemaV1<Values>
 
@@ -179,7 +176,7 @@ const nestedDefinition = kit.defineForm(schema)({
 				{
 					kind: "array",
 					path: "members",
-					label: computed<string, GroupValue>(({ name }) => `${name} members`),
+					label: ({ name }) => `${name} members`,
 					itemDefault: {
 						name: "New member",
 					},
@@ -188,9 +185,7 @@ const nestedDefinition = kit.defineForm(schema)({
 							kind: "field",
 							path: "name",
 							control: "text",
-							label: computed<string, MemberValue>(
-								({ name }) => `Member ${name}`,
-							),
+							label: ({ name }) => `Member ${name}`,
 						},
 					],
 				},
@@ -329,7 +324,7 @@ describe("generated arrays", () => {
 		expect(queryInput("lockedContacts.1.name")).toBeNull()
 	})
 
-	it("renders nested arrays with concrete paths and row-scoped computed labels", () => {
+	it("renders nested arrays with concrete paths and row-scoped derived labels", () => {
 		render(
 			<kit.AutoForm
 				defaultValues={defaultValues()}

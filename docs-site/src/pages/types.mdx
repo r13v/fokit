@@ -65,7 +65,7 @@ At runtime, paths use canonical dotted strings such as
 ## Form instances and context
 
 `FormInstance<Schema, Context>` carries schema and runtime context through
-commands, selectors, and computed UI. `UseFormOptions<Schema, Context>`
+commands, selectors, and derived UI. `UseFormOptions<Schema, Context>`
 describes the options accepted by `useForm` and `AutoForm`.
 
 ```ts twoslash
@@ -84,9 +84,10 @@ type ProfileOptions = UseFormOptions<typeof schema, Context>
 Use context for loaded option lists, permissions, or product state that affects
 UI but must never become submitted form data.
 
-`ComputedValues<Input>` maps every canonical `FieldPath<Input>` to its
-`PathValue`. It is the readonly object seen by a low-level `computed` resolver;
-schema-bound resolvers infer it automatically.
+`UiResolverValues<Input>` maps every canonical `FieldPath<Input>` to its
+`PathValue`. It is the readonly object seen by a UI resolver; schema-bound
+resolvers infer it automatically. `UiResolver<Result, Input, Context>` names the
+complete function type when a standalone resolver needs an annotation.
 
 ## Custom control inference
 

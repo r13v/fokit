@@ -10,9 +10,9 @@ Conditional form UI should be predictable: a resolver reads the values it
 needs, Fokit recomputes only when those values change, and value retention stays
 an explicit product decision.
 
-## Derive UI with computed
+## Derive UI with resolver functions
 
-Use `computed()` anywhere a UI node accepts a resolvable value, including
+Use a function anywhere a UI node accepts a resolvable value, including
 `visible`, `disabled`, `readOnly`, `required`, labels, descriptions, and control
 options.
 
@@ -27,7 +27,7 @@ const schema = z.object({
 const kit = createFormKit({ controls: nativeControls })
 
 // ---cut---
-const definition = kit.defineForm(schema)((computed) => ({
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
@@ -46,13 +46,11 @@ const definition = kit.defineForm(schema)((computed) => ({
 			path: "companyName",
 			control: "text",
 			label: "Company name",
-			visible: computed(
-				({ accountType }) => accountType === "company",
-			),
+			visible: ({ accountType }) => accountType === "company",
 			valuePolicy: "unset",
 		},
 	],
-}))
+})
 ```
 
 Fokit tracks every canonical path read during the synchronous resolver call.
@@ -60,16 +58,20 @@ The cached result is reused until one of those values or the runtime `context`
 reference changes. If a resolver takes a different branch next time, its
 tracked paths change with that branch.
 
-The callback receives a schema-bound `computed`. Because `defineForm` binds the
-schema first, TypeScript autocompletes destructured paths and infers every
-resolver value. Nested canonical paths use an alias such as
+Because `defineForm` binds the schema first, TypeScript contextually types each
+resolver, autocompletes destructured paths, and infers every value. Nested
+canonical paths use an alias such as
 `({ "address.country": country })`. Invalid paths and incompatible return
 values fail type checking; imports and explicit type arguments are not needed.
 
 Read paths explicitly through the resolver's first argument. Rest
 destructuring, spread, and enumeration with `Object.keys()` are rejected because
 they would hide which values affect the result. Resolvers stay synchronous and
-pure; remote loading belongs in application data flow, not inside `computed()`.
+pure; remote loading belongs in application data flow, not inside a resolver.
+
+A function assigned directly to a resolvable property is always a resolver. If
+a custom control option contains callbacks, keep them inside an options object:
+`options: { filter: (item) => item.active }`.
 
 ## Decide what happens to hidden values
 
@@ -107,23 +109,23 @@ type ProfileContext = {
 
 const kit = createFormKit({ controls: nativeControls })
 
-// ---cut---
-const definition = kit
-	.defineForm(schema)
-	.withContext<ProfileContext>((computed) => ({
-		ui: [
+	// ---cut---
+	const definition = kit
+		.defineForm(schema)
+		.withContext<ProfileContext>({
+			ui: [
 			{
 				kind: "field",
 				path: "country",
 				control: "select",
 				label: "Country",
-				readOnly: computed((_values, { context }) => context.locked),
-				options: computed((_values, { context }) => ({
-					options: context.countries,
-				})),
-			},
-		],
-	}))
+					readOnly: (_values, { context }) => context.locked,
+					options: (_values, { context }) => ({
+						options: context.countries,
+					}),
+				},
+			],
+		})
 ```
 
 Load countries before rendering the form, then pass them through `context`.

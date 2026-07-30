@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import type { ControlMetadata, StandardSchema, UiNode } from "./index.js"
-import { computed, createFormStore, normalizeDefinition } from "./index.js"
+import { createFormStore, normalizeDefinition } from "./index.js"
 
 type ProfileValues = {
 	name: string
@@ -50,14 +50,8 @@ function createProfileForm() {
 				kind: "field",
 				path: "companyName",
 				control: "text",
-				visible: computed(
-					(_values, { context }: { readonly context: ProfileContext }) =>
-						context.showCompany,
-				),
-				disabled: computed(
-					(_values, { context }: { readonly context: ProfileContext }) =>
-						context.locked,
-				),
+				visible: (_values, { context }) => context.showCompany,
+				disabled: (_values, { context }) => context.locked,
 			},
 		] satisfies readonly UiNode<
 			ProfileValues,

@@ -14,7 +14,7 @@ flows behind an API, follow the linked guide.
 | Import | Use it for |
 | --- | --- |
 | `fokit` | React kits, native controls, generated forms, hooks, classic submit, and shared types |
-| `fokit/core` | React-free stores, definitions, computed UI, paths, and immutable value helpers |
+| `fokit/core` | React-free stores, definitions, derived UI, paths, and immutable value helpers |
 | `fokit/server` | Safe FormData normalization, Standard Schema validation, `FormResult`, and `SubmissionIssue` |
 | `fokit/react19` | `ActionForm` and `ActionSubmit` |
 | `fokit/layout.css` | Optional structural layout |
@@ -58,17 +58,15 @@ or slots.
 
 ```text
 kit.defineForm(schema)({ ui }) => NormalizedFormDefinition
-kit.defineForm(schema)((computed) => ({ ui })) => NormalizedFormDefinition
 kit.defineForm(schema).withContext<Context>({ ui }) => NormalizedFormDefinition
-kit.defineForm(schema).withContext<Context>((computed) => ({ ui })) => NormalizedFormDefinition
 ```
 
 The definition validates control names, typed paths, duplicate IDs, layout
 ranges, and value policies. Passing the schema first lets TypeScript infer the
 input type before it checks the UI tree. Use the direct object form for static
-UI. When derived UI is needed, the callback receives a schema-bound
-`computed()` with path autocomplete and inferred resolver values. Paths read
-during the resolver call are tracked automatically.
+and derived UI. Resolver functions assigned to resolvable properties receive
+schema-bound path autocomplete and inferred values. Paths read during the
+resolver call are tracked automatically.
 The normalized result is frozen and reusable across form instances.
 
 ```ts twoslash
@@ -91,10 +89,10 @@ const definition = kit.defineForm(schema)({
 })
 ```
 
-### computed
+### UI resolvers
 
 ```text
-computed((values, { context }) => result) => Computed<Result>
+property: (values, { context }) => result
 ```
 
 `values` is a readonly map of canonical form paths to their typed values.
@@ -111,7 +109,7 @@ const schema = z.object({
 const kit = createFormKit({ controls: nativeControls })
 
 // ---cut---
-kit.defineForm(schema)((computed) => ({
+kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
@@ -123,24 +121,26 @@ kit.defineForm(schema)((computed) => ({
 					{ value: "company", label: "Company" },
 				],
 			},
-			visible: computed(({ accountType }) => accountType === "company"),
+			visible: ({ accountType }) => accountType === "company",
 		},
 		{
 			kind: "field",
 			path: "address.country",
 			control: "text",
-			visible: computed(
-				({ "address.country": country }) => country === "GB",
-			),
+			visible: ({ "address.country": country }) => country === "GB",
 		},
 	],
-}))
+})
 ```
 
 The cached result is reused until a tracked value or the `context` reference
 changes. The values proxy exists only for the synchronous resolver call. Rest
 destructuring, spread, and enumeration are rejected; remote data should be
 loaded outside the resolver and passed through `context`.
+
+A function assigned directly to a resolvable property is always a resolver.
+When custom control options contain callbacks, keep those callbacks inside an
+options object rather than using a function as the complete `options` value.
 
 ### UI node families
 
@@ -153,7 +153,7 @@ The `ui` array is a typed tree:
 | `"array"` | required | Repeat relative child nodes for every array item |
 
 All three node families accept `visible`, `disabled`, and `readOnly` as either
-booleans or `computed(...)` values. Those states inherit through sections and
+booleans or resolver functions. Those states inherit through sections and
 arrays. They also accept static `className` and `span`; the shipped layout uses
 `span` for direct children of a section grid.
 
@@ -169,12 +169,12 @@ submission behavior and when to use each state.
 | `path` | yes | Typed `FieldPath<FormInput<Schema>>` |
 | `control` | yes | A compatible key from this kit's control registry |
 | `id` | no | Derived from `path` |
-| `label`, `description` | no | `string` or `computed(...)` |
-| `required` | no | `boolean` or `computed(...)`; default `false` |
-| `visible` | no | `boolean` or `computed(...)`; default `true` |
-| `disabled`, `readOnly` | no | `boolean` or `computed(...)`; default `false` |
+| `label`, `description` | no | `string` or a resolver function |
+| `required` | no | `boolean` or a resolver function; default `false` |
+| `visible` | no | `boolean` or a resolver function; default `true` |
+| `disabled`, `readOnly` | no | `boolean` or a resolver function; default `false` |
 | `valuePolicy` | no | `"preserve"` or `"unset"`; default `"preserve"` |
-| `options` | no | Options inferred from `control`, or `computed(...)` |
+| `options` | no | Options inferred from `control`, or a resolver function |
 | `className`, `span` | no | Static styling and grid metadata |
 
 `required` configures presentation, native state, and ARIA; validation still
@@ -187,10 +187,10 @@ be absent or contain `undefined`.
 | --- | --- | --- |
 | `id` | yes | Unique non-empty string without ASCII whitespace |
 | `children` | yes | Nested `field`, `section`, or `array` nodes |
-| `title`, `description` | no | `string` or `computed(...)` |
+| `title`, `description` | no | `string` or a resolver function |
 | `columns` | no | `1`, `2`, `3`, or `4`; default `1` |
-| `visible` | no | `boolean` or `computed(...)`; default `true` |
-| `disabled`, `readOnly` | no | `boolean` or `computed(...)`; default `false` |
+| `visible` | no | `boolean` or a resolver function; default `true` |
+| `disabled`, `readOnly` | no | `boolean` or a resolver function; default `false` |
 | `className`, `span` | no | Static styling and grid metadata |
 
 Inside a section, fields default to `span: 1`; nested sections and arrays
@@ -204,9 +204,9 @@ default to `span: "full"`.
 | `itemDefault` | yes | A complete item or a function returning one |
 | `children` | yes | UI nodes with paths relative to one item |
 | `id` | no | Derived from `path` |
-| `label`, `description` | no | `string` or `computed(...)` |
-| `visible` | no | `boolean` or `computed(...)`; default `true` |
-| `disabled`, `readOnly` | no | `boolean` or `computed(...)`; default `false` |
+| `label`, `description` | no | `string` or a resolver function |
+| `visible` | no | `boolean` or a resolver function; default `true` |
+| `disabled`, `readOnly` | no | `boolean` or a resolver function; default `false` |
 | `className`, `span` | no | Static styling and grid metadata |
 
 Definitions reject unknown controls, duplicate paths within one scope,
@@ -222,7 +222,7 @@ behavior, arrays, layout, and manual-composition boundaries.
 | --- | --- | --- |
 | `definition` | yes | Normalized definition from this kit |
 | `defaultValues` | yes | Complete editable `FormInput` baseline |
-| `context` | no | Runtime-only data for computed UI |
+| `context` | no | Runtime-only data for UI resolvers |
 | `validation` | no | Partial validation options |
 | `disabled` | no | Make the complete form unavailable and prevent submission |
 | `readOnly` | no | Prevent edits while keeping the form available for submission |
@@ -378,7 +378,7 @@ the product needs one.
 The exported option contracts are `NativeTextOptions`,
 `NativeTextareaOptions`, `NativeSelectOptions`, `NativeSelectOption`,
 `NativeNumberOptions`, `NativeDateOptions`, and `NativeFileOptions`. A field's
-`options` can also be computed from tracked form values or runtime context.
+`options` can also be derived from tracked form values or runtime context.
 
 See [Controls and design systems](/guides/controls) for adapter and serializer
 contracts.
@@ -436,8 +436,8 @@ See the end-to-end [React 19 Actions guide](/guides/react-19-actions).
 Use `fokit/core` in shared packages, non-React runtimes, and focused tests.
 
 - `createFormStore` creates the immutable external store.
-- `computed` and `isComputed` define derived UI with tracked value reads.
-- `normalizeDefinition` and `resolveUi` normalize and resolve definitions.
+- Resolver functions in definitions derive UI with tracked value reads.
+- `normalizeDefinition` and `resolveUi` normalize and resolve those definitions.
 - `parsePath`, `formatPath`, `parseArrayIndex`, `isSamePath`,
   `isAncestorPath`, `isDescendantPath`, and `pathsOverlap` work with canonical
   paths.

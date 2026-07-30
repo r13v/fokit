@@ -53,7 +53,7 @@ export const kit = createFormKit({
 // [!endregion kit]
 
 // [!region definition]
-export const profileDefinition = kit.defineForm(profileSchema)((computed) => ({
+export const profileDefinition = kit.defineForm(profileSchema)({
 	ui: [
 		{
 			kind: "section",
@@ -89,7 +89,7 @@ export const profileDefinition = kit.defineForm(profileSchema)((computed) => ({
 					path: "companyName",
 					control: "text",
 					label: "Company name",
-					visible: computed(({ accountType }) => accountType === "company"),
+					visible: ({ accountType }) => accountType === "company",
 					valuePolicy: "unset",
 					options: {
 						autoComplete: "organization",
@@ -137,7 +137,7 @@ export const profileDefinition = kit.defineForm(profileSchema)((computed) => ({
 			],
 		},
 	],
-}))
+})
 
 export const defaultValues = {
 	name: "Ada Lovelace",

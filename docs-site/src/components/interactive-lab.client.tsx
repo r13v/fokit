@@ -83,7 +83,7 @@ const kit = createFormKit({
 	}),
 })
 
-const profileDefinition = kit.defineForm(profileSchema)((computed) => ({
+const profileDefinition = kit.defineForm(profileSchema)({
 	ui: [
 		{
 			kind: "section",
@@ -122,7 +122,7 @@ const profileDefinition = kit.defineForm(profileSchema)((computed) => ({
 					path: "companyName",
 					control: "text",
 					label: "Company name",
-					visible: computed(({ accountType }) => accountType === "company"),
+					visible: ({ accountType }) => accountType === "company",
 					valuePolicy: "unset",
 					options: {
 						placeholder: "Compiler Labs",
@@ -192,7 +192,7 @@ const profileDefinition = kit.defineForm(profileSchema)((computed) => ({
 			],
 		},
 	],
-}))
+})
 
 export function InteractiveLabClient() {
 	const [lastSubmit, setLastSubmit] = useState("No submission yet")

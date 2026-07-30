@@ -115,8 +115,8 @@ before choosing a mode.
 ## Does every field rerender on each change?
 
 No. The store uses external subscriptions. `useValue`, `useField`,
-`useArrayField`, and `useFormState` select focused slices. `computed`
-automatically tracks the paths read while resolving derived UI.
+`useArrayField`, and `useFormState` select focused slices. UI resolver functions
+automatically track the paths read while deriving UI.
 
 ## Does Fokit provide wizards or autosave?
 

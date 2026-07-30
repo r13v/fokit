@@ -79,3 +79,8 @@ them per form instance.
 to `1000`, `maxPathLength` to `1024`, `maxDepth` to `32`, and `maxArrayIndex` to
 `10000`. Framework request, multipart, file-count, and file-size limits should
 run before calling `parseFormData`.
+
+## Kudos
+
+Kudos to [Evgeniy Ivaha](https://github.com/ivahaev) for the idea and the
+example implementation.

@@ -937,6 +937,10 @@ test("Vocs root page and root CSS replace the custom app shell", async () => {
 	assert.match(page, /<OverviewDemo \/>/)
 	assert.match(page, /createFormKit\(\{\s*controls: nativeControls/)
 	assert.match(page, /kit\.AutoForm/)
+	assert.match(
+		page,
+		/Kudos to \[Evgeniy Ivaha\]\(https:\/\/github\.com\/ivahaev\) for the idea and the\s+example implementation\./,
+	)
 	assert.doesNotMatch(page, /[А-Яа-яЁё]/)
 
 	assert.match(css, /@import "@fontsource-variable\/newsreader"/)
@@ -996,6 +1000,10 @@ test("superseded public guides and example copies are deleted", async () => {
 		/https:\/\/r13v\.github\.io\/fokit\/guides\/react-19-actions/,
 	)
 	assert.match(readme, /docs-site\/src\/snippets\/form-kit\.tsx/)
+	assert.match(
+		readme,
+		/Kudos to \[Evgeniy Ivaha\]\(https:\/\/github\.com\/ivahaev\) for the idea and the\s+example implementation\./,
+	)
 	assert.match(tutorial, /https:\/\/r13v\.github\.io\/fokit\/guides\/tutorial/)
 	assert.match(tutorial, /docs-site\/src\/snippets\/form-kit\.tsx/)
 	assert.match(tutorial, /docs-site\/src\/snippets\/basic-form\.tsx/)

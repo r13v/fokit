@@ -459,8 +459,7 @@ const nativeTextLikeKit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm<Context>()({
-	schema,
+const definition = kit.defineForm(schema).withContext<Context>({
 	ui: [
 		{
 			kind: "field",
@@ -549,8 +548,7 @@ const definition = kit.defineForm<Context>()({
 	],
 })
 
-const incompatibleDefinition = kit.defineForm<Context>()({
-	schema,
+const incompatibleDefinition = kit.defineForm(schema).withContext<Context>({
 	ui: [
 		{
 			kind: "field",
@@ -562,8 +560,7 @@ const incompatibleDefinition = kit.defineForm<Context>()({
 	],
 })
 
-const uploadDefinition = uploadKit.defineForm({
-	schema: uploadSchema,
+const uploadDefinition = uploadKit.defineForm(uploadSchema)({
 	ui: [
 		{
 			kind: "field",
@@ -574,8 +571,7 @@ const uploadDefinition = uploadKit.defineForm({
 	],
 })
 
-const nestedDefinition = kit.defineForm<Context>()({
-	schema: nestedSchema,
+const nestedDefinition = kit.defineForm(nestedSchema).withContext<Context>({
 	ui: [
 		{
 			kind: "array",
@@ -609,8 +605,9 @@ const nestedDefinition = kit.defineForm<Context>()({
 	],
 })
 
-const nativeTextLikeDefinition = nativeTextLikeKit.defineForm({
-	schema: nativeTextLikeSchema,
+const nativeTextLikeDefinition = nativeTextLikeKit.defineForm(
+	nativeTextLikeSchema,
+)({
 	ui: [
 		{
 			kind: "field",
@@ -643,8 +640,9 @@ const nativeTextLikeDefinition = nativeTextLikeKit.defineForm({
 	],
 })
 
-const nativeChoiceFileDefinition = nativeTextLikeKit.defineForm({
-	schema: nativeChoiceFileSchema,
+const nativeChoiceFileDefinition = nativeTextLikeKit.defineForm(
+	nativeChoiceFileSchema,
+)({
 	ui: [
 		{
 			kind: "field",
@@ -673,8 +671,9 @@ const nativeChoiceFileDefinition = nativeTextLikeKit.defineForm({
 	],
 })
 
-const nativeChoicePreservationDefinition = nativeTextLikeKit.defineForm({
-	schema: nativeChoiceFileSchema,
+const nativeChoicePreservationDefinition = nativeTextLikeKit.defineForm(
+	nativeChoiceFileSchema,
+)({
 	ui: [
 		{
 			kind: "field",
@@ -719,8 +718,9 @@ const nativeChoicePreservationDefinition = nativeTextLikeKit.defineForm({
 	],
 })
 
-const disabledNativeFileDefinition = nativeTextLikeKit.defineForm({
-	schema: nativeChoiceFileSchema,
+const disabledNativeFileDefinition = nativeTextLikeKit.defineForm(
+	nativeChoiceFileSchema,
+)({
 	ui: [
 		{
 			kind: "field",
@@ -732,8 +732,9 @@ const disabledNativeFileDefinition = nativeTextLikeKit.defineForm({
 	],
 })
 
-const hiddenNativeFileDefinition = nativeTextLikeKit.defineForm({
-	schema: nativeChoiceFileSchema,
+const hiddenNativeFileDefinition = nativeTextLikeKit.defineForm(
+	nativeChoiceFileSchema,
+)({
 	ui: [
 		{
 			kind: "field",

@@ -403,3 +403,24 @@ Capturing a deep-linked documentation section in the in-app browser →
 `waitForURL` timed out because GitHub Pages normalized `/fokit/api#…` to
 `/fokit/api/#…` even though navigation had succeeded. Read the resulting tab
 URL after direct navigation or include the canonical trailing slash.
+
+## 2026-07-30 00:18 — GPT-5
+
+Probing generic inference with the TypeScript compiler API → the installed
+TypeScript 7 package exposed only version metadata through `import`/`require`,
+so `ScriptTarget` and the usual compiler API were unavailable. Use the bundled
+`tsc` executable with an isolated type-test until the native package restores
+compiler API compatibility.
+
+## 2026-07-30 00:20 — GPT-5
+
+Compiling an isolated TypeScript inference probe by filename → TypeScript 7
+rejected the command because a repository `tsconfig.json` existed, even though
+files were passed explicitly. Add `--ignoreConfig` for standalone type-tests.
+
+## 2026-07-30 09:02 — GPT-5
+
+Running a smoke fixture's `typecheck` directly from its source directory →
+the fixture could not resolve `fokit` because the package is installed only in
+the smoke harness's temporary copy. Use `npm run test:smoke` for fixture
+verification instead of invoking a fixture script in place.

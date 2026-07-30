@@ -3,7 +3,6 @@ import {
 	type ArraySlotProps,
 	type ControlProps,
 	cloneValue,
-	computed,
 	createFormKit,
 	createFormStore,
 	defineControl,
@@ -39,6 +38,7 @@ import {
 	useFormState,
 	useValue,
 } from "fokit"
+import { computed } from "fokit/core"
 import type { ReactNode } from "react"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
@@ -50,6 +50,9 @@ type _NoActionForm = MainExports["ActionForm"]
 
 // @ts-expect-error React 19 Action APIs must stay isolated under fokit/react19.
 type _NoActionSubmit = MainExports["ActionSubmit"]
+
+// @ts-expect-error computed is schema-bound through kit.defineForm in the React API.
+type _NoStandaloneComputed = MainExports["computed"]
 
 type ProfileInput = {
 	readonly name: string
@@ -182,8 +185,9 @@ const nativeKit = createFormKit({
 	controls: nativeControls,
 })
 
-const description = computed(["name"] as const, ({ name }) =>
-	typeof name === "string" && name.length > 0 ? `Editing ${name}` : "Profile",
+const description = computed<readonly ["name"], string, unknown, ProfileInput>(
+	["name"],
+	({ name }) => (name.length > 0 ? `Editing ${name}` : "Profile"),
 )
 
 const ui = [
@@ -196,13 +200,14 @@ const ui = [
 	},
 ] satisfies readonly UiNode<ProfileInput, typeof kit.controls>[]
 
-const defineProfile = kit.defineForm as unknown as (definition: {
-	readonly schema: typeof schema
-	readonly ui: typeof ui
-}) => NormalizedFormDefinition<typeof schema>
+const defineProfile = kit.defineForm as unknown as (
+	profileSchema: typeof schema,
+	definition: {
+		readonly ui: typeof ui
+	},
+) => NormalizedFormDefinition<typeof schema>
 
-const definition = defineProfile({
-	schema,
+const definition = defineProfile(schema, {
 	ui,
 })
 

@@ -4,7 +4,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import { computed, type ImperativeFormIssue } from "../core/index.js"
+import type { ImperativeFormIssue } from "../core/index.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import { useFormContext } from "./form-context.js"
@@ -99,73 +99,56 @@ function createDefinition(
 		readonly kind: ProfileValues["kind"]
 	}) => TextOptions = () => ({ placeholder: "" }),
 ) {
-	return profileKit.defineForm<ProfileContext>()({
-		schema,
-		ui: [
-			{
-				kind: "section",
-				id: "account",
-				title: "Account",
-				description: "Profile settings",
-				columns: 2,
-				className: "account-section",
-				disabled: computed<readonly [], boolean, ProfileContext, ProfileValues>(
-					[] as const,
-					(_values, { context }: { readonly context: ProfileContext }) =>
-						context.locked,
-				),
-				children: [
-					{
-						kind: "field",
-						path: "name",
-						control: "text",
-						label: "Name",
-						description: "Legal name",
-						required: true,
-						className: "name-field",
-						options: {
-							placeholder: "Full name",
+	return profileKit
+		.defineForm(schema)
+		.withContext<ProfileContext>((computed) => ({
+			ui: [
+				{
+					kind: "section",
+					id: "account",
+					title: "Account",
+					description: "Profile settings",
+					columns: 2,
+					className: "account-section",
+					disabled: computed([], (_values, { context }) => context.locked),
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							label: "Name",
+							description: "Legal name",
+							required: true,
+							className: "name-field",
+							options: {
+								placeholder: "Full name",
+							},
 						},
-					},
-					{
-						kind: "field",
-						path: "email",
-						control: "text",
-						label: "Email",
-						options: computed<
-							readonly ["kind"],
-							TextOptions,
-							ProfileContext,
-							ProfileValues
-						>(["kind"] as const, optionsResolver),
-					},
-					{
-						kind: "field",
-						path: "companyName",
-						control: "text",
-						label: "Company",
-						visible: computed<
-							readonly ["kind"],
-							boolean,
-							ProfileContext,
-							ProfileValues
-						>(["kind"] as const, ({ kind }) => kind === "company"),
-					},
-				],
-			},
-			{
-				kind: "field",
-				path: "hiddenNote",
-				control: "text",
-				label: "Hidden note",
-				visible: computed<readonly [], boolean, ProfileContext, ProfileValues>(
-					[] as const,
-					(_values, { context }: { readonly context: ProfileContext }) =>
-						context.showHidden,
-				),
-			},
-		],
-	})
+						{
+							kind: "field",
+							path: "email",
+							control: "text",
+							label: "Email",
+							options: computed(["kind"], optionsResolver),
+						},
+						{
+							kind: "field",
+							path: "companyName",
+							control: "text",
+							label: "Company",
+							visible: computed(["kind"], ({ kind }) => kind === "company"),
+						},
+					],
+				},
+				{
+					kind: "field",
+					path: "hiddenNote",
+					control: "text",
+					label: "Hidden note",
+					visible: computed([], (_values, { context }) => context.showHidden),
+				},
+			],
+		}))
 }
 
 function defaultValues(): ProfileValues {

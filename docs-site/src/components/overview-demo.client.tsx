@@ -25,8 +25,7 @@ const kit = createFormKit({
 	controls: nativeControls,
 })
 
-const profileDefinition = kit.defineForm({
-	schema: profileSchema,
+const profileDefinition = kit.defineForm(profileSchema)({
 	ui: [
 		{
 			kind: "field",

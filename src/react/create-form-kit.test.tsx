@@ -24,8 +24,7 @@ const schema = {} as TestSchema
 const collisionSchema = {} as CollisionSchema
 
 function createDefinition() {
-	return testKit.defineForm({
-		schema,
+	return testKit.defineForm(schema)({
 		ui: [
 			{
 				kind: "field",
@@ -56,27 +55,24 @@ describe("createFormKit", () => {
 			},
 		})
 
-		expect(() =>
-			kit.defineForm({
-				schema,
-				ui: [
-					{
-						kind: "field",
-						path: "name",
-						control: "text",
-					},
-				],
-			}),
-		).not.toThrow()
+		const definition = kit.defineForm(schema)({
+			ui: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+				},
+			],
+		})
 
+		expect(definition.schema).toBe(schema)
 		expectResolvedSlots(kit.slots)
 		expect(Object.isFrozen(kit.slots)).toBe(true)
 	})
 
 	it("preserves custom kits while defaulting omitted slots", () => {
 		expect(() =>
-			testKit.defineForm({
-				schema,
+			testKit.defineForm(schema)({
 				ui: [
 					{
 						kind: "field",
@@ -88,8 +84,7 @@ describe("createFormKit", () => {
 		).not.toThrow()
 
 		expect(() =>
-			testKit.defineForm<{ readonly locked: boolean }>()({
-				schema,
+			testKit.defineForm(schema).withContext<{ readonly locked: boolean }>({
 				ui: [
 					{
 						kind: "field",
@@ -115,8 +110,7 @@ describe("createFormKit", () => {
 				Field,
 			},
 		})
-		const definition = kit.defineForm({
-			schema,
+		const definition = kit.defineForm(schema)({
 			ui: [
 				{
 					kind: "field",
@@ -215,8 +209,7 @@ describe("createFormKit", () => {
 	})
 
 	it("keeps generated DOM IDs distinct for dashed and nested paths", () => {
-		const definition = testKit.defineForm({
-			schema: collisionSchema,
+		const definition = testKit.defineForm(collisionSchema)({
 			ui: [
 				{
 					kind: "field",

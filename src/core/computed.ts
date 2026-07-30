@@ -1,6 +1,10 @@
 import { parsePath } from "./path.js"
 import type { FieldPath, PathValue } from "./path-types.js"
 
+declare const computedTypes: unique symbol
+
+type NoInferComputed<Value> = [Value][Value extends unknown ? 0 : never]
+
 export type ComputedDetails<Context = unknown> = {
 	readonly context: Readonly<Context>
 }
@@ -21,12 +25,32 @@ export type Computed<
 	Dependencies extends readonly string[] = readonly string[],
 > = {
 	readonly __fokitComputed: true
+	// Phantom metadata carries the form types without adding runtime state.
+	readonly [computedTypes]?: {
+		readonly context: Context
+		readonly input: Input
+	}
 	readonly dependencies: Dependencies
-	readonly resolver: (
+	// Construction checks the resolver strictly. Stored resolvers are bivariant so
+	// a concrete dependency tuple remains assignable to Resolvable's erased tuple.
+	readonly resolver: {
+		bivarianceHack(
+			values: ComputedDependencyValues<Input, Dependencies>,
+			details: ComputedDetails<Context>,
+		): Result
+	}["bivarianceHack"]
+}
+
+export type FormComputed<Input, Context = unknown> = <
+	const Dependencies extends readonly FieldPath<Input>[],
+	Result,
+>(
+	dependencies: Dependencies,
+	resolver: (
 		values: ComputedDependencyValues<Input, Dependencies>,
 		details: ComputedDetails<Context>,
-	) => Result
-}
+	) => Result,
+) => Computed<Result, Input, Context, Dependencies>
 
 export function computed<
 	const Dependencies extends readonly string[],
@@ -34,10 +58,10 @@ export function computed<
 	Context = unknown,
 	Input = unknown,
 >(
-	dependencies: Dependencies,
+	dependencies: Dependencies & readonly FieldPath<NoInferComputed<Input>>[],
 	resolver: (
-		values: ComputedDependencyValues<Input, Dependencies>,
-		details: ComputedDetails<Context>,
+		values: ComputedDependencyValues<NoInferComputed<Input>, Dependencies>,
+		details: ComputedDetails<NoInferComputed<Context>>,
 	) => Result,
 ): Computed<Result, Input, Context, Dependencies> {
 	if (isAsyncFunction(resolver)) {

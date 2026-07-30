@@ -3,6 +3,8 @@
 import type { ComponentType, ReactElement, ReactNode } from "react"
 
 import {
+	computed,
+	type FormComputed,
 	type FormDefinition,
 	type FormInput,
 	type NormalizedFormDefinition,
@@ -42,14 +44,50 @@ export type CreateFormKitOptions<Controls extends ControlDefinitionRegistry> = {
 	readonly slots?: Partial<FormKitSlots>
 }
 
-export type DefineForm<Controls extends ControlDefinitionRegistry> = {
-	<Schema extends StandardSchema>(
-		definition: FormDefinition<Schema, Controls, unknown>,
+type FormDefinitionFactory<
+	Schema extends StandardSchema,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+> = (
+	computed: FormComputed<FormInput<Schema>, Context>,
+) => FormDefinitionInput<Schema, Controls, Context>
+
+type FormDefinitionInput<
+	Schema extends StandardSchema,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+> = Omit<FormDefinition<Schema, Controls, Context>, "schema">
+
+type DefineFormWithContext<
+	Schema extends StandardSchema,
+	Controls extends ControlDefinitionRegistry,
+> = {
+	<Context>(
+		createDefinition: FormDefinitionFactory<Schema, Controls, Context>,
 	): NormalizedFormDefinition<Schema>
-	<Context>(): <Schema extends StandardSchema>(
-		definition: FormDefinition<Schema, Controls, Context>,
-	) => NormalizedFormDefinition<Schema>
+	<Context>(
+		definition: FormDefinitionInput<Schema, Controls, Context>,
+	): NormalizedFormDefinition<Schema>
 }
+
+type DefineFormForSchema<
+	Schema extends StandardSchema,
+	Controls extends ControlDefinitionRegistry,
+> = {
+	(
+		createDefinition: FormDefinitionFactory<Schema, Controls, unknown>,
+	): NormalizedFormDefinition<Schema>
+	(
+		definition: FormDefinitionInput<Schema, Controls, unknown>,
+	): NormalizedFormDefinition<Schema>
+	readonly withContext: DefineFormWithContext<Schema, Controls>
+}
+
+export type DefineForm<Controls extends ControlDefinitionRegistry> = <
+	Schema extends StandardSchema,
+>(
+	schema: Schema,
+) => DefineFormForSchema<Schema, Controls>
 
 export type FieldsProps = {
 	readonly children?: ReactNode
@@ -93,13 +131,13 @@ export function createFormKit<Controls extends ControlDefinitionRegistry>(
 	})
 	assertSlots(slots)
 
-	const defineForm = ((definition?: unknown) => {
-		if (definition === undefined) {
-			return (curriedDefinition: unknown) =>
-				normalizeKitDefinition(curriedDefinition, options.controls)
-		}
+	const defineForm = ((schema: unknown) => {
+		const create = (createDefinition: unknown) =>
+			normalizeKitDefinition(schema, createDefinition, options.controls)
 
-		return normalizeKitDefinition(definition, options.controls)
+		return Object.assign(create, {
+			withContext: create,
+		})
 	}) as DefineForm<Controls>
 
 	return Object.freeze({
@@ -114,11 +152,19 @@ export function createFormKit<Controls extends ControlDefinitionRegistry>(
 }
 
 function normalizeKitDefinition(
-	definition: unknown,
+	schema: unknown,
+	definitionSource: unknown,
 	controls: ControlDefinitionRegistry,
 ): NormalizedFormDefinition<StandardSchema> {
+	const definition =
+		typeof definitionSource === "function"
+			? (
+					definitionSource as (createComputed: typeof computed) => {
+						readonly ui: readonly unknown[]
+					}
+				)(computed)
+			: definitionSource
 	const input = definition as {
-		readonly schema: StandardSchema
 		readonly ui: readonly unknown[]
 	}
 	const normalize = normalizeDefinition as (input: {
@@ -128,7 +174,7 @@ function normalizeKitDefinition(
 	}) => NormalizedFormDefinition<StandardSchema>
 
 	return normalize({
-		schema: input.schema,
+		schema: schema as StandardSchema,
 		ui: input.ui,
 		controls,
 	})

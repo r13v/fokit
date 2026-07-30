@@ -226,27 +226,33 @@ export const kit = createFormKit({
 Definition связывает пути схемы с контролами:
 
 ```ts
-export const profileDefinition = kit.defineForm<ProfileContext>()({
-	schema: profileSchema,
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-			required: true,
-		},
-		{
-			kind: "field",
-			path: "companyName",
-			control: "text",
-			label: "Company name",
-			visible: computed(["kind"] as const, ({ kind }) => kind === "company"),
-			valuePolicy: "unset",
-		},
-	],
-})
+export const profileDefinition = kit
+	.defineForm(profileSchema)
+	.withContext<ProfileContext>((computed) => ({
+		ui: [
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: "Name",
+				required: true,
+			},
+			{
+				kind: "field",
+				path: "companyName",
+				control: "text",
+				label: "Company name",
+				visible: computed(["kind"], ({ kind }) => kind === "company"),
+				valuePolicy: "unset",
+			},
+		],
+	}))
 ```
+
+`computed` здесь не импортируется: `defineForm` передает в callback функцию,
+уже привязанную к input схемы и `ProfileContext`. Поэтому редактор дополняет
+пути зависимостей, а типы аргументов resolver выводятся без generic-параметров
+и `as const`.
 
 `valuePolicy: "unset"` разрешен только для optional путей. Когда поле
 становится невидимым, Fokit удаляет значение через тот же механизм
@@ -258,15 +264,8 @@ export const profileDefinition = kit.defineForm<ProfileContext>()({
 читайте runtime context.
 
 ```ts
-import type { NativeSelectOptions } from "fokit"
-
-options: computed<
-	readonly ["kind"],
-	NativeSelectOptions,
-	ProfileContext,
-	ProfileInput
->(
-	["kind"] as const,
+options: computed(
+	["kind"],
 	(_values, { context }) => ({ options: context.countries }),
 )
 ```

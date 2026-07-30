@@ -11,7 +11,7 @@ sees, how fields are grouped, and which control edits each value. Keeping those
 decisions separate lets a domain schema evolve without silently redesigning the
 form.
 
-`kit.defineForm({ schema, ui })` validates the tree once, freezes it, and keeps
+`kit.defineForm(schema)({ ui })` validates the tree once, freezes it, and keeps
 the result reusable across form instances.
 
 ## Read the tree at a glance

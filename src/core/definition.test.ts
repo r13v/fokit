@@ -58,15 +58,18 @@ function normalize(ui: readonly unknown[]) {
 
 describe("form definition normalization", () => {
 	it("normalizes fields, sections, arrays, computed values, and immutable indexes", () => {
-		const companyVisible = computed(
-			["kind"] as const,
-			({ kind }) => kind === "company",
-		)
-		const companyDisabled = computed(
-			[] as const,
-			(_values, { context }: { context: ExampleContext }) =>
-				!context.canEditCompanyName,
-		)
+		const companyVisible = computed<
+			readonly ["kind"],
+			boolean,
+			ExampleContext,
+			ExampleValues
+		>(["kind"], ({ kind }) => kind === "company")
+		const companyDisabled = computed<
+			readonly [],
+			boolean,
+			ExampleContext,
+			ExampleValues
+		>([], (_values, { context }) => !context.canEditCompanyName)
 
 		const definition = normalize([
 			{
@@ -253,7 +256,12 @@ describe("form definition normalization", () => {
 	})
 
 	it("stores computed resolvers as explicit synchronous dependencies", () => {
-		const visible = computed(["kind"] as const, ({ kind }) => kind === "person")
+		const visible = computed<
+			readonly ["kind"],
+			boolean,
+			unknown,
+			ExampleValues
+		>(["kind"], ({ kind }) => kind === "person")
 
 		expect(visible.dependencies).toEqual(["kind"])
 		expect(visible.resolver({ kind: "person" }, { context: {} })).toBe(true)

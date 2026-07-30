@@ -26,6 +26,7 @@ export type {
 	FieldNode,
 	FieldPath,
 	FocusTarget,
+	FormComputed,
 	FormDefinition,
 	FormErrors,
 	FormInput,
@@ -77,7 +78,6 @@ export type {
 } from "./core/index.js"
 export {
 	cloneValue,
-	computed,
 	createFormStore,
 	formatPath,
 	getPathValue,

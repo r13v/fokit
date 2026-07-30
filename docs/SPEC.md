@@ -916,8 +916,10 @@ versioning.
 The returned kit provides:
 
 ```ts
-kit.defineForm({ schema, ui });
-kit.defineForm<Context>()({ schema, ui });
+kit.defineForm(schema)({ ui });
+kit.defineForm(schema)((computed) => ({ ui }));
+kit.defineForm(schema).withContext<Context>({ ui });
+kit.defineForm(schema).withContext<Context>((computed) => ({ ui }));
 
 kit.Form;
 kit.AutoForm;
@@ -941,7 +943,6 @@ disabled and concurrent-submit guards.
 A definition combines a Standard Schema with a typed UI tree:
 
 ```tsx
-import { computed } from 'fokit';
 import { z } from 'zod';
 
 type AccountContext = {
@@ -960,85 +961,88 @@ const accountSchema = z.object({
   ),
 });
 
-export const accountForm = kit.defineForm<AccountContext>()({
-  schema: accountSchema,
-  ui: [
-    {
-      kind: 'section',
-      id: 'account',
-      title: 'Account',
-      columns: 2,
-      children: [
-        {
-          kind: 'field',
-          path: 'name',
-          control: 'text',
-          label: 'Name',
-          options: {
-            autoComplete: 'name',
+export const accountForm = kit
+  .defineForm(accountSchema)
+  .withContext<AccountContext>((computed) => ({
+    ui: [
+      {
+        kind: 'section',
+        id: 'account',
+        title: 'Account',
+        columns: 2,
+        children: [
+          {
+            kind: 'field',
+            path: 'name',
+            control: 'text',
+            label: 'Name',
+            options: {
+              autoComplete: 'name',
+            },
           },
-        },
-        {
-          kind: 'field',
-          path: 'email',
-          control: 'text',
-          label: 'Email',
-          options: {
-            autoComplete: 'email',
+          {
+            kind: 'field',
+            path: 'email',
+            control: 'text',
+            label: 'Email',
+            options: {
+              autoComplete: 'email',
+            },
           },
-        },
-        {
-          kind: 'field',
-          path: 'kind',
-          control: 'select',
-          label: 'Customer type',
-          options: {
-            options: [
-              { value: 'person', label: 'Person' },
-              { value: 'company', label: 'Company' },
-            ],
+          {
+            kind: 'field',
+            path: 'kind',
+            control: 'select',
+            label: 'Customer type',
+            options: {
+              options: [
+                { value: 'person', label: 'Person' },
+                { value: 'company', label: 'Company' },
+              ],
+            },
           },
-        },
-        {
-          kind: 'field',
-          path: 'companyName',
-          control: 'text',
-          label: 'Company name',
-          visible: computed(
-            ['kind'],
-            ({ kind }) => kind === 'company',
-          ),
-          disabled: computed(
-            [],
-            (_, { context }) => !context.canEditCompanyName,
-          ),
-          valuePolicy: 'unset',
-        },
-      ],
-    },
-    {
-      kind: 'array',
-      path: 'contacts',
-      itemDefault: {
-        value: '',
+          {
+            kind: 'field',
+            path: 'companyName',
+            control: 'text',
+            label: 'Company name',
+            visible: computed(
+              ['kind'],
+              ({ kind }) => kind === 'company',
+            ),
+            disabled: computed(
+              [],
+              (_, { context }) => !context.canEditCompanyName,
+            ),
+            valuePolicy: 'unset',
+          },
+        ],
       },
-      children: [
-        {
-          kind: 'field',
-          path: 'value',
-          control: 'text',
-          label: 'Contact',
+      {
+        kind: 'array',
+        path: 'contacts',
+        itemDefault: {
+          value: '',
         },
-      ],
-    },
-  ],
-});
+        children: [
+          {
+            kind: 'field',
+            path: 'value',
+            control: 'text',
+            label: 'Contact',
+          },
+        ],
+      },
+    ],
+  }));
 ```
 
-Forms that do not need runtime context keep the one-call
-`kit.defineForm({ schema, ui })` form. The curried overload exists only because
-TypeScript cannot infer a context type that appears solely at form
-instantiation.
+Static forms use `kit.defineForm(schema)({ ui })`. When a definition needs
+derived UI, pass a factory:
+`kit.defineForm(schema)((computed) => ({ ui }))`. The callback's `computed` is
+already bound to the schema input, so TypeScript autocompletes dependency paths
+and infers resolver values without imports, explicit type arguments, or
+`as const`. `withContext<Context>` binds runtime context in the same step.
 
 Default values are complete instance state and do not belong to a reusable
 definition. A create page and an edit page can reuse the same definition with
@@ -1338,18 +1342,9 @@ Static and computed configuration share the same public shape:
 type Resolvable<T> = T | Computed<T>;
 ```
 
-Example:
-
-```ts
-const companyVisible = computed(
-  ['kind'],
-  ({ kind }) => kind === 'company',
-);
-```
-
-The dependency tuple and resolver result are inferred. The resolver receives
-only its declared form-value dependencies plus the form's read-only runtime
-context:
+The dependency tuple, dependency values, runtime context, and resolver result
+are inferred inside a form definition. The resolver receives only its declared
+form-value dependencies plus the form's read-only runtime context:
 
 ```ts
 import type { NativeSelectOption } from 'fokit';
@@ -1360,22 +1355,23 @@ type AddressContext = {
   >;
 };
 
-const addressForm = kit.defineForm<AddressContext>()({
-  schema: addressSchema,
-  ui: [
-    {
-      kind: 'field',
-      path: 'city',
-      control: 'select',
-      options: computed(
-        ['country'],
-        ({ country }, { context }) => ({
-          options: context.citiesByCountry[country] ?? [],
-        }),
-      ),
-    },
-  ],
-});
+const addressForm = kit
+  .defineForm(addressSchema)
+  .withContext<AddressContext>((computed) => ({
+    ui: [
+      {
+        kind: 'field',
+        path: 'city',
+        control: 'select',
+        options: computed(
+          ['country'],
+          ({ country }, { context }) => ({
+            options: context.citiesByCountry[country] ?? [],
+          }),
+        ),
+      },
+    ],
+  }));
 ```
 
 This is the dynamic options use case: `options` is a normal computed property,

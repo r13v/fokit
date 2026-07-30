@@ -39,8 +39,7 @@ const schema = z.object({
 	email: z.string().email("Enter a valid email"),
 })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",

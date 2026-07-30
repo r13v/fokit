@@ -84,8 +84,7 @@ const kit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "array",
@@ -114,8 +113,7 @@ const definition = kit.defineForm({
 	],
 })
 
-const disabledDefinition = kit.defineForm({
-	schema,
+const disabledDefinition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "array",
@@ -138,8 +136,7 @@ const disabledDefinition = kit.defineForm({
 	],
 })
 
-const readOnlyDefinition = kit.defineForm({
-	schema,
+const readOnlyDefinition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "array",
@@ -162,8 +159,7 @@ const readOnlyDefinition = kit.defineForm({
 	],
 })
 
-const nestedDefinition = kit.defineForm({
-	schema,
+const nestedDefinition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "array",
@@ -184,7 +180,7 @@ const nestedDefinition = kit.defineForm({
 					kind: "array",
 					path: "members",
 					label: computed<readonly ["name"], string, unknown, GroupValue>(
-						["name"] as const,
+						["name"],
 						({ name }) => `${name} members`,
 					),
 					itemDefault: {
@@ -196,7 +192,7 @@ const nestedDefinition = kit.defineForm({
 							path: "name",
 							control: "text",
 							label: computed<readonly ["name"], string, unknown, MemberValue>(
-								["name"] as const,
+								["name"],
 								({ name }) => `Member ${name}`,
 							),
 						},

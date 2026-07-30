@@ -108,8 +108,7 @@ const kit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm({
-	schema: createSchema(validateValues),
+const definition = kit.defineForm(createSchema(validateValues))({
 	ui: [
 		{
 			kind: "field",
@@ -137,8 +136,7 @@ describe("React 19 ActionForm", () => {
 				aria-label="Profile"
 				action={action}
 				defaultValues={defaultValues()}
-				definition={kit.defineForm({
-					schema: createSchema(validate),
+				definition={kit.defineForm(createSchema(validate))({
 					ui: [
 						{
 							kind: "field",
@@ -246,10 +244,11 @@ describe("React 19 ActionForm", () => {
 					aria-label="Profile"
 					action={action}
 					defaultValues={defaultValues()}
-					definition={kit.defineForm({
-						schema: createSchema(() => ({
+					definition={kit.defineForm(
+						createSchema(() => ({
 							value: defaultValues(),
 						})),
+					)({
 						ui: [
 							{
 								kind: "field",
@@ -380,8 +379,7 @@ describe("React 19 ActionForm", () => {
 						email: "ada@example.test",
 						archivedNote: "keep me",
 					}}
-					definition={kit.defineForm({
-						schema: createSchema(validateValues),
+					definition={kit.defineForm(createSchema(validateValues))({
 						ui: [
 							{
 								kind: "field",
@@ -417,8 +415,7 @@ describe("React 19 ActionForm", () => {
 					defaultValues={defaultValues({
 						archivedNote: "hidden",
 					})}
-					definition={kit.defineForm({
-						schema: createSchema(validateValues),
+					definition={kit.defineForm(createSchema(validateValues))({
 						ui: [
 							{
 								kind: "field",
@@ -449,8 +446,7 @@ describe("React 19 ActionForm", () => {
 				defaultValues={{
 					items: [{ archivedNote: "keep me" }],
 				}}
-				definition={kit.defineForm({
-					schema: nestedSchema,
+				definition={kit.defineForm(nestedSchema)({
 					ui: [
 						{
 							kind: "array",

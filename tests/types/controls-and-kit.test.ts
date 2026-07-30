@@ -167,31 +167,42 @@ type _partialSlotsResolve = Expect<
 
 type _customSlotsResolve = Expect<Equal<typeof kit.slots, FormKitSlots>>
 
-const exampleDefinition = kit.defineForm<ExampleContext>()({
-	schema,
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-		},
-		{
-			kind: "field",
-			path: "status",
-			control: "text",
-		},
-		{
-			kind: "field",
-			path: "age",
-			control: "number",
-		},
-		{
-			kind: "field",
-			path: "maybeNull",
-			control: "nullableText",
-		},
-	],
-})
+const exampleDefinition = kit
+	.defineForm(schema)
+	.withContext<ExampleContext>((computed) => ({
+		ui: [
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				disabled: computed([], (_values, { context }) => {
+					type _context = Expect<
+						Equal<typeof context, Readonly<ExampleContext>>
+					>
+					return context.locked
+				}),
+				visible: computed(["status"], ({ status }) => {
+					type _status = Expect<Equal<typeof status, ExampleInput["status"]>>
+					return status === "published"
+				}),
+			},
+			{
+				kind: "field",
+				path: "status",
+				control: "text",
+			},
+			{
+				kind: "field",
+				path: "age",
+				control: "number",
+			},
+			{
+				kind: "field",
+				path: "maybeNull",
+				control: "nullableText",
+			},
+		],
+	}))
 
 kit.AutoForm({
 	definition: exampleDefinition,
@@ -221,8 +232,7 @@ kit.AutoForm({
 	},
 })
 
-kit.defineForm<ExampleContext>()({
-	schema,
+kit.defineForm(schema).withContext<ExampleContext>({
 	ui: [
 		{
 			kind: "field",
@@ -258,8 +268,34 @@ kit.defineForm<ExampleContext>()({
 	],
 })
 
-kit.defineForm<ExampleContext>()({
-	schema,
+// @ts-expect-error visible computed resolvers must return booleans
+kit.defineForm(schema)((computed) => ({
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			visible: computed([], () => "visible"),
+		},
+	],
+}))
+
+kit.defineForm(schema)((computed) => ({
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			visible: computed(
+				// @ts-expect-error computed dependencies must be valid schema paths
+				["missing"],
+				() => true,
+			),
+		},
+	],
+}))
+
+kit.defineForm(schema).withContext<ExampleContext>({
 	ui: [
 		{
 			kind: "field",
@@ -270,8 +306,7 @@ kit.defineForm<ExampleContext>()({
 	],
 })
 
-kit.defineForm<ExampleContext>()({
-	schema,
+kit.defineForm(schema).withContext<ExampleContext>({
 	ui: [
 		{
 			kind: "field",
@@ -282,8 +317,7 @@ kit.defineForm<ExampleContext>()({
 	],
 })
 
-kit.defineForm({
-	schema,
+kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
@@ -294,8 +328,7 @@ kit.defineForm({
 	],
 })
 
-kit.defineForm<ExampleContext>()({
-	schema,
+kit.defineForm(schema).withContext<ExampleContext>({
 	ui: [
 		{
 			kind: "field",

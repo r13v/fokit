@@ -17,20 +17,17 @@ Use `computed()` anywhere a UI node accepts a resolvable value, including
 options.
 
 ```ts twoslash
-import { computed, createFormKit, type FormInput, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "fokit"
 import { z } from "zod"
 
 const schema = z.object({
 	accountType: z.enum(["personal", "company"]),
 	companyName: z.string().optional(),
 })
-type ProfileInput = FormInput<typeof schema>
-
 const kit = createFormKit({ controls: nativeControls })
 
 // ---cut---
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)((computed) => ({
 	ui: [
 		{
 			kind: "field",
@@ -49,24 +46,24 @@ const definition = kit.defineForm({
 			path: "companyName",
 			control: "text",
 			label: "Company name",
-			visible: computed<
-				readonly ["accountType"],
-				boolean,
-				unknown,
-				ProfileInput
-			>(
-				["accountType"] as const,
+			visible: computed(
+				["accountType"],
 				({ accountType }) => accountType === "company",
 			),
 			valuePolicy: "unset",
 		},
 	],
-})
+}))
 ```
 
 Dependencies use the same canonical paths as fields. A resolver stays
 synchronous and pure; remote loading belongs in application data flow, not
 inside `computed()`.
+
+The callback receives a schema-bound `computed`. Because `defineForm` binds the
+schema first, TypeScript autocompletes dependency paths and infers every
+resolver value. Invalid paths and incompatible return values fail type
+checking; imports, explicit type arguments, and `as const` are not needed.
 
 ## Decide what happens to hidden values
 
@@ -90,11 +87,10 @@ Context is runtime-only data. It can drive options and interaction state but
 never becomes form data and never makes the form dirty.
 
 ```ts twoslash
-import { computed, createFormKit, type FormInput, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "fokit"
 import { z } from "zod"
 
 const schema = z.object({ country: z.string() })
-type ProfileInput = FormInput<typeof schema>
 type ProfileContext = {
 	readonly countries: readonly {
 		readonly value: string
@@ -106,31 +102,22 @@ type ProfileContext = {
 const kit = createFormKit({ controls: nativeControls })
 
 // ---cut---
-const definition = kit.defineForm<ProfileContext>()({
-	schema,
-	ui: [
-		{
-			kind: "field",
-			path: "country",
-			control: "select",
-			label: "Country",
-			readOnly: computed<
-				readonly [],
-				boolean,
-				ProfileContext,
-				ProfileInput
-			>([] as const, (_values, { context }) => context.locked),
-			options: computed<
-				readonly [],
-				{ readonly options: ProfileContext["countries"] },
-				ProfileContext,
-				ProfileInput
-			>([] as const, (_values, { context }) => ({
-				options: context.countries,
-			})),
-		},
-	],
-})
+const definition = kit
+	.defineForm(schema)
+	.withContext<ProfileContext>((computed) => ({
+		ui: [
+			{
+				kind: "field",
+				path: "country",
+				control: "select",
+				label: "Country",
+				readOnly: computed([], (_values, { context }) => context.locked),
+				options: computed([], (_values, { context }) => ({
+					options: context.countries,
+				})),
+			},
+		],
+	}))
 ```
 
 Load countries before rendering the form, then pass them through `context`.

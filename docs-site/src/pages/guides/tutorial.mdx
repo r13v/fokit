@@ -62,9 +62,10 @@ decisions explicit:
 
 </details>
 
-`computed()` lists the exact paths that can invalidate derived UI. The resolver
-is synchronous and pure. `valuePolicy: "unset"` is allowed because
-`companyName` is optional in editable input.
+The schema-bound `computed()` passed to the definition callback lists the exact
+paths that can invalidate derived UI. The resolver is synchronous and pure.
+`valuePolicy: "unset"` is allowed because `companyName` is optional in
+editable input.
 
 The array node does not add hidden IDs to your values. Fokit keeps stable row
 keys as UI metadata while paths, touched state, and visible issues move with

@@ -1,7 +1,6 @@
 "use client"
 
 import {
-	computed,
 	createDefaultSlots,
 	createFormKit,
 	type FormInput,
@@ -72,8 +71,6 @@ const countryOptions = [
 	{ value: "NL", label: "Netherlands" },
 ]
 
-type ProfileInput = FormInput<typeof profileSchema>
-
 const kit = createFormKit({
 	controls: nativeControls,
 	slots: createDefaultSlots({
@@ -86,8 +83,7 @@ const kit = createFormKit({
 	}),
 })
 
-const profileDefinition = kit.defineForm({
-	schema: profileSchema,
+const profileDefinition = kit.defineForm(profileSchema)((computed) => ({
 	ui: [
 		{
 			kind: "section",
@@ -126,13 +122,8 @@ const profileDefinition = kit.defineForm({
 					path: "companyName",
 					control: "text",
 					label: "Company name",
-					visible: computed<
-						readonly ["accountType"],
-						boolean,
-						unknown,
-						ProfileInput
-					>(
-						["accountType"] as const,
+					visible: computed(
+						["accountType"],
 						({ accountType }) => accountType === "company",
 					),
 					valuePolicy: "unset",
@@ -204,7 +195,7 @@ const profileDefinition = kit.defineForm({
 			],
 		},
 	],
-})
+}))
 
 export function InteractiveLabClient() {
 	const [lastSubmit, setLastSubmit] = useState("No submission yet")

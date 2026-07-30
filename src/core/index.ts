@@ -8,6 +8,7 @@ export type {
 	Computed,
 	ComputedDependencyValues,
 	ComputedDetails,
+	FormComputed,
 } from "./computed.js"
 export {
 	computed,

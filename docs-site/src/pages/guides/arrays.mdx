@@ -33,8 +33,7 @@ const schema = z.object({
 const kit = createFormKit({ controls: nativeControls })
 
 // ---cut---
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "array",
@@ -115,8 +114,7 @@ const schema = z.object({
 	contacts: z.array(z.object({ email: z.string() })),
 })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "array",

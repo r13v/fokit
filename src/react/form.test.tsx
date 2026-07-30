@@ -11,8 +11,7 @@ type TestSchema = StandardSchemaV1<TestValues>
 
 const schema = {} as TestSchema
 
-const definition = testKit.defineForm({
-	schema,
+const definition = testKit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",

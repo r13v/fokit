@@ -61,8 +61,7 @@ const kit = createFormKit({
 	controls: nativeControls,
 })
 
-const editableDefinition = kit.defineForm({
-	schema,
+const editableDefinition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
@@ -113,8 +112,7 @@ const editableDefinition = kit.defineForm({
 	],
 })
 
-const choiceDefinition = kit.defineForm({
-	schema,
+const choiceDefinition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
@@ -152,8 +150,7 @@ const choiceDefinition = kit.defineForm({
 	],
 })
 
-const missingSelectOptionsDefinition = kit.defineForm({
-	schema,
+const missingSelectOptionsDefinition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
@@ -164,8 +161,7 @@ const missingSelectOptionsDefinition = kit.defineForm({
 	],
 })
 
-const preservationDefinition = kit.defineForm({
-	schema,
+const preservationDefinition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
@@ -238,8 +234,7 @@ const preservationDefinition = kit.defineForm({
 	],
 })
 
-const readOnlyDefinition = kit.defineForm({
-	schema,
+const readOnlyDefinition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",

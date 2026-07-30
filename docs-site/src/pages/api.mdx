@@ -57,12 +57,18 @@ or slots.
 ## kit.defineForm
 
 ```text
-kit.defineForm({ schema, ui }) => NormalizedFormDefinition
-kit.defineForm<Context>()({ schema, ui }) => NormalizedFormDefinition
+kit.defineForm(schema)({ ui }) => NormalizedFormDefinition
+kit.defineForm(schema)((computed) => ({ ui })) => NormalizedFormDefinition
+kit.defineForm(schema).withContext<Context>({ ui }) => NormalizedFormDefinition
+kit.defineForm(schema).withContext<Context>((computed) => ({ ui })) => NormalizedFormDefinition
 ```
 
 The definition validates control names, typed paths, duplicate IDs, layout
-ranges, and value policies. It is frozen and reusable across form instances.
+ranges, and value policies. Passing the schema first lets TypeScript infer the
+input type before it checks the UI tree. Use the direct object form for static
+UI. When derived UI is needed, the callback receives a schema-bound
+`computed()` with dependency-path autocomplete and inferred resolver values.
+The normalized result is frozen and reusable across form instances.
 
 ```ts twoslash
 import { createFormKit, nativeControls } from "fokit"
@@ -72,8 +78,7 @@ const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
 
 // ---cut---
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
@@ -188,8 +193,7 @@ import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",

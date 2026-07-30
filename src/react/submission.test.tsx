@@ -85,8 +85,7 @@ const profileUi = [
 	},
 ] as const
 
-const definition = kit.defineForm({
-	schema: createSchema(validateProfile),
+const definition = kit.defineForm(createSchema(validateProfile))({
 	ui: profileUi,
 })
 
@@ -108,8 +107,7 @@ describe("classic React submission", () => {
 			return (
 				<kit.AutoForm
 					aria-label="Profile"
-					definition={kit.defineForm({
-						schema,
+					definition={kit.defineForm(schema)({
 						ui: profileUi,
 					})}
 					defaultValues={defaultValues()}
@@ -163,8 +161,7 @@ describe("classic React submission", () => {
 		render(
 			<kit.AutoForm
 				aria-label="Profile"
-				definition={kit.defineForm({
-					schema: createSchema(validate),
+				definition={kit.defineForm(createSchema(validate))({
 					ui: profileUi,
 				})}
 				defaultValues={defaultValues()}
@@ -212,16 +209,15 @@ describe("classic React submission", () => {
 		render(
 			<kit.AutoForm
 				aria-label="Form-level profile"
-				definition={kit.defineForm({
-					schema: createSchema(() => ({
+				definition={kit.defineForm(
+					createSchema(() => ({
 						issues: [
 							{
 								message: "The profile cannot be saved",
 							},
 						],
 					})),
-					ui: profileUi,
-				})}
+				)({ ui: profileUi })}
 				defaultValues={defaultValues()}
 			>
 				<button type="submit">Save</button>
@@ -247,8 +243,7 @@ describe("classic React submission", () => {
 
 		function View() {
 			form = useForm(
-				kit.defineForm({
-					schema: createSchema(validate),
+				kit.defineForm(createSchema(validate))({
 					ui: profileUi,
 				}),
 				{
@@ -298,8 +293,7 @@ describe("classic React submission", () => {
 
 		function View() {
 			form = useForm(
-				kit.defineForm({
-					schema: createSchema(validate),
+				kit.defineForm(createSchema(validate))({
 					ui: profileUi,
 				}),
 				{

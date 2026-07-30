@@ -95,8 +95,7 @@ const kit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "section",
@@ -122,8 +121,7 @@ const definition = kit.defineForm({
 	],
 })
 
-const defaultSlotsDefinition = defaultSlotsKit.defineForm({
-	schema,
+const defaultSlotsDefinition = defaultSlotsKit.defineForm(schema)({
 	ui: [
 		{
 			kind: "section",

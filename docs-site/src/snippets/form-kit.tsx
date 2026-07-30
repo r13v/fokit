@@ -1,7 +1,6 @@
 "use client"
 
 import {
-	computed,
 	createFormKit,
 	type FormInput,
 	type FormOutput,
@@ -54,8 +53,7 @@ export const kit = createFormKit({
 // [!endregion kit]
 
 // [!region definition]
-export const profileDefinition = kit.defineForm({
-	schema: profileSchema,
+export const profileDefinition = kit.defineForm(profileSchema)((computed) => ({
 	ui: [
 		{
 			kind: "section",
@@ -91,13 +89,8 @@ export const profileDefinition = kit.defineForm({
 					path: "companyName",
 					control: "text",
 					label: "Company name",
-					visible: computed<
-						readonly ["accountType"],
-						boolean,
-						unknown,
-						ProfileInput
-					>(
-						["accountType"] as const,
+					visible: computed(
+						["accountType"],
 						({ accountType }) => accountType === "company",
 					),
 					valuePolicy: "unset",
@@ -147,7 +140,7 @@ export const profileDefinition = kit.defineForm({
 			],
 		},
 	],
-})
+}))
 
 export const defaultValues = {
 	name: "Ada Lovelace",

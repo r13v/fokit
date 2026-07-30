@@ -39,8 +39,7 @@ import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
@@ -86,8 +85,7 @@ import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm({
-	schema,
+const definition = kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",

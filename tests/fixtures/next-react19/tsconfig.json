@@ -13,7 +13,25 @@
 		"isolatedModules": true,
 		"jsx": "preserve",
 		"incremental": false,
-		"plugins": [{ "name": "next" }]
+		"plugins": [{ "name": "next" }],
+		"paths": {
+			"fokit": [
+				"../../../src/index.ts",
+				"./node_modules/fokit/dist/index.d.ts"
+			],
+			"fokit/core": [
+				"../../../src/core/index.ts",
+				"./node_modules/fokit/dist/core.d.ts"
+			],
+			"fokit/react19": [
+				"../../../src/react19/index.ts",
+				"./node_modules/fokit/dist/react19.d.ts"
+			],
+			"fokit/server": [
+				"../../../src/server/index.ts",
+				"./node_modules/fokit/dist/server.d.ts"
+			]
+		}
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
 	"exclude": ["node_modules"]

@@ -284,6 +284,17 @@ export function createFormStore<
 	return new CoreFormStore(options) as unknown as FormStore<Schema, Context>
 }
 
+export function replaceFormStoreRuntime<
+	Schema extends StandardSchema,
+	Context = unknown,
+>(
+	store: FormStore<Schema, Context>,
+	context: Context,
+	options: FormStoreRuntimeOptions,
+): void {
+	asCoreFormStore(store).replaceRuntime(context, options)
+}
+
 export function startFormSubmission<
 	Schema extends StandardSchema,
 	Context = unknown,
@@ -654,15 +665,34 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	}
 
 	replaceOptions(options: FormStoreRuntimeOptions): void {
-		const nextDisabled = options.disabled === true
-		const nextReadOnly = options.readOnly === true
-		const nextValidationOptions = normalizeValidationOptions(options.validation)
+		this.#replaceRuntime(this.#context, options)
+	}
+
+	replaceContext(context: Context): void {
+		this.#replaceRuntime(context)
+	}
+
+	replaceRuntime(context: Context, options: FormStoreRuntimeOptions): void {
+		this.#replaceRuntime(context, options)
+	}
+
+	#replaceRuntime(context: Context, options?: FormStoreRuntimeOptions): void {
+		const contextChanged = !Object.is(context, this.#context)
+		const nextDisabled =
+			options === undefined ? this.#disabled : options.disabled === true
+		const nextReadOnly =
+			options === undefined ? this.#readOnly : options.readOnly === true
+		const nextValidationOptions =
+			options === undefined
+				? this.#validationOptions
+				: normalizeValidationOptions(options.validation)
 		const validationChanged = !isSameValidationOptions(
 			this.#validationOptions,
 			nextValidationOptions,
 		)
 
 		if (
+			!contextChanged &&
 			this.#disabled === nextDisabled &&
 			this.#readOnly === nextReadOnly &&
 			!validationChanged
@@ -671,6 +701,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		const previousSnapshot = this.#snapshot
+		this.#context = context
 		this.#disabled = nextDisabled
 		this.#readOnly = nextReadOnly
 		this.#validationOptions = nextValidationOptions
@@ -678,22 +709,6 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			this.#cancelScheduledValidation()
 			this.#abortNonSubmitValidation(false)
 		}
-		this.#snapshot = this.#createSnapshot({
-			previousResolvedUi: previousSnapshot.resolvedUi,
-		})
-		this.#notify()
-		this.#commitValueChanges([], "valuePolicy", {
-			transitionFromUi: previousSnapshot.resolvedUi,
-		})
-	}
-
-	replaceContext(context: Context): void {
-		if (Object.is(context, this.#context)) {
-			return
-		}
-
-		const previousSnapshot = this.#snapshot
-		this.#context = context
 		this.#snapshot = this.#createSnapshot({
 			previousResolvedUi: previousSnapshot.resolvedUi,
 		})

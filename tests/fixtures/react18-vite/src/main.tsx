@@ -3,6 +3,7 @@ import {
 	type ArraySlotProps,
 	type ControlProps,
 	cloneValue,
+	createForm,
 	createFormKit,
 	createFormStore,
 	defineControl,
@@ -253,6 +254,10 @@ function defaultValues(): FormInput<typeof schema> {
 	}
 }
 
+const externalForm = createForm(definition, {
+	defaultValues: defaultValues(),
+})
+
 function HookProbe() {
 	const form = useFormContext<typeof schema>()
 	const name = useValue(form, "name")
@@ -267,8 +272,7 @@ function HookProbe() {
 }
 
 function App({ children }: { readonly children?: ReactNode }) {
-	const form = useForm(definition, {
-		defaultValues: defaultValues(),
+	const form = useForm(externalForm, {
 		onSubmit({ value }) {
 			void value.slug
 		},

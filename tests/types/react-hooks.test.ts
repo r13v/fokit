@@ -8,8 +8,10 @@ import type {
 import { normalizeDefinition } from "../../src/core/index.js"
 import {
 	type ArrayBinding,
+	createForm,
 	type FieldBinding,
 	type FormInstance,
+	type FormRuntimeOptions,
 	useArrayField,
 	useField,
 	useForm,
@@ -108,6 +110,23 @@ const exampleContext: ExampleContext = {
 	locked: false,
 }
 
+const externalForm = createForm(definition, {
+	defaultValues: {
+		kind: "person",
+		profile: {
+			first: "Grace",
+			last: "Hopper",
+		},
+		contacts: [],
+	},
+	context: exampleContext,
+})
+
+const externalRuntimeOptions = {
+	context: exampleContext,
+	disabled: false,
+} satisfies FormRuntimeOptions<ExampleSchema, ExampleContext>
+
 type _formInput = Expect<Equal<FormInput<ExampleSchema>, ExampleInput>>
 
 function TypeHarness() {
@@ -135,6 +154,45 @@ function TypeHarness() {
 	type _form = Expect<
 		Equal<typeof form, FormInstance<ExampleSchema, ExampleContext>>
 	>
+
+	const boundExternalForm = useForm(externalForm, externalRuntimeOptions)
+	type _externalForm = Expect<
+		Equal<typeof boundExternalForm, FormInstance<ExampleSchema, ExampleContext>>
+	>
+
+	externalForm.replaceContext({
+		locked: true,
+	})
+	externalForm.replaceOptions({
+		beforeUpdate(event) {
+			type _context = Expect<
+				Equal<typeof event.context, Readonly<ExampleContext>>
+			>
+		},
+		onSubmit({ form: submittedForm, value }) {
+			type _value = Expect<Equal<typeof value, ExampleInput>>
+			type _form = Expect<
+				Equal<typeof submittedForm, FormInstance<ExampleSchema, ExampleContext>>
+			>
+		},
+	})
+
+	externalForm.replaceOptions({
+		// @ts-expect-error context is replaced through replaceContext
+		context: exampleContext,
+	})
+
+	// @ts-expect-error an existing instance already owns defaultValues
+	useForm(externalForm, {
+		defaultValues: {
+			kind: "person",
+			profile: {
+				first: "Grace",
+				last: "Hopper",
+			},
+			contacts: [],
+		},
+	})
 
 	const first = useValue(form, "profile.first")
 	type _valueInference = Expect<Equal<typeof first, string>>

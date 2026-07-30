@@ -2,80 +2,76 @@
 
 import { useEffect, useRef } from "react"
 
+import type { NormalizedFormDefinition, StandardSchema } from "../core/index.js"
 import {
-	createFormStore,
-	type FormInput,
-	type FormStore,
-	type FormStoreOptions,
-	type NormalizedFormDefinition,
-	type StandardSchema,
-} from "../core/index.js"
-import {
-	attachClassicSubmission,
-	type ClassicFormInstance,
-	type SubmitHandler,
-} from "./submission.js"
+	createForm,
+	type FormInstance,
+	FormInstanceImpl,
+	type FormRuntimeOptions,
+	getFormInstanceImpl,
+	type UseFormOptions,
+} from "./form-instance.js"
 
-export type FormInstance<
-	Schema extends StandardSchema,
-	Context = unknown,
-> = ClassicFormInstance<Schema, Context>
-
-export type UseFormOptions<
-	Schema extends StandardSchema,
-	Context = unknown,
-> = Omit<FormStoreOptions<Schema, Context>, "definition"> & {
-	readonly onSubmit?: SubmitHandler<Schema, Context>
-}
+export type {
+	FormInstance,
+	FormRuntimeOptions,
+	UseFormOptions,
+} from "./form-instance.js"
+export { createForm } from "./form-instance.js"
 
 export function useForm<Schema extends StandardSchema, Context = unknown>(
+	form: FormInstance<Schema, Context>,
+	options: FormRuntimeOptions<Schema, Context>,
+): FormInstance<Schema, Context>
+export function useForm<Schema extends StandardSchema, Context = unknown>(
 	definition: NormalizedFormDefinition<Schema>,
-	options: UseFormOptions<Schema, Context> & {
-		readonly defaultValues: FormInput<Schema>
-	},
+	options: UseFormOptions<Schema, Context>,
+): FormInstance<Schema, Context>
+export function useForm<Schema extends StandardSchema, Context = unknown>(
+	formOrDefinition:
+		| FormInstance<Schema, Context>
+		| NormalizedFormDefinition<Schema>,
+	options:
+		| FormRuntimeOptions<Schema, Context>
+		| UseFormOptions<Schema, Context>,
 ): FormInstance<Schema, Context> {
-	const optionsRef = useRef(options)
-	const contextRef = useRef(options.context as Context)
-	const formRef = useRef<FormInstance<Schema, Context>>(undefined)
+	const createdFormRef = useRef<FormInstance<Schema, Context>>(undefined)
+	const ownerRef = useRef<object>({})
+	const runtimeOptionsRef = useRef(
+		options as FormRuntimeOptions<Schema, Context>,
+	)
+	let form: FormInstance<Schema, Context>
 
-	if (formRef.current === undefined) {
-		formRef.current = attachClassicSubmission(
-			createFormStore({
-				definition,
-				defaultValues: options.defaultValues,
-				context: options.context,
-				disabled: options.disabled,
-				readOnly: options.readOnly,
-				validation: options.validation,
-				beforeUpdate: (event) => optionsRef.current.beforeUpdate?.(event),
-				onUpdate: (event) => {
-					optionsRef.current.onUpdate?.(event)
-				},
-			}) as FormStore<Schema, Context>,
-			() => optionsRef.current.onSubmit,
-		)
+	if (formOrDefinition instanceof FormInstanceImpl) {
+		form = formOrDefinition
+	} else {
+		if (createdFormRef.current === undefined) {
+			createdFormRef.current = createForm(
+				formOrDefinition as NormalizedFormDefinition<Schema>,
+				options as UseFormOptions<Schema, Context>,
+			)
+		}
+		form = createdFormRef.current
 	}
 
 	useEffect(() => {
-		optionsRef.current = options
+		runtimeOptionsRef.current = options as FormRuntimeOptions<Schema, Context>
 	})
 
 	useEffect(() => {
-		formRef.current?.replaceOptions({
-			disabled: options.disabled,
-			readOnly: options.readOnly,
-			validation: options.validation,
-		})
-	}, [options.disabled, options.readOnly, options.validation])
+		const instance = getFormInstanceImpl(form)
+		instance.bind(ownerRef.current, runtimeOptionsRef.current)
+		return () => {
+			instance.unbind(ownerRef.current)
+		}
+	}, [form])
 
 	useEffect(() => {
-		if (Object.is(contextRef.current, options.context)) {
-			return
-		}
+		getFormInstanceImpl(form).updateBinding(
+			ownerRef.current,
+			runtimeOptionsRef.current,
+		)
+	})
 
-		contextRef.current = options.context as Context
-		formRef.current?.replaceContext(options.context as Context)
-	}, [options.context])
-
-	return formRef.current
+	return form
 }

@@ -26,6 +26,7 @@ import { ErrorSummary } from "../react/error-summary.js"
 import { FieldsRenderer } from "../react/fields.js"
 import type { NativeFormProps } from "../react/form.js"
 import { FormProvider } from "../react/form-context.js"
+import { getFormStore } from "../react/form-instance.js"
 import {
 	assertFormDataCompatible,
 	HiddenInputs,
@@ -96,6 +97,7 @@ export function ActionForm<
 			onUpdate?.(event)
 		},
 	})
+	const store = getFormStore(form)
 	const state = useFormState(form, (snapshot) => ({
 		dirty: snapshot.isDirty,
 		disabled: snapshot.resolvedUi.disabled,
@@ -118,11 +120,16 @@ export function ActionForm<
 
 		lastResultRef.current = result
 		const attempt = attemptRef.current
-		syncActionResult(form, result, attempt, formElementRef.current ?? undefined)
+		syncActionResult(
+			store,
+			result,
+			attempt,
+			formElementRef.current ?? undefined,
+		)
 		if (attempt !== undefined && Object.is(attemptRef.current, attempt)) {
 			attemptRef.current = undefined
 		}
-	}, [form, result])
+	}, [result, store])
 
 	const handlePendingChange = useCallback(
 		(pending: boolean) => {
@@ -131,7 +138,7 @@ export function ActionForm<
 				if (attemptRef.current === undefined) {
 					const snapshot = form.getSnapshot()
 					if (!snapshot.resolvedUi.disabled && !snapshot.isSubmitting) {
-						attemptRef.current = startActionSubmission(form)
+						attemptRef.current = startActionSubmission(store)
 					}
 				}
 				return
@@ -144,7 +151,7 @@ export function ActionForm<
 			observedPendingRef.current = false
 			attemptRef.current?.finish()
 		},
-		[form],
+		[form, store],
 	)
 
 	function handleSubmit(event: FormEvent<HTMLFormElement>): void {
@@ -163,7 +170,7 @@ export function ActionForm<
 			throw error
 		}
 
-		attemptRef.current = startActionSubmission(form)
+		attemptRef.current = startActionSubmission(store)
 	}
 
 	function handleReset(event: FormEvent<HTMLFormElement>): void {

@@ -329,6 +329,38 @@ return (
 `useFormState`. Array binding отдает стабильные row keys, поэтому строки
 сохраняют identity при append, insert, remove и move.
 
+Если instance должен жить вне React, создайте его заранее и подключите к
+актуальным React options:
+
+```tsx
+const profileForm = createForm(profileDefinition, {
+	defaultValues,
+	context: initialContext,
+})
+
+function ProfileEditor({ context, disabled }) {
+	const form = useForm(profileForm, {
+		context,
+		disabled,
+		onSubmit({ value }) {
+			void saveProfile(value)
+		},
+	})
+
+	return (
+		<kit.Form form={form}>
+			<kit.Fields />
+			<kit.Submit>Save profile</kit.Submit>
+		</kit.Form>
+	)
+}
+```
+
+После unmount внешний instance получает обратно context и options, с которыми
+он был создан или которые были установлены через `replaceContext` и
+`replaceOptions`. Не подключайте один instance одновременно через несколько
+`useForm`.
+
 ## 9. Используйте транзакции явно
 
 `beforeUpdate` видит всю предложенную транзакцию. Верните `false`, чтобы

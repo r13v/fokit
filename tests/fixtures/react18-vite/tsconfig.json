@@ -9,7 +9,17 @@
 		"noEmit": true,
 		"types": ["vite/client"],
 		"verbatimModuleSyntax": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"paths": {
+			"fokit": [
+				"../../../src/index.ts",
+				"./node_modules/fokit/dist/index.d.ts"
+			],
+			"fokit/core": [
+				"../../../src/core/index.ts",
+				"./node_modules/fokit/dist/core.d.ts"
+			]
+		}
 	},
 	"include": ["src"]
 }

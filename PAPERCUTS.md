@@ -465,3 +465,10 @@ Combining formatter, diff validation, and an `rg` import regex in one zsh
 command → nested single-quote matching made the shell reject the command before
 anything ran. Keep regex-heavy searches in separate tool calls with simple
 quoting.
+
+## 2026-07-30 22:43 — GPT-5
+
+Patching the external-instance contract into `docs/SPEC.md` → the first patch
+missed because the expected paragraph wrapped differently from the file.
+Re-read the narrow target range before patching prose whose line wrapping may
+have changed.

@@ -7,7 +7,21 @@
 		"strict": true,
 		"noEmit": true,
 		"skipLibCheck": false,
-		"types": ["node"]
+		"types": ["node"],
+		"paths": {
+			"fokit": [
+				"../../../dist/index.d.cts",
+				"./node_modules/fokit/dist/index.d.cts"
+			],
+			"fokit/core": [
+				"../../../dist/core.d.cts",
+				"./node_modules/fokit/dist/core.d.cts"
+			],
+			"fokit/server": [
+				"../../../dist/server.d.cts",
+				"./node_modules/fokit/dist/server.d.cts"
+			]
+		}
 	},
 	"include": ["index.cts"]
 }

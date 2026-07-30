@@ -66,10 +66,16 @@ At runtime, paths use canonical dotted strings such as
 
 `FormInstance<Schema, Context>` carries schema and runtime context through
 commands, selectors, and derived UI. `UseFormOptions<Schema, Context>`
-describes the options accepted by `useForm` and `AutoForm`.
+describes creation options. `FormRuntimeOptions<Schema, Context>` omits the
+fixed `defaultValues` and is accepted when an existing instance is bound to
+React.
 
 ```ts twoslash
-import type { FormInstance, UseFormOptions } from "fokit"
+import type {
+	FormInstance,
+	FormRuntimeOptions,
+	UseFormOptions,
+} from "fokit"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -79,6 +85,7 @@ type Context = {
 
 type ProfileForm = FormInstance<typeof schema, Context>
 type ProfileOptions = UseFormOptions<typeof schema, Context>
+type ProfileRuntimeOptions = FormRuntimeOptions<typeof schema, Context>
 ```
 
 Use context for loaded option lists, permissions, or product state that affects

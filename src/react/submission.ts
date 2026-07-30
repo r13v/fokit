@@ -10,11 +10,12 @@ import type {
 	StandardSchema,
 } from "../core/index.js"
 import { isDirtyEqual } from "../core/index.js"
+import type { FormInstance } from "./form-instance.js"
 
 export type SubmitContext<Schema extends StandardSchema, Context = unknown> = {
 	readonly value: FormOutput<Schema>
 	readonly input: FormInput<Schema>
-	readonly form: ClassicFormInstance<Schema, Context>
+	readonly form: FormInstance<Schema, Context>
 	readonly formData: FormData
 }
 
@@ -45,26 +46,19 @@ export function attachClassicSubmission<
 	Schema extends StandardSchema,
 	Context = unknown,
 >(
-	form: FormStore<Schema, Context>,
+	form: ClassicFormInstance<Schema, Context>,
+	store: FormStore<Schema, Context>,
 	getOnSubmit: () => SubmitHandler<Schema, Context> | undefined,
-): ClassicFormInstance<Schema, Context> {
+): void {
 	const existing = controllerByForm.get(
 		form as FormStore<StandardSchema, unknown>,
 	)
 	if (existing !== undefined) {
-		return form as ClassicFormInstance<Schema, Context>
+		return
 	}
 
-	const controller = createClassicSubmissionController(form, getOnSubmit)
+	const controller = createClassicSubmissionController(form, store, getOnSubmit)
 	controllerByForm.set(form as FormStore<StandardSchema, unknown>, controller)
-	Object.defineProperty(form, "submit", {
-		value: () => controller.submit(),
-		writable: false,
-		configurable: false,
-		enumerable: false,
-	})
-
-	return form as ClassicFormInstance<Schema, Context>
 }
 
 export function registerClassicForm<
@@ -94,11 +88,19 @@ export function rejectClassicFormSubmit<
 	getController(form).rejectSubmit(error)
 }
 
+export function requestClassicFormSubmit<
+	Schema extends StandardSchema,
+	Context = unknown,
+>(form: ClassicFormInstance<Schema, Context>): Promise<void> {
+	return getController(form).submit()
+}
+
 function createClassicSubmissionController<
 	Schema extends StandardSchema,
 	Context = unknown,
 >(
-	form: FormStore<Schema, Context>,
+	form: ClassicFormInstance<Schema, Context>,
+	store: FormStore<Schema, Context>,
 	getOnSubmit: () => SubmitHandler<Schema, Context> | undefined,
 ): ClassicSubmissionController {
 	let element: HTMLFormElement | undefined
@@ -114,26 +116,26 @@ function createClassicSubmissionController<
 			return inFlight
 		}
 
-		const snapshot = form.getSnapshot()
+		const snapshot = store.getSnapshot()
 		if (snapshot.resolvedUi.disabled || snapshot.isSubmitting) {
 			return Promise.resolve()
 		}
 
 		const input = snapshot.values
 		const formData = createFormData(formElement, submitter)
-		const attempt = startFormSubmission(form)
+		const attempt = startFormSubmission(store)
 		const promise = (async () => {
 			try {
 				const result = await attempt.validate()
 				if (!result.success) {
-					focusSubmitIssues(form, formElement, input)
+					focusSubmitIssues(store, formElement, input)
 					return
 				}
 
 				await getOnSubmit()?.({
 					value: result.value,
 					input,
-					form: form as ClassicFormInstance<Schema, Context>,
+					form,
 					formData,
 				})
 			} finally {
@@ -155,7 +157,7 @@ function createClassicSubmissionController<
 			const formElement = event.currentTarget
 			const promise = runSubmit(formElement, getSubmitter(event.nativeEvent))
 			lastSubmitPromise = promise
-			if (form.getSnapshot().resolvedUi.disabled || inFlight !== promise) {
+			if (store.getSnapshot().resolvedUi.disabled || inFlight !== promise) {
 				event.stopPropagation()
 			}
 			return promise

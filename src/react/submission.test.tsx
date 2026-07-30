@@ -17,7 +17,7 @@ import type {
 	SectionSlotProps,
 } from "./slots.js"
 import type { FormInstance } from "./use-form.js"
-import { useForm } from "./use-form.js"
+import { createForm, useForm } from "./use-form.js"
 
 type ProfileInput = {
 	readonly name: string
@@ -98,6 +98,66 @@ function defaultValues(values: Partial<ProfileInput> = {}): ProfileInput {
 }
 
 describe("classic React submission", () => {
+	it("submits an instance created outside React", async () => {
+		const onSubmit = vi.fn()
+		const form = createForm(definition, {
+			defaultValues: defaultValues(),
+			onSubmit,
+		})
+
+		render(
+			<kit.Form aria-label="Profile" form={form}>
+				<kit.Fields />
+				<button type="submit">Save</button>
+			</kit.Form>,
+		)
+
+		await form.submit()
+
+		expect(onSubmit).toHaveBeenCalledTimes(1)
+		expect(onSubmit.mock.calls[0]?.[0].form).toBe(form)
+		expect(onSubmit.mock.calls[0]?.[0].value).toEqual({
+			...defaultValues(),
+			slug: "ada",
+		})
+	})
+
+	it("restores an external submit callback after React unmounts", async () => {
+		const externalOnSubmit = vi.fn()
+		const reactOnSubmit = vi.fn()
+		const form = createForm(definition, {
+			defaultValues: defaultValues(),
+			onSubmit: externalOnSubmit,
+		})
+
+		function BoundForm() {
+			const boundForm = useForm(form, {
+				onSubmit: reactOnSubmit,
+			})
+			return (
+				<kit.Form form={boundForm}>
+					<kit.Fields />
+				</kit.Form>
+			)
+		}
+
+		const mounted = render(<BoundForm />)
+		await form.submit()
+		expect(reactOnSubmit).toHaveBeenCalledTimes(1)
+		expect(externalOnSubmit).not.toHaveBeenCalled()
+
+		mounted.unmount()
+		render(
+			<kit.Form form={form}>
+				<kit.Fields />
+			</kit.Form>,
+		)
+		await form.submit()
+
+		expect(reactOnSubmit).toHaveBeenCalledTimes(1)
+		expect(externalOnSubmit).toHaveBeenCalledTimes(1)
+	})
+
 	it("captures input, native FormData, and the submitter before pending UI changes", async () => {
 		const validation = createDeferred<StandardSchemaV1.Result<ProfileOutput>>()
 		const schema = createSchema(() => validation.promise)

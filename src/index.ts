@@ -166,6 +166,7 @@ export type {
 export { Submit } from "./react/submit.js"
 export type {
 	FormInstance,
+	FormRuntimeOptions,
 	UseFormOptions,
 } from "./react/use-form.js"
-export { useForm } from "./react/use-form.js"
+export { createForm, useForm } from "./react/use-form.js"

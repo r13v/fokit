@@ -1813,6 +1813,53 @@ or mount a new keyed instance for a different definition/schema. Other
 instance options and callbacks use their latest committed React values without
 recreating the store or capturing stale render closures.
 
+Applications that need instance ownership outside React create the complete
+classic instance explicitly:
+
+```tsx
+const accountFormInstance = createForm(accountForm, {
+  defaultValues,
+  context: initialAccountContext,
+});
+
+function AccountEditor({ context, disabled }) {
+  const form = useForm(accountFormInstance, {
+    context,
+    disabled,
+    onSubmit: async ({ value }) => {
+      await saveAccount(value);
+    },
+  });
+
+  return (
+    <kit.Form form={form}>
+      <kit.Fields />
+      <kit.Submit>Save</kit.Submit>
+    </kit.Form>
+  );
+}
+```
+
+`createForm` belongs to the main React entry point and returns the same
+`FormInstance` type as the creation overload of `useForm`. The React-free core
+continues to expose `createFormStore`.
+
+`useForm(existingForm, runtimeOptions)` returns the exact supplied object.
+It applies context and runtime options together after commit. The instance
+keeps its definition and baseline values. On unmount, it restores the latest
+external context and runtime options and drops React-owned callbacks. One
+instance may have only one active `useForm` binding; a concurrent binding is a
+runtime error. React Strict Mode setup-cleanup replay is not a concurrent
+binding.
+
+`replaceContext(context)` replaces context without changing runtime options.
+`replaceOptions(options)` fully replaces disabled, read-only, validation,
+transaction-hook, and classic-submit behavior without changing context.
+Omitted options return to defaults. An imperative replacement while React is
+bound applies immediately; the next committed binding update reapplies the
+declarative runtime options. Server applications create external instances per
+request and do not share mutable form instances between requests.
+
 The external store returns cached immutable snapshots. `useSyncExternalStore`
 receives a `getServerSnapshot` based on the same initial `defaultValues` and
 resolved UI as the first client render. Consumers must supply semantically

@@ -14,7 +14,7 @@ import {
 } from "../core/index.js"
 import { useArrayField, useField, useFormState, useValue } from "./hooks.js"
 import type { FormInstance } from "./use-form.js"
-import { useForm } from "./use-form.js"
+import { createForm, useForm } from "./use-form.js"
 
 type ProfileValues = {
 	name: string
@@ -211,6 +211,139 @@ describe("React form hooks", () => {
 			expect(screen.getByText("true:true").textContent).toBe("true:true")
 		})
 		expect(new Set(seen).size).toBe(1)
+	})
+
+	it("binds an external instance and restores its configuration on unmount", () => {
+		const externalBeforeUpdate = vi.fn()
+		const reactBeforeUpdate = vi.fn()
+		const form = createForm(definition, {
+			defaultValues: defaultValues(),
+			context: context(false),
+			beforeUpdate: externalBeforeUpdate,
+		})
+		let boundForm: FormInstance<typeof schema, ProfileContext> | undefined
+
+		function View() {
+			boundForm = useForm(form, {
+				context: context(true),
+				disabled: true,
+				beforeUpdate: reactBeforeUpdate,
+			})
+			return null
+		}
+
+		const { unmount } = render(<View />)
+
+		expect(boundForm).toBe(form)
+		expect(form.getSnapshot().context.locked).toBe(true)
+		expect(form.getSnapshot().resolvedUi.disabled).toBe(true)
+
+		form.setValue("name", "Grace")
+		expect(reactBeforeUpdate).toHaveBeenCalledTimes(1)
+		expect(externalBeforeUpdate).not.toHaveBeenCalled()
+
+		unmount()
+
+		expect(form.getSnapshot().context.locked).toBe(false)
+		expect(form.getSnapshot().resolvedUi.disabled).toBe(false)
+
+		form.setValue("name", "Katherine")
+		expect(reactBeforeUpdate).toHaveBeenCalledTimes(1)
+		expect(externalBeforeUpdate).toHaveBeenCalledTimes(1)
+	})
+
+	it("fully replaces external runtime options without replacing context", () => {
+		const firstOnUpdate = vi.fn()
+		const latestOnUpdate = vi.fn()
+		const form = createForm(definition, {
+			defaultValues: defaultValues(),
+			context: context(true),
+			disabled: true,
+			onUpdate: firstOnUpdate,
+		})
+
+		form.replaceOptions({
+			onUpdate: latestOnUpdate,
+		})
+		form.setValue("name", "Grace")
+
+		expect(form.getSnapshot().context.locked).toBe(true)
+		expect(form.getSnapshot().resolvedUi.disabled).toBe(false)
+		expect(firstOnUpdate).not.toHaveBeenCalled()
+		expect(latestOnUpdate).toHaveBeenCalledTimes(1)
+	})
+
+	it("applies one React context and option update without an intermediate snapshot", () => {
+		const form = createForm(definition, {
+			defaultValues: defaultValues(),
+			context: context(false),
+		})
+		const listener = vi.fn()
+		form.subscribe((snapshot) => snapshot, listener)
+
+		function View() {
+			useForm(form, {
+				context: context(true),
+				disabled: true,
+			})
+			return null
+		}
+
+		render(<View />)
+
+		expect(listener).toHaveBeenCalledTimes(1)
+		const snapshot = listener.mock.calls[0]?.[0]
+		expect(snapshot.context.locked).toBe(true)
+		expect(snapshot.resolvedUi.disabled).toBe(true)
+	})
+
+	it("supports Strict Mode replay for one external binding", () => {
+		const form = createForm(definition, {
+			defaultValues: defaultValues(),
+			context: context(false),
+		})
+
+		function View() {
+			useForm(form, {
+				context: context(true),
+			})
+			return null
+		}
+
+		const { unmount } = render(
+			<StrictMode>
+				<View />
+			</StrictMode>,
+		)
+
+		expect(form.getSnapshot().context.locked).toBe(true)
+		unmount()
+		expect(form.getSnapshot().context.locked).toBe(false)
+	})
+
+	it("rejects concurrent React bindings for one external instance", () => {
+		const form = createForm(definition, {
+			defaultValues: defaultValues(),
+			context: context(false),
+		})
+
+		function View() {
+			useForm(form, {
+				context: context(true),
+			})
+			return null
+		}
+
+		expect(() =>
+			render(
+				<>
+					<View />
+					<View />
+				</>,
+			),
+		).toThrow(
+			"A Fokit form instance cannot be bound by multiple useForm hooks at the same time",
+		)
 	})
 
 	it("rerenders only hooks whose selected path changes", () => {

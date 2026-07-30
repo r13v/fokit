@@ -239,10 +239,12 @@ validated `FormOutput`; `input` is the captured editable shape.
 
 ```text
 useForm(definition, options) => FormInstance
+useForm(form, runtimeOptions) => same FormInstance
 ```
 
-`useForm` creates one stable instance. Runtime options update without replacing
-the store; changing `defaultValues` does not overwrite edits.
+The definition overload creates one stable instance. The instance overload
+returns the supplied object. Runtime options update without replacing either
+instance; changing `defaultValues` does not overwrite edits.
 
 ```tsx twoslash
 // @jsx: react-jsx
@@ -279,6 +281,46 @@ function ProfileForm() {
 	)
 }
 ```
+
+Use `createForm` when the instance must exist outside a React component:
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createForm, createFormKit, nativeControls, useForm } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string() })
+const kit = createFormKit({ controls: nativeControls })
+const definition = kit.defineForm(schema)({
+	ui: [{ kind: "field", path: "name", control: "text" }],
+})
+const profileForm = createForm(definition, {
+	defaultValues: { name: "" },
+})
+
+// ---cut---
+function ProfileForm({ disabled }: { readonly disabled: boolean }) {
+	const form = useForm(profileForm, {
+		disabled,
+		onSubmit({ value }) {
+			value.name.toUpperCase()
+		},
+	})
+
+	return (
+		<kit.Form form={form}>
+			<kit.Fields />
+			<kit.Submit>Save</kit.Submit>
+		</kit.Form>
+	)
+}
+```
+
+The external instance owns its definition, baseline, and fallback runtime
+configuration. While mounted, `useForm(form, runtimeOptions)` applies the
+latest committed React options. Unmount restores the external configuration.
+One instance may have only one active `useForm` binding. Create external
+instances per request rather than as server process singletons.
 
 Use `form.reset(loadedValues)` when loaded or saved data should become the new
 clean baseline.
@@ -335,6 +377,12 @@ issues atomically.
 | `getSnapshot()` | Read immutable form state |
 | `subscribe(selector, listener, options?)` | Observe selected state outside React |
 | `replaceContext(context)` | Recompute context-dependent UI |
+| `replaceOptions(options)` | Fully replace runtime behavior while preserving context |
+
+`replaceOptions` replaces `disabled`, `readOnly`, validation settings, and
+update/submit callbacks. Omitted options return to their defaults. A later
+committed `useForm(form, runtimeOptions)` update remains authoritative while
+the instance is React-bound.
 
 Read [Validation and errors](/guides/validation) for visibility and stale-result
 rules.

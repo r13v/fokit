@@ -105,6 +105,11 @@ booleans or `computed(...)` values. Those states inherit through sections and
 arrays. They also accept static `className` and `span`; the shipped layout uses
 `span` for direct children of a section grid.
 
+`disabled` makes a node unavailable. `readOnly` keeps its controls enabled and
+focusable but prevents changes. See [UI definitions: Choose disabled or
+read-only](/guides/ui-definitions#choose-disabled-or-read-only) for form-wide
+submission behavior and when to use each state.
+
 #### Field node
 
 | Property | Required | Type or default |
@@ -167,7 +172,8 @@ behavior, arrays, layout, and manual-composition boundaries.
 | `defaultValues` | yes | Complete editable `FormInput` baseline |
 | `context` | no | Runtime-only data for computed UI |
 | `validation` | no | Partial validation options |
-| `disabled`, `readOnly` | no | Form-wide interaction state |
+| `disabled` | no | Make the complete form unavailable and prevent submission |
+| `readOnly` | no | Prevent edits while keeping the form available for submission |
 | `beforeUpdate`, `onUpdate` | no | Transaction hooks |
 | `onSubmit` | no | Validated classic submit callback |
 

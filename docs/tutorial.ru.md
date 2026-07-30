@@ -127,6 +127,11 @@ export const textControl = defineControl<string | undefined, TextOptions>({
 вызывайте `blur` на blur нативного элемента, `setValue` при изменениях и
 передавайте `disabled`, `readOnly`, `required` в подходящий DOM element.
 
+Используйте `disabled`, когда control или вся форма недоступны: нативный
+control не фокусируется, а при `disabled` на уровне формы submit останавливается
+до validation. Используйте `readOnly`, когда значение нужно оставить доступным
+для просмотра, фокуса и отправки, но запретить его изменение.
+
 ## 4. Используйте default slots или замените нужные
 
 `slots` в `createFormKit` теперь optional и partial. Если вы не передали slot,

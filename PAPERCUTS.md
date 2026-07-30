@@ -424,3 +424,9 @@ Running a smoke fixture's `typecheck` directly from its source directory →
 the fixture could not resolve `fokit` because the package is installed only in
 the smoke harness's temporary copy. Use `npm run test:smoke` for fixture
 verification instead of invoking a fixture script in place.
+
+## 2026-07-30 19:48 — GPT-5
+
+Searching build configuration with an unmatched zsh glob → the shell rejected
+`vite.config.*` before `rg` could run. Use `rg --files -g 'vite.config.*'` or
+quote optional glob patterns when a matching file may not exist.

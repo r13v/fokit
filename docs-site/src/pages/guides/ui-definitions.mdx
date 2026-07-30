@@ -106,6 +106,20 @@ Hiding a section hides its complete subtree. Disabling or making a section
 read-only also affects every descendant; arrays apply those states to add,
 remove, and reorder actions. `required` is field-only and does not inherit.
 
+### Choose disabled or read-only
+
+Use the state that describes what the person can do, not just how the control
+should look:
+
+| State | Use it when | What the person experiences |
+| --- | --- | --- |
+| `disabled` | The control or form is currently unavailable | Controls cannot be edited or focused. Form-wide `disabled` stops submission before submit-time validation. |
+| `readOnly` | The value should remain available but must not change | Controls stay enabled, named, and focusable, while all mutation paths are guarded. The form can still be submitted. |
+
+For example, disable a form while its workflow is unavailable; make it
+read-only for a review or confirmation step. If both states resolve to `true`,
+disabled behavior takes precedence.
+
 `disabled` and `readOnly` retain values in the form store and validated output.
 They are interaction policies, not data-removal policies.
 

@@ -1195,10 +1195,13 @@ effectiveReadOnly =
   formReadOnly || parentReadOnly || resolve(node.readOnly, false);
 ```
 
-`disabled` and `readOnly` are independent flags; if both are true, native
-disabled behavior takes precedence. Fields receive the effective flags,
-sections pass them to descendants, and arrays also apply them to add, remove,
-and reorder actions.
+`disabled` and `readOnly` are independent flags. `disabled` means unavailable:
+native controls use disabled behavior, and form-level `disabled` stops
+submission before submit-time validation. `readOnly` means present but locked:
+controls remain enabled, named, and focusable, mutation is guarded, and form
+submission remains available. If both flags are true, native disabled behavior
+takes precedence. Fields receive the effective flags, sections pass them to
+descendants, and arrays also apply them to add, remove, and reorder actions.
 
 Both states retain values in the store, schema validation, and submission
 output. `disabled` is an interaction policy, not an implicit data-omission

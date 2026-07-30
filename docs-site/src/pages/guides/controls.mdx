@@ -133,9 +133,13 @@ Every custom control should forward:
 - `disabled`, `readOnly`, and `required`;
 - `meta.invalid` or `meta.displayErrors` for invalid state.
 
-Text-like controls can use native `readOnly`. Widgets without that attribute
-must remain named and focusable while preventing value mutation and exposing
-`aria-readonly`.
+Forward `disabled` to the native disabled state: the control is unavailable and
+does not need to remain focusable. Text-like controls can use native `readOnly`.
+Widgets without that attribute must remain enabled, named, and focusable while
+preventing value mutation and exposing `aria-readonly`.
+
+Read [Choose disabled or read-only](/guides/ui-definitions#choose-disabled-or-read-only)
+for the product-level distinction between the two states.
 
 ## Choose a FormData mode
 

@@ -16,6 +16,7 @@ generated and manually composed form.
 | --- | --- |
 | Working semantic HTML | `nativeControls` |
 | Product input components | Add controls with `defineControl` |
+| One form needs an extra control | Extend the shared kit |
 | Different field or array markup | Override structural slots |
 | Fully bespoke form sections | Compose `kit.Form`, `kit.Fields`, and hooks |
 
@@ -122,6 +123,33 @@ const definition = kit.defineForm(schema)({
 
 TypeScript rejects a control whose value contract does not match the selected
 schema path.
+
+## Extend a shared kit locally
+
+Keep the product kit as the compatibility root and add a uniquely named control
+only where it is needed:
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createFormKit, defineControl, nativeControls } from "fokit"
+
+const productKit = createFormKit({ controls: nativeControls })
+const addressPicker = defineControl<string>({
+	component: () => null,
+	formData: { mode: "native" },
+})
+
+// ---cut---
+const checkoutKit = productKit.extend({
+	controls: { addressPicker },
+})
+```
+
+The extension is an immutable snapshot. Base definitions render through
+`checkoutKit`, while definitions created by `checkoutKit` cannot be rendered by
+`productKit`. Existing control names cannot be replaced because doing so could
+silently change options, rendering, and serialization. Partial `slots`
+replacements may be supplied in the same `extend` call.
 
 ## Preserve the control contract
 

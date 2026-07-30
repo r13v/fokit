@@ -45,6 +45,7 @@ The returned kit exposes:
 | --- | --- |
 | `controls` | The exact typed control registry |
 | `slots` | Resolved `Field`, `Section`, `Array`, `ArrayItem`, and `ErrorMessage` slots |
+| `extend` | Create an add-only snapshot with local controls or slot replacements |
 | `defineForm` | Normalize a schema and typed UI tree |
 | `AutoForm` | Create an instance and render the complete definition |
 | `Form` | Render the native form shell for an existing instance |
@@ -53,6 +54,41 @@ The returned kit exposes:
 
 Read [Controls and design systems](/guides/controls) before replacing controls
 or slots.
+
+## kit.extend
+
+```text
+kit.extend({ controls?, slots? }) => FormKit
+```
+
+An extension snapshots the inherited registry and resolved slots. Controls are
+add-only; a duplicate inherited name is a type error and a runtime error.
+Slots are partial replacements. Provide at least one of `controls` or `slots`.
+
+```ts twoslash
+import { createFormKit, defineControl, nativeControls } from "fokit"
+
+const baseKit = createFormKit({ controls: nativeControls })
+const money = defineControl<number>({
+	component: () => null,
+	formData: {
+		mode: "hidden",
+		serialize(value, { name }) {
+			return [{ name, value: String(value) }]
+		},
+	},
+})
+
+// ---cut---
+const checkoutKit = baseKit.extend({
+	controls: { money },
+})
+```
+
+A base definition works with `checkoutKit`. A definition created through
+`checkoutKit` retains its complete structural registry requirement and cannot
+be rendered by `baseKit` or a sibling missing one of those names. Siblings with
+the same complete registry contract are compatible.
 
 ## kit.defineForm
 
@@ -88,6 +124,45 @@ const definition = kit.defineForm(schema)({
 	],
 })
 ```
+
+### Render local React content
+
+Use a render node for arbitrary form-local content that is not a field:
+
+```tsx twoslash
+// @jsx: react-jsx
+import {
+	createFormKit,
+	nativeControls,
+	useFormContext,
+	useFormState,
+} from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string() })
+const kit = createFormKit({ controls: nativeControls })
+
+function NamePreview() {
+	const form = useFormContext<typeof schema>()
+	const name = useFormState(form, (snapshot) => snapshot.values.name)
+	return <output>{name}</output>
+}
+
+// ---cut---
+kit.defineForm(schema)({
+	ui: [
+		{
+			kind: "render",
+			id: "name-preview",
+			component: NamePreview,
+		},
+	],
+})
+```
+
+The component receives no props and may use public hooks. Fokit provides no
+field, layout, accessibility, or FormData behavior for its contents. Render
+nodes work at the root and inside sections, but not inside array rows.
 
 ### UI resolvers
 
@@ -151,11 +226,13 @@ The `ui` array is a typed tree:
 | `"field"` | required | Connect one typed value to one registered control |
 | `"section"` | none | Group nodes and provide a responsive grid |
 | `"array"` | required | Repeat relative child nodes for every array item |
+| `"render"` | none | Mount form-local React content with no field contract |
 
-All three node families accept `visible`, `disabled`, and `readOnly` as either
-booleans or resolver functions. Those states inherit through sections and
-arrays. They also accept static `className` and `span`; the shipped layout uses
-`span` for direct children of a section grid.
+Field, section, and array nodes accept `visible`, `disabled`, and `readOnly` as
+either booleans or resolver functions. Those states inherit through sections
+and arrays. They also accept static `className` and `span`; the shipped layout
+uses `span` for direct children of a section grid. Render nodes expose only
+`id` and `component`.
 
 `disabled` makes a node unavailable. `readOnly` keeps its controls enabled and
 focusable but prevents changes. See [UI definitions: Choose disabled or
@@ -186,7 +263,7 @@ be absent or contain `undefined`.
 | Property | Required | Type or default |
 | --- | --- | --- |
 | `id` | yes | Unique non-empty string without ASCII whitespace |
-| `children` | yes | Nested `field`, `section`, or `array` nodes |
+| `children` | yes | Nested `field`, `section`, `array`, or `render` nodes |
 | `title`, `description` | no | `string` or a resolver function |
 | `columns` | no | `1`, `2`, `3`, or `4`; default `1` |
 | `visible` | no | `boolean` or a resolver function; default `true` |

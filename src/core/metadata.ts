@@ -2,7 +2,7 @@ import { type ArrayRowsState, createArrayRowsState } from "./array-state.js"
 import type {
 	NormalizedArrayNode,
 	NormalizedFormDefinition,
-	NormalizedUiNode,
+	NormalizedRelativeUiNode,
 } from "./definition.js"
 import {
 	formatPath,
@@ -156,7 +156,7 @@ function addArrayChildMetadata(
 }
 
 function addRelativeMetadata(
-	nodes: readonly NormalizedUiNode[],
+	nodes: readonly NormalizedRelativeUiNode[],
 	scopePath: string,
 	fieldsByPath: Record<string, FieldMetadata>,
 	arraysByPath: Record<string, ArrayMetadata>,

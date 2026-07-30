@@ -2,6 +2,7 @@
 
 import {
 	type ComponentPropsWithoutRef,
+	type ComponentType,
 	type FormEvent,
 	type ReactNode,
 	useCallback,
@@ -47,7 +48,11 @@ export type ActionFormProps<
 > = NativeFormProps &
 	Omit<UseFormOptions<Schema, Context>, "defaultValues" | "onSubmit"> & {
 		readonly kit: Pick<FormKit<Controls>, "controls" | "slots">
-		readonly definition: NormalizedFormDefinition<Schema>
+		readonly definition: NormalizedFormDefinition<
+			Schema,
+			Controls,
+			ComponentType
+		>
 		readonly defaultValues: FormInput<Schema>
 		readonly action: NonNullable<ComponentPropsWithoutRef<"form">["action"]>
 		readonly result?: FormResult | null

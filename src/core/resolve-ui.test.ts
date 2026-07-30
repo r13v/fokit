@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import type {
 	ControlMetadata,
+	NormalizedFormDefinition,
 	StandardSchema,
 	UiNode,
 	UiResolver,
@@ -72,7 +73,55 @@ function normalize(
 	})
 }
 
+function normalizeWithRender(ui: readonly unknown[]) {
+	const normalizeOpaque = normalizeDefinition as (input: {
+		readonly schema: typeof schema
+		readonly controls: ExampleControls
+		readonly ui: readonly unknown[]
+	}) => NormalizedFormDefinition<typeof schema, ExampleControls, () => null>
+
+	return normalizeOpaque({
+		schema,
+		controls,
+		ui,
+	})
+}
+
 describe("resolveUi", () => {
+	it("transports opaque render components without invoking them", () => {
+		const Summary = vi.fn(() => null)
+		const definition = normalizeWithRender([
+			{
+				kind: "render",
+				id: "summary",
+				component: Summary,
+			},
+		])
+
+		const resolved = resolveUi(
+			definition,
+			{
+				name: "Ada",
+				kind: "person",
+				country: "us",
+				city: "nyc",
+				unrelated: "same",
+			},
+			{
+				locked: false,
+				citiesByCountry: {},
+			},
+		)
+		const summary = resolved.nodesById.summary
+
+		expect(summary.kind).toBe("render")
+		if (summary.kind !== "render") {
+			throw new Error("Expected a render node")
+		}
+		expect(summary.component).toBe(Summary)
+		expect(Summary).not.toHaveBeenCalled()
+	})
+
 	it("resolves labels, descriptions, options, required state, layout, context, and inherited flags", () => {
 		const definition = normalize([
 			{

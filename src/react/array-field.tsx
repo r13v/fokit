@@ -427,6 +427,10 @@ function resolvedNodeEqual<Context>(
 			)
 		case "array":
 			return next.kind === "array" && resolvedArrayShellEqual(previous, next)
+		case "render":
+			return (
+				next.kind === "render" && Object.is(previous.component, next.component)
+			)
 		default:
 			return false
 	}

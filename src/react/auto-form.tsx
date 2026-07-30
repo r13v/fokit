@@ -12,10 +12,9 @@ import { FieldsRenderer } from "./fields.js"
 import { KitForm } from "./form.js"
 import { useForm } from "./use-form.js"
 
-export function createAutoFormComponent(
-	controls: ControlDefinitionRegistry,
-	slots: FormKitSlots,
-): AutoFormComponent {
+export function createAutoFormComponent<
+	Controls extends ControlDefinitionRegistry,
+>(controls: Controls, slots: FormKitSlots): AutoFormComponent<Controls> {
 	function AutoForm<Schema extends StandardSchema, Context = unknown>({
 		definition,
 		defaultValues,
@@ -28,7 +27,7 @@ export function createAutoFormComponent(
 		onSubmit,
 		children,
 		...formProps
-	}: AutoFormProps<Schema, Context>) {
+	}: AutoFormProps<Schema, Context, Controls>) {
 		const form = useForm(definition, {
 			defaultValues,
 			context,

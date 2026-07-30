@@ -472,3 +472,17 @@ Patching the external-instance contract into `docs/SPEC.md` → the first patch
 missed because the expected paragraph wrapped differently from the file.
 Re-read the narrow target range before patching prose whose line wrapping may
 have changed.
+
+## 2026-07-30 23:00 — GPT-5
+
+Inspecting the form-kit control API → the first read targeted
+`src/react/controls.tsx` and then `src/react/control.ts`, while the actual file
+is singular and uses the `.tsx` extension. Resolve source paths with `rg --files`
+before batching reads when nearby module names are uncertain.
+
+## 2026-07-30 23:06 — GPT-5
+
+Loading the glossary format referenced by the Grill skill → the first read
+resolved `./CONTEXT-FORMAT.md` against the skills root instead of the
+`grill/` package directory. Resolve relative skill resources from the directory
+containing that skill's `SKILL.md`.

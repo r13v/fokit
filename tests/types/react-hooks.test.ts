@@ -152,12 +152,18 @@ function TypeHarness() {
 	})
 
 	type _form = Expect<
-		Equal<typeof form, FormInstance<ExampleSchema, ExampleContext>>
+		Equal<
+			typeof form,
+			FormInstance<ExampleSchema, ExampleContext, ExampleControls>
+		>
 	>
 
 	const boundExternalForm = useForm(externalForm, externalRuntimeOptions)
 	type _externalForm = Expect<
-		Equal<typeof boundExternalForm, FormInstance<ExampleSchema, ExampleContext>>
+		Equal<
+			typeof boundExternalForm,
+			FormInstance<ExampleSchema, ExampleContext, ExampleControls>
+		>
 	>
 
 	externalForm.replaceContext({

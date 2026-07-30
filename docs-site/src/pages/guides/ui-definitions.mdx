@@ -16,16 +16,18 @@ the result reusable across form instances.
 
 ## Read the tree at a glance
 
-Every node has one of three jobs:
+Every node has one of four jobs:
 
 | Node | Owns | Children |
 | --- | --- | --- |
 | `field` | One typed value path, its control, copy, and interaction state | none |
 | `section` | A semantic group and an optional one-to-four-column layout | other UI nodes |
 | `array` | One repeatable value path and the editor for each item | relative UI nodes |
+| `render` | Form-local React content with no field contract | none |
 
-A section can contain fields, nested sections, and arrays. An array repeats its
-children for every item, resolving their paths relative to that item.
+A section can contain fields, nested sections, arrays, and render nodes. An
+array repeats fields, sections, and nested arrays for every item, resolving
+their paths relative to that item.
 
 <details>
 <summary>Open a complete section, conditional field, and array</summary>
@@ -55,6 +57,53 @@ belong to the selected control. For example, a number path accepts the shipped
 
 `required` does not add a validation rule. Generated forms use the Standard
 Schema as the source of truth, so required validation belongs in the schema.
+
+## Place form-local React content
+
+Use a render node when a preview, command, or other React component belongs at
+an exact position but does not represent one field:
+
+```tsx twoslash
+// @jsx: react-jsx
+import {
+	createFormKit,
+	nativeControls,
+	useFormContext,
+	useFormState,
+} from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string() })
+const kit = createFormKit({ controls: nativeControls })
+
+function NamePreview() {
+	const form = useFormContext<typeof schema>()
+	const name = useFormState(form, (snapshot) => snapshot.values.name)
+	return <output>{name}</output>
+}
+
+// ---cut---
+const definition = kit.defineForm(schema)({
+	ui: [
+		{
+			kind: "render",
+			id: "name-preview",
+			component: NamePreview,
+		},
+	],
+})
+```
+
+Fokit owns only the render node's ID, order, and mounting. The component
+receives no props; hooks provide form state. Its contents get no automatic
+path, copy, errors, layout, inherited interaction state, accessibility, or
+FormData behavior. Render nodes are allowed at the root and inside sections,
+but not inside array rows.
+
+`ActionForm` still renders them and ignores them during compatibility checks.
+Any successful form controls inside the component are application-owned.
+Because the definition embeds a component reference, it is React-only and
+cannot cross a serializable React Server Components boundary.
 
 ## Group fields and describe layout
 
@@ -163,11 +212,12 @@ Generated definitions deliberately keep a narrow contract:
 
 - each data path appears once within its scope;
 - explicit node IDs are unique;
-- fields and arrays derive an ID from their path, while sections require one;
-- the tree contains fields, sections, and arrays—not arbitrary content nodes.
+- fields and arrays derive an ID from their path, while sections and render
+  nodes require one;
+- arbitrary content is explicit through a React-only render node.
 
-Render actions, summaries, previews, and workflow content as `AutoForm`
-children. When product layout needs exact placement, compose `kit.Form`,
+Use `AutoForm` children for workflow content after generated nodes. When
+product layout needs exact placement beyond a render node, compose `kit.Form`,
 `kit.Fields`, and granular hooks around the same definition and form instance.
 
 Continue with [Controls and design systems](/guides/controls) to change

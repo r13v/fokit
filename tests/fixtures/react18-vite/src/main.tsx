@@ -18,7 +18,6 @@ import {
 	isSamePath,
 	KitForm,
 	mergePathValue,
-	type NormalizedFormDefinition,
 	nativeControls,
 	normalizeDefinition,
 	parseArrayIndex,
@@ -188,6 +187,42 @@ const kit = createFormKit({
 	},
 })
 
+const extendedKit = kit.extend({
+	controls: {
+		localText: text,
+	},
+})
+
+function LocalPreview() {
+	const form = useFormContext<typeof schema>()
+	const name = useValue(form, "name")
+	return <output>{name}</output>
+}
+
+const extendedDefinition = extendedKit.defineForm(schema)({
+	ui: [
+		{
+			kind: "render",
+			id: "local-preview",
+			component: LocalPreview,
+		},
+		{
+			kind: "field",
+			path: "name",
+			control: "localText",
+		},
+	],
+})
+
+function ExtendedFormProbe() {
+	return (
+		<extendedKit.AutoForm
+			defaultValues={{ name: "Ada Lovelace" }}
+			definition={extendedDefinition}
+		/>
+	)
+}
+
 const nativeKit = createFormKit({
 	controls: nativeControls,
 })
@@ -206,16 +241,7 @@ const ui = [
 	},
 ] satisfies readonly UiNode<ProfileInput, typeof kit.controls>[]
 
-const defineProfile = kit.defineForm as unknown as (
-	profileSchema: typeof schema,
-	definition: {
-		readonly ui: typeof ui
-	},
-) => NormalizedFormDefinition<typeof schema>
-
-const definition = defineProfile(schema, {
-	ui,
-})
+const definition = kit.defineForm(schema)({ ui })
 
 const store = createFormStore({
 	definition,
@@ -246,6 +272,7 @@ void [
 	Submit,
 	normalizeDefinition,
 	useArrayField,
+	ExtendedFormProbe,
 ]
 
 function defaultValues(): FormInput<typeof schema> {

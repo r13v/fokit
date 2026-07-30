@@ -3,7 +3,9 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import {
 	type ArrayItemSlotProps,
 	type ArraySlotProps,
+	type ControlDefinitionRegistry,
 	type ControlProps,
+	createForm,
 	createFormKit,
 	defineControl,
 	type ErrorMessageSlotProps,
@@ -11,10 +13,14 @@ import {
 	type FokitCssVariable,
 	type FokitStyle,
 	type FormKitSlots,
+	type NormalizedArrayNode,
 	type Resolvable,
+	type ResolvedArrayNode,
 	type SectionSlotProps,
 	type StructuralRootProps,
+	type UiNode,
 } from "../../src/index.js"
+import { ActionForm } from "../../src/react19/index.js"
 
 type Equal<Left, Right> =
 	(<Value>() => Value extends Left ? 1 : 2) extends <
@@ -42,8 +48,15 @@ type ExampleContext = {
 }
 
 type ExampleSchema = StandardSchemaV1<ExampleInput>
+type ListInput = {
+	readonly items: readonly {
+		readonly value: string
+	}[]
+}
+type ListSchema = StandardSchemaV1<ListInput>
 
 declare const schema: ExampleSchema
+declare const listSchema: ListSchema
 
 type CallableOptions = () => string
 
@@ -214,6 +227,246 @@ const exampleDefinition = kit.defineForm(schema).withContext<ExampleContext>({
 			kind: "field",
 			path: "maybeNull",
 			control: "nullableText",
+		},
+	],
+})
+
+const exampleDefaultValues: ExampleInput = {
+	name: "Ada",
+	status: "draft",
+	age: 37,
+	maybeNull: null,
+	profile: {
+		country: "GB",
+	},
+}
+
+const extendedKit = kit.extend({
+	controls: {
+		extraText: text,
+	},
+	slots: {
+		Field,
+	},
+})
+const slotsOnlyKit = kit.extend({
+	slots: {
+		Field,
+	},
+})
+const chainedKit = extendedKit.extend({
+	controls: {
+		secondaryText: text,
+	},
+})
+const siblingKit = kit.extend({
+	controls: {
+		siblingText: text,
+	},
+})
+const compatibleSiblingKit = kit.extend({
+	controls: {
+		extraText: text,
+	},
+})
+const broadControls: ControlDefinitionRegistry = {
+	text,
+}
+const broadKit = createFormKit({
+	controls: broadControls,
+})
+const broadExtendedKit = broadKit.extend({
+	controls: {
+		extraText: text,
+	},
+})
+
+type _extendedControlNames = Expect<
+	Equal<
+		keyof typeof extendedKit.controls,
+		keyof typeof kit.controls | "extraText"
+	>
+>
+type _slotsOnlyControls = Expect<
+	Equal<typeof slotsOnlyKit.controls, typeof kit.controls>
+>
+type _chainedControlNames = Expect<
+	Equal<
+		keyof typeof chainedKit.controls,
+		keyof typeof kit.controls | "extraText" | "secondaryText"
+	>
+>
+type _coreUiNodeWithoutRender = Expect<
+	Equal<
+		Extract<
+			UiNode<ListInput, typeof kit.controls>,
+			{ readonly kind: "render" }
+		>,
+		never
+	>
+>
+type _normalizedArrayWithoutRender = Expect<
+	Equal<
+		Extract<
+			NormalizedArrayNode["children"][number],
+			{ readonly kind: "render" }
+		>,
+		never
+	>
+>
+type _resolvedArrayWithoutRender = Expect<
+	Equal<
+		Extract<ResolvedArrayNode["children"][number], { readonly kind: "render" }>,
+		never
+	>
+>
+
+void broadExtendedKit
+
+// @ts-expect-error extensions must add controls instead of replacing them
+kit.extend({ controls: { text } })
+
+// @ts-expect-error an extension must provide controls or slots
+kit.extend({})
+
+const extendedDefinition = extendedKit
+	.defineForm(schema)
+	.withContext<ExampleContext>({
+		ui: [
+			{
+				kind: "render",
+				id: "name-preview",
+				component: () => null,
+			},
+			{
+				kind: "section",
+				id: "account",
+				children: [
+					{
+						kind: "render",
+						id: "account-preview",
+						component: () => null,
+					},
+					{
+						kind: "field",
+						path: "name",
+						control: "extraText",
+					},
+				],
+			},
+		],
+	})
+
+extendedKit.defineForm(schema)({
+	ui: [
+		{
+			kind: "render",
+			id: "invalid-preview",
+			// @ts-expect-error render components receive no props
+			component: (_props: { value: string }) => null,
+		},
+	],
+})
+
+extendedKit.AutoForm({
+	definition: exampleDefinition,
+	defaultValues: exampleDefaultValues,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+})
+
+kit.AutoForm({
+	// @ts-expect-error a base kit cannot render a definition owned by its extension
+	definition: extendedDefinition,
+	defaultValues: exampleDefaultValues,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+})
+
+siblingKit.AutoForm({
+	// @ts-expect-error sibling extensions do not inherit each other's controls
+	definition: extendedDefinition,
+	defaultValues: exampleDefaultValues,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+})
+
+// Sibling kits with the same complete registry contract are structurally compatible.
+compatibleSiblingKit.AutoForm({
+	definition: extendedDefinition,
+	defaultValues: exampleDefaultValues,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+})
+
+ActionForm({
+	kit: extendedKit,
+	definition: exampleDefinition,
+	defaultValues: exampleDefaultValues,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+	action: (_formData: FormData) => undefined,
+})
+
+ActionForm({
+	kit,
+	// @ts-expect-error ActionForm keeps the selected kit's registry ownership
+	definition: extendedDefinition,
+	defaultValues: exampleDefaultValues,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+	action: (_formData: FormData) => undefined,
+})
+
+const baseForm = createForm(exampleDefinition, {
+	defaultValues: exampleDefaultValues,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+})
+const extendedForm = createForm(extendedDefinition, {
+	defaultValues: exampleDefaultValues,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+})
+
+extendedKit.Form({ form: baseForm })
+kit.Form({
+	// @ts-expect-error manual composition preserves the definition's kit ownership
+	form: extendedForm,
+})
+
+extendedKit.defineForm(listSchema)({
+	ui: [
+		{
+			kind: "array",
+			path: "items",
+			itemDefault: {
+				value: "",
+			},
+			children: [
+				{
+					// @ts-expect-error render nodes are not available inside array rows
+					kind: "render",
+					id: "row-preview",
+					component: () => null,
+				},
+			],
 		},
 	],
 })

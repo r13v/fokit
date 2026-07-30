@@ -4,6 +4,7 @@ import { replaceFormStoreRuntime } from "../core/form-store.js"
 import {
 	type ArrayFieldPath,
 	type ArrayItemValue,
+	type ControlRegistry,
 	createFormStore,
 	type FieldPath,
 	type FocusTarget,
@@ -50,7 +51,9 @@ type ReplaceFormOptions<Schema extends StandardSchema, Context> = Omit<
 export type FormInstance<
 	Schema extends StandardSchema,
 	Context = unknown,
-> = Omit<FormStore<Schema, Context>, "replaceOptions"> & {
+	RequiredControls extends ControlRegistry | undefined = undefined,
+> = Omit<FormStore<Schema, Context>, "definition" | "replaceOptions"> & {
+	readonly definition: NormalizedFormDefinition<Schema, RequiredControls>
 	replaceOptions(options: ReplaceFormOptions<Schema, Context>): void
 	submit(): Promise<void>
 }
@@ -61,8 +64,12 @@ type FormBinding<Schema extends StandardSchema, Context> = {
 	readonly options: ReplaceFormOptions<Schema, Context>
 }
 
-export class FormInstanceImpl<Schema extends StandardSchema, Context> {
-	readonly definition: NormalizedFormDefinition<Schema>
+export class FormInstanceImpl<
+	Schema extends StandardSchema,
+	Context,
+	RequiredControls extends ControlRegistry | undefined = undefined,
+> {
+	readonly definition: NormalizedFormDefinition<Schema, RequiredControls>
 	readonly schema: Schema
 
 	readonly #store: FormStore<Schema, Context>
@@ -73,7 +80,7 @@ export class FormInstanceImpl<Schema extends StandardSchema, Context> {
 	#binding: FormBinding<Schema, Context> | undefined
 
 	constructor(
-		definition: NormalizedFormDefinition<Schema>,
+		definition: NormalizedFormDefinition<Schema, RequiredControls>,
 		options: UseFormOptions<Schema, Context>,
 	) {
 		this.#baseContext = options.context as Context
@@ -92,10 +99,10 @@ export class FormInstanceImpl<Schema extends StandardSchema, Context> {
 				this.#activeOptions.onUpdate?.(event)
 			},
 		})
-		this.definition = this.#store.definition
+		this.definition = definition
 		this.schema = this.#store.schema
 		attachClassicSubmission(
-			this as FormInstance<Schema, Context>,
+			this as FormInstance<Schema, Context, RequiredControls>,
 			this.#store,
 			() => this.#activeOptions.onSubmit,
 		)
@@ -264,7 +271,9 @@ export class FormInstanceImpl<Schema extends StandardSchema, Context> {
 	}
 
 	submit(): Promise<void> {
-		return requestClassicFormSubmit(this as FormInstance<Schema, Context>)
+		return requestClassicFormSubmit(
+			this as FormInstance<Schema, Context, RequiredControls>,
+		)
 	}
 
 	#applyRuntime(
@@ -281,22 +290,34 @@ export class FormInstanceImpl<Schema extends StandardSchema, Context> {
 	}
 }
 
-export function createForm<Schema extends StandardSchema, Context = unknown>(
-	definition: NormalizedFormDefinition<Schema>,
+export function createForm<
+	Schema extends StandardSchema,
+	Context = unknown,
+	RequiredControls extends ControlRegistry | undefined = undefined,
+>(
+	definition: NormalizedFormDefinition<Schema, RequiredControls>,
 	options: UseFormOptions<Schema, Context>,
-): FormInstance<Schema, Context> {
+): FormInstance<Schema, Context, RequiredControls> {
 	return new FormInstanceImpl(definition, options)
 }
 
-export function getFormStore<Schema extends StandardSchema, Context = unknown>(
-	form: FormInstance<Schema, Context>,
+export function getFormStore<
+	Schema extends StandardSchema,
+	Context = unknown,
+	RequiredControls extends ControlRegistry | undefined = undefined,
+>(
+	form: FormInstance<Schema, Context, RequiredControls>,
 ): FormStore<Schema, Context> {
 	return getFormInstanceImpl(form).getStore()
 }
 
-export function getFormInstanceImpl<Schema extends StandardSchema, Context>(
-	form: FormInstance<Schema, Context>,
-): FormInstanceImpl<Schema, Context> {
+export function getFormInstanceImpl<
+	Schema extends StandardSchema,
+	Context,
+	RequiredControls extends ControlRegistry | undefined,
+>(
+	form: FormInstance<Schema, Context, RequiredControls>,
+): FormInstanceImpl<Schema, Context, RequiredControls> {
 	if (form instanceof FormInstanceImpl) {
 		return form
 	}

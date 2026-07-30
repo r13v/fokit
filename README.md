@@ -69,6 +69,11 @@ Controls stay explicit because their value and FormData behavior are part of
 the public form contract. Add custom controls by composing a registry, and
 override any slot by passing a partial `slots` object.
 
+Use `kit.extend({ controls, slots })` when one form needs add-only controls or
+local slot replacements while remaining compatible with definitions from a
+shared base kit. Use an explicit `render` UI node for form-local React content
+that intentionally owns no field, accessibility, or FormData contract.
+
 ## Configuration
 
 Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and

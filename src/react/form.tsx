@@ -30,23 +30,27 @@ export type NativeFormProps = Omit<
 export type KitFormProps<
 	Schema extends import("../core/index.js").StandardSchema,
 	Context = unknown,
+	RequiredControls extends ControlDefinitionRegistry | undefined = undefined,
 > = NativeFormProps & {
-	readonly form: FormInstance<Schema, Context>
+	readonly form: FormInstance<Schema, Context, RequiredControls>
 	readonly controls?: ControlDefinitionRegistry
 	readonly children?: ReactNode
 }
 
-export type KitFormComponent = <
+export type KitFormComponent<
+	Controls extends ControlDefinitionRegistry | undefined = undefined,
+> = <
 	Schema extends import("../core/index.js").StandardSchema,
 	Context = unknown,
 >(
-	props: Omit<KitFormProps<Schema, Context>, "controls">,
+	props: Omit<KitFormProps<Schema, Context, Controls>, "controls">,
 ) => ReactNode
 
 export function KitForm<
 	Schema extends import("../core/index.js").StandardSchema,
 	Context = unknown,
->(props: KitFormProps<Schema, Context>) {
+	RequiredControls extends ControlDefinitionRegistry | undefined = undefined,
+>(props: KitFormProps<Schema, Context, RequiredControls>) {
 	rejectOwnedFormProps(props)
 	const { form, controls, children, id, ...nativeProps } = props
 	const generatedId = useGeneratedFormId(id)
@@ -120,13 +124,13 @@ export function KitForm<
 	)
 }
 
-export function createFormComponent(
-	controls: ControlDefinitionRegistry,
-): KitFormComponent {
+export function createFormComponent<Controls extends ControlDefinitionRegistry>(
+	controls: Controls,
+): KitFormComponent<Controls> {
 	function Form<
 		Schema extends import("../core/index.js").StandardSchema,
 		Context,
-	>(props: Omit<KitFormProps<Schema, Context>, "controls">) {
+	>(props: Omit<KitFormProps<Schema, Context, Controls>, "controls">) {
 		return <KitForm {...props} controls={controls} />
 	}
 

@@ -133,6 +133,8 @@ function appendNodeEntries(
 			case "field":
 				appendFieldEntries(node, pathPrefix, state)
 				break
+			case "render":
+				break
 			case "section":
 				appendSectionEntries(node, pathPrefix, state)
 				break

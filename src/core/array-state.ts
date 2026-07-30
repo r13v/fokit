@@ -1,7 +1,7 @@
 import type {
 	NormalizedArrayNode,
 	NormalizedFormDefinition,
-	NormalizedUiNode,
+	NormalizedRelativeUiNode,
 } from "./definition.js"
 import {
 	formatPath,
@@ -89,7 +89,7 @@ function addConcreteArrayRowStates(
 
 function addRelativeArrayRowStates(
 	rowsByPath: Record<string, ArrayRowState>,
-	nodes: readonly NormalizedUiNode[],
+	nodes: readonly NormalizedRelativeUiNode[],
 	values: unknown,
 	scopePath: string,
 ): void {
@@ -335,7 +335,7 @@ function findArrayNodeInTree(
 }
 
 function findRelativeArrayNode(
-	nodes: readonly NormalizedUiNode[],
+	nodes: readonly NormalizedRelativeUiNode[],
 	segments: PathSegments,
 ): NormalizedArrayNode | undefined {
 	for (const node of nodes) {
@@ -523,7 +523,7 @@ function createRowKey(path: string, index: number): string {
 }
 
 function hasRelativeFieldPath(
-	nodes: readonly NormalizedUiNode[],
+	nodes: readonly NormalizedRelativeUiNode[],
 	segments: PathSegments,
 ): boolean {
 	for (const node of nodes) {

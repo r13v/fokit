@@ -1,6 +1,11 @@
 "use client"
 
-import { type ReactNode, useCallback } from "react"
+import {
+	type ComponentType,
+	createElement,
+	type ReactNode,
+	useCallback,
+} from "react"
 
 import type {
 	FieldPath,
@@ -139,6 +144,8 @@ function GeneratedNode<Schema extends StandardSchema, Context>({
 					slots={slots}
 				/>
 			)
+		case "render":
+			return createElement(node.component as ComponentType)
 		default:
 			throw new TypeError("Unknown resolved UI node kind")
 	}

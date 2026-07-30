@@ -132,10 +132,17 @@ export type FieldNode<
 	[Path in FieldPath<Input>]: FieldNodeForPath<Input, Controls, Context, Path>
 }[FieldPath<Input>]
 
+export type RenderNode<Component = unknown> = {
+	readonly kind: "render"
+	readonly id: string
+	readonly component: Component
+}
+
 export type SectionNode<
 	Input,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
+	RenderComponent = never,
 > = {
 	readonly kind: "section"
 	readonly id: string
@@ -147,7 +154,12 @@ export type SectionNode<
 	readonly className?: string
 	readonly columns?: GridColumns
 	readonly span?: GridSpan
-	readonly children: readonly UiNode<Input, Controls, Context>[]
+	readonly children: readonly UiNode<
+		Input,
+		Controls,
+		Context,
+		RenderComponent
+	>[]
 }
 
 export type ArrayItemValue<Input, Path extends ArrayFieldPath<Input>> =
@@ -198,13 +210,18 @@ export type UiNode<
 	Input,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
+	RenderComponent = never,
 > =
 	| FieldNode<Input, Controls, Context>
-	| SectionNode<Input, Controls, Context>
+	| ([RenderComponent] extends [never] ? never : RenderNode<RenderComponent>)
+	| SectionNode<Input, Controls, Context, RenderComponent>
 	| ArrayNode<Input, Controls, Context>
 
 export type RelativeUiNode<
 	Input,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
-> = UiNode<Input, Controls, Context>
+> =
+	| ArrayNode<Input, Controls, Context>
+	| FieldNode<Input, Controls, Context>
+	| SectionNode<Input, Controls, Context>

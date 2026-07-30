@@ -126,6 +126,46 @@ const definition = kit.defineForm(createSchema(validateValues))({
 })
 
 describe("React 19 ActionForm", () => {
+	it("renders render nodes while keeping them outside ActionForm compatibility", async () => {
+		function NamePreview() {
+			const form = useFormContext<Schema>()
+			const name = useFormState(form, (snapshot) => snapshot.values.name)
+			return <output data-testid="action-preview">{name}</output>
+		}
+		const action = vi.fn((_formData: FormData) => undefined)
+		const renderDefinition = kit.defineForm(createSchema(validateValues))({
+			ui: [
+				{
+					kind: "render",
+					id: "name-preview",
+					component: NamePreview,
+				},
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+				},
+			],
+		})
+
+		render(
+			<ActionForm
+				action={action}
+				defaultValues={defaultValues()}
+				definition={renderDefinition}
+				kit={kit}
+			>
+				<ActionSubmit>Save</ActionSubmit>
+			</ActionForm>,
+		)
+
+		expect(screen.getByTestId("action-preview").textContent).toBe("Ada")
+		await userEvent.click(screen.getByRole("button", { name: "Save" }))
+		await waitFor(() => {
+			expect(action).toHaveBeenCalledTimes(1)
+		})
+	})
+
 	it("keeps the supplied Action on the native form without prevalidating or preventing a valid dispatch", async () => {
 		const validate = vi.fn(validateValues)
 		const action = vi.fn((_formData: FormData) => undefined)

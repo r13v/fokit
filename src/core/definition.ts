@@ -11,7 +11,7 @@ import type {
 } from "./ui-types.js"
 import { cloneValue } from "./value.js"
 
-type NodeKind = "array" | "field" | "section"
+type NodeKind = "array" | "field" | "render" | "section"
 type NoInferValue<Value> = [Value][Value extends unknown ? 0 : never]
 type NodeScope = {
 	readonly idPrefix: string
@@ -19,12 +19,12 @@ type NodeScope = {
 	readonly relative: boolean
 }
 
-type NormalizationState = {
+type NormalizationState<RenderComponent> = {
 	readonly controls: ControlRegistry
 	readonly nodeIds: Set<string>
 	readonly pathsByScope: Map<string, Set<string>>
-	readonly nodes: NormalizedUiNode[]
-	readonly nodesById: Record<string, NormalizedUiNode>
+	readonly nodes: NormalizedUiNode<RenderComponent>[]
+	readonly nodesById: Record<string, NormalizedUiNode<RenderComponent>>
 	readonly fieldsByPath: Record<string, NormalizedFieldNode>
 	readonly arraysByPath: Record<string, NormalizedArrayNode>
 }
@@ -75,6 +75,12 @@ type RawArrayNode = Record<string, unknown> & {
 	readonly children?: unknown
 }
 
+type RawRenderNode = Record<string, unknown> & {
+	readonly kind: "render"
+	readonly id?: unknown
+	readonly component?: unknown
+}
+
 type NormalizedNodeBase = {
 	readonly id: string
 	readonly kind: NodeKind
@@ -99,13 +105,19 @@ export type NormalizedFieldNode = NormalizedNodeBase & {
 	readonly options?: Resolvable<unknown>
 }
 
-export type NormalizedSectionNode = NormalizedNodeBase & {
-	readonly kind: "section"
-	readonly title?: Resolvable<string>
-	readonly description?: Resolvable<string>
-	readonly columns: GridColumns
-	readonly children: readonly NormalizedUiNode[]
+export type NormalizedRenderNode<Component = unknown> = NormalizedNodeBase & {
+	readonly kind: "render"
+	readonly component: Component
 }
+
+export type NormalizedSectionNode<RenderComponent = unknown> =
+	NormalizedNodeBase & {
+		readonly kind: "section"
+		readonly title?: Resolvable<string>
+		readonly description?: Resolvable<string>
+		readonly columns: GridColumns
+		readonly children: readonly NormalizedUiNode<RenderComponent>[]
+	}
 
 export type NormalizedArrayNode = NormalizedNodeBase & {
 	readonly kind: "array"
@@ -114,24 +126,34 @@ export type NormalizedArrayNode = NormalizedNodeBase & {
 	readonly label?: Resolvable<string>
 	readonly description?: Resolvable<string>
 	readonly itemDefault: unknown | (() => unknown)
-	readonly children: readonly NormalizedUiNode[]
+	readonly children: readonly NormalizedRelativeUiNode[]
 }
 
-export type NormalizedUiNode =
+export type NormalizedRelativeUiNode =
 	| NormalizedArrayNode
 	| NormalizedFieldNode
-	| NormalizedSectionNode
+	| NormalizedSectionNode<never>
+
+export type NormalizedUiNode<RenderComponent = unknown> =
+	| NormalizedArrayNode
+	| NormalizedFieldNode
+	| ([RenderComponent] extends [never]
+			? never
+			: NormalizedRenderNode<RenderComponent>)
+	| NormalizedSectionNode<RenderComponent>
 
 export type FormDefinition<
 	Schema extends StandardSchema = StandardSchema,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
+	RenderComponent = never,
 > = {
 	readonly schema: Schema
 	readonly ui: readonly UiNode<
 		FormInput<NoInferValue<Schema>>,
 		Controls,
-		Context
+		Context,
+		RenderComponent
 	>[]
 }
 
@@ -139,34 +161,58 @@ export type NormalizeDefinitionInput<
 	Schema extends StandardSchema,
 	Controls extends ControlRegistry,
 	Context,
-> = FormDefinition<Schema, Controls, Context> & {
+	RenderComponent = never,
+> = FormDefinition<Schema, Controls, Context, RenderComponent> & {
 	readonly controls: Controls
 }
 
+declare const requiredControls: unique symbol
+
+type DefinitionControlRequirement<
+	RequiredControls extends ControlRegistry | undefined,
+> = [RequiredControls] extends [ControlRegistry]
+	? string extends keyof Extract<RequiredControls, ControlRegistry>
+		? object
+		: {
+				readonly [requiredControls]?: Extract<
+					keyof Extract<RequiredControls, ControlRegistry>,
+					string
+				>
+			}
+	: object
+
 export type NormalizedFormDefinition<
 	Schema extends StandardSchema = StandardSchema,
+	RequiredControls extends ControlRegistry | undefined = undefined,
+	RenderComponent = unknown,
 > = {
 	readonly schema: Schema
-	readonly ui: readonly NormalizedUiNode[]
-	readonly nodes: readonly NormalizedUiNode[]
-	readonly nodesById: Readonly<Record<string, NormalizedUiNode>>
+	readonly ui: readonly NormalizedUiNode<RenderComponent>[]
+	readonly nodes: readonly NormalizedUiNode<RenderComponent>[]
+	readonly nodesById: Readonly<
+		Record<string, NormalizedUiNode<RenderComponent>>
+	>
 	readonly fieldsByPath: Readonly<Record<string, NormalizedFieldNode>>
 	readonly arraysByPath: Readonly<Record<string, NormalizedArrayNode>>
-}
+} & DefinitionControlRequirement<RequiredControls>
 
 export function normalizeDefinition<
 	Schema extends StandardSchema,
 	Controls extends ControlRegistry,
 	Context = unknown,
+	RenderComponent = never,
 >(
-	input: NormalizeDefinitionInput<Schema, Controls, Context>,
-): NormalizedFormDefinition<Schema> {
-	const state: NormalizationState = {
+	input: NormalizeDefinitionInput<Schema, Controls, Context, RenderComponent>,
+): NormalizedFormDefinition<Schema, Controls, RenderComponent> {
+	const state: NormalizationState<RenderComponent> = {
 		controls: input.controls,
 		nodeIds: new Set(),
 		pathsByScope: new Map(),
 		nodes: [],
-		nodesById: Object.create(null) as Record<string, NormalizedUiNode>,
+		nodesById: Object.create(null) as Record<
+			string,
+			NormalizedUiNode<RenderComponent>
+		>,
 		fieldsByPath: Object.create(null) as Record<string, NormalizedFieldNode>,
 		arraysByPath: Object.create(null) as Record<string, NormalizedArrayNode>,
 	}
@@ -184,16 +230,16 @@ export function normalizeDefinition<
 		nodesById: Object.freeze({ ...state.nodesById }),
 		fieldsByPath: Object.freeze({ ...state.fieldsByPath }),
 		arraysByPath: Object.freeze({ ...state.arraysByPath }),
-	}) as NormalizedFormDefinition<Schema>
+	}) as NormalizedFormDefinition<Schema, Controls, RenderComponent>
 }
 
-function normalizeChildren(
+function normalizeChildren<RenderComponent>(
 	nodes: readonly unknown[],
-	state: NormalizationState,
+	state: NormalizationState<RenderComponent>,
 	scope: NodeScope,
 	parentId?: string,
 	parentColumns?: GridColumns,
-): readonly NormalizedUiNode[] {
+): readonly NormalizedUiNode<RenderComponent>[] {
 	if (!Array.isArray(nodes)) {
 		throw new TypeError("UI children must be an array")
 	}
@@ -205,13 +251,13 @@ function normalizeChildren(
 	)
 }
 
-function normalizeNode(
+function normalizeNode<RenderComponent>(
 	node: unknown,
-	state: NormalizationState,
+	state: NormalizationState<RenderComponent>,
 	scope: NodeScope,
 	parentId: string | undefined,
 	parentColumns: GridColumns | undefined,
-): NormalizedUiNode {
+): NormalizedUiNode<RenderComponent> {
 	if (!isObjectRecord(node)) {
 		throw new TypeError("UI node must be an object")
 	}
@@ -241,14 +287,21 @@ function normalizeNode(
 				parentId,
 				parentColumns,
 			)
+		case "render":
+			return normalizeRender(
+				node as RawRenderNode,
+				state,
+				scope,
+				parentId,
+			) as NormalizedUiNode<RenderComponent>
 		default:
 			throw new TypeError(`Unknown UI node kind "${String(node.kind)}"`)
 	}
 }
 
-function normalizeField(
+function normalizeField<RenderComponent>(
 	node: RawFieldNode,
-	state: NormalizationState,
+	state: NormalizationState<RenderComponent>,
 	scope: NodeScope,
 	parentId: string | undefined,
 	parentColumns: GridColumns | undefined,
@@ -289,13 +342,13 @@ function normalizeField(
 	return normalized
 }
 
-function normalizeSection(
+function normalizeSection<RenderComponent>(
 	node: RawSectionNode,
-	state: NormalizationState,
+	state: NormalizationState<RenderComponent>,
 	scope: NodeScope,
 	parentId: string | undefined,
 	parentColumns: GridColumns | undefined,
-): NormalizedSectionNode {
+): NormalizedSectionNode<RenderComponent> {
 	const id = normalizeNodeId(node.id, "section")
 	registerNodeId(id, state)
 	const columns = normalizeColumns(node.columns)
@@ -307,7 +360,7 @@ function normalizeSection(
 		id,
 		columns,
 	)
-	const normalized: NormalizedSectionNode = deepFreezePlain({
+	const normalized: NormalizedSectionNode<RenderComponent> = deepFreezePlain({
 		id,
 		kind: "section",
 		parentId,
@@ -328,9 +381,9 @@ function normalizeSection(
 	return normalized
 }
 
-function normalizeArray(
+function normalizeArray<RenderComponent>(
 	node: RawArrayNode,
-	state: NormalizationState,
+	state: NormalizationState<RenderComponent>,
 	scope: NodeScope,
 	parentId: string | undefined,
 	parentColumns: GridColumns | undefined,
@@ -350,7 +403,7 @@ function normalizeArray(
 		state,
 		childScope,
 		id,
-	)
+	) as readonly NormalizedRelativeUiNode[]
 	const normalized: NormalizedArrayNode = deepFreezePlain({
 		id,
 		kind: "array",
@@ -378,6 +431,36 @@ function normalizeArray(
 		state.arraysByPath[path] = normalized
 	}
 
+	return normalized
+}
+
+function normalizeRender<RenderComponent>(
+	node: RawRenderNode,
+	state: NormalizationState<RenderComponent>,
+	scope: NodeScope,
+	parentId: string | undefined,
+): NormalizedRenderNode<RenderComponent> {
+	if (scope.relative) {
+		throw new TypeError("Render nodes are not allowed inside arrays")
+	}
+
+	const id = normalizeNodeId(node.id, "render")
+	registerNodeId(id, state)
+	if (node.component === undefined) {
+		throw new TypeError(`Render node "${id}" requires a component`)
+	}
+
+	const normalized = Object.freeze({
+		id,
+		kind: "render" as const,
+		parentId,
+		scopePath: scope.pathScope,
+		component: node.component as RenderComponent,
+	})
+
+	const normalizedUiNode = normalized as NormalizedUiNode<RenderComponent>
+	state.nodes.push(normalizedUiNode)
+	state.nodesById[id] = normalizedUiNode
 	return normalized
 }
 
@@ -410,7 +493,7 @@ function normalizeNodeId(id: unknown, nodeKind: NodeKind): string {
 	return id
 }
 
-function registerNodeId(id: string, state: NormalizationState): void {
+function registerNodeId(id: string, state: NormalizationState<unknown>): void {
 	if (state.nodeIds.has(id)) {
 		throw new TypeError(`Duplicate node ID "${id}"`)
 	}
@@ -420,7 +503,7 @@ function registerNodeId(id: string, state: NormalizationState): void {
 
 function registerPath(
 	path: string,
-	state: NormalizationState,
+	state: NormalizationState<unknown>,
 	scope: NodeScope,
 ): void {
 	const scopeKey = scope.pathScope

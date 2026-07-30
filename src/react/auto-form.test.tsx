@@ -8,6 +8,7 @@ import type { ImperativeFormIssue } from "../core/index.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import { useFormContext } from "./form-context.js"
+import { useFormState } from "./hooks.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -160,6 +161,52 @@ function defaultValues(): ProfileValues {
 }
 
 describe("kit.AutoForm and kit.Fields", () => {
+	it("renders no-prop render nodes in definition order with form hooks available", () => {
+		function NamePreview() {
+			const form = useFormContext<ProfileSchema, ProfileContext>()
+			const name = useFormState(form, (snapshot) => snapshot.values.name)
+			return <output data-testid="name-preview">{name}</output>
+		}
+		const definition = profileKit
+			.defineForm(schema)
+			.withContext<ProfileContext>({
+				ui: [
+					{
+						kind: "render",
+						id: "name-preview",
+						component: NamePreview,
+					},
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						label: "Name",
+					},
+				],
+			})
+
+		render(
+			<profileKit.AutoForm
+				context={{
+					locked: false,
+					showHidden: false,
+				}}
+				defaultValues={defaultValues()}
+				definition={definition}
+			/>,
+		)
+
+		const preview = screen.getByTestId("name-preview")
+		const input = screen.getByLabelText("Name")
+		expect(preview.textContent).toBe("Ada")
+		expect(
+			preview.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING,
+		).toBeTruthy()
+
+		fireEvent.change(input, { target: { value: "Grace" } })
+		expect(preview.textContent).toBe("Grace")
+	})
+
 	it("renders section, field, and error slots with workflow children after generated nodes", async () => {
 		render(
 			<profileKit.AutoForm

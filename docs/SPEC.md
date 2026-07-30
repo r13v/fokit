@@ -191,6 +191,9 @@ pipeline.
 
 Reusable definitions refer to controls by name. React components are registered
 once in a form kit. A form definition does not embed a renderer for every field.
+An explicit `render` node is a React-only escape hatch for form-local content;
+it is not a field and owns none of the control, accessibility, or `FormData`
+contract.
 
 ### Styling-neutral core with an optional structural layer
 
@@ -720,6 +723,38 @@ The resolved `kit.slots` object always contains all five slots. A fully custom
 kit stays source-compatible by passing all five keys. An explicit invalid
 JavaScript value such as `{ Field: undefined }` is rejected after merging.
 
+A form may extend a shared kit with additional controls and partial resolved
+slot replacements:
+
+```tsx
+const checkoutKit = kit.extend({
+  controls: {
+    money,
+  },
+  slots: {
+    Field: CheckoutField,
+  },
+});
+```
+
+Extensions are immutable snapshots and may be chained. `controls` and `slots`
+are individually optional, but `extend({})` is invalid. Added control names
+must not collide with any inherited control; TypeScript rejects known
+collisions and runtime validation covers untyped JavaScript. Slots intentionally
+replace inherited resolved slots by name.
+
+Definitions retain the complete structural registry requirement of the kit
+that created them. A base definition is compatible with an extended kit. An
+extended definition is not compatible with its base or with a sibling whose
+registry lacks any required name, even when its current UI happens to use only
+inherited controls. Siblings with the same complete registry contract are
+compatible; TypeScript cannot assign a fresh nominal identity to a function
+call. Define portable forms through the lowest common base kit.
+
+When a registry is intentionally widened to `ControlDefinitionRegistry`, its
+known-name protection is erased. Extensions remain available and runtime
+collision and unknown-control checks stay authoritative.
+
 The default slots are an accessibility baseline, not a design-system wrapper
 or visual theme. They render semantic unstyled HTML, preserve every supplied
 slot prop, and do not import `fokit/layout.css`. Consumers that want the
@@ -921,6 +956,7 @@ The returned kit provides:
 ```ts
 kit.defineForm(schema)({ ui });
 kit.defineForm(schema).withContext<Context>({ ui });
+kit.extend({ controls?, slots? });
 
 kit.Form;
 kit.AutoForm;
@@ -928,8 +964,8 @@ kit.Fields;
 kit.Submit;
 ```
 
-`createFormKit` is the only place where the control registry is assembled.
-There is no class builder and no second renderer registration step.
+`createFormKit` creates a root registry and `kit.extend` adds form-local
+controls without a mutable builder or second renderer registration step.
 
 `kit.Submit` is an unstyled native `<button type="submit">`. It accepts native
 button props except `type`, passes through `className`, `style`, `aria-*`, and
@@ -1050,14 +1086,36 @@ Production does not silently repair an invalid definition.
 
 ### UI node types
 
-Fokit's UI tree contains three node kinds:
+Fokit's React UI tree contains four node kinds:
 
 ```ts
-type UiNode = FieldNode | SectionNode | ArrayNode;
+type UiNode = FieldNode | SectionNode | ArrayNode | RenderNode;
 
 type GridColumns = 1 | 2 | 3 | 4;
 type GridSpan = 1 | 2 | 3 | 4 | 'full';
 ```
+
+A render node places arbitrary React content without pretending it is a field:
+
+```tsx
+{
+  kind: 'render',
+  id: 'price-preview',
+  component: PricePreview,
+}
+```
+
+Its component receives no props and may use public hooks inside `kit.Form`.
+Fokit owns only node identity, ordering, and mounting. It does not provide a
+path, field copy, issues, layout, inherited interaction props, accessibility,
+or `FormData` behavior. Render nodes may appear at the root or inside sections,
+but not in `array.children`. `ActionForm` renders them and ignores them during
+control compatibility checks. Because the definition embeds a component
+reference, that definition is React-only and is not serializable across a
+React Server Components boundary.
+
+The React-free core transports the render component as an opaque typed payload.
+It never imports or invokes React.
 
 All definition, imperative, issue, subscription, and `FormData` paths use the
 same canonical dot grammar: `address.city` and `contacts.0.value`. Bracket

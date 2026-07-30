@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import type {
 	ControlMetadata,
+	NormalizedFormDefinition,
 	StandardSchema,
 	UiNode,
 	UiResolver,
@@ -61,7 +62,81 @@ function normalize(ui: readonly unknown[]) {
 	})
 }
 
+function normalizeWithRender(ui: readonly unknown[]) {
+	const normalizeOpaque = normalizeDefinition as (input: {
+		readonly schema: typeof schema
+		readonly controls: ExampleControls
+		readonly ui: readonly unknown[]
+	}) => NormalizedFormDefinition<typeof schema, ExampleControls, () => null>
+
+	return normalizeOpaque({
+		schema,
+		controls,
+		ui,
+	})
+}
+
 describe("form definition normalization", () => {
+	it("preserves opaque render components in the ordered UI tree", () => {
+		const Summary = () => null
+		const Preview = () => null
+		const definition = normalizeWithRender([
+			{
+				kind: "render",
+				id: "summary",
+				component: Summary,
+			},
+			{
+				kind: "section",
+				id: "account",
+				children: [
+					{
+						kind: "render",
+						id: "preview",
+						component: Preview,
+					},
+				],
+			},
+		])
+
+		expect(definition.ui.map((node) => node.id)).toEqual(["summary", "account"])
+		expect(definition.nodesById.summary.kind).toBe("render")
+		expect(definition.nodesById.preview.kind).toBe("render")
+		const summary = definition.nodesById.summary
+		const preview = definition.nodesById.preview
+		if (summary.kind !== "render" || preview.kind !== "render") {
+			throw new Error("Expected render nodes")
+		}
+		expect(summary.component).toBe(Summary)
+		expect(preview.component).toBe(Preview)
+		expect(Object.isFrozen(summary)).toBe(true)
+	})
+
+	it("rejects render nodes without identity or inside array rows", () => {
+		expect(() => normalize([{ kind: "render", id: "summary" }])).toThrow(
+			/requires a component/i,
+		)
+		expect(() =>
+			normalize([{ kind: "render", component: () => null }]),
+		).toThrow(/render node id/i)
+		expect(() =>
+			normalize([
+				{
+					kind: "array",
+					path: "contacts",
+					itemDefault: { value: "" },
+					children: [
+						{
+							kind: "render",
+							id: "row-preview",
+							component: () => null,
+						},
+					],
+				},
+			]),
+		).toThrow(/render nodes.*inside arrays/i)
+	})
+
 	it("normalizes fields, sections, arrays, UI resolvers, and immutable indexes", () => {
 		const companyVisible: UiResolver<
 			boolean,

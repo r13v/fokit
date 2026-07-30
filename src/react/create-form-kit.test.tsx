@@ -48,6 +48,120 @@ function defaultValues(): FormInput<TestSchema> {
 }
 
 describe("createFormKit", () => {
+	it("extends controls and resolved slots as an immutable add-only snapshot", () => {
+		const controls = {
+			text: textControl,
+		}
+		const baseKit = createFormKit({ controls })
+		const LocalField = ({ rootProps, label, control }: FieldSlotProps) => (
+			<div {...rootProps} data-local-field="">
+				{label}
+				{control}
+			</div>
+		)
+		const localKit = baseKit.extend({
+			controls: {
+				localText: textControl,
+			},
+			slots: {
+				Field: LocalField,
+			},
+		})
+		const chainedKit = localKit.extend({
+			controls: {
+				secondaryText: textControl,
+			},
+		})
+		const definition = localKit.defineForm(schema)({
+			ui: [
+				{
+					kind: "field",
+					path: "name",
+					control: "localText",
+					label: "Name",
+				},
+			],
+		})
+
+		Object.assign(controls, { lateText: textControl })
+
+		expect(Object.isFrozen(localKit.controls)).toBe(true)
+		expect(localKit.controls).toHaveProperty("text", textControl)
+		expect(localKit.controls).toHaveProperty("localText", textControl)
+		expect(localKit.controls).not.toHaveProperty("lateText")
+		expect(localKit.slots.Field).toBe(LocalField)
+		expect(localKit.slots.Section).toBe(baseKit.slots.Section)
+		expect(chainedKit.controls).toHaveProperty("localText", textControl)
+		expect(chainedKit.controls).toHaveProperty("secondaryText", textControl)
+
+		render(
+			<localKit.AutoForm
+				defaultValues={defaultValues()}
+				definition={definition}
+			/>,
+		)
+		expect(screen.getByText("Name").getAttribute("data-local-field")).toBe("")
+	})
+
+	it("renders base definitions through an extended kit", () => {
+		const baseKit = createFormKit({
+			controls: {
+				text: textControl,
+			},
+		})
+		const localKit = baseKit.extend({
+			controls: {
+				localText: textControl,
+			},
+		})
+		const definition = baseKit.defineForm(schema)({
+			ui: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					label: "Name",
+				},
+			],
+		})
+
+		render(
+			<localKit.AutoForm
+				defaultValues={defaultValues()}
+				definition={definition}
+			/>,
+		)
+
+		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+			"Ada",
+		)
+	})
+
+	it("rejects empty extensions, control replacement, and removed slots", () => {
+		const kit = createFormKit({
+			controls: {
+				text: textControl,
+			},
+		})
+		const extend = kit.extend as (options: unknown) => unknown
+
+		expect(() => extend({})).toThrow(/requires controls or slots/i)
+		expect(() =>
+			extend({
+				controls: {
+					text: textControl,
+				},
+			}),
+		).toThrow(/cannot replace control "text"/i)
+		expect(() =>
+			extend({
+				slots: {
+					Field: undefined,
+				},
+			}),
+		).toThrow(/requires a Field slot/i)
+	})
+
 	it("normalizes definitions with kit controls when slots are omitted", () => {
 		const kit = createFormKit({
 			controls: {

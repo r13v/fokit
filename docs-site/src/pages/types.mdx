@@ -31,20 +31,6 @@ type Saved = FormOutput<typeof schema>
 The form store contains `Draft`. A successful submit handler receives `Saved`.
 Validation output never replaces editable values automatically.
 
-Use these aliases at application boundaries:
-
-```ts twoslash
-import type { FormInput, FormOutput } from "fokit"
-import { z } from "zod"
-
-export const profileSchema = z.object({
-	email: z.string().email(),
-})
-
-export type ProfileDraft = FormInput<typeof profileSchema>
-export type SavedProfile = FormOutput<typeof profileSchema>
-```
-
 ## Typed definitions and paths
 
 `FormDefinition` connects one schema, a control registry, and a readonly UI

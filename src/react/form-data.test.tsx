@@ -69,10 +69,12 @@ type NativeTextLikeValues = {
 	readonly note?: string
 	readonly count?: number
 	readonly birthday?: string
+	readonly openingTime?: string
 }
 
 type NativeChoiceFileValues = {
 	readonly status: string
+	readonly representation?: "registered" | "forming"
 	readonly subscribed: boolean
 	readonly avatar?: File
 	readonly disabledStatus: string
@@ -148,6 +150,7 @@ const nativeTextLikeSchema = createSchema<
 			note: optionalString(input.note),
 			count: input.count === undefined ? undefined : Number(input.count),
 			birthday: optionalString(input.birthday),
+			openingTime: optionalString(input.openingTime),
 		},
 	}
 })
@@ -160,6 +163,10 @@ const nativeChoiceFileSchema = createSchema<
 	return {
 		value: {
 			status: String(input.status ?? ""),
+			representation:
+				input.representation === "" || input.representation === undefined
+					? undefined
+					: (String(input.representation) as "registered" | "forming"),
 			subscribed:
 				input.subscribed === true ||
 				input.subscribed === "true" ||
@@ -625,6 +632,13 @@ const nativeTextLikeDefinition = nativeTextLikeKit.defineForm(
 		},
 		{
 			kind: "field",
+			path: "openingTime",
+			control: "time",
+			label: "Opening time",
+			visible: false,
+		},
+		{
+			kind: "field",
 			path: "count",
 			control: "number",
 			label: "Count",
@@ -653,6 +667,19 @@ const nativeChoiceFileDefinition = nativeTextLikeKit.defineForm(
 				options: [
 					{ value: "draft", label: "Draft" },
 					{ value: "published", label: "Published" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "representation",
+			control: "select",
+			label: "Representation",
+			options: {
+				emptyOption: { label: "Choose a representation", disabled: true },
+				options: [
+					{ value: "registered", label: "Registered" },
+					{ value: "forming", label: "Forming" },
 				],
 			},
 		},
@@ -976,6 +1003,7 @@ describe("native FormData serialization", () => {
 			note: "private",
 			count: 7,
 			birthday: "2026-07-28",
+			openingTime: "08:30",
 		} satisfies NativeTextLikeValues
 		render(
 			<nativeTextLikeKit.AutoForm
@@ -996,6 +1024,7 @@ describe("native FormData serialization", () => {
 		expect(formData.get("note")).toBe("private")
 		expect(formData.get("count")).toBe("7")
 		expect(formData.get("birthday")).toBe("2026-07-28")
+		expect(formData.get("openingTime")).toBe("08:30")
 		expect(parsed).toEqual({
 			success: true,
 			value: defaultValues,
@@ -1034,7 +1063,16 @@ describe("native FormData serialization", () => {
 		expect(selected?.size).toBe(avatar.size)
 		expect(new FormData(form).get("avatar")).toBeInstanceOf(File)
 		expect(new FormData(form).get("status")).toBe("draft")
+		expect(new FormData(form).get("representation")).toBe("")
 		expect(new FormData(form).get("subscribed")).toBe("true")
+		const parsed = await parseFormData(
+			new FormData(form),
+			nativeChoiceFileSchema,
+		)
+		expect(parsed.success).toBe(true)
+		if (parsed.success) {
+			expect(parsed.value.representation).toBeUndefined()
+		}
 
 		await user.click(screen.getByLabelText("Subscribed"))
 		expect(new FormData(form).has("subscribed")).toBe(false)

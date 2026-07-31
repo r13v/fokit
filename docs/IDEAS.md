@@ -3,24 +3,6 @@
 These are observations from building the six production-shaped documentation
 examples. They are prompts for design work, not accepted roadmap items.
 
-## Native controls
-
-### Let `select` represent an unset enum
-
-The research-grant identity branch initially modeled its representation as an
-optional enum. `nativeControls.select` does not accept `string | undefined`, so
-the example needed a domain-level `"none"` member solely to render an empty
-choice. Consider an explicit empty-option contract that maps `""` to
-`undefined` while keeping the submitted value and control type safe.
-
-### Add a native time control
-
-The studio policy editor stores opening exceptions as `HH:mm` strings. The
-native text control's supported `type` union excludes `time`, so the example
-uses text inputs with placeholders. A `time` control or a carefully expanded
-native text type would preserve browser semantics without requiring a custom
-control.
-
 ## Definitions and composition
 
 ### Provide a typed fragment helper for repeated deep sections

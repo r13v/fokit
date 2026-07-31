@@ -1008,7 +1008,6 @@ test("six complex examples stay public, documented, networked, and independent",
 
 	const ideas = await readRepositoryText("docs/IDEAS.md")
 	for (const heading of [
-		"Native controls",
 		"Definitions and composition",
 		"Transactions",
 		"Async workflows",
@@ -1016,6 +1015,9 @@ test("six complex examples stay public, documented, networked, and independent",
 	]) {
 		assert.match(ideas, new RegExp(`^## ${heading}$`, "m"))
 	}
+	assert.doesNotMatch(ideas, /^## Native controls$/m)
+	assert.doesNotMatch(ideas, /Let `select` represent an unset enum/)
+	assert.doesNotMatch(ideas, /Add a native time control/)
 })
 
 test("canonical TypeScript snippets are physical files covered by docs typecheck", async () => {

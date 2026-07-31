@@ -42,13 +42,25 @@ export type NativeDateOptions = {
 	readonly max?: string
 }
 
-export type NativeSelectOption<Value extends string = string> = {
-	readonly value: Value
+export type NativeTimeOptions = {
+	readonly min?: string
+	readonly max?: string
+	readonly step?: number | "any"
+}
+
+export type NativeSelectOption<Value extends string | undefined = string> = {
+	readonly value: Exclude<Value, undefined>
 	readonly label: string
 	readonly disabled?: boolean
 }
 
-export type NativeSelectOptions<Value extends string = string> = {
+export type NativeSelectEmptyOption = {
+	readonly label: string
+	readonly disabled?: boolean
+}
+
+export type NativeSelectOptions<Value extends string | undefined = string> = {
+	readonly emptyOption?: NativeSelectEmptyOption
 	readonly options: readonly NativeSelectOption<Value>[]
 }
 
@@ -200,6 +212,44 @@ function NativeDateControl({
 	)
 }
 
+function NativeTimeControl({
+	value,
+	setValue,
+	blur,
+	input,
+	meta,
+	options,
+	disabled,
+	readOnly,
+	required,
+}: ControlProps<string | undefined, NativeTimeOptions>): ReactElement {
+	return (
+		<input
+			aria-describedby={input["aria-describedby"]}
+			aria-invalid={meta.invalid || undefined}
+			disabled={disabled}
+			id={input.id}
+			max={options.max}
+			min={options.min}
+			name={input.name}
+			onBlur={blur}
+			onChange={(event) =>
+				setValue(
+					event.currentTarget.value === ""
+						? undefined
+						: event.currentTarget.value,
+				)
+			}
+			readOnly={readOnly}
+			ref={input.ref}
+			required={required}
+			step={options.step}
+			type="time"
+			value={value ?? ""}
+		/>
+	)
+}
+
 function NativeSelectControl({
 	value,
 	setValue,
@@ -210,10 +260,23 @@ function NativeSelectControl({
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string, NativeSelectOptions>): ReactElement {
+}: ControlProps<string | undefined, NativeSelectOptions>): ReactElement {
 	const selectOptions = options.options
 	if (!Array.isArray(selectOptions)) {
 		throw new TypeError("nativeControls.select requires options.options")
+	}
+	if (
+		options.emptyOption !== undefined &&
+		selectOptions.some((option) => option.value === "")
+	) {
+		throw new TypeError(
+			'nativeControls.select cannot combine options.emptyOption with an option whose value is ""',
+		)
+	}
+	if (value === undefined && options.emptyOption === undefined) {
+		throw new TypeError(
+			"nativeControls.select requires options.emptyOption to represent undefined",
+		)
 	}
 
 	return (
@@ -228,11 +291,16 @@ function NativeSelectControl({
 			onChange={(event) => {
 				if (readOnly) {
 					event.preventDefault()
-					event.currentTarget.value = value
+					event.currentTarget.value = value ?? ""
 					return
 				}
 
-				setValue(event.currentTarget.value)
+				const nextValue = event.currentTarget.value
+				setValue(
+					nextValue === "" && options.emptyOption !== undefined
+						? undefined
+						: nextValue,
+				)
 			}}
 			onKeyDown={(event) => {
 				if (readOnly && isSelectMutationKey(event.key)) {
@@ -246,8 +314,13 @@ function NativeSelectControl({
 			}}
 			ref={input.ref}
 			required={required}
-			value={value}
+			value={value ?? ""}
 		>
+			{options.emptyOption === undefined ? null : (
+				<option disabled={options.emptyOption.disabled} value="">
+					{options.emptyOption.label}
+				</option>
+			)}
 			{selectOptions.map((option) => (
 				<option
 					disabled={option.disabled}
@@ -422,18 +495,19 @@ const date = defineControl<string | undefined, NativeDateOptions>({
 	},
 })
 
-const select = defineControl<string, NativeSelectOptions>({
+const time = defineControl<string | undefined, NativeTimeOptions>({
+	component: NativeTimeControl,
+	formData: {
+		mode: "native",
+		serialize: serializeOptionalString,
+	},
+})
+
+const select = defineControl<string | undefined, NativeSelectOptions>({
 	component: NativeSelectControl,
 	formData: {
 		mode: "native",
-		serialize(value, details) {
-			return [
-				{
-					name: details.name,
-					value,
-				},
-			]
-		},
+		serialize: serializeOptionalString,
 	},
 })
 
@@ -466,6 +540,7 @@ export const nativeControls = Object.freeze({
 	checkbox,
 	number,
 	date,
+	time,
 	file,
 })
 

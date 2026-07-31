@@ -29,7 +29,7 @@ const grantSchema = z
 		}),
 		jurisdiction: z.enum(["local", "international"]),
 		organization: z.object({
-			path: z.enum(["none", "registered", "forming"]),
+			path: z.enum(["registered", "forming"]).optional(),
 			registryId: z.string().optional(),
 			name: z.string().optional(),
 			registrationCountry: z.string().optional(),
@@ -54,7 +54,7 @@ const grantSchema = z
 	})
 	.superRefine((value, context) => {
 		if (value.applicantKind === "collective") {
-			if (value.organization.path === "none") {
+			if (value.organization.path === undefined) {
 				context.addIssue({
 					code: "custom",
 					path: ["organization", "path"],
@@ -150,7 +150,7 @@ const defaultValues = {
 	contact: { name: "Mina Park", email: "mina@example.test" },
 	jurisdiction: "local",
 	organization: {
-		path: "none",
+		path: undefined,
 		registryId: undefined,
 		name: undefined,
 		registrationCountry: undefined,
@@ -306,8 +306,8 @@ const grantDefinition = kit.defineForm(grantSchema)({
 					control: "select",
 					label: "Representation",
 					options: {
+						emptyOption: { label: "Choose a path", disabled: true },
 						options: [
-							{ value: "none", label: "Choose a path" },
 							{ value: "registered", label: "Registered collective" },
 							{ value: "forming", label: "Collective in formation" },
 						],
@@ -333,7 +333,7 @@ const grantDefinition = kit.defineForm(grantSchema)({
 					control: "text",
 					label: ({ "organization.path": path }) =>
 						path === "registered" ? "Registered name" : "Working name",
-					visible: ({ "organization.path": path }) => path !== "none",
+					visible: ({ "organization.path": path }) => path !== undefined,
 					readOnly: ({ "organization.path": path }) => path === "registered",
 					valuePolicy: "unset",
 				},
@@ -342,7 +342,7 @@ const grantDefinition = kit.defineForm(grantSchema)({
 					path: "organization.registrationCountry",
 					control: "text",
 					label: "Registration country",
-					visible: ({ "organization.path": path }) => path !== "none",
+					visible: ({ "organization.path": path }) => path !== undefined,
 					readOnly: ({ "organization.path": path }) => path === "registered",
 					valuePolicy: "unset",
 				},
@@ -556,7 +556,7 @@ function preserveGrantInvariants(
 
 	if (event.currentValues.applicantKind !== event.nextValues.applicantKind) {
 		replacements.push(
-			{ type: "set", path: "organization.path", value: "none" },
+			{ type: "unset", path: "organization.path" },
 			{ type: "unset", path: "organization.registryId" },
 			{ type: "unset", path: "organization.name" },
 			{ type: "unset", path: "organization.registrationCountry" },

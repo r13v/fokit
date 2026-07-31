@@ -73,11 +73,13 @@ export const kit = createFormKit({
   `autoComplete`;
 - `textarea`: `string | undefined`, options `placeholder`, `autoComplete`,
   `rows`;
-- `select`: `string`, options `{ options: [{ value, label, disabled? }] }`;
+- `select`: `string | undefined`, options `emptyOption` и
+  `{ options: [{ value, label, disabled? }] }`;
 - `checkbox`: `boolean`;
 - `number`: `number | undefined`, options `min`, `max`, `step`,
   `placeholder`;
 - `date`: `string | undefined`, options `min`, `max`;
+- `time`: `string | undefined`, options `min`, `max`, `step`;
 - `file`: `File | undefined`, option `accept`.
 
 Если нужен свой дизайн-системный control, он остается обычным
@@ -418,9 +420,12 @@ Fokit использует dot paths и array markers с именем `__fokit.a
 
 `nativeControls` следуют browser FormData semantics:
 
-- visible `number` и `date` отправляют строки, schema должна их coercion-ить;
+- visible `number`, `date` и `time` отправляют строки, schema должна их
+  coercion-ить;
 - empty optional text-like field в visible DOM отправляет `""`, а preserved
   hidden/disabled `undefined` не создает hidden entry;
+- `select.emptyOption` хранится как `undefined`, но visible select отправляет
+  `""`; server schema должна нормализовать его для optional enum;
 - checked checkbox отправляет `"true"`, unchecked visible checkbox отсутствует
   в `FormData`;
 - hidden/disabled preserved checkbox сериализуется как `"true"` или `"false"`;

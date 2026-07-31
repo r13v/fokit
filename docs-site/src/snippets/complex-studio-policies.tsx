@@ -197,11 +197,11 @@ const policyDefinition = kit
 					{
 						kind: "field",
 						path: "access.earlyFrom",
-						control: "text",
+						control: "time",
 						label: "Earliest arrival",
 						visible: ({ "access.earlyEnabled": enabled }) => enabled,
 						valuePolicy: "unset",
-						options: { placeholder: "08:00" },
+						options: { step: 900 },
 					},
 					{
 						kind: "field",
@@ -221,11 +221,11 @@ const policyDefinition = kit
 					{
 						kind: "field",
 						path: "access.lateUntil",
-						control: "text",
+						control: "time",
 						label: "Latest departure",
 						visible: ({ "access.lateEnabled": enabled }) => enabled,
 						valuePolicy: "unset",
-						options: { placeholder: "22:00" },
+						options: { step: 900 },
 					},
 					{
 						kind: "field",

@@ -646,18 +646,27 @@ The first native registry contains:
 - `date`: `string | undefined`, with options
   `{ min?: string; max?: string }`. The value is the native `YYYY-MM-DD`
   string.
-- `select`: `string`, with options
-  `{ options: readonly NativeSelectOption[] }`, where each option has
-  `{ value: string; label: string; disabled?: boolean }`. No placeholder option
-  is injected.
+- `time`: `string | undefined`, with options
+  `{ min?: string; max?: string; step?: number | 'any' }`. The value is the
+  native time input string. A numeric `step` is measured in seconds. Empty input
+  updates the store to `undefined`.
+- `select`: `string | undefined`, with options
+  `{ emptyOption?: NativeSelectEmptyOption; options: readonly NativeSelectOption[] }`.
+  A normal option has `{ value: string; label: string; disabled?: boolean }`.
+  The optional empty option has `{ label: string; disabled?: boolean }`, renders
+  with `value=""`, and maps that DOM value to `undefined`. It is required when
+  the current store value is `undefined` and cannot be combined with a normal
+  option whose value is `""`. Without `emptyOption`, a normal option whose value
+  is `""` remains an empty string in the store.
 - `checkbox`: `boolean`, with no options.
 - `file`: `File | undefined`, with options `{ accept?: string }`. The input is
   uncontrolled and stores only the first selected file.
 
 The registry and option contracts are exported as `nativeControls`,
 `NativeTextType`, `NativeTextOptions`, `NativeTextareaOptions`,
-`NativeSelectOptions`, `NativeSelectOption`, `NativeNumberOptions`,
-`NativeDateOptions`, and `NativeFileOptions`.
+`NativeSelectOptions`, `NativeSelectOption`, `NativeSelectEmptyOption`,
+`NativeNumberOptions`, `NativeDateOptions`, `NativeTimeOptions`, and
+`NativeFileOptions`.
 
 All native controls preserve the supplied `input.id`, `input.name`,
 `input.ref`, `input['aria-describedby']`, `meta.invalid`, `blur`, `disabled`,
@@ -2416,12 +2425,17 @@ current browser session. Reset clears the native file input through its ref.
 
 The shipped `nativeControls` intentionally preserve browser protocols:
 
-- visible `text`, `textarea`, `number`, and `date` fields submit strings;
+- visible `text`, `textarea`, `number`, `date`, `time`, and `select` fields
+  submit strings;
 - an empty visible optional text-like field submits `""`, while a preserved
   hidden or disabled `undefined` value emits no serializer entry;
 - `number` stores `number | undefined` but native `FormData` still contains a
   string such as `"42"`;
 - `date` stores the native `YYYY-MM-DD` string and submits that same string;
+- `time` stores the native time input string and submits that same string;
+- `select` stores an empty option as `undefined`, while its visible native
+  element submits `""`; server schemas must normalize that value when the enum
+  is optional;
 - a checked native checkbox submits `"true"`, and an unchecked visible
   checkbox is absent from `FormData`;
 - hidden or disabled preserved checkbox values serialize as `"true"` or
@@ -2431,8 +2445,9 @@ The shipped `nativeControls` intentionally preserve browser protocols:
   portable hidden-file representation.
 
 Server schemas therefore remain responsible for coercing strings to numbers,
-dates, booleans, optional strings, and application-specific file rules. Fokit
-does not decode native control entries from the React registry on the server.
+dates, booleans, optional strings or enums, and application-specific file
+rules. Fokit does not decode native control entries from the React registry on
+the server.
 
 A native control may intentionally follow browser absence semantics, such as
 an unchecked checkbox. Its schema must accept or coerce the resulting
@@ -2640,7 +2655,7 @@ Before the API is considered stable, the implementation must prove:
 - native control types, options, read-only behavior, and hidden/disabled
   serializer behavior match their documented contracts;
 - native `FormData` parity for control-contract fixtures, empty arrays, absent
-  checkboxes, repeated values, dates, numbers, and files;
+  checkboxes, repeated values, dates, times, numbers, selects, and files;
 - exact `__fokit.array` marker behavior and rejection of malformed or unknown
   reserved metadata;
 - serializer hidden inputs are present in SSR output and normalize to the same
@@ -2702,7 +2717,7 @@ The product has no unresolved public-API questions in this specification:
 9. Controls remain explicit, while omitted or partial slots resolve from
    English unstyled defaults.
 10. The shipped native controls cover text, textarea, select, checkbox,
-    number, date, and single-file values only.
+    number, date, time, and single-file values only.
 
 Implementation discoveries may refine private algorithms, but changing these
 contracts requires an explicit specification update rather than an implicit

@@ -61,3 +61,10 @@ Running the Vocs build before its Markdown audit → the build exceeded the
 command's 30-second output window, and the orchestration discarded its session
 ID while the process continued successfully. Preserve and poll long-running
 command session IDs before starting dependent verification.
+
+## 2026-07-31 17:10 — GPT-5
+
+Applying the empty-select compatibility fix → a context-only patch matched the
+similar date input handler and produced invalid syntax before the focused test
+ran. Anchor patches to the surrounding function name when handlers share the
+same expression shape.

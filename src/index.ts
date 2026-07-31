@@ -149,11 +149,13 @@ export type {
 	NativeDateOptions,
 	NativeFileOptions,
 	NativeNumberOptions,
+	NativeSelectEmptyOption,
 	NativeSelectOption,
 	NativeSelectOptions,
 	NativeTextareaOptions,
 	NativeTextOptions,
 	NativeTextType,
+	NativeTimeOptions,
 } from "./react/native-controls.js"
 export { nativeControls } from "./react/native-controls.js"
 export type {

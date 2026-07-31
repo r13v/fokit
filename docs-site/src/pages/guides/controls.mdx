@@ -196,10 +196,11 @@ TanStack Query while keeping remote options outside synchronous UI resolvers.
 | --- | --- | --- |
 | `text` | `string \| undefined` | `type`, `placeholder`, `autoComplete` |
 | `textarea` | `string \| undefined` | `rows`, `placeholder`, `autoComplete` |
-| `select` | `string` | explicit `options` |
+| `select` | `string \| undefined` | explicit `options`, optional `emptyOption` |
 | `checkbox` | `boolean` | native checked/unchecked behavior |
 | `number` | `number \| undefined` | `min`, `max`, `step`, `placeholder` |
 | `date` | `string \| undefined` | `min`, `max` |
+| `time` | `string \| undefined` | `min`, `max`, `step` |
 | `file` | `File \| undefined` | single file and `accept` |
 
 Start with these controls to prove the form model. Replace only the controls

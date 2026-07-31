@@ -13,11 +13,13 @@ import {
 	type NativeDateOptions,
 	type NativeFileOptions,
 	type NativeNumberOptions,
+	type NativeSelectEmptyOption,
 	type NativeSelectOption,
 	type NativeSelectOptions,
 	type NativeTextareaOptions,
 	type NativeTextOptions,
 	type NativeTextType,
+	type NativeTimeOptions,
 	nativeControls,
 	type StandardSchema,
 } from "../../src/index.js"
@@ -36,7 +38,9 @@ type NativeValues = {
 	readonly bio?: string
 	readonly age?: number
 	readonly birthday?: string
+	readonly openingTime?: string
 	readonly status: "draft" | "published"
+	readonly representation?: "registered" | "forming"
 	readonly newsletter: boolean
 	readonly avatar?: File
 	readonly metadata: {
@@ -83,7 +87,14 @@ type NativeControlName = ControlName<typeof nativeKit.controls>
 type _nativeControlNames = Expect<
 	Equal<
 		NativeControlName,
-		"text" | "textarea" | "select" | "checkbox" | "number" | "date" | "file"
+		| "text"
+		| "textarea"
+		| "select"
+		| "checkbox"
+		| "number"
+		| "date"
+		| "time"
+		| "file"
 	>
 >
 
@@ -94,7 +105,7 @@ type _textareaValue = Expect<
 	Equal<ControlValueOf<typeof nativeControls.textarea>, string | undefined>
 >
 type _selectValue = Expect<
-	Equal<ControlValueOf<typeof nativeControls.select>, string>
+	Equal<ControlValueOf<typeof nativeControls.select>, string | undefined>
 >
 type _checkboxValue = Expect<
 	Equal<ControlValueOf<typeof nativeControls.checkbox>, boolean>
@@ -104,6 +115,9 @@ type _numberValue = Expect<
 >
 type _dateValue = Expect<
 	Equal<ControlValueOf<typeof nativeControls.date>, string | undefined>
+>
+type _timeValue = Expect<
+	Equal<ControlValueOf<typeof nativeControls.time>, string | undefined>
 >
 type _fileValue = Expect<
 	Equal<ControlValueOf<typeof nativeControls.file>, File | undefined>
@@ -123,6 +137,9 @@ type _numberOptions = Expect<
 >
 type _dateOptions = Expect<
 	Equal<ControlOptionsOf<typeof nativeControls.date>, NativeDateOptions>
+>
+type _timeOptions = Expect<
+	Equal<ControlOptionsOf<typeof nativeControls.time>, NativeTimeOptions>
 >
 type _fileOptions = Expect<
 	Equal<ControlOptionsOf<typeof nativeControls.file>, NativeFileOptions>
@@ -172,12 +189,34 @@ const nativeDefinition = nativeKit.defineForm(schema)({
 		},
 		{
 			kind: "field",
+			path: "openingTime",
+			control: "time",
+			options: {
+				min: "08:00",
+				max: "22:00",
+				step: 900,
+			},
+		},
+		{
+			kind: "field",
 			path: "status",
 			control: "select",
 			options: {
 				options: [
 					{ value: "draft", label: "Draft" },
 					{ value: "published", label: "Published", disabled: true },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "representation",
+			control: "select",
+			options: {
+				emptyOption: { label: "Choose a representation", disabled: true },
+				options: [
+					{ value: "registered", label: "Registered" },
+					{ value: "forming", label: "Forming" },
 				],
 			},
 		},
@@ -314,20 +353,47 @@ const fileTextType: NativeTextType = "file"
 const numberTextType: NativeTextType = "number"
 // @ts-expect-error dates use the dedicated date control
 const dateTextType: NativeTextType = "date"
+// @ts-expect-error times use the dedicated time control
+const timeTextType: NativeTextType = "time"
 // @ts-expect-error buttons are not value controls
 const buttonTextType: NativeTextType = "button"
 
 const selectOptions = {
+	emptyOption: { label: "Choose a status", disabled: true },
 	options: [
 		{ value: "draft", label: "Draft" },
 		{ value: "published", label: "Published", disabled: true },
 	],
 } satisfies NativeSelectOptions<NativeValues["status"]>
 
+const optionalSelectOptions = {
+	emptyOption: { label: "Choose a representation", disabled: true },
+	options: [
+		{ value: "registered", label: "Registered" },
+		{ value: "forming", label: "Forming" },
+	],
+} satisfies NativeSelectOptions<NativeValues["representation"]>
+
+const selectEmptyOption = {
+	label: "Choose a status",
+	disabled: true,
+} satisfies NativeSelectEmptyOption
+
 const selectOption = {
 	value: "draft",
 	label: "Draft",
 } satisfies NativeSelectOption<"draft">
+
+const optionalSelectOption = {
+	value: "registered",
+	label: "Registered",
+} satisfies NativeSelectOption<NativeValues["representation"]>
+
+const timeOptions = {
+	min: "08:00",
+	max: "22:00",
+	step: "any",
+} satisfies NativeTimeOptions
 
 const badSelectOptions = {
 	options: [
@@ -338,6 +404,16 @@ const badSelectOptions = {
 		},
 	],
 } satisfies NativeSelectOptions
+
+const badOptionalSelectOptions = {
+	options: [
+		{
+			// @ts-expect-error undefined is represented by emptyOption, not a normal option
+			value: undefined,
+			label: "Unset",
+		},
+	],
+} satisfies NativeSelectOptions<NativeValues["representation"]>
 
 type CoreExports = typeof import("../../src/core/index.js")
 type ServerExports = typeof import("../../src/server/index.js")
@@ -361,7 +437,13 @@ void checkboxTextType
 void fileTextType
 void numberTextType
 void dateTextType
+void timeTextType
 void buttonTextType
 void selectOptions
+void optionalSelectOptions
+void selectEmptyOption
 void selectOption
+void optionalSelectOption
+void timeOptions
 void badSelectOptions
+void badOptionalSelectOptions

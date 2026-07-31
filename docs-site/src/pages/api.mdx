@@ -504,7 +504,7 @@ the entries used when Fokit must represent the value outside a visible native
 control.
 
 `nativeControls` contains `text`, `textarea`, `select`, `checkbox`, `number`,
-`date`, and single-file `file`.
+`date`, `time`, and single-file `file`.
 
 ### nativeControls
 
@@ -515,21 +515,27 @@ accessibility, read-only, and `FormData` behavior:
 | --- | --- | --- |
 | `text` | `string \| undefined` | `type?: NativeTextType`, `placeholder?: string`, `autoComplete?: string` |
 | `textarea` | `string \| undefined` | `placeholder?: string`, `autoComplete?: string`, `rows?: number` |
-| `select` | `string` | `options: readonly { value: string; label: string; disabled?: boolean }[]` |
+| `select` | `string \| undefined` | `emptyOption?: { label: string; disabled?: boolean }`, `options: readonly { value: string; label: string; disabled?: boolean }[]` |
 | `checkbox` | `boolean` | none |
 | `number` | `number \| undefined` | `min?: number`, `max?: number`, `step?: number \| "any"`, `placeholder?: string` |
 | `date` | `string \| undefined` | `min?: string`, `max?: string` |
+| `time` | `string \| undefined` | `min?: string`, `max?: string`, `step?: number \| "any"` |
 | `file` | `File \| undefined` | `accept?: string`; one file |
 
 `NativeTextType` is `"text"`, `"email"`, `"password"`, `"search"`, `"tel"`,
-or `"url"`; omitted `type` renders `"text"`. `select.options` is required and
-has no separate placeholder property—represent a prompt as a real option when
-the product needs one.
+or `"url"`; omitted `type` renders `"text"`. `select.options` is required.
+`select.emptyOption` renders a separate `value=""` option and maps it to
+`undefined`; define it whenever the current select value can be `undefined`. If
+`emptyOption` is absent, a normal option with `value=""` remains an empty string.
+The visible native element still submits `""`, so server schemas must normalize
+that value for optional enums. A numeric `time.step` is measured in seconds,
+matching the native input contract.
 
 The exported option contracts are `NativeTextOptions`,
 `NativeTextareaOptions`, `NativeSelectOptions`, `NativeSelectOption`,
-`NativeNumberOptions`, `NativeDateOptions`, and `NativeFileOptions`. A field's
-`options` can also be derived from tracked form values or runtime context.
+`NativeSelectEmptyOption`, `NativeNumberOptions`, `NativeDateOptions`,
+`NativeTimeOptions`, and `NativeFileOptions`. A field's `options` can also be
+derived from tracked form values or runtime context.
 
 See [Controls and design systems](/guides/controls) for adapter and serializer
 contracts.

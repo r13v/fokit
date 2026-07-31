@@ -26,6 +26,8 @@ then sends the accepted application through a second mutation.
 ## What this form stresses
 
 - Deep paths across identity, project, settlement, and reporting objects.
+- An optional enum rendered through `select.emptyOption` without a domain
+  sentinel value.
 - Resolver-driven sections and `valuePolicy` cleanup for hidden optional fields.
 - A `beforeUpdate` hook that atomically clears dependent branches.
 - A render node that reads the live Fokit snapshot for a review card.

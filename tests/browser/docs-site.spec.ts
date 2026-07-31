@@ -568,6 +568,7 @@ test.describe("Fokit documentation", () => {
 		})
 
 		await grant.getByLabel("Applying as").selectOption("collective")
+		await expect(grant.getByLabel("Representation")).toHaveValue("")
 		await grant.getByLabel("Representation").selectOption("registered")
 		await grant.getByLabel("Search the independent registry").fill("Open")
 		await grant
@@ -584,6 +585,10 @@ test.describe("Fokit documentation", () => {
 		const policies = page.getByRole("region", {
 			name: "Creative studio policies example",
 		})
+		await expect(policies.getByLabel("Earliest arrival")).toHaveAttribute(
+			"type",
+			"time",
+		)
 		await policies.getByLabel("Allow early access").uncheck()
 		await expect(policies.getByLabel("Earliest arrival")).toHaveCount(0)
 		await policies.getByRole("button", { name: "Publish policies" }).click()

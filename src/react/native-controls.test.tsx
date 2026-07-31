@@ -13,11 +13,13 @@ import {
 	type NativeDateOptions,
 	type NativeFileOptions,
 	type NativeNumberOptions,
+	type NativeSelectEmptyOption,
 	type NativeSelectOption,
 	type NativeSelectOptions,
 	type NativeTextareaOptions,
 	type NativeTextOptions,
 	type NativeTextType,
+	type NativeTimeOptions,
 	nativeControls,
 } from "./native-controls.js"
 
@@ -26,21 +28,26 @@ type Values = {
 	readonly bio?: string
 	readonly age?: number
 	readonly birthday?: string
-	readonly status: "draft" | "published" | "archived"
+	readonly openingTime?: string
+	readonly status: "" | "draft" | "published" | "archived"
+	readonly representation?: "registered" | "forming"
 	readonly newsletter: boolean
 	readonly avatar?: File
 	readonly disabledEmail?: string
 	readonly hiddenBio?: string
 	readonly disabledAge?: number
 	readonly hiddenBirthday?: string
+	readonly hiddenTime?: string
 	readonly disabledStatus: string
 	readonly hiddenStatus: string
+	readonly hiddenRepresentation?: "registered" | "forming"
 	readonly disabledNewsletter: boolean
 	readonly hiddenNewsletter: boolean
 	readonly readonlyEmail?: string
 	readonly readonlyBio?: string
 	readonly readonlyAge?: number
 	readonly readonlyBirthday?: string
+	readonly readonlyTime?: string
 }
 
 type Schema = StandardSchemaV1<Values>
@@ -109,6 +116,17 @@ const editableDefinition = kit.defineForm(schema)({
 				max: "2100-12-31",
 			},
 		},
+		{
+			kind: "field",
+			path: "openingTime",
+			control: "time",
+			label: "Opening time",
+			options: {
+				min: "08:00",
+				max: "22:00",
+				step: 900,
+			},
+		},
 	],
 })
 
@@ -126,6 +144,19 @@ const choiceDefinition = kit.defineForm(schema)({
 					{ value: "draft", label: "Draft" },
 					{ value: "published", label: "Published", disabled: true },
 					{ value: "archived", label: "Archived" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "representation",
+			control: "select",
+			label: "Representation",
+			options: {
+				emptyOption: { label: "Choose a representation", disabled: true },
+				options: [
+					{ value: "registered", label: "Registered" },
+					{ value: "forming", label: "Forming" },
 				],
 			},
 		},
@@ -157,6 +188,58 @@ const missingSelectOptionsDefinition = kit.defineForm(schema)({
 			path: "status",
 			control: "select",
 			label: "Status",
+		},
+	],
+})
+
+const missingSelectEmptyOptionDefinition = kit.defineForm(schema)({
+	ui: [
+		{
+			kind: "field",
+			path: "representation",
+			control: "select",
+			label: "Representation",
+			options: {
+				options: [
+					{ value: "registered", label: "Registered" },
+					{ value: "forming", label: "Forming" },
+				],
+			},
+		},
+	],
+})
+
+const conflictingSelectEmptyOptionDefinition = kit.defineForm(schema)({
+	ui: [
+		{
+			kind: "field",
+			path: "representation",
+			control: "select",
+			label: "Representation",
+			options: {
+				emptyOption: { label: "Choose a representation" },
+				options: [
+					{ value: "", label: "Empty" },
+					{ value: "registered", label: "Registered" },
+				],
+			},
+		},
+	],
+})
+
+const emptyStringSelectDefinition = kit.defineForm(schema)({
+	ui: [
+		{
+			kind: "field",
+			path: "status",
+			control: "select",
+			label: "Status",
+			options: {
+				options: [
+					{ value: "draft", label: "Draft" },
+					{ value: "", label: "No status" },
+				],
+			},
 		},
 	],
 })
@@ -193,6 +276,13 @@ const preservationDefinition = kit.defineForm(schema)({
 		},
 		{
 			kind: "field",
+			path: "hiddenTime",
+			control: "time",
+			label: "Hidden time",
+			visible: false,
+		},
+		{
+			kind: "field",
 			path: "disabledStatus",
 			control: "select",
 			label: "Disabled status",
@@ -214,6 +304,20 @@ const preservationDefinition = kit.defineForm(schema)({
 				options: [
 					{ value: "draft", label: "Draft" },
 					{ value: "archived", label: "Archived" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "hiddenRepresentation",
+			control: "select",
+			label: "Hidden representation",
+			visible: false,
+			options: {
+				emptyOption: { label: "Choose a representation", disabled: true },
+				options: [
+					{ value: "registered", label: "Registered" },
+					{ value: "forming", label: "Forming" },
 				],
 			},
 		},
@@ -264,6 +368,13 @@ const readOnlyDefinition = kit.defineForm(schema)({
 			label: "Readonly birthday",
 			readOnly: true,
 		},
+		{
+			kind: "field",
+			path: "readonlyTime",
+			control: "time",
+			label: "Readonly time",
+			readOnly: true,
+		},
 	],
 })
 
@@ -291,6 +402,9 @@ describe("nativeControls text-like controls", () => {
 		const bio = screen.getByLabelText("Bio") as HTMLTextAreaElement
 		const age = screen.getByLabelText("Age") as HTMLInputElement
 		const birthday = screen.getByLabelText("Birthday") as HTMLInputElement
+		const openingTime = screen.getByLabelText(
+			"Opening time",
+		) as HTMLInputElement
 
 		expect(email.id).toBe("native-email")
 		expect(email.name).toBe("email")
@@ -314,6 +428,10 @@ describe("nativeControls text-like controls", () => {
 		expect(birthday.type).toBe("date")
 		expect(birthday.min).toBe("1900-01-01")
 		expect(birthday.max).toBe("2100-12-31")
+		expect(openingTime.type).toBe("time")
+		expect(openingTime.min).toBe("08:00")
+		expect(openingTime.max).toBe("22:00")
+		expect(openingTime.step).toBe("900")
 
 		await user.click(screen.getByRole("button", { name: "Focus age" }))
 		expect(document.activeElement).toBe(age)
@@ -328,7 +446,7 @@ describe("nativeControls text-like controls", () => {
 		)
 	})
 
-	it("updates string, number, and date values through native events", async () => {
+	it("updates string, number, date, and time values through native events", async () => {
 		const user = userEvent.setup()
 		render(
 			<kit.AutoForm
@@ -344,6 +462,7 @@ describe("nativeControls text-like controls", () => {
 		const bio = screen.getByLabelText("Bio")
 		const age = screen.getByLabelText("Age") as HTMLInputElement
 		const birthday = screen.getByLabelText("Birthday")
+		const openingTime = screen.getByLabelText("Opening time")
 
 		await user.clear(email)
 		await user.type(email, "grace@example.test")
@@ -353,6 +472,7 @@ describe("nativeControls text-like controls", () => {
 		expect(screen.getByTestId("age-value").textContent).toBe("undefined")
 		await user.type(age, "42")
 		fireEvent.change(birthday, { target: { value: "2030-05-06" } })
+		fireEvent.change(openingTime, { target: { value: "10:15" } })
 
 		expect(screen.getByTestId("email-value").textContent).toBe(
 			"grace@example.test",
@@ -360,8 +480,10 @@ describe("nativeControls text-like controls", () => {
 		expect(screen.getByTestId("bio-value").textContent).toBe("Compiler notes")
 		expect(screen.getByTestId("age-value").textContent).toBe("42")
 		expect(screen.getByTestId("birthday-value").textContent).toBe("2030-05-06")
+		expect(screen.getByTestId("opening-time-value").textContent).toBe("10:15")
 		expect(new FormData(requireForm()).get("age")).toBe("42")
 		expect(new FormData(requireForm()).get("birthday")).toBe("2030-05-06")
+		expect(new FormData(requireForm()).get("openingTime")).toBe("10:15")
 
 		Object.defineProperties(age, {
 			value: {
@@ -390,6 +512,12 @@ describe("nativeControls text-like controls", () => {
 		fireEvent.change(birthday, { target: { value: "" } })
 		expect(screen.getByTestId("birthday-value").textContent).toBe("")
 		expect(new FormData(requireForm()).get("birthday")).toBe("")
+
+		fireEvent.change(openingTime, { target: { value: "" } })
+		expect(screen.getByTestId("opening-time-value").textContent).toBe(
+			"undefined",
+		)
+		expect(new FormData(requireForm()).get("openingTime")).toBe("")
 	})
 
 	it("preserves hidden and disabled values with hidden serializers", () => {
@@ -418,8 +546,10 @@ describe("nativeControls text-like controls", () => {
 		expect(formData.get("hiddenBio")).toBe("Private notes")
 		expect(formData.get("disabledAge")).toBe("64")
 		expect(formData.get("hiddenBirthday")).toBe("1962-02-03")
+		expect(formData.get("hiddenTime")).toBe("07:45")
 		expect(formData.get("disabledStatus")).toBe("archived")
 		expect(formData.get("hiddenStatus")).toBe("draft")
+		expect(formData.has("hiddenRepresentation")).toBe(false)
 		expect(formData.get("disabledNewsletter")).toBe("true")
 		expect(formData.get("hiddenNewsletter")).toBe("false")
 	})
@@ -440,11 +570,13 @@ describe("nativeControls text-like controls", () => {
 		const birthday = screen.getByLabelText(
 			"Readonly birthday",
 		) as HTMLInputElement
+		const time = screen.getByLabelText("Readonly time") as HTMLInputElement
 
 		expect(email.readOnly).toBe(true)
 		expect(bio.readOnly).toBe(true)
 		expect(age.readOnly).toBe(true)
 		expect(birthday.readOnly).toBe(true)
+		expect(time.readOnly).toBe(true)
 		expect(email.disabled).toBe(false)
 		email.focus()
 		expect(document.activeElement).toBe(email)
@@ -461,6 +593,7 @@ describe("nativeControls text-like controls", () => {
 		expect(formData.get("readonlyBio")).toBe("Readonly notes")
 		expect(formData.get("readonlyAge")).toBe("8")
 		expect(formData.get("readonlyBirthday")).toBe("2000-01-02")
+		expect(formData.get("readonlyTime")).toBe("18:30")
 	})
 })
 
@@ -477,6 +610,55 @@ describe("nativeControls choice and file controls", () => {
 		).toThrow("nativeControls.select requires options.options")
 	})
 
+	it("fails clearly when undefined has no empty option", () => {
+		expect(() =>
+			render(
+				<kit.AutoForm
+					defaultValues={defaultValues()}
+					definition={missingSelectEmptyOptionDefinition}
+					id="missing-select-empty-option"
+				/>,
+			),
+		).toThrow(
+			"nativeControls.select requires options.emptyOption to represent undefined",
+		)
+	})
+
+	it("rejects an ambiguous empty option value", () => {
+		expect(() =>
+			render(
+				<kit.AutoForm
+					defaultValues={defaultValues()}
+					definition={conflictingSelectEmptyOptionDefinition}
+					id="conflicting-select-empty-option"
+				/>,
+			),
+		).toThrow(
+			'nativeControls.select cannot combine options.emptyOption with an option whose value is ""',
+		)
+	})
+
+	it("preserves an empty string option when emptyOption is absent", () => {
+		render(
+			<kit.AutoForm
+				defaultValues={defaultValues()}
+				definition={emptyStringSelectDefinition}
+				id="empty-string-select"
+			>
+				<ValueProbe />
+			</kit.AutoForm>,
+		)
+
+		const status = screen.getByLabelText("Status") as HTMLSelectElement
+		fireEvent.change(status, { target: { value: "" } })
+
+		expect(status.value).toBe("")
+		expect(screen.getByTestId("status-value-kind").textContent).toBe(
+			"empty string",
+		)
+		expect(new FormData(requireForm()).get("status")).toBe("")
+	})
+
 	it("renders native attributes, metadata, refs, blur, and supported options", async () => {
 		const user = userEvent.setup()
 		render(
@@ -491,6 +673,9 @@ describe("nativeControls choice and file controls", () => {
 		)
 
 		const status = screen.getByLabelText("Status") as HTMLSelectElement
+		const representation = screen.getByLabelText(
+			"Representation",
+		) as HTMLSelectElement
 		const newsletter = screen.getByLabelText("Newsletter") as HTMLInputElement
 		const avatar = screen.getByLabelText("Avatar") as HTMLInputElement
 
@@ -507,6 +692,14 @@ describe("nativeControls choice and file controls", () => {
 			"archived",
 		])
 		expect(status.options[1]?.disabled).toBe(true)
+		expect([...representation.options].map((option) => option.value)).toEqual([
+			"",
+			"registered",
+			"forming",
+		])
+		expect(representation.options[0]?.disabled).toBe(true)
+		expect(representation.value).toBe("")
+		expect(new FormData(requireForm()).get("representation")).toBe("")
 		expect(newsletter.type).toBe("checkbox")
 		expect(newsletter.name).toBe("newsletter")
 		expect(newsletter.value).toBe("true")
@@ -568,6 +761,9 @@ describe("nativeControls choice and file controls", () => {
 		)
 
 		const status = screen.getByLabelText("Status") as HTMLSelectElement
+		const representation = screen.getByLabelText(
+			"Representation",
+		) as HTMLSelectElement
 		const newsletter = screen.getByLabelText("Newsletter") as HTMLInputElement
 		const avatar = screen.getByLabelText("Avatar") as HTMLInputElement
 		const first = new File(["one"], "one.png", { type: "image/png" })
@@ -584,10 +780,14 @@ describe("nativeControls choice and file controls", () => {
 		expect(new FormData(requireForm()).has("avatar")).toBe(false)
 
 		await user.selectOptions(status, "archived")
+		await user.selectOptions(representation, "registered")
 		await user.click(newsletter)
 		await user.upload(avatar, [first, second])
 
 		expect(screen.getByTestId("status-value").textContent).toBe("archived")
+		expect(screen.getByTestId("representation-value").textContent).toBe(
+			"registered",
+		)
 		expect(screen.getByTestId("newsletter-value").textContent).toBe("false")
 		expect(screen.getByTestId("avatar-value").textContent).toBe("one.png")
 		expect(avatar.files).toHaveLength(1)
@@ -596,8 +796,15 @@ describe("nativeControls choice and file controls", () => {
 
 		const formData = new FormData(requireForm())
 		expect(formData.get("status")).toBe("archived")
+		expect(formData.get("representation")).toBe("registered")
 		expect(formData.has("newsletter")).toBe(false)
 		expect(formData.get("avatar")).toBeInstanceOf(File)
+
+		fireEvent.change(representation, { target: { value: "" } })
+		expect(screen.getByTestId("representation-value").textContent).toBe(
+			"undefined",
+		)
+		expect(new FormData(requireForm()).get("representation")).toBe("")
 
 		await user.click(
 			screen.getByRole("button", { name: "Set avatar programmatically" }),
@@ -643,6 +850,9 @@ describe("nativeControls choice and file controls", () => {
 
 		render(<LockingForm />)
 		const status = screen.getByLabelText("Status") as HTMLSelectElement
+		const representation = screen.getByLabelText(
+			"Representation",
+		) as HTMLSelectElement
 		const newsletter = screen.getByLabelText("Newsletter") as HTMLInputElement
 		const avatar = screen.getByLabelText("Avatar") as HTMLInputElement
 
@@ -651,18 +861,21 @@ describe("nativeControls choice and file controls", () => {
 		await user.click(screen.getByRole("button", { name: "Lock form" }))
 
 		expect(status.disabled).toBe(false)
+		expect(representation.disabled).toBe(false)
 		expect(newsletter.disabled).toBe(false)
 		expect(avatar.disabled).toBe(false)
 		expect(status.name).toBe("status")
 		expect(newsletter.name).toBe("newsletter")
 		expect(avatar.name).toBe("avatar")
 		expect(status.getAttribute("aria-readonly")).toBe("true")
+		expect(representation.getAttribute("aria-readonly")).toBe("true")
 		expect(newsletter.getAttribute("aria-readonly")).toBe("true")
 		expect(avatar.getAttribute("aria-readonly")).toBe("true")
 
 		expect(fireEvent.mouseDown(status)).toBe(false)
 		expect(fireEvent.keyDown(status, { key: "ArrowDown" })).toBe(false)
 		fireEvent.change(status, { target: { value: "archived" } })
+		fireEvent.change(representation, { target: { value: "registered" } })
 		await user.click(newsletter)
 		newsletter.focus()
 		expect(fireEvent.keyDown(newsletter, { key: " " })).toBe(false)
@@ -678,14 +891,19 @@ describe("nativeControls choice and file controls", () => {
 		await user.upload(avatar, replacement)
 
 		expect(status.value).toBe("draft")
+		expect(representation.value).toBe("")
 		expect(newsletter.checked).toBe(true)
 		expect(avatar.files?.item(0)).toBe(first)
 		expect(screen.getByTestId("status-value").textContent).toBe("draft")
+		expect(screen.getByTestId("representation-value").textContent).toBe(
+			"undefined",
+		)
 		expect(screen.getByTestId("newsletter-value").textContent).toBe("true")
 		expect(screen.getByTestId("avatar-value").textContent).toBe("avatar.png")
 
 		const formData = new FormData(requireForm())
 		expect(formData.get("status")).toBe("draft")
+		expect(formData.get("representation")).toBe("")
 		expect(formData.get("newsletter")).toBe("true")
 		expect(formData.get("avatar")).toBeInstanceOf(File)
 	})
@@ -789,7 +1007,16 @@ function ValueProbe() {
 				{String(Number.isNaN(values.age))}
 			</output>
 			<output data-testid="birthday-value">{values.birthday}</output>
+			<output data-testid="opening-time-value">
+				{values.openingTime ?? "undefined"}
+			</output>
 			<output data-testid="status-value">{values.status}</output>
+			<output data-testid="status-value-kind">
+				{values.status === "" ? "empty string" : "non-empty string"}
+			</output>
+			<output data-testid="representation-value">
+				{values.representation ?? "undefined"}
+			</output>
 			<output data-testid="newsletter-value">
 				{String(values.newsletter)}
 			</output>
@@ -836,12 +1063,14 @@ function defaultValues(): Values {
 		bio: "First compiler",
 		age: 37,
 		birthday: "1815-12-10",
+		openingTime: "09:30",
 		status: "draft",
 		newsletter: true,
 		disabledEmail: "locked@example.test",
 		hiddenBio: "Private notes",
 		disabledAge: 64,
 		hiddenBirthday: "1962-02-03",
+		hiddenTime: "07:45",
 		disabledStatus: "archived",
 		hiddenStatus: "draft",
 		disabledNewsletter: true,
@@ -850,6 +1079,7 @@ function defaultValues(): Values {
 		readonlyBio: "Readonly notes",
 		readonlyAge: 8,
 		readonlyBirthday: "2000-01-02",
+		readonlyTime: "18:30",
 	}
 }
 
@@ -902,12 +1132,24 @@ const dateOptions = {
 	max: "2030-01-01",
 } satisfies NativeDateOptions
 
+const timeOptions = {
+	min: "08:00",
+	max: "22:00",
+	step: "any",
+} satisfies NativeTimeOptions
+
 const selectOptions = {
+	emptyOption: { label: "Choose a status", disabled: true },
 	options: [
 		{ value: "draft", label: "Draft" },
 		{ value: "published", label: "Published", disabled: true },
 	],
 } satisfies NativeSelectOptions<"draft" | "published">
+
+const selectEmptyOption = {
+	label: "Choose a status",
+	disabled: true,
+} satisfies NativeSelectEmptyOption
 
 const selectOption = {
 	value: "draft",
@@ -939,6 +1181,8 @@ const fileTextType: NativeTextType = "file"
 const numberTextType: NativeTextType = "number"
 // @ts-expect-error date inputs use the dedicated date control
 const dateTextType: NativeTextType = "date"
+// @ts-expect-error time inputs use the dedicated time control
+const timeTextType: NativeTextType = "time"
 // @ts-expect-error button inputs are not value controls
 const buttonTextType: NativeTextType = "button"
 
@@ -946,7 +1190,9 @@ void textOptions
 void textareaOptions
 void numberOptions
 void dateOptions
+void timeOptions
 void selectOptions
+void selectEmptyOption
 void selectOption
 void fileOptions
 void badSelectOptions
@@ -955,4 +1201,5 @@ void checkboxTextType
 void fileTextType
 void numberTextType
 void dateTextType
+void timeTextType
 void buttonTextType

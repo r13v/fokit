@@ -115,3 +115,22 @@ Adding fragment coverage to the packed React 18 fixture → TypeScript 5.4 hit
 its instantiation-depth limit while a mapped `DefinitionFragmentPath` inferred
 an otherwise small object scope. Express the path filter as a distributive
 conditional helper so older consumer compilers evaluate one path at a time.
+
+## 2026-07-31 20:37 — GPT-5
+
+Adding the transaction-hooks guide and snippet in one patch → one wrapped MDX
+line missed its diff marker, so `apply_patch` rejected the complete patch.
+Split new files into separate patches or validate every wrapped added line.
+
+## 2026-07-31 20:39 — GPT-5
+
+Checking the new guide's contract text → a content-test regexp assumed one
+physical line, but normal MDX wrapping split the sentence. Match whitespace
+with `\s+` when a prose assertion can cross formatted lines.
+
+## 2026-07-31 20:40 — GPT-5
+
+Building the docs site after adding a guide → Vocs rejected nine pre-existing
+`twoslash` fences in `advanced.mdx` and `api.mdx` because they contain
+pseudo-signatures or undeclared JSX. Mark pseudocode as text or make each
+example self-contained before using `twoslash`.

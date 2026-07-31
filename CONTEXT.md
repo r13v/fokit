@@ -25,3 +25,19 @@ _Avoid_: Async defaults, initial data
 **Path subset**: One or more schema path subtrees selected for issue exposure,
 validation results, or error focus while the complete schema is still checked.
 _Avoid_: Partial validation, field validation
+
+**Async control data**: Remotely loaded options, suggestions, or labels used by
+a control while the form continues to own only its typed value.
+_Avoid_: Async field
+
+**Resource state**: The current pending, successful, or failed state of
+application-owned asynchronous data supplied to a form through runtime context.
+_Avoid_: Promise state, form loading state
+
+**Asynchronous UI resolution**: Evaluation in which a UI resolver returns a
+Promise instead of a resolved property value.
+_Avoid_: Async field, async control data
+
+**Async definition node**: A field, section, array, or render node whose
+definition itself becomes available asynchronously.
+_Avoid_: Async field, asynchronous UI resolution

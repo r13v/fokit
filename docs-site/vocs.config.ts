@@ -39,6 +39,7 @@ export default defineConfig({
 					text: "Conditional fields",
 					link: "/guides/conditional-fields",
 				},
+				{ text: "Transaction hooks", link: "/guides/transaction-hooks" },
 				{ text: "Arrays", link: "/guides/arrays" },
 				{ text: "Controls & design systems", link: "/guides/controls" },
 				{

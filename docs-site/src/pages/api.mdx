@@ -24,7 +24,7 @@ boundary belongs in the application.
 
 ## createFormKit
 
-```ts twoslash
+```text
 createFormKit({ controls, slots? }) => FormKit
 ```
 
@@ -57,7 +57,7 @@ or slots.
 
 ## kit.extend
 
-```tsx twoslash
+```text
 kit.extend({ controls?, slots? }) => FormKit
 ```
 
@@ -97,7 +97,7 @@ compatibility follows the same base-to-extension direction through
 
 ## kit.defineForm
 
-```tsx twoslash
+```text
 kit.defineForm(schema)({ ui }) => NormalizedFormDefinition
 kit.defineForm(schema).withContext<Context>({ ui }) => NormalizedFormDefinition
 ```
@@ -132,7 +132,7 @@ const definition = kit.defineForm(schema)({
 
 ### Compose an object fragment
 
-```tsx twoslash
+```text
 const define = kit.defineForm(schema)
 define.fragment(objectPath, nodes) => DefinitionFragmentNode[]
 define.fragment.withContext<Context>()(objectPath, nodes)
@@ -382,7 +382,7 @@ callback and use `form.setErrors(...)` for user-visible issues.
 
 ## useForm
 
-```tsx twoslash
+```text
 useForm(definition, options) => FormInstance
 useForm(form, runtimeOptions) => same FormInstance
 ```
@@ -510,6 +510,9 @@ stable row metadata.
 returns the incoming transaction plus typed additions, or `undefined` when the
 addition list is empty.
 
+Read [Transaction hooks](/guides/transaction-hooks) for the lifecycle, return
+values, update sources, and complete examples.
+
 ### Arrays
 
 `append`, `insert`, `remove`, and `move` update values, row keys, metadata, and
@@ -551,7 +554,7 @@ rules.
 
 ## defineControl
 
-```tsx twoslash
+```text
 defineControl({ component, formData }) => ControlDefinition
 ```
 
@@ -626,7 +629,7 @@ contracts.
 
 ## createDefaultSlots
 
-```tsx twoslash
+```text
 createDefaultSlots({ i18n? }) => FormKitSlots
 ```
 
@@ -637,7 +640,7 @@ the row position and label context.
 
 ## parseFormData
 
-```tsx twoslash
+```text
 parseFormData(formData, schema, options?) => Promise<ParseResult<Output>>
 ```
 

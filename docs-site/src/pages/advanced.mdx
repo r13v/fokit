@@ -17,6 +17,7 @@ UI own more of the experience.
 | Understand the complete typed UI tree | [UI definitions](/guides/ui-definitions) |
 | Tune validation timing or install server feedback | [Validation and errors](/guides/validation) |
 | Show, disable, or remove fields from tracked values | [Conditional fields](/guides/conditional-fields) |
+| Preserve atomic cross-field updates | [Transaction hooks](/guides/transaction-hooks) |
 | Add repeatable rows with stable identity | [Arrays](/guides/arrays) |
 | Connect a component library | [Controls and design systems](/guides/controls) |
 | Load suggestions or bespoke async field UI | [Async fields](/guides/async-fields) |
@@ -126,7 +127,7 @@ metadata, and dirty state.
 When switching between distinct create/edit records should discard the current
 instance completely, key the component at that product boundary instead:
 
-```tsx twoslash
+```text
 <ProfileEditor key={profile.id} profile={profile} />
 ```
 

@@ -70,6 +70,13 @@ const canonicalPages = [
 			"Derive visibility, interaction state, labels, and options from automatically tracked form values and runtime context.",
 	},
 	{
+		path: "src/pages/guides/transaction-hooks.mdx",
+		route: "/guides/transaction-hooks",
+		title: "Transaction hooks",
+		description:
+			"Inspect, change, cancel, and observe each atomic form update with beforeUpdate and onUpdate.",
+	},
+	{
 		path: "src/pages/guides/arrays.mdx",
 		route: "/guides/arrays",
 		title: "Arrays",
@@ -222,6 +229,16 @@ const canonicalSnippets = [
 		target: "src/snippets/basic-form.tsx",
 		include: "~/snippets/basic-form.tsx",
 		terms: ["kit.AutoForm", "ProfileEditor", "ProfileOutput"],
+	},
+	{
+		target: "src/snippets/transaction-hooks.tsx",
+		include: "~/snippets/transaction-hooks.tsx",
+		terms: [
+			"preserveDateRange",
+			"extendValueChanges",
+			"BeforeUpdateEvent",
+			"onUpdate",
+		],
 	},
 	{
 		target: "src/snippets/server-action.ts",
@@ -585,6 +602,25 @@ const requiredGuidePageContent = {
 			'valuePolicy: "unset"',
 			"Replacing context",
 			"superRefine",
+		],
+	},
+	"src/pages/guides/transaction-hooks.mdx": {
+		headings: [
+			"Choose the correct mechanism",
+			"Follow one transaction",
+			"Preserve an invariant with beforeUpdate",
+			"Observe a commit with onUpdate",
+			"Identify the update source",
+			"Know when hooks do not run",
+			"Use both hooks",
+		],
+		terms: [
+			"extendValueChanges",
+			"BeforeUpdateEvent",
+			"UpdateEvent",
+			"ValueChange[]",
+			"valuePolicy",
+			"defaultValues",
 		],
 	},
 	"src/pages/guides/arrays.mdx": {
@@ -1176,6 +1212,9 @@ test("sidebar follows the learning path before reference material", async () => 
 	const tutorial = source.indexOf('link: "/guides/tutorial"')
 	const uiDefinitions = source.indexOf('link: "/guides/ui-definitions"')
 	const validation = source.indexOf('link: "/guides/validation"')
+	const conditionalFields = source.indexOf('link: "/guides/conditional-fields"')
+	const transactionHooks = source.indexOf('link: "/guides/transaction-hooks"')
+	const arrays = source.indexOf('link: "/guides/arrays"')
 	const controls = source.indexOf('link: "/guides/controls"')
 	const asyncMultiselect = source.indexOf('link: "/guides/async-multiselect"')
 	const asyncFields = source.indexOf('link: "/guides/async-fields"')
@@ -1188,6 +1227,9 @@ test("sidebar follows the learning path before reference material", async () => 
 		tutorial,
 		uiDefinitions,
 		validation,
+		conditionalFields,
+		transactionHooks,
+		arrays,
 		controls,
 		asyncMultiselect,
 		asyncFields,
@@ -1201,7 +1243,10 @@ test("sidebar follows the learning path before reference material", async () => 
 	assert.ok(getStarted < tutorial)
 	assert.ok(tutorial < uiDefinitions)
 	assert.ok(uiDefinitions < validation)
-	assert.ok(validation < controls)
+	assert.ok(validation < conditionalFields)
+	assert.ok(conditionalFields < transactionHooks)
+	assert.ok(transactionHooks < arrays)
+	assert.ok(arrays < controls)
 	assert.ok(controls < asyncMultiselect)
 	assert.ok(asyncMultiselect < asyncFields)
 	assert.ok(asyncFields < complexExamples)
@@ -1338,6 +1383,26 @@ test("tutorial stays focused on one copyable production form", async () => {
 	assert.doesNotMatch(source, /npm install|docs-site\/src\/snippets/)
 	assert.doesNotMatch(source, /npm run (test:docs|check|knip)/)
 	assert.doesNotMatch(source, /Use transactions deliberately/)
+})
+
+test("transaction hooks guide separates transforms from post-commit effects", async () => {
+	const source = await readText("src/pages/guides/transaction-hooks.mdx")
+	const snippet = await readText("src/snippets/transaction-hooks.tsx")
+
+	assert.match(source, /A returned array does not append changes/)
+	assert.match(source, /Do not call a value command from\s+`beforeUpdate`/)
+	assert.match(source, /does\s+not call `onUpdate` for that transaction/)
+	assert.match(source, /does not roll back a commit when `onUpdate` throws/)
+	assert.match(source, /Put validity rules in the schema/)
+	assert.match(source, /~\/snippets\/transaction-hooks\.tsx/)
+	assert.match(snippet, /Alternative 1: Accept the complete proposal/)
+	assert.match(snippet, /Alternative 2: Cancel the complete transaction/)
+	assert.match(snippet, /Alternative 3: Replace the complete proposal/)
+	assert.match(snippet, /The original changes are discarded/)
+	assert.match(
+		snippet,
+		/keeps the original changes and adds one dependent change/,
+	)
 })
 
 test("documentation uses the public imperative error commands", async () => {

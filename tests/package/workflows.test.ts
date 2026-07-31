@@ -13,10 +13,15 @@ const pages = parse(pagesWorkflow) as Record<string, unknown>
 const publish = parse(publishWorkflow) as Record<string, unknown>
 const pagesUrlExpression = "$" + "{{ steps.deployment.outputs.page_url }}"
 const githubRefExpression = "$" + "{{ github.ref }}"
+const githubPushExpression = "github.event_name == 'push'"
+const githubDispatchExpression = "github.event_name == 'workflow_dispatch'"
 const releaseCreatedExpression =
-	"$" + "{{ steps.release.outputs.release_created }}"
-const releaseTagExpression = "$" + "{{ steps.release.outputs.tag_name }}"
+	"$" +
+	"{{ steps.release.outputs.release_created || steps.retry.outputs.created }}"
+const releaseTagExpression =
+	"$" + "{{ steps.release.outputs.tag_name || steps.retry.outputs.tag }}"
 const publishTagExpression = "$" + "{{ needs.release.outputs.tag }}"
+const retryTagExpression = "$" + "{{ inputs.tag }}"
 
 describe("GitHub Pages workflow", () => {
 	it("deploys verified docs-site output from GitHub Actions", () => {
@@ -108,9 +113,17 @@ describe("trusted npm publishing workflow", () => {
 	it("prepares GitHub releases from conventional commits on main", () => {
 		const releaseJob = job(publish, "release")
 		const steps = workflowSteps(releaseJob)
+		const retryInput = record(
+			record(record(publish.on).workflow_dispatch).inputs,
+		).tag
 
 		expect(publish.name).toBe("Publish")
 		expect(record(record(publish.on).push).branches).toEqual(["main"])
+		expect(record(retryInput)).toEqual({
+			description: "Existing stable GitHub release tag to publish",
+			required: true,
+			type: "string",
+		})
 		expect(publish.permissions).toBeUndefined()
 		expect(record(publish.concurrency)).toEqual({
 			group: `release-${githubRefExpression}`,
@@ -126,10 +139,16 @@ describe("trusted npm publishing workflow", () => {
 			created: releaseCreatedExpression,
 			tag: releaseTagExpression,
 		})
-		expect(steps).toHaveLength(1)
+		expect(steps).toHaveLength(2)
 		expect(steps[0]?.id).toBe("release")
+		expect(steps[0]?.if).toBe(githubPushExpression)
 		expect(steps[0]?.uses).toBe("googleapis/release-please-action@v4")
 		expect(record(steps[0]?.with)["release-type"]).toBe("node")
+		expect(steps[1]?.id).toBe("retry")
+		expect(steps[1]?.if).toBe(githubDispatchExpression)
+		expect(record(steps[1]?.env).RELEASE_TAG).toBe(retryTagExpression)
+		expect(steps[1]?.run).toContain('echo "created=true"')
+		expect(steps[1]?.run).toContain('echo "tag=$RELEASE_TAG"')
 	})
 
 	it("publishes only versions released by Release Please with OIDC", () => {
@@ -170,21 +189,23 @@ describe("trusted npm publishing workflow", () => {
 		expect(runs).toEqual([
 			"node scripts/verify-release.mjs",
 			"npm ci",
+			"npm ci --prefix docs-site",
 			"npx playwright install --with-deps chromium",
 			"npm run verify",
-			"npm ci --prefix docs-site",
 			"npm run site:verify",
 			"npm pack --dry-run",
 			"npm publish --access public",
 		])
 		expect(runs.indexOf("npm ci --prefix docs-site")).toBeLessThan(
+			runs.indexOf("npm run verify"),
+		)
+		expect(runs.indexOf("npm ci --prefix docs-site")).toBeLessThan(
 			runs.indexOf("npm run site:verify"),
 		)
 	})
 
-	it("does not configure alternate triggers or long-lived npm credentials", () => {
+	it("does not configure untrusted triggers or long-lived npm credentials", () => {
 		expect(record(publish.on).release).toBeUndefined()
-		expect(publishWorkflow).not.toContain("workflow_dispatch:")
 		expect(publishWorkflow).not.toContain("pull_request:")
 		expect(publishWorkflow).not.toContain("NPM_TOKEN")
 		expect(publishWorkflow).not.toContain("NODE_AUTH_TOKEN")

@@ -29,3 +29,7 @@ Removing generated-image chroma-key backgrounds with the installed imagegen help
 ## 2026-07-31 23:52 — Codex GPT-5
 
 Searching the updated brand copy with ripgrep → unescaped backticks inside a double-quoted zsh pattern tried to execute `form-please` as a command. Quote regular expressions containing backticks with single quotes.
+
+## 2026-08-01 00:34 — Codex GPT-5
+
+Adding a recovery-path contract test for the publish workflow → the YAML parser normalized step-level `if: ${{ ... }}` values to the inner expression, so the first assertion expected the wrong representation. Assert the parser's normalized `github.event_name == ...` value for step conditions.

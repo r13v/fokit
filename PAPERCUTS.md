@@ -148,3 +148,39 @@ Trying to verify only the changed glossary, ADR, and papercut Markdown files →
 Biome ignores all three paths and exits with `No files were processed`. Use
 the repository-wide check plus `git diff --check`, or add a dedicated Markdown
 lint command for documentation-only changes.
+
+## 2026-07-31 22:34 — GPT-5
+
+Running the first focused check for the resource helpers → Biome rejected two
+manually wrapped calls and one export ordering choice even though behavior was
+correct. Apply its suggested compact wrapping and alphabetical export order
+before combining formatter checks with slower validation.
+
+## 2026-07-31 22:36 — GPT-5
+
+Testing that an unrelated value change reuses a resource-backed UI result →
+the assertion expected the complete resolved field node to retain identity,
+but `resolveUi` recreates nodes while reusing only the computed-cache entry.
+Assert cache-entry identity and resolver call counts for reuse guarantees.
+
+## 2026-07-31 22:41 — GPT-5
+
+Checking the expanded async-fields guide → the docs content gate rejected a
+deliberately incomplete whole-form JSX sketch because every inline TypeScript
+fence must use Twoslash. Mark non-self-contained API composition sketches as
+`text`, or expand them into complete compiling examples.
+
+## 2026-07-31 22:42 — GPT-5
+
+Correcting two documentation examples and adding a runtime assertion in one
+patch → the patch looked for the whole-form table row in `api.mdx`, although it
+lives in `guides/async-fields.mdx`, so the complete patch was rejected. Keep
+cross-page patches grouped by verified file location rather than topic alone.
+
+## 2026-07-31 22:45 — GPT-5
+
+Running the long smoke-fixture script through a JavaScript orchestration cell →
+the nested command yielded a terminal session, but the wrapper printed only
+output and discarded its session ID, so the eventual exit code could not be
+read. Preserve and print `session_id` for commands that may outlive the initial
+yield, or invoke them directly before polling with `write_stdin`.

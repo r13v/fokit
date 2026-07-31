@@ -158,6 +158,8 @@ Resolver functions are synchronous and pure. The values proxy is valid only
 during the resolver call. Rest destructuring, spread, and property enumeration
 are rejected because they do not identify a finite dependency set. Fetching
 remote data belongs to an application data layer or to a control component.
+Applications may project the current state of that data synchronously with
+`fromResource`; neither UI resolvers nor resource selectors accept promises.
 
 ### One store mode
 
@@ -1520,9 +1522,55 @@ Resolver functions:
 - reject rest destructuring, spread, and enumeration of the values proxy;
 - can be evaluated by `resolveUi` outside React.
 
-An asynchronous option list should be loaded by application code and passed to
-the form or resolved by a control-specific data integration. It is not a
-UI resolver.
+### Application resource projection
+
+Fokit exposes a minimal availability state and two exhaustive synchronous
+matchers:
+
+```ts
+type ResourceState<Value, Error = unknown> =
+  | { readonly status: 'pending' }
+  | { readonly status: 'success'; readonly value: Value }
+  | { readonly status: 'error'; readonly error: Error };
+
+matchResource(resource, {
+  pending: state => pendingResult,
+  success: state => successResult,
+  error: state => errorResult,
+});
+
+fromResource(
+  (values, details) => details.context.resource,
+  {
+    pending: (state, values, details) => pendingResult,
+    success: (state, values, details) => successResult,
+    error: (state, values, details) => errorResult,
+  },
+);
+```
+
+`matchResource` maps an immediate state. `fromResource` accepts a synchronous
+UI resolver that selects a resource and returns a normal UI resolver. All three
+case functions are required, receive a narrowed branch, and may return
+different result types. A `fromResource` case additionally receives the same
+values proxy and resolver details as the selector; reads made by both the
+selector and the active case participate in normal dependency tracking.
+
+Application-specific resource unions may structurally extend each branch. For
+example, a successful query result may carry a nested discriminated `refresh`
+state without changing the Fokit helper. The core does not depend on a query
+library and does not convert query booleans into a resource implicitly.
+
+An asynchronous option list must be loaded by application code and passed
+through context or handled by a control-specific data integration. Fokit does
+not start requests, cache data, retry, cancel, suspend resolution, or convert
+mapper exceptions into resource errors. Promise-valued selectors and UI
+resolvers are invalid.
+
+Fields and sections use `fromResource` in their existing resolvable properties
+and typed `slotOptions`. A complete form uses `matchResource` at the application
+composition boundary. Pending resources do not implicitly disable submission
+or suspend hidden-field `valuePolicy`; those policies must be mapped explicitly.
 
 ## Form state
 
@@ -2552,6 +2600,8 @@ const resolved = resolveUi(
 
 It does not mutate values or run effects.
 The context argument is read-only and is not added to the resolved form data.
+`fromResource` composes with this synchronous pass; it selects and maps only the
+resource state already present in context.
 
 Schema validation is also exposed as a pure operation through the form
 definition or an internal shared validator used by browser and server flows.
@@ -2687,6 +2737,10 @@ Before the API is considered stable, the implementation must prove:
   resolver call;
 - replacing runtime context reruns derived UI without changing values or
   dirty state when no `valuePolicy` change is produced;
+- `matchResource` and `fromResource` require all availability branches, narrow
+  application-specific branch extensions, and reject promise-valued selectors;
+- path reads in both a `fromResource` selector and its active case participate
+  in resolver cache invalidation;
 - a context-aware control is rejected when the form context does not satisfy
   its declared requirement;
 - `beforeUpdate` can accept, cancel, or replace an atomic batch;
@@ -2795,8 +2849,10 @@ The product has no unresolved public-API questions in this specification:
 12. Schema paths are commandable and selectively validatable without UI
     registration; array commands and Action serialization keep their explicit
     node requirements.
-13. Async fields remain an application data-layer recipe, and loaded baselines
-    remain explicit mount, key, or reset patterns.
+13. Async fields remain an application data-layer recipe. Applications may
+    project current resource states synchronously through `matchResource` and
+    `fromResource`; loaded baselines remain explicit mount, key, or reset
+    patterns.
 
 Implementation discoveries may refine private algorithms, but changing these
 contracts requires an explicit specification update rather than an implicit

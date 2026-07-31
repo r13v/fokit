@@ -106,6 +106,30 @@ UI but must never become submitted form data.
 resolvers infer it automatically. `UiResolver<Result, Input, Context>` names the
 complete function type when a standalone resolver needs an annotation.
 
+## Resource states
+
+`ResourceState<Value, Error = unknown>` is the minimal application-owned state
+accepted by `matchResource` and `fromResource`:
+
+```ts twoslash
+import type { ResourceState } from "fokit"
+
+type Cities = ResourceState<
+	readonly { readonly value: string; readonly label: string }[],
+	Error
+>
+```
+
+It is a discriminated union of `{ status: "pending" }`,
+`{ status: "success", value }`, and `{ status: "error", error }`. Applications
+may add properties to those branches. For example, a successful query resource
+can add a nested discriminated `refresh` state; the active branch remains fully
+narrowed inside each matcher case.
+
+This type represents current availability only. It does not prescribe cache,
+retry, cancellation, stale-data, or submission policy, and it does not accept a
+promise in place of a resource state.
+
 ## Custom control inference
 
 `defineControl` establishes the accepted value, options, and optional context.

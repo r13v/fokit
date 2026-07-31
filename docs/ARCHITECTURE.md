@@ -85,7 +85,7 @@ remain suitable for server-side use.
 | Definitions | `src/core/definition.ts`, `src/core/definition-fragment.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts` | Type, scope, validate, normalize, and index reusable UI definitions |
 | Paths and values | `src/core/path.ts`, `src/core/path-types.ts`, `src/core/value.ts` | Canonical deep paths and immutable value operations |
 | Runtime store | `src/core/form-store.ts`, `src/core/form-state.ts`, `src/core/transaction.ts` | Transactions, snapshots, subscriptions, reset, focus, and runtime options |
-| Derived state | `src/core/resolve-ui.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, dirty/touched state, issue exposure, and stable array rows |
+| Derived state | `src/core/resolve-ui.ts`, `src/core/resource.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, synchronous application-resource projection, dirty/touched state, issue exposure, and stable array rows |
 | Validation | `src/core/validation.ts`, `src/core/standard-schema.ts` | Standard Schema execution and normalized results |
 | Form kits | `src/react/create-form-kit.tsx`, `src/react/default-slots.tsx`, `src/react/native-controls.tsx` | Bind control and slot registries into a rendering integration |
 | React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to the external store |
@@ -214,6 +214,12 @@ path read becomes a dependency. A previous result is reused while the resolver
 identity, context reference, and dependency values are unchanged. Enumeration
 and asynchronous resolvers are rejected because they would make dependencies
 unbounded or timing-dependent.
+
+`fromResource` remains inside this resolver boundary. It synchronously selects
+an application-owned `ResourceState` and maps its active branch; path reads in
+the selector and case mapper are observed by the same proxy. `matchResource`
+serves application composition outside definition resolution. Neither helper
+owns request state or changes definition topology.
 
 React hooks bridge the store through `useSyncExternalStore`. `useFormState`
 accepts a selector and equality function; `useField`, `useValue`, and

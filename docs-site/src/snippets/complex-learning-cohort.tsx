@@ -10,6 +10,7 @@ import {
 	createFormKit,
 	type FormInput,
 	type FormOutput,
+	matchResource,
 	nativeControls,
 	useFormContext,
 	useFormState,
@@ -17,6 +18,8 @@ import {
 } from "fokit"
 import { useState } from "react"
 import { z } from "zod"
+
+import { queryToResource } from "./query-to-resource"
 
 const cohortSchema = z
 	.object({
@@ -224,21 +227,44 @@ function TitleSuggestions() {
 		enabled: title.trim().length >= 5,
 		staleTime: 20_000,
 	})
+	const suggestionsResource = queryToResource(suggestions)
 
 	return (
 		<section className="fokit-complex__embedded" aria-label="Title suggestions">
 			<strong>Remote title suggestions</strong>
 			<div className="fokit-complex__choice-list">
-				{suggestions.isFetching ? <span>Generating suggestions…</span> : null}
-				{suggestions.data?.map((suggestion) => (
-					<button
-						key={suggestion}
-						onClick={() => form.setValue("identity.title", suggestion)}
-						type="button"
-					>
-						{suggestion}
-					</button>
-				))}
+				{matchResource(suggestionsResource, {
+					pending: ({ fetchStatus }) => (
+						<span>
+							{fetchStatus === "idle"
+								? "Enter at least five characters."
+								: "Generating suggestions…"}
+						</span>
+					),
+					success: ({ value, refresh }) => (
+						<>
+							{refresh.status === "pending" ? (
+								<span>Refreshing suggestions…</span>
+							) : null}
+							{refresh.status === "paused" ? (
+								<span>Refresh paused; showing saved suggestions.</span>
+							) : null}
+							{refresh.status === "error" ? (
+								<span>Refresh failed; showing saved suggestions.</span>
+							) : null}
+							{value.map((suggestion) => (
+								<button
+									key={suggestion}
+									onClick={() => form.setValue("identity.title", suggestion)}
+									type="button"
+								>
+									{suggestion}
+								</button>
+							))}
+						</>
+					),
+					error: () => <span>Could not load title suggestions.</span>,
+				})}
 			</div>
 		</section>
 	)

@@ -268,6 +268,76 @@ A function assigned directly to a resolvable property is always a resolver.
 When custom control options contain callbacks, keep those callbacks inside an
 options object rather than using a function as the complete `options` value.
 
+### Resource projection
+
+```text
+ResourceState<Value, Error = unknown>
+matchResource(resource, cases) => pending | success | error result
+fromResource(selector, cases) => UiResolver
+```
+
+`ResourceState` describes availability without owning a request lifecycle:
+
+```ts twoslash
+import type { ResourceState } from "fokit"
+
+type Permission = ResourceState<
+	{ readonly canEdit: boolean },
+	Error
+>
+```
+
+Both helpers require `pending`, `success`, and `error` case functions and narrow
+the state passed to each function. `matchResource` maps an immediate state:
+
+```ts twoslash
+import { matchResource, type ResourceState } from "fokit"
+
+declare const permission: ResourceState<{ readonly canEdit: boolean }, Error>
+
+const disabled = matchResource(permission, {
+	pending: () => true,
+	success: ({ value }) => !value.canEdit,
+	error: () => true,
+})
+```
+
+`fromResource` maps a synchronous resource selector to a normal resolver. Its
+case functions also receive the resolver's `values` and `{ context }`; path
+reads in the selector and active case are tracked:
+
+```ts twoslash
+import {
+	fromResource,
+	type ResourceState,
+	type UiResolver,
+} from "fokit"
+
+type Input = { readonly kind: "person" | "company" }
+type Context = {
+	readonly permission: ResourceState<{ readonly canEdit: boolean }, Error>
+}
+
+const selectPermission: UiResolver<Context["permission"], Input, Context> = (
+	_values,
+	{ context },
+) => context.permission
+
+const disabled = fromResource(
+	selectPermission,
+	{
+		pending: () => true,
+		success: ({ value }, { kind }) => !value.canEdit || kind === "person",
+		error: () => true,
+	},
+)
+```
+
+Selectors and case functions run synchronously. Fokit does not start, cache,
+retry, or cancel requests, and it does not add query-library states. See
+[Async fields](/guides/async-fields) for field, section, whole-form, skeleton,
+and TanStack Query adapter examples.
+
 ### UI node families
 
 The `ui` array is a typed tree:
@@ -683,6 +753,8 @@ Use `fokit/core` in shared packages, non-React runtimes, and focused tests.
 - `createFormStore` creates the immutable external store.
 - Resolver functions in definitions derive UI with tracked value reads.
 - `normalizeDefinition` and `resolveUi` normalize and resolve those definitions.
+- `matchResource` and `fromResource` project application-owned resource states
+  without introducing an async lifecycle.
 - `parsePath`, `formatPath`, `parseArrayIndex`, `isSamePath`,
   `isAncestorPath`, `isDescendantPath`, and `pathsOverlap` work with canonical
   paths.

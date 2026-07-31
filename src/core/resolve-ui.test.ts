@@ -3,13 +3,14 @@ import { describe, expect, it, vi } from "vitest"
 import type {
 	ControlMetadata,
 	NormalizedFormDefinition,
+	ResourceState,
 	StandardSchema,
 	UiNode,
 	UiPresentation,
 	UiResolver,
 	UiResolverValues,
 } from "./index.js"
-import { normalizeDefinition, resolveUi } from "./index.js"
+import { fromResource, normalizeDefinition, resolveUi } from "./index.js"
 
 type ExampleValues = {
 	name: string
@@ -28,6 +29,9 @@ type ExampleValues = {
 
 type ExampleContext = {
 	readonly locked: boolean
+	readonly companyAccessByCountry?: Readonly<
+		Record<string, ResourceState<boolean, string>>
+	>
 	readonly citiesByCountry: Readonly<
 		Record<
 			string,
@@ -332,6 +336,70 @@ describe("resolveUi", () => {
 			unrelatedChange.fieldsByPath.city.options,
 		)
 		expect(contextChange.fieldsByPath.name.label).toBe("Name: Ada")
+	})
+
+	it("tracks path reads from both resource selection and branch mapping", () => {
+		const selectAccess: UiResolver<
+			ResourceState<boolean, string>,
+			ExampleValues,
+			ExampleContext
+		> = vi.fn(
+			({ country }, { context }) =>
+				context.companyAccessByCountry?.[country] ?? { status: "pending" },
+		)
+		const visible: UiResolver<boolean, ExampleValues, ExampleContext> =
+			fromResource(selectAccess, {
+				pending: () => false,
+				success: ({ value }, { kind }) => value && kind === "company",
+				error: () => false,
+			})
+		const definition = normalize([
+			{
+				kind: "field",
+				path: "companyName",
+				control: "text",
+				visible,
+			},
+		])
+		const context = {
+			locked: false,
+			companyAccessByCountry: {
+				us: { status: "success", value: true },
+			},
+			citiesByCountry: {},
+		} satisfies ExampleContext
+		const values = {
+			name: "Ada",
+			kind: "company",
+			country: "us",
+			city: "nyc",
+			unrelated: "same",
+		} satisfies ExampleValues
+
+		const first = resolveUi(definition, values, context)
+		const unrelatedChange = resolveUi(
+			definition,
+			{ ...values, unrelated: "changed" },
+			context,
+			{ previous: first },
+		)
+		const branchDependencyChange = resolveUi(
+			definition,
+			{ ...values, kind: "person" },
+			context,
+			{ previous: unrelatedChange },
+		)
+
+		expect(first.fieldsByPath.companyName.visible).toBe(true)
+		expect(first.computedCache["companyName:visible"]?.dependencies).toEqual([
+			{ path: "country", value: "us" },
+			{ path: "kind", value: "company" },
+		])
+		expect(unrelatedChange.computedCache["companyName:visible"]).toBe(
+			first.computedCache["companyName:visible"],
+		)
+		expect(branchDependencyChange.fieldsByPath.companyName.visible).toBe(false)
+		expect(selectAccess).toHaveBeenCalledTimes(2)
 	})
 
 	it("resolves and caches structural slot options like other UI resolvers", () => {

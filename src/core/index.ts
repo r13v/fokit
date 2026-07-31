@@ -92,6 +92,8 @@ export type {
 	ResolveUiOptions,
 } from "./resolve-ui.js"
 export { resolveUi } from "./resolve-ui.js"
+export type { ResourceState } from "./resource.js"
+export { fromResource, matchResource } from "./resource.js"
 export type {
 	FormInput,
 	FormOutput,

@@ -30,11 +30,19 @@ of the draft.
 - Two reorderable configuration arrays plus media and a native file.
 - Cross-row price validation rather than row-local validation only.
 - Four offer subforms composed from one typed object-scoped fragment.
-- Query-owned title suggestions following the async-field ownership recipe.
+- `queryToResource` projecting query-owned title suggestions into exhaustive
+  pending, success, refresh, and error presentation.
 - Three sequential resource mutations.
 - Mapping a typed conflict back into Fokit's server-error lifecycle.
 
 ## Copy the source
+
+The example imports the same application-owned adapter documented in the async
+fields guide:
+
+```ts
+// [!include ~/snippets/query-to-resource.ts]
+```
 
 ```tsx
 // [!include ~/snippets/complex-learning-cohort.tsx]

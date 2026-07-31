@@ -12,6 +12,7 @@ import {
 	extendValueChanges,
 	type FormInput,
 	type FormOutput,
+	fromResource,
 	nativeControls,
 	useFormContext,
 	useFormState,
@@ -19,6 +20,8 @@ import {
 } from "fokit"
 import { useState } from "react"
 import { z } from "zod"
+
+import { type QueryResourceState, queryToResource } from "./query-to-resource"
 
 const studioPolicySchema = z
 	.object({
@@ -114,7 +117,9 @@ type StudioPolicyInput = FormInput<typeof studioPolicySchema>
 type StudioPolicyOutput = FormOutput<typeof studioPolicySchema>
 
 type EquipmentOption = { readonly value: string; readonly label: string }
-type PolicyContext = { readonly equipment: readonly EquipmentOption[] }
+type PolicyContext = {
+	readonly equipment: QueryResourceState<readonly EquipmentOption[], Error>
+}
 
 const baseline = {
 	access: {
@@ -308,7 +313,28 @@ const policyDefinition = kit
 				kind: "array",
 				path: "equipment",
 				label: "Equipment rules",
-				description: "Each row retains stable identity while it moves.",
+				description: fromResource((_values, { context }) => context.equipment, {
+					pending: () => "Loading the equipment catalog…",
+					success: ({ refresh }) => {
+						switch (refresh.status) {
+							case "pending":
+								return "Refreshing the catalog; saved options remain available."
+							case "paused":
+								return "Catalog refresh paused; saved options remain available."
+							case "error":
+								return "Catalog refresh failed; saved options remain available."
+							case "idle":
+								return "Each row retains stable identity while it moves."
+						}
+					},
+					error: () =>
+						"The equipment catalog is unavailable; existing rules are preserved.",
+				}),
+				disabled: fromResource((_values, { context }) => context.equipment, {
+					pending: () => true,
+					success: () => false,
+					error: () => true,
+				}),
 				itemDefault: {
 					assetId: "",
 					mandatoryBriefing: false,
@@ -320,8 +346,10 @@ const policyDefinition = kit
 						path: "assetId",
 						control: "select",
 						label: "Equipment",
-						options: (_values, { context }) => ({
-							options: context.equipment,
+						options: fromResource((_values, { context }) => context.equipment, {
+							pending: () => ({ options: [] }),
+							success: ({ value }) => ({ options: value }),
+							error: () => ({ options: [] }),
 						}),
 					},
 					{
@@ -431,6 +459,7 @@ function StudioPoliciesForm() {
 		queryKey: ["studio-equipment-catalog"],
 		queryFn: () => fakeRequest(equipmentCatalog, 510),
 	})
+	const equipmentResource = queryToResource(equipment)
 	const saveRules = useMutation({
 		mutationFn: (value: StudioPolicyOutput) =>
 			fakeRequest({ revision: value.equipmentReplacementTotal + 17 }, 430),
@@ -441,14 +470,14 @@ function StudioPoliciesForm() {
 	})
 	const [notice, setNotice] = useState("No changes published yet.")
 
-	if (policies.isPending || equipment.isPending) {
+	if (policies.isPending) {
 		return (
 			<section className="fokit-complex" aria-live="polite">
-				Loading policy baseline and equipment catalog…
+				Loading policy baseline…
 			</section>
 		)
 	}
-	if (policies.isError || equipment.isError) {
+	if (policies.isError) {
 		return (
 			<section className="fokit-complex">
 				Could not load the policy editor.
@@ -463,13 +492,14 @@ function StudioPoliciesForm() {
 		>
 			<p className="fokit-complex__kicker">Composite policy editor</p>
 			<p className="fokit-complex__summary">
-				Two baselines feed one definition; conditional policy groups and a
-				reorderable equipment matrix are published to two endpoints.
+				A loaded baseline and an independent catalog feed one definition;
+				conditional policy groups and a reorderable equipment matrix are
+				published to two endpoints.
 			</p>
 			<kit.AutoForm
 				beforeUpdate={preservePolicyInvariants}
 				className="fokit-complex__form"
-				context={{ equipment: equipment.data }}
+				context={{ equipment: equipmentResource }}
 				defaultValues={policies.data}
 				definition={policyDefinition}
 				onSubmit={async ({ value, form }) => {

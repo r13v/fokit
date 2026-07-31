@@ -16,7 +16,7 @@ export type FormResult =
 	  }
 
 export function normalizeFormResult(result: unknown): FormResult {
-	if (!isObjectRecord(result)) {
+	if (!isNonNullObject(result)) {
 		throw new TypeError("Form result must be an object")
 	}
 
@@ -46,7 +46,7 @@ export function normalizeFormResult(result: unknown): FormResult {
 }
 
 function normalizeSubmissionIssue(issue: SubmissionIssue): SubmissionIssue {
-	if (!isObjectRecord(issue)) {
+	if (!isNonNullObject(issue)) {
 		throw new TypeError("Submission issue must be an object")
 	}
 
@@ -107,6 +107,8 @@ function normalizeSubmissionIssueCode(code: unknown): string | undefined {
 	return code
 }
 
-function isObjectRecord(value: unknown): value is Record<PropertyKey, unknown> {
+function isNonNullObject(
+	value: unknown,
+): value is Record<PropertyKey, unknown> {
 	return typeof value === "object" && value !== null
 }

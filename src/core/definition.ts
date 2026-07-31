@@ -1,4 +1,5 @@
 import type { ControlRegistry } from "./control-types.js"
+import { hasOwn, isPlainObject } from "./object.js"
 import type { PathSegments } from "./path.js"
 import { formatPath, parsePath } from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
@@ -319,7 +320,7 @@ function normalizeNode<RenderComponent, Presentation extends UiPresentation>(
 	parentId: string | undefined,
 	parentColumns: GridColumns | undefined,
 ): NormalizedUiNode<RenderComponent, Presentation> {
-	if (!isObjectRecord(node)) {
+	if (!isPlainObject(node)) {
 		throw new TypeError("UI node must be an object")
 	}
 
@@ -709,7 +710,7 @@ function deepFreezePlain<Value>(value: Value): Value {
 		return Object.freeze(value)
 	}
 
-	if (!isObjectRecord(value)) {
+	if (!isPlainObject(value)) {
 		return value
 	}
 
@@ -731,17 +732,4 @@ function deepFreezePlainExcept<Value extends Record<string, unknown>>(
 		}
 	}
 	return Object.freeze(value)
-}
-
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		(Object.getPrototypeOf(value) === Object.prototype ||
-			Object.getPrototypeOf(value) === null)
-	)
-}
-
-function hasOwn<Value extends object>(value: Value, key: PropertyKey): boolean {
-	return Object.hasOwn(value, key)
 }

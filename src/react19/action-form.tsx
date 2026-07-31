@@ -7,7 +7,6 @@ import {
 	type ReactNode,
 	useCallback,
 	useEffect,
-	useId,
 	useRef,
 } from "react"
 import type { FormResult } from "../core/form-result.js"
@@ -27,13 +26,17 @@ import { ErrorSummary } from "../react/error-summary.js"
 import { FieldsRenderer } from "../react/fields.js"
 import type { NativeFormProps } from "../react/form.js"
 import { FormProvider } from "../react/form-context.js"
+import { resetFormFromEvent, useGeneratedFormId } from "../react/form-dom.js"
+import { hasDisplayErrors } from "../react/form-errors.js"
 import { getFormStore } from "../react/form-instance.js"
 import {
 	assertFormDataCompatible,
 	HiddenInputs,
 } from "../react/hidden-inputs.js"
 import { useFormState } from "../react/hooks.js"
+import { rejectOwnedProps } from "../react/owned-props.js"
 import type { FokitStyle, ReactUiPresentation } from "../react/slots.js"
+import { booleanData } from "../react/structural-props.js"
 import { type UseFormOptions, useForm } from "../react/use-form.js"
 import {
 	assertReact19ActionSupport,
@@ -101,7 +104,7 @@ export function ActionForm<
 	SectionSlotOptions,
 	ArraySlotOptions
 >) {
-	rejectOwnedActionFormProps(nativeProps)
+	rejectOwnedProps(nativeProps, "form", ["onReset", "onSubmit", "noValidate"])
 	assertReact19ActionSupport()
 
 	const attemptRef = useRef<ActionSubmissionAttempt<Schema>>(undefined)
@@ -199,15 +202,6 @@ export function ActionForm<
 		attemptRef.current = startActionSubmission(store)
 	}
 
-	function handleReset(event: FormEvent<HTMLFormElement>): void {
-		event.preventDefault()
-		const previousSnapshot = form.getSnapshot()
-		form.reset()
-		if (form.getSnapshot() !== previousSnapshot) {
-			clearFileInputs(event.currentTarget)
-		}
-	}
-
 	return (
 		<FormProvider form={form} idPrefix={generatedId}>
 			<form
@@ -226,7 +220,7 @@ export function ActionForm<
 				ref={(element) => {
 					formElementRef.current = element
 				}}
-				onReset={handleReset}
+				onReset={(event) => resetFormFromEvent(form, event)}
 				onSubmit={handleSubmit}
 			>
 				<ActionPendingBridge onPendingChange={handlePendingChange} />
@@ -265,49 +259,4 @@ function ActionPendingBridge({
 	}, [onPendingChange, status.pending])
 
 	return null
-}
-
-function clearFileInputs(form: HTMLFormElement): void {
-	for (const input of form.querySelectorAll<HTMLInputElement>(
-		'input[type="file"]',
-	)) {
-		input.value = ""
-	}
-}
-
-function rejectOwnedActionFormProps(props: object): void {
-	for (const prop of ["onReset", "onSubmit", "noValidate"] as const) {
-		if (Object.hasOwn(props, prop)) {
-			throw new TypeError(`Fokit owns the ${prop} form prop`)
-		}
-	}
-}
-
-function useGeneratedFormId(explicitId: string | undefined): string {
-	const reactId = useId()
-	return explicitId ?? `fokit-${sanitizeDomId(reactId)}`
-}
-
-function sanitizeDomId(value: string): string {
-	return value.replaceAll(/[^A-Za-z0-9_-]/g, "")
-}
-
-function booleanData(value: boolean): "" | undefined {
-	return value ? "" : undefined
-}
-
-function hasDisplayErrors(
-	errors: import("../core/index.js").DisplayFormErrors,
-): boolean {
-	if (errors.form.length > 0) {
-		return true
-	}
-
-	for (const fieldErrors of errors.fields.values()) {
-		if (fieldErrors.length > 0) {
-			return true
-		}
-	}
-
-	return false
 }

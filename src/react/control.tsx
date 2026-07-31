@@ -18,6 +18,7 @@ import {
 import { createDomId } from "./dom-id.js"
 import { useFormIdPrefix } from "./form-context.js"
 import { type FieldBinding, useField, useFormState } from "./hooks.js"
+import { joinIds } from "./structural-props.js"
 import type { AnyFormInstance } from "./use-form.js"
 
 export type ControlProps<
@@ -183,9 +184,4 @@ function createControlProps<
 		readOnly: resolved.readOnly,
 		required: resolved.required,
 	}
-}
-
-function joinIds(ids: readonly (string | undefined)[]): string | undefined {
-	const joined = ids.filter((id) => id !== undefined && id.length > 0).join(" ")
-	return joined.length === 0 ? undefined : joined
 }

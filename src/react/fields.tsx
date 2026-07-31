@@ -11,8 +11,6 @@ import type {
 	AnyUiPresentation,
 	FieldPath,
 	FormInput,
-	FormIssue,
-	GridSpan,
 	ResolvedFieldNode,
 	ResolvedSectionNode,
 	ResolvedUiNode,
@@ -28,8 +26,12 @@ import type {
 } from "./create-form-kit.js"
 import { createDomId } from "./dom-id.js"
 import { useFormContext, useFormIdPrefix } from "./form-context.js"
+import { createIssueKey } from "./form-errors.js"
 import { useField, useFormState } from "./hooks.js"
-import type { StructuralNodeName, StructuralRootProps } from "./slots.js"
+import {
+	createErrorMessageRootProps,
+	createStructuralRootProps,
+} from "./structural-props.js"
 import type { AnyFormInstance } from "./use-form.js"
 
 type FieldsRendererProps<Schema extends StandardSchema, Context> = {
@@ -45,20 +47,6 @@ type GeneratedNodeProps<Schema extends StandardSchema, Context> = {
 	readonly slots: RuntimeFormKitSlots
 	readonly node: ResolvedUiNode<Context, unknown, AnyUiPresentation>
 }
-
-type StructuralDataProps = {
-	readonly "data-fokit-path"?: string
-	readonly "data-fokit-span"?: string
-	readonly "data-invalid"?: ""
-	readonly "data-dirty"?: ""
-	readonly "data-disabled"?: ""
-	readonly "data-readonly"?: ""
-	readonly "data-required"?: ""
-	readonly "data-touched"?: ""
-	readonly "data-validating"?: ""
-}
-
-type GeneratedRootProps = StructuralRootProps & StructuralDataProps
 
 export function createFieldsComponent(
 	controls: ControlDefinitionRegistry,
@@ -285,72 +273,4 @@ function GeneratedField<Schema extends StandardSchema, Context>({
 			})}
 		/>
 	)
-}
-
-export function createErrorMessageRootProps({
-	id,
-	path,
-	tabIndex,
-	ref,
-}: {
-	readonly id: string
-	readonly path?: string
-	readonly tabIndex?: -1
-	readonly ref?: (element: HTMLElement | null) => void
-}): StructuralRootProps {
-	const props: GeneratedRootProps = {
-		"data-fokit-node": "error-message",
-		...(path === undefined ? {} : { "data-fokit-path": path }),
-		id,
-		...(tabIndex === undefined ? {} : { tabIndex }),
-		...(ref === undefined ? {} : { ref }),
-	}
-
-	return props
-}
-
-function createStructuralRootProps(
-	nodeName: StructuralNodeName,
-	options: {
-		readonly id?: string
-		readonly path?: string
-		readonly className?: string
-		readonly span?: GridSpan
-		readonly invalid?: boolean
-		readonly dirty?: boolean
-		readonly disabled?: boolean
-		readonly readOnly?: boolean
-		readonly required?: boolean
-		readonly touched?: boolean
-		readonly validating?: boolean
-	},
-): StructuralRootProps {
-	const props: GeneratedRootProps = {
-		"data-fokit-node": nodeName,
-		...(options.id === undefined ? {} : { id: options.id }),
-		...(options.path === undefined ? {} : { "data-fokit-path": options.path }),
-		...(options.span === undefined
-			? {}
-			: { "data-fokit-span": String(options.span) }),
-		...(options.className === undefined
-			? {}
-			: { className: options.className }),
-		"data-invalid": booleanData(options.invalid === true),
-		"data-dirty": booleanData(options.dirty === true),
-		"data-disabled": booleanData(options.disabled === true),
-		"data-readonly": booleanData(options.readOnly === true),
-		"data-required": booleanData(options.required === true),
-		"data-touched": booleanData(options.touched === true),
-		"data-validating": booleanData(options.validating === true),
-	}
-
-	return props
-}
-
-function createIssueKey(issue: FormIssue, index: number): string {
-	return `${issue.source}:${issue.path ?? "form"}:${issue.message}:${index}`
-}
-
-function booleanData(value: boolean): "" | undefined {
-	return value ? "" : undefined
 }

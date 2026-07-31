@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 
 import { reindexArrayPath } from "./array-state.js"
+import { isPlainObject } from "./object.js"
 import {
 	formatPath,
 	isDescendantPath,
@@ -406,7 +407,7 @@ export function normalizeStandardSchemaIssue(
 }
 
 function normalizeFormIssue(issue: FormIssue): FormIssue {
-	if (!isObjectRecord(issue)) {
+	if (!isPlainObject(issue)) {
 		throw new TypeError("Form issue must be an object")
 	}
 
@@ -737,7 +738,7 @@ function normalizeStandardSchemaPathKey(
 	segment: PropertyKey | StandardSchemaV1.PathSegment,
 ): PathSegment | undefined {
 	const key =
-		isObjectRecord(segment) && Object.hasOwn(segment, "key")
+		isPlainObject(segment) && Object.hasOwn(segment, "key")
 			? segment.key
 			: segment
 
@@ -880,13 +881,4 @@ function createReadonlyMap<K, V>(
 	}
 	readonlyMap = Object.freeze(wrapper) as ReadonlyMap<K, V>
 	return readonlyMap
-}
-
-function isObjectRecord(value: unknown): value is Record<string, unknown> {
-	if (value === null || typeof value !== "object") {
-		return false
-	}
-
-	const prototype = Object.getPrototypeOf(value)
-	return prototype === Object.prototype || prototype === null
 }

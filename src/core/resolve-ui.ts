@@ -19,6 +19,7 @@ import type {
 	UiResolver,
 	ValuePolicy,
 } from "./ui-types.js"
+import { isPromiseLike } from "./validation.js"
 import { getPathValue, isDirtyEqual } from "./value.js"
 
 export type ResolvedComputedEntry = {
@@ -702,14 +703,6 @@ function createUiResolverTracker<
 		paths,
 		revoke,
 	}
-}
-
-function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
-	return (
-		((typeof value === "object" && value !== null) ||
-			typeof value === "function") &&
-		typeof (value as { readonly then?: unknown }).then === "function"
-	)
 }
 
 function dependenciesEqual<

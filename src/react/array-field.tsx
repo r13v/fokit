@@ -7,8 +7,6 @@ import type {
 	ArrayFieldPath,
 	ArrayItemMetadata,
 	FormInput,
-	FormIssue,
-	GridSpan,
 	PathSegments,
 	ResolvedArrayNode,
 	ResolvedUiNode,
@@ -17,8 +15,13 @@ import type {
 import type { RuntimeFormKitSlots } from "./create-form-kit.js"
 import { createDomId } from "./dom-id.js"
 import { useFormIdPrefix } from "./form-context.js"
+import { createIssueKey } from "./form-errors.js"
 import { useArrayField, useFormState } from "./hooks.js"
-import type { StructuralNodeName, StructuralRootProps } from "./slots.js"
+import {
+	createErrorMessageRootProps,
+	createStructuralRootProps,
+	joinIds,
+} from "./structural-props.js"
 import type { AnyFormInstance } from "./use-form.js"
 
 type GeneratedArrayProps<Schema extends StandardSchema, Context> = {
@@ -48,22 +51,6 @@ type GeneratedArrayItemProps<Schema extends StandardSchema, Context> = {
 		key: string,
 	): ReactNode
 }
-
-type StructuralDataProps = {
-	readonly "aria-describedby"?: string
-	readonly "aria-labelledby"?: string
-	readonly "data-fokit-path"?: string
-	readonly "data-fokit-span"?: string
-	readonly "data-invalid"?: ""
-	readonly "data-dirty"?: ""
-	readonly "data-disabled"?: ""
-	readonly "data-readonly"?: ""
-	readonly "data-required"?: ""
-	readonly "data-touched"?: ""
-	readonly "data-validating"?: ""
-}
-
-type GeneratedRootProps = StructuralRootProps & StructuralDataProps
 
 const emptyItems = Object.freeze([]) as readonly ArrayItemMetadata[]
 
@@ -228,81 +215,6 @@ const GeneratedArrayItem = memo(function GeneratedArrayItem<
 }, areArrayItemPropsEqual) as <Schema extends StandardSchema, Context>(
 	props: GeneratedArrayItemProps<Schema, Context>,
 ) => ReactNode
-
-function createErrorMessageRootProps({
-	id,
-	path,
-}: {
-	readonly id: string
-	readonly path?: string
-}): StructuralRootProps {
-	const props: GeneratedRootProps = {
-		"data-fokit-node": "error-message",
-		...(path === undefined ? {} : { "data-fokit-path": path }),
-		id,
-	}
-
-	return props
-}
-
-function createStructuralRootProps(
-	nodeName: StructuralNodeName,
-	options: {
-		readonly id?: string
-		readonly path?: string
-		readonly className?: string
-		readonly span?: GridSpan
-		readonly invalid?: boolean
-		readonly dirty?: boolean
-		readonly disabled?: boolean
-		readonly readOnly?: boolean
-		readonly required?: boolean
-		readonly touched?: boolean
-		readonly validating?: boolean
-		readonly labelledBy?: string
-		readonly describedBy?: string
-	},
-): StructuralRootProps {
-	const props: GeneratedRootProps = {
-		"data-fokit-node": nodeName,
-		...(options.id === undefined ? {} : { id: options.id }),
-		...(options.path === undefined ? {} : { "data-fokit-path": options.path }),
-		...(options.span === undefined
-			? {}
-			: { "data-fokit-span": String(options.span) }),
-		...(options.className === undefined
-			? {}
-			: { className: options.className }),
-		...(options.labelledBy === undefined
-			? {}
-			: { "aria-labelledby": options.labelledBy }),
-		...(options.describedBy === undefined
-			? {}
-			: { "aria-describedby": options.describedBy }),
-		"data-invalid": booleanData(options.invalid === true),
-		"data-dirty": booleanData(options.dirty === true),
-		"data-disabled": booleanData(options.disabled === true),
-		"data-readonly": booleanData(options.readOnly === true),
-		"data-required": booleanData(options.required === true),
-		"data-touched": booleanData(options.touched === true),
-		"data-validating": booleanData(options.validating === true),
-	}
-
-	return props
-}
-
-function createIssueKey(issue: FormIssue, index: number): string {
-	return `${issue.source}:${issue.path ?? "form"}:${issue.message}:${index}`
-}
-
-function joinIds(ids: readonly (string | undefined)[]): string | undefined {
-	const joined = ids.filter((id) => id !== undefined && id.length > 0).join(" ")
-	return joined.length === 0 ? undefined : joined
-}
-
-function booleanData(value: boolean): "" | undefined {
-	return value ? "" : undefined
-}
 
 function areArrayItemPropsEqual(
 	previous: GeneratedArrayItemProps<StandardSchema, unknown>,

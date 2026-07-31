@@ -1,3 +1,4 @@
+import { isPlainObject } from "./object.js"
 import type { PathInput } from "./path.js"
 import { formatPath, isDescendantPath, isSamePath } from "./path.js"
 import type { CanonicalArrayIndex, FieldPath } from "./path-types.js"
@@ -257,13 +258,4 @@ function validatePatchSegment(segment: string, topLevel: boolean): void {
 	if (numericLikePattern.test(segment)) {
 		throw new TypeError(`setValues patch key "${segment}" cannot be an index`)
 	}
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-	if (value === null || typeof value !== "object") {
-		return false
-	}
-
-	const prototype = Object.getPrototypeOf(value)
-	return prototype === Object.prototype || prototype === null
 }

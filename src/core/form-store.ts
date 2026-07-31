@@ -45,12 +45,12 @@ import {
 	type MetadataState,
 	touchMetadataPath,
 } from "./metadata.js"
+import { isPlainObject } from "./object.js"
 import {
 	formatPath,
 	isDescendantPath,
 	isSamePath,
 	type PathInput,
-	parsePath,
 	pathsOverlap,
 } from "./path.js"
 import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
@@ -79,7 +79,12 @@ import {
 	type ValidationOptions,
 	type ValidationResult,
 } from "./validation.js"
-import { cloneMutableValueLeaves, getPathValue, isDirtyEqual } from "./value.js"
+import {
+	cloneMutableValueLeaves,
+	getPathValue,
+	hasPathValue,
+	isDirtyEqual,
+} from "./value.js"
 
 export type { ValueChange } from "./transaction.js"
 
@@ -1720,45 +1725,6 @@ function createResetChanges(
 	}
 
 	return Object.freeze(changes)
-}
-
-function hasPathValue(value: unknown, path: PathInput): boolean {
-	let current = value
-
-	for (const segment of parsePath(path)) {
-		if (Array.isArray(current)) {
-			if (
-				typeof segment !== "number" ||
-				segment >= current.length ||
-				!Object.hasOwn(current, segment)
-			) {
-				return false
-			}
-			current = current[segment]
-			continue
-		}
-
-		if (isPlainObject(current)) {
-			if (typeof segment !== "string" || !Object.hasOwn(current, segment)) {
-				return false
-			}
-			current = current[segment]
-			continue
-		}
-
-		return false
-	}
-
-	return true
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-	if (value === null || typeof value !== "object") {
-		return false
-	}
-
-	const prototype = Object.getPrototypeOf(value)
-	return prototype === Object.prototype || prototype === null
 }
 
 function normalizeChangedPaths(

@@ -10,7 +10,8 @@ import type {
 	ResolvedUiNode,
 	StandardSchema,
 } from "../core/index.js"
-import { formatPath, getPathValue, parsePath } from "../core/index.js"
+import { formatPath, getPathValue } from "../core/index.js"
+import { hasPathValue } from "../core/value.js"
 import type { ControlDefinitionRegistry } from "./control.js"
 import { useFormState } from "./hooks.js"
 import type { AnyFormInstance } from "./use-form.js"
@@ -246,43 +247,4 @@ function pushHiddenInputEntry(
 		name,
 		value,
 	})
-}
-
-function hasPathValue(value: unknown, path: string): boolean {
-	let current = value
-
-	for (const segment of parsePath(path)) {
-		if (Array.isArray(current)) {
-			if (
-				typeof segment !== "number" ||
-				segment >= current.length ||
-				!Object.hasOwn(current, segment)
-			) {
-				return false
-			}
-			current = current[segment]
-			continue
-		}
-
-		if (isPlainObject(current)) {
-			if (typeof segment !== "string" || !Object.hasOwn(current, segment)) {
-				return false
-			}
-			current = current[segment]
-			continue
-		}
-
-		return false
-	}
-
-	return true
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-	if (value === null || typeof value !== "object") {
-		return false
-	}
-
-	const prototype = Object.getPrototypeOf(value)
-	return prototype === Object.prototype || prototype === null
 }

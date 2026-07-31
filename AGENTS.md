@@ -5,6 +5,14 @@ submission, or serialization, read [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Run `npm run check` and `npm run knip` before reporting a task done.
 
+## Reuse Before Adding Helpers
+
+Before creating a helper, search `src` for the same behavior, including helpers
+with different names. Reuse the existing implementation or move identical
+behavior into the narrowest shared module that fits its responsibility. Keep
+similar helpers separate when their contracts differ, and make that difference
+explicit; do not hide unrelated behavior in a generic utilities module.
+
 ## Creator Vibe Lens
 
 Treat `creator-vibe` as the persistent interpretive lens for every user message, before classifying the task or acting on its literal wording.

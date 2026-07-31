@@ -6,6 +6,7 @@ import * as ReactDom from "react-dom"
 
 import { useFormContext } from "../react/form-context.js"
 import { useFormState } from "../react/hooks.js"
+import { rejectOwnedProps } from "../react/owned-props.js"
 
 export type ActionSubmitProps = Omit<ComponentPropsWithoutRef<"button">, "type">
 
@@ -14,7 +15,7 @@ type FormStatus = {
 }
 
 export function ActionSubmit(props: ActionSubmitProps) {
-	rejectOwnedActionSubmitProps(props)
+	rejectOwnedProps(props, "submit", ["type"])
 	const status = useReact19FormStatus()
 	const form = useFormContext()
 	const state = useFormState(form, (snapshot) => ({
@@ -63,11 +64,5 @@ function getReact19ActionHooks(): {
 
 	return {
 		useFormStatus,
-	}
-}
-
-function rejectOwnedActionSubmitProps(props: object): void {
-	if (Object.hasOwn(props, "type")) {
-		throw new TypeError("Fokit owns the type submit prop")
 	}
 }

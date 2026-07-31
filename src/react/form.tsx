@@ -2,18 +2,20 @@
 
 import {
 	type ComponentPropsWithoutRef,
-	type FormEvent,
 	type ReactNode,
 	useCallback,
-	useId,
 } from "react"
 
 import type { StandardSchema, UiPresentation } from "../core/index.js"
 import type { ControlDefinitionRegistry } from "./control.js"
 import { FormProvider } from "./form-context.js"
+import { resetFormFromEvent, useGeneratedFormId } from "./form-dom.js"
+import { hasDisplayErrors } from "./form-errors.js"
 import { assertFormDataCompatible, HiddenInputs } from "./hidden-inputs.js"
 import { useFormState } from "./hooks.js"
+import { rejectOwnedProps } from "./owned-props.js"
 import type { FokitStyle, ReactUiPresentation } from "./slots.js"
+import { booleanData } from "./structural-props.js"
 import {
 	registerClassicForm,
 	rejectClassicFormSubmit,
@@ -55,7 +57,12 @@ export function KitForm<
 	RequiredControls extends ControlDefinitionRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
 >(props: KitFormProps<Schema, Context, RequiredControls, Presentation>) {
-	rejectOwnedFormProps(props)
+	rejectOwnedProps(props, "form", [
+		"action",
+		"onReset",
+		"onSubmit",
+		"noValidate",
+	])
 	const { form, controls, children, id, ...nativeProps } = props
 	const generatedId = useGeneratedFormId(id)
 	const state = useFormState(form, (snapshot) => ({
@@ -76,15 +83,6 @@ export function KitForm<
 		[form],
 	)
 
-	function handleReset(event: FormEvent<HTMLFormElement>): void {
-		event.preventDefault()
-		const previousSnapshot = form.getSnapshot()
-		form.reset()
-		if (form.getSnapshot() !== previousSnapshot) {
-			clearFileInputs(event.currentTarget)
-		}
-	}
-
 	return (
 		<FormProvider form={form} idPrefix={generatedId}>
 			<form
@@ -100,7 +98,7 @@ export function KitForm<
 				id={generatedId}
 				noValidate
 				ref={handleFormRef}
-				onReset={handleReset}
+				onReset={(event) => resetFormFromEvent(form, event)}
 				onSubmit={(event) => {
 					const snapshot = form.getSnapshot()
 					if (!snapshot.resolvedUi.disabled && controls !== undefined) {
@@ -142,49 +140,4 @@ export function createFormComponent<
 	}
 
 	return Form
-}
-
-function clearFileInputs(form: HTMLFormElement): void {
-	for (const input of form.querySelectorAll<HTMLInputElement>(
-		'input[type="file"]',
-	)) {
-		input.value = ""
-	}
-}
-
-function rejectOwnedFormProps(props: object): void {
-	for (const prop of ["action", "onReset", "onSubmit", "noValidate"] as const) {
-		if (Object.hasOwn(props, prop)) {
-			throw new TypeError(`Fokit owns the ${prop} form prop`)
-		}
-	}
-}
-
-function useGeneratedFormId(explicitId: string | undefined): string {
-	const reactId = useId()
-	return explicitId ?? `fokit-${sanitizeDomId(reactId)}`
-}
-
-function sanitizeDomId(value: string): string {
-	return value.replaceAll(/[^A-Za-z0-9_-]/g, "")
-}
-
-function booleanData(value: boolean): "" | undefined {
-	return value ? "" : undefined
-}
-
-function hasDisplayErrors(
-	errors: import("../core/index.js").DisplayFormErrors,
-): boolean {
-	if (errors.form.length > 0) {
-		return true
-	}
-
-	for (const fieldErrors of errors.fields.values()) {
-		if (fieldErrors.length > 0) {
-			return true
-		}
-	}
-
-	return false
 }

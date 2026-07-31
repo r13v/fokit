@@ -4,9 +4,9 @@ import { useCallback } from "react"
 
 import type { StandardSchema } from "../core/index.js"
 import type { RuntimeFormKitSlots } from "./create-form-kit.js"
-import { createErrorMessageRootProps } from "./fields.js"
 import { useFormIdPrefix } from "./form-context.js"
 import { useFormState } from "./hooks.js"
+import { createErrorMessageRootProps } from "./structural-props.js"
 import type { AnyFormInstance } from "./use-form.js"
 
 export type ErrorSummaryProps<Schema extends StandardSchema, Context> = {

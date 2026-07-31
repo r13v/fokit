@@ -1,3 +1,4 @@
+import { hasOwn, isPlainObject } from "./object.js"
 import type { PathInput, PathSegment } from "./path.js"
 import { parsePath } from "./path.js"
 
@@ -33,6 +34,36 @@ export function getPathValue(value: unknown, path: PathInput): unknown {
 	}
 
 	return current
+}
+
+export function hasPathValue(value: unknown, path: PathInput): boolean {
+	let current = value
+
+	for (const segment of parsePath(path)) {
+		if (Array.isArray(current)) {
+			if (
+				typeof segment !== "number" ||
+				segment >= current.length ||
+				!hasOwn(current, segment)
+			) {
+				return false
+			}
+			current = current[segment]
+			continue
+		}
+
+		if (isPlainObject(current)) {
+			if (typeof segment !== "string" || !hasOwn(current, segment)) {
+				return false
+			}
+			current = current[segment]
+			continue
+		}
+
+		return false
+	}
+
+	return true
 }
 
 export function setPathValue<Value>(
@@ -389,15 +420,6 @@ function ensurePairAcyclic(
 	seen.set(left, new WeakSet([right]))
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-	if (value === null || typeof value !== "object") {
-		return false
-	}
-
-	const prototype = Object.getPrototypeOf(value)
-	return prototype === Object.prototype || prototype === null
-}
-
 function createPlainClone(
 	value: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -415,11 +437,4 @@ function defineDataProperty(
 		configurable: true,
 		writable: true,
 	})
-}
-
-function hasOwn(
-	value: Record<string, unknown>,
-	key: string,
-): value is Record<string, unknown> {
-	return Object.hasOwn(value, key)
 }

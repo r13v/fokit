@@ -7,6 +7,7 @@ import {
 	type FormStore,
 } from "../core/form-store.js"
 import type { StandardSchema } from "../core/standard-schema.js"
+import { isFocusableIssuePath } from "../react/form-errors.js"
 
 export function syncActionResult<
 	Schema extends StandardSchema,
@@ -50,12 +51,4 @@ function focusActionIssues<Schema extends StandardSchema, Context>(
 			'[data-fokit-node="error-message"][tabindex="-1"]',
 		)
 		?.focus()
-}
-
-function isFocusableIssuePath<Context>(
-	snapshot: ReturnType<FormStore<StandardSchema, Context>["getSnapshot"]>,
-	path: string,
-): boolean {
-	const field = snapshot.resolvedUi.fieldsByPath[path]
-	return field?.visible === true && !field.disabled && !field.readOnly
 }

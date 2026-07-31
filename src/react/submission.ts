@@ -10,6 +10,7 @@ import type {
 	StandardSchema,
 } from "../core/index.js"
 import { isDirtyEqual } from "../core/index.js"
+import { isFocusableIssuePath } from "./form-errors.js"
 import type { FormInstance } from "./form-instance.js"
 
 export type SubmitContext<Schema extends StandardSchema, Context = unknown> = {
@@ -249,12 +250,4 @@ function focusSubmitIssues<Schema extends StandardSchema, Context>(
 			'[data-fokit-node="error-message"][tabindex="-1"]',
 		)
 		?.focus()
-}
-
-function isFocusableIssuePath<Context>(
-	snapshot: ReturnType<FormStore<StandardSchema, Context>["getSnapshot"]>,
-	path: string,
-): boolean {
-	const field = snapshot.resolvedUi.fieldsByPath[path]
-	return field?.visible === true && !field.disabled && !field.readOnly
 }

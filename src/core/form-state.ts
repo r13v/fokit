@@ -1,5 +1,6 @@
 import type { DisplayFormErrors, FormErrors } from "./issues.js"
 import type { FormMetadata } from "./metadata.js"
+import { isPlainObject } from "./object.js"
 import type { ResolvedUiState } from "./resolve-ui.js"
 import { cloneValue, isDirtyEqual } from "./value.js"
 
@@ -109,13 +110,4 @@ function freezePlainContainers(value: unknown, seen: WeakSet<object>): unknown {
 	}
 
 	return value
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-	if (typeof value !== "object" || value === null) {
-		return false
-	}
-
-	const prototype = Object.getPrototypeOf(value)
-	return prototype === Object.prototype || prototype === null
 }

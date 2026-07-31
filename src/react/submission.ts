@@ -135,7 +135,7 @@ function createClassicSubmissionController<
 				await getOnSubmit()?.({
 					value: result.value,
 					input,
-					form,
+					form: form as FormInstance<Schema, Context>,
 					formData,
 				})
 			} finally {

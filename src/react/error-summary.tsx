@@ -3,15 +3,15 @@
 import { useCallback } from "react"
 
 import type { StandardSchema } from "../core/index.js"
-import type { FormKitSlots } from "./create-form-kit.js"
+import type { RuntimeFormKitSlots } from "./create-form-kit.js"
 import { createErrorMessageRootProps } from "./fields.js"
 import { useFormIdPrefix } from "./form-context.js"
 import { useFormState } from "./hooks.js"
-import type { FormInstance } from "./use-form.js"
+import type { AnyFormInstance } from "./use-form.js"
 
 export type ErrorSummaryProps<Schema extends StandardSchema, Context> = {
-	readonly form: FormInstance<Schema, Context>
-	readonly slots: FormKitSlots
+	readonly form: AnyFormInstance<Schema, Context>
+	readonly slots: RuntimeFormKitSlots
 }
 
 export function ErrorSummary<Schema extends StandardSchema, Context>({

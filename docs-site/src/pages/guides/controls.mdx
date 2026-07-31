@@ -255,5 +255,23 @@ The five slots are `Field`, `Section`, `Array`, `ArrayItem`, and
 `ErrorMessage`. Keep forwarding their public props so labels, focus targets,
 layout data, and errors remain connected.
 
+`FieldSlotProps`, `SectionSlotProps`, and `ArraySlotProps` accept an independent
+generic options type. Registering `FieldSlotProps<{ labelTooltip?: string }>`
+adds a matching, resolvable `slotOptions` property to field definitions created
+by that kit. This is the open-ended presentation channel for tooltip copy,
+badges, density, or other design-system behavior. It is separate from a
+field's control `options`.
+
+Slot replacement through `kit.extend` is directional: the new slot must accept
+the inherited options and may add optional capabilities. Base definitions then
+remain renderable by the extension, while definitions using a new capability
+cannot be rendered by the base kit or an incompatible sibling.
+
+Treat slot-option objects as immutable after defining the form. Core preserves
+their identity but does not observe mutations inside them.
+
+When composing manually, take `kit.Form` and `kit.Fields` from the same kit.
+Their React context pairing is enforced at runtime, not by TypeScript.
+
 Next, apply the [styling baseline](/guides/styling), or read
 [Arrays](/guides/arrays) before replacing array actions.

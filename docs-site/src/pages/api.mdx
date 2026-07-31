@@ -90,6 +90,11 @@ A base definition works with `checkoutKit`. A definition created through
 be rendered by `baseKit` or a sibling missing one of those names. Siblings with
 the same complete registry contract are compatible.
 
+For `Field`, `Section`, and `Array`, a replacement slot must accept the
+inherited `slotOptions` type and may add optional properties. Presentation
+compatibility follows the same base-to-extension direction through
+`AutoForm`, manual `Form` composition, and `ActionForm`.
+
 ## kit.defineForm
 
 ```text
@@ -246,7 +251,8 @@ submission behavior and when to use each state.
 | `path` | yes | Typed `FieldPath<FormInput<Schema>>` |
 | `control` | yes | A compatible key from this kit's control registry |
 | `id` | no | Derived from `path` |
-| `label`, `description` | no | `string` or a resolver function |
+| `label`, `description` | no | `ReactUiContent` or a resolver function |
+| `slotOptions` | no | Options inferred from the registered `Field` slot, or a resolver function |
 | `required` | no | `boolean` or a resolver function; default `false` |
 | `visible` | no | `boolean` or a resolver function; default `true` |
 | `disabled`, `readOnly` | no | `boolean` or a resolver function; default `false` |
@@ -264,7 +270,8 @@ be absent or contain `undefined`.
 | --- | --- | --- |
 | `id` | yes | Unique non-empty string without ASCII whitespace |
 | `children` | yes | Nested `field`, `section`, `array`, or `render` nodes |
-| `title`, `description` | no | `string` or a resolver function |
+| `title`, `description` | no | `ReactUiContent` or a resolver function |
+| `slotOptions` | no | Options inferred from the registered `Section` slot, or a resolver function |
 | `columns` | no | `1`, `2`, `3`, or `4`; default `1` |
 | `visible` | no | `boolean` or a resolver function; default `true` |
 | `disabled`, `readOnly` | no | `boolean` or a resolver function; default `false` |
@@ -281,7 +288,8 @@ default to `span: "full"`.
 | `itemDefault` | yes | A complete item or a function returning one |
 | `children` | yes | UI nodes with paths relative to one item |
 | `id` | no | Derived from `path` |
-| `label`, `description` | no | `string` or a resolver function |
+| `label`, `description` | no | `ReactUiContent` or a resolver function |
+| `slotOptions` | no | Options inferred from the registered `Array` slot, or a resolver function |
 | `visible` | no | `boolean` or a resolver function; default `true` |
 | `disabled`, `readOnly` | no | `boolean` or a resolver function; default `false` |
 | `className`, `span` | no | Static styling and grid metadata |
@@ -290,6 +298,10 @@ Definitions reject unknown controls, duplicate paths within one scope,
 duplicate node IDs, invalid layout ranges, and unsupported value policies.
 Read [UI definitions](/guides/ui-definitions) for inheritance, hidden-value
 behavior, arrays, layout, and manual-composition boundaries.
+
+`ReactUiContent` is `string | ReactElement`. The React-free core defaults these
+properties to strings and treats presentation values and structural slot
+options as opaque payloads.
 
 ## AutoForm
 

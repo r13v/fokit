@@ -58,6 +58,112 @@ belong to the selected control. For example, a number path accepts the shipped
 `required` does not add a validation rule. Generated forms use the Standard
 Schema as the source of truth, so required validation belongs in the schema.
 
+## Compose structural copy
+
+In React kits, field labels and descriptions, section titles and descriptions,
+and array labels and descriptions accept `string | ReactElement`. Use this for
+inline links, emphasis, badges, or a tooltip trigger that remains part of the
+node's accessible structure:
+
+```tsx twoslash
+// @jsx: react-jsx
+import {
+	createFormKit,
+	nativeControls,
+	type FieldSlotProps,
+} from "fokit"
+import { z } from "zod"
+
+type ProductFieldOptions = {
+	readonly labelTooltip?: string
+}
+
+function ProductTooltip({
+	id,
+	content,
+}: {
+	readonly id: string
+	readonly content: string
+}) {
+	return (
+		<span className="product-tooltip">
+			<button aria-describedby={id} type="button">
+				<span aria-hidden="true">?</span>
+				<span className="sr-only">About this field</span>
+			</button>
+			<span id={id} role="tooltip">
+				{content}
+			</span>
+		</span>
+	)
+}
+
+function ProductField({
+	rootProps,
+	label,
+	labelProps,
+	description,
+	descriptionProps,
+	slotOptions,
+	control,
+	errors,
+}: FieldSlotProps<ProductFieldOptions>) {
+	const tooltipId = `${labelProps.htmlFor}-tooltip`
+
+	return (
+		<div {...rootProps}>
+			<label {...labelProps}>{label}</label>
+			{slotOptions?.labelTooltip === undefined ? null : (
+				<ProductTooltip
+					content={slotOptions.labelTooltip}
+					id={tooltipId}
+				/>
+			)}
+			<div {...descriptionProps}>{description}</div>
+			{control}
+			{errors}
+		</div>
+	)
+}
+
+const schema = z.object({ name: z.string() })
+const kit = createFormKit({
+	controls: nativeControls,
+	slots: { Field: ProductField },
+})
+
+// ---cut---
+kit.defineForm(schema)({
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: <strong>Display name</strong>,
+			description: <a href="/naming-policy">Read the naming policy</a>,
+			slotOptions: {
+				labelTooltip: "This is visible to other members",
+			},
+		},
+	],
+})
+```
+
+`slotOptions` belongs to structural presentation; field `options` still belongs
+to the selected value control. `Field`, `Section`, and `Array` each infer an
+independent options type from the slot registered in `createFormKit`. The
+property is also resolvable, so tooltip copy or other presentation data can
+depend on tracked values and runtime context.
+
+The React-free `fokit/core` default remains string-only. React elements and
+slot-option objects are opaque to core normalization: their internals are not
+cloned or frozen. Treat them as immutable after defining the form; mutating an
+opaque object does not notify the form store or trigger a render.
+
+The tooltip example keeps its interactive trigger outside the field label and
+connects it to `role="tooltip"` content. Product CSS or a design-system tooltip
+can reveal that content on hover and keyboard focus.
+
 ## Place form-local React content
 
 Use a render node when a preview, command, or other React component belongs at
@@ -127,9 +233,9 @@ only when one of those values changes. The resolver can also read runtime
 
 | Node | Resolvable properties |
 | --- | --- |
-| `field` | `label`, `description`, `required`, `visible`, `disabled`, `readOnly`, `options` |
-| `section` | `title`, `description`, `visible`, `disabled`, `readOnly` |
-| `array` | `label`, `description`, `visible`, `disabled`, `readOnly` |
+| `field` | `label`, `description`, `slotOptions`, `required`, `visible`, `disabled`, `readOnly`, `options` |
+| `section` | `title`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly` |
+| `array` | `label`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly` |
 
 Structure stays static: paths, controls, children, layout, classes, and array
 defaults are not resolvable. Change resolvable properties for dynamic UI;
@@ -214,11 +320,14 @@ Generated definitions deliberately keep a narrow contract:
 - explicit node IDs are unique;
 - fields and arrays derive an ID from their path, while sections and render
   nodes require one;
-- arbitrary content is explicit through a React-only render node.
+- standalone arbitrary content is explicit through a React-only render node.
 
 Use `AutoForm` children for workflow content after generated nodes. When
 product layout needs exact placement beyond a render node, compose `kit.Form`,
 `kit.Fields`, and granular hooks around the same definition and form instance.
+Always take `Form` and `Fields` from the same kit. React context cannot encode
+that runtime pairing, so TypeScript cannot detect components mixed from
+different kits.
 
 Continue with [Controls and design systems](/guides/controls) to change
 renderers, [Styling](/guides/styling) to apply the structural grid, or

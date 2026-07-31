@@ -2,6 +2,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 
 import type {
 	ControlMetadata,
+	CoreUiPresentation,
 	FormInput,
 	UiNode,
 } from "../../src/core/index.js"
@@ -154,7 +155,12 @@ function TypeHarness() {
 	type _form = Expect<
 		Equal<
 			typeof form,
-			FormInstance<ExampleSchema, ExampleContext, ExampleControls>
+			FormInstance<
+				ExampleSchema,
+				ExampleContext,
+				ExampleControls,
+				CoreUiPresentation
+			>
 		>
 	>
 
@@ -162,7 +168,12 @@ function TypeHarness() {
 	type _externalForm = Expect<
 		Equal<
 			typeof boundExternalForm,
-			FormInstance<ExampleSchema, ExampleContext, ExampleControls>
+			FormInstance<
+				ExampleSchema,
+				ExampleContext,
+				ExampleControls,
+				CoreUiPresentation
+			>
 		>
 	>
 

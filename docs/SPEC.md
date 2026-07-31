@@ -741,7 +741,9 @@ Extensions are immutable snapshots and may be chained. `controls` and `slots`
 are individually optional, but `extend({})` is invalid. Added control names
 must not collide with any inherited control; TypeScript rejects known
 collisions and runtime validation covers untyped JavaScript. Slots intentionally
-replace inherited resolved slots by name.
+replace inherited resolved slots by name. A replacement `Field`, `Section`, or
+`Array` slot must accept the inherited structural `slotOptions` contract and
+may add optional capabilities.
 
 Definitions retain the complete structural registry requirement of the kit
 that created them. A base definition is compatible with an extended kit. An
@@ -814,6 +816,8 @@ The public default-slot contract is exported as `createDefaultSlots`,
 The shared structural contracts are:
 
 ```ts
+type ReactUiContent = string | React.ReactElement;
+
 type StructuralNodeName =
   | 'field'
   | 'section'
@@ -839,7 +843,7 @@ type StructuralRootProps =
     style?: FokitStyle;
   };
 
-type SectionSlotProps = {
+type SectionSlotProps<SlotOptions = never> = {
   rootProps: StructuralRootProps;
   layoutProps: React.HTMLAttributes<HTMLElement> & {
     'data-fokit-layout': 'grid';
@@ -847,15 +851,17 @@ type SectionSlotProps = {
   };
   title?: React.ReactNode;
   description?: React.ReactNode;
+  slotOptions?: Readonly<SlotOptions>;
   children: React.ReactNode;
 };
 
-type FieldSlotProps = {
+type FieldSlotProps<SlotOptions = never> = {
   rootProps: StructuralRootProps;
   label?: React.ReactNode;
   labelProps: React.LabelHTMLAttributes<HTMLLabelElement>;
   description?: React.ReactNode;
   descriptionProps: React.HTMLAttributes<HTMLElement>;
+  slotOptions?: Readonly<SlotOptions>;
   control: React.ReactNode;
   errors: readonly React.ReactNode[];
   disabled: boolean;
@@ -863,12 +869,13 @@ type FieldSlotProps = {
   required: boolean;
 };
 
-type ArraySlotProps = {
+type ArraySlotProps<SlotOptions = never> = {
   rootProps: StructuralRootProps;
   label?: React.ReactNode;
   labelProps: React.HTMLAttributes<HTMLElement>;
   description?: React.ReactNode;
   descriptionProps: React.HTMLAttributes<HTMLElement>;
+  slotOptions?: Readonly<SlotOptions>;
   errors: readonly React.ReactNode[];
   invalid: boolean;
   canAdd: boolean;
@@ -886,6 +893,11 @@ Every structural slot receives mandatory `rootProps`. The slot must spread
 them onto exactly one DOM root and preserve `rootProps.className` when adding
 its own classes. Fokit does not add a wrapper around a custom slot, so a
 `Fragment` cannot implement this contract.
+
+`createFormKit` infers the independent `Field`, `Section`, and `Array`
+`slotOptions` types from the registered slots. A matching `slotOptions`
+property is then available on that node family in definitions. It is
+resolvable and is unrelated to field control `options`.
 
 `Section` additionally receives `layoutProps` for the element containing its
 children:
@@ -1135,8 +1147,9 @@ type FieldNode = {
   path: FieldPath<FormInput>;
   control: keyof Controls;
 
-  label?: Resolvable<string>;
-  description?: Resolvable<string>;
+  label?: Resolvable<ReactUiContent>;
+  description?: Resolvable<ReactUiContent>;
+  slotOptions?: Resolvable<FieldSlotOptions>;
   required?: Resolvable<boolean>;
   disabled?: Resolvable<boolean>;
   readOnly?: Resolvable<boolean>;
@@ -1174,8 +1187,9 @@ store violate its declared `FormInput` type.
 type SectionNode = {
   kind: 'section';
   id: string;
-  title?: Resolvable<string>;
-  description?: Resolvable<string>;
+  title?: Resolvable<ReactUiContent>;
+  description?: Resolvable<ReactUiContent>;
+  slotOptions?: Resolvable<SectionSlotOptions>;
   visible?: Resolvable<boolean>;
   disabled?: Resolvable<boolean>;
   readOnly?: Resolvable<boolean>;
@@ -1195,8 +1209,9 @@ type ArrayNode = {
   kind: 'array';
   id?: string;
   path: ArrayFieldPath<FormInput>;
-  label?: Resolvable<string>;
-  description?: Resolvable<string>;
+  label?: Resolvable<ReactUiContent>;
+  description?: Resolvable<ReactUiContent>;
+  slotOptions?: Resolvable<ArraySlotOptions>;
   visible?: Resolvable<boolean>;
   disabled?: Resolvable<boolean>;
   readOnly?: Resolvable<boolean>;
@@ -1208,6 +1223,13 @@ type ArrayNode = {
 ```
 
 Child paths are relative to the array item.
+
+The `ReactUiContent` type applies to definitions created by a React form kit.
+The `fokit/core` definition default remains `string`, so core does not import
+React. Core treats presentation content and structural slot options as opaque:
+it preserves their identity and does not traverse or freeze their internals.
+Consumers treat these values as immutable after normalization; mutating an
+opaque object does not notify the form store.
 
 Array row identity is internal form metadata. Fokit must not require consumers
 to add synthetic keys to submitted data.
@@ -1853,6 +1875,9 @@ function AccountEditor() {
 
 `kit.Form` provides context and renders the native `<form>`. `kit.Fields`
 renders the UI definition stored in the form instance.
+`kit.Form` and `kit.Fields` in one composition must come from the same kit.
+Their React context pairing is a runtime constraint that TypeScript cannot
+detect across independently referenced kit components.
 
 Consumers may omit `kit.Fields` and build a completely manual form using the
 same instance and hooks.

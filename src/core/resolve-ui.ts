@@ -10,9 +10,12 @@ import type { PathSegments } from "./path.js"
 import { formatPath, parsePath } from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
 import type {
+	AnyUiPresentation,
+	CoreUiPresentation,
 	GridColumns,
 	GridSpan,
 	Resolvable,
+	UiPresentation,
 	UiResolver,
 	ValuePolicy,
 } from "./ui-types.js"
@@ -34,8 +37,12 @@ export type ResolvedComputedCache = Readonly<
 	Record<string, ResolvedComputedEntry>
 >
 
-export type ResolveUiOptions<Context = unknown, RenderComponent = unknown> = {
-	readonly previous?: ResolvedUiState<Context, RenderComponent>
+export type ResolveUiOptions<
+	Context = unknown,
+	RenderComponent = unknown,
+	Presentation extends UiPresentation = AnyUiPresentation,
+> = {
+	readonly previous?: ResolvedUiState<Context, RenderComponent, Presentation>
 	readonly disabled?: boolean
 	readonly readOnly?: boolean
 }
@@ -52,13 +59,17 @@ type ResolvedNodeBase<Context> = {
 	readonly context: Readonly<Context>
 }
 
-export type ResolvedFieldNode<Context = unknown> = ResolvedNodeBase<Context> & {
+export type ResolvedFieldNode<
+	Context = unknown,
+	Presentation extends UiPresentation = CoreUiPresentation,
+> = ResolvedNodeBase<Context> & {
 	readonly kind: "field"
 	readonly path: string
 	readonly pathSegments: PathSegments
 	readonly control: string
-	readonly label?: string
-	readonly description?: string
+	readonly label?: Presentation["content"]
+	readonly description?: Presentation["content"]
+	readonly slotOptions?: Presentation["fieldSlotOptions"]
 	readonly required: boolean
 	readonly valuePolicy: ValuePolicy
 	readonly options?: unknown
@@ -75,61 +86,106 @@ export type ResolvedRenderNode<
 export type ResolvedSectionNode<
 	Context = unknown,
 	RenderComponent = unknown,
+	Presentation extends UiPresentation = CoreUiPresentation,
 > = ResolvedNodeBase<Context> & {
 	readonly kind: "section"
-	readonly title?: string
-	readonly description?: string
+	readonly title?: Presentation["content"]
+	readonly description?: Presentation["content"]
+	readonly slotOptions?: Presentation["sectionSlotOptions"]
 	readonly columns: GridColumns
-	readonly children: readonly ResolvedUiNode<Context, RenderComponent>[]
+	readonly children: readonly ResolvedUiNode<
+		Context,
+		RenderComponent,
+		Presentation
+	>[]
 }
 
-export type ResolvedArrayNode<Context = unknown> = ResolvedNodeBase<Context> & {
+export type ResolvedArrayNode<
+	Context = unknown,
+	Presentation extends UiPresentation = CoreUiPresentation,
+> = ResolvedNodeBase<Context> & {
 	readonly kind: "array"
 	readonly path: string
 	readonly pathSegments: PathSegments
-	readonly label?: string
-	readonly description?: string
+	readonly label?: Presentation["content"]
+	readonly description?: Presentation["content"]
+	readonly slotOptions?: Presentation["arraySlotOptions"]
 	readonly itemDefault: unknown | (() => unknown)
-	readonly children: readonly ResolvedRelativeUiNode<Context>[]
-	readonly itemChildren: readonly (readonly ResolvedRelativeUiNode<Context>[])[]
+	readonly children: readonly ResolvedRelativeUiNode<Context, Presentation>[]
+	readonly itemChildren: readonly (readonly ResolvedRelativeUiNode<
+		Context,
+		Presentation
+	>[])[]
 }
 
-export type ResolvedRelativeUiNode<Context = unknown> =
-	| ResolvedArrayNode<Context>
-	| ResolvedFieldNode<Context>
-	| ResolvedSectionNode<Context, never>
+export type ResolvedRelativeUiNode<
+	Context = unknown,
+	Presentation extends UiPresentation = CoreUiPresentation,
+> =
+	| ResolvedArrayNode<Context, Presentation>
+	| ResolvedFieldNode<Context, Presentation>
+	| ResolvedSectionNode<Context, never, Presentation>
 
-export type ResolvedUiNode<Context = unknown, RenderComponent = unknown> =
-	| ResolvedArrayNode<Context>
-	| ResolvedFieldNode<Context>
+export type ResolvedUiNode<
+	Context = unknown,
+	RenderComponent = unknown,
+	Presentation extends UiPresentation = CoreUiPresentation,
+> =
+	| ResolvedArrayNode<Context, Presentation>
+	| ResolvedFieldNode<Context, Presentation>
 	| ([RenderComponent] extends [never]
 			? never
 			: ResolvedRenderNode<Context, RenderComponent>)
-	| ResolvedSectionNode<Context, RenderComponent>
+	| ResolvedSectionNode<Context, RenderComponent, Presentation>
 
-export type ResolvedUiState<Context = unknown, RenderComponent = unknown> = {
+export type ResolvedUiState<
+	Context = unknown,
+	RenderComponent = unknown,
+	Presentation extends UiPresentation = AnyUiPresentation,
+> = {
 	readonly context: Readonly<Context>
 	readonly disabled: boolean
 	readonly readOnly: boolean
-	readonly ui: readonly ResolvedUiNode<Context, RenderComponent>[]
-	readonly nodes: readonly ResolvedUiNode<Context, RenderComponent>[]
+	readonly ui: readonly ResolvedUiNode<Context, RenderComponent, Presentation>[]
+	readonly nodes: readonly ResolvedUiNode<
+		Context,
+		RenderComponent,
+		Presentation
+	>[]
 	readonly nodesById: Readonly<
-		Record<string, ResolvedUiNode<Context, RenderComponent>>
+		Record<string, ResolvedUiNode<Context, RenderComponent, Presentation>>
 	>
-	readonly fieldsByPath: Readonly<Record<string, ResolvedFieldNode<Context>>>
-	readonly arraysByPath: Readonly<Record<string, ResolvedArrayNode<Context>>>
+	readonly fieldsByPath: Readonly<
+		Record<string, ResolvedFieldNode<Context, Presentation>>
+	>
+	readonly arraysByPath: Readonly<
+		Record<string, ResolvedArrayNode<Context, Presentation>>
+	>
 	readonly computedCache: ResolvedComputedCache
 }
 
-type ResolveState<Context, RenderComponent> = {
+type ResolveState<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+> = {
 	readonly values: unknown
 	readonly context: Context
 	readonly previousCache: ResolvedComputedCache
 	readonly computedCache: Record<string, ResolvedComputedEntry>
-	readonly nodes: ResolvedUiNode<Context, RenderComponent>[]
-	readonly nodesById: Record<string, ResolvedUiNode<Context, RenderComponent>>
-	readonly fieldsByPath: Record<string, ResolvedFieldNode<Context>>
-	readonly arraysByPath: Record<string, ResolvedArrayNode<Context>>
+	readonly nodes: ResolvedUiNode<Context, RenderComponent, Presentation>[]
+	readonly nodesById: Record<
+		string,
+		ResolvedUiNode<Context, RenderComponent, Presentation>
+	>
+	readonly fieldsByPath: Record<
+		string,
+		ResolvedFieldNode<Context, Presentation>
+	>
+	readonly arraysByPath: Record<
+		string,
+		ResolvedArrayNode<Context, Presentation>
+	>
 }
 
 type ParentState = {
@@ -149,13 +205,19 @@ export function resolveUi<
 	Schema extends StandardSchema,
 	Context = unknown,
 	RenderComponent = unknown,
+	Presentation extends UiPresentation = AnyUiPresentation,
 >(
-	definition: NormalizedFormDefinition<Schema, undefined, RenderComponent>,
+	definition: NormalizedFormDefinition<
+		Schema,
+		undefined,
+		RenderComponent,
+		Presentation
+	>,
 	values: FormInput<Schema>,
 	context: Context,
-	options: ResolveUiOptions<Context, RenderComponent> = {},
-): ResolvedUiState<Context, RenderComponent> {
-	const state: ResolveState<Context, RenderComponent> = {
+	options: ResolveUiOptions<Context, RenderComponent, Presentation> = {},
+): ResolvedUiState<Context, RenderComponent, Presentation> {
+	const state: ResolveState<Context, RenderComponent, Presentation> = {
 		values,
 		context,
 		previousCache: options.previous?.computedCache ?? {},
@@ -163,15 +225,15 @@ export function resolveUi<
 		nodes: [],
 		nodesById: Object.create(null) as Record<
 			string,
-			ResolvedUiNode<Context, RenderComponent>
+			ResolvedUiNode<Context, RenderComponent, Presentation>
 		>,
 		fieldsByPath: Object.create(null) as Record<
 			string,
-			ResolvedFieldNode<Context>
+			ResolvedFieldNode<Context, Presentation>
 		>,
 		arraysByPath: Object.create(null) as Record<
 			string,
-			ResolvedArrayNode<Context>
+			ResolvedArrayNode<Context, Presentation>
 		>,
 	}
 	const rootDisabled = options.disabled === true
@@ -200,12 +262,16 @@ export function resolveUi<
 	})
 }
 
-function resolveNodes<Context, RenderComponent>(
-	nodes: readonly NormalizedUiNode<RenderComponent>[],
-	state: ResolveState<Context, RenderComponent>,
+function resolveNodes<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
+	nodes: readonly NormalizedUiNode<RenderComponent, Presentation>[],
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	parent: ParentState,
 	scope: ResolveScope,
-): readonly ResolvedUiNode<Context, RenderComponent>[] {
+): readonly ResolvedUiNode<Context, RenderComponent, Presentation>[] {
 	return Object.freeze(
 		nodes.map((node) => {
 			switch (node.kind) {
@@ -221,15 +287,19 @@ function resolveNodes<Context, RenderComponent>(
 					throw new TypeError("Unknown normalized UI node kind")
 			}
 		}),
-	) as readonly ResolvedUiNode<Context, RenderComponent>[]
+	) as readonly ResolvedUiNode<Context, RenderComponent, Presentation>[]
 }
 
-function resolveField<Context, RenderComponent>(
-	node: NormalizedFieldNode,
-	state: ResolveState<Context, RenderComponent>,
+function resolveField<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
+	node: NormalizedFieldNode<Presentation>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	parent: ParentState,
 	scope: ResolveScope,
-): ResolvedFieldNode<Context> {
+): ResolvedFieldNode<Context, Presentation> {
 	const resolvedParent = resolveParent(node, state, parent, scope)
 	const path = joinScopedPath(scope.pathPrefix, node.path)
 	const resolved = Object.freeze({
@@ -247,6 +317,12 @@ function resolveField<Context, RenderComponent>(
 		description: resolveOptional(
 			`${resolvedParent.id}:description`,
 			node.description,
+			state,
+			scope,
+		),
+		slotOptions: resolveOptional(
+			`${resolvedParent.id}:slotOptions`,
+			node.slotOptions,
 			state,
 			scope,
 		),
@@ -274,12 +350,16 @@ function resolveField<Context, RenderComponent>(
 	return resolved
 }
 
-function resolveSection<Context, RenderComponent>(
-	node: NormalizedSectionNode<RenderComponent>,
-	state: ResolveState<Context, RenderComponent>,
+function resolveSection<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
+	node: NormalizedSectionNode<RenderComponent, Presentation>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	parent: ParentState,
 	scope: ResolveScope,
-): ResolvedSectionNode<Context, RenderComponent> {
+): ResolvedSectionNode<Context, RenderComponent, Presentation> {
 	const resolvedParent = resolveParent(node, state, parent, scope)
 	const children = resolveNodes(node.children, state, resolvedParent, scope)
 	const resolved = Object.freeze({
@@ -297,6 +377,12 @@ function resolveSection<Context, RenderComponent>(
 			state,
 			scope,
 		),
+		slotOptions: resolveOptional(
+			`${resolvedParent.id}:slotOptions`,
+			node.slotOptions,
+			state,
+			scope,
+		),
 		columns: node.columns,
 		children,
 	})
@@ -305,12 +391,16 @@ function resolveSection<Context, RenderComponent>(
 	return resolved
 }
 
-function resolveArray<Context, RenderComponent>(
-	node: NormalizedArrayNode,
-	state: ResolveState<Context, RenderComponent>,
+function resolveArray<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
+	node: NormalizedArrayNode<Presentation>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	parent: ParentState,
 	scope: ResolveScope,
-): ResolvedArrayNode<Context> {
+): ResolvedArrayNode<Context, Presentation> {
 	const resolvedParent = resolveParent(node, state, parent, scope)
 	const path = joinScopedPath(scope.pathPrefix, node.path)
 	const children = resolveNodes(
@@ -318,7 +408,7 @@ function resolveArray<Context, RenderComponent>(
 		state,
 		resolvedParent,
 		templateScope,
-	) as readonly ResolvedRelativeUiNode<Context>[]
+	) as readonly ResolvedRelativeUiNode<Context, Presentation>[]
 	const itemChildren = scope.registerPaths
 		? resolveArrayItemChildren(node, path, state, resolvedParent)
 		: Object.freeze([])
@@ -339,6 +429,12 @@ function resolveArray<Context, RenderComponent>(
 			state,
 			scope,
 		),
+		slotOptions: resolveOptional(
+			`${resolvedParent.id}:slotOptions`,
+			node.slotOptions,
+			state,
+			scope,
+		),
 		itemDefault: node.itemDefault,
 		children,
 		itemChildren,
@@ -352,12 +448,16 @@ function resolveArray<Context, RenderComponent>(
 	return resolved
 }
 
-function resolveArrayItemChildren<Context, RenderComponent>(
-	node: NormalizedArrayNode,
+function resolveArrayItemChildren<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
+	node: NormalizedArrayNode<Presentation>,
 	path: string,
-	state: ResolveState<Context, RenderComponent>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	parent: ParentState,
-): readonly (readonly ResolvedRelativeUiNode<Context>[])[] {
+): readonly (readonly ResolvedRelativeUiNode<Context, Presentation>[])[] {
 	const value = getPathValue(state.values, path)
 	if (!Array.isArray(value)) {
 		return Object.freeze([])
@@ -371,14 +471,18 @@ function resolveArrayItemChildren<Context, RenderComponent>(
 				idPrefix: itemPath,
 				registerNodes: true,
 				registerPaths: true,
-			}) as readonly ResolvedRelativeUiNode<Context>[]
+			}) as readonly ResolvedRelativeUiNode<Context, Presentation>[]
 		}),
 	)
 }
 
-function resolveRender<Context, RenderComponent>(
+function resolveRender<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
 	node: NormalizedRenderNode<RenderComponent>,
-	state: ResolveState<Context, RenderComponent>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	parent: ParentState,
 	scope: ResolveScope,
 ): ResolvedRenderNode<Context, RenderComponent> {
@@ -389,20 +493,24 @@ function resolveRender<Context, RenderComponent>(
 	})
 
 	registerResolvedNode(
-		resolved as ResolvedUiNode<Context, RenderComponent>,
+		resolved as ResolvedUiNode<Context, RenderComponent, Presentation>,
 		state,
 		scope,
 	)
 	return resolved
 }
 
-function resolveParent<Context, RenderComponent>(
+function resolveParent<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
 	node:
-		| NormalizedArrayNode
-		| NormalizedFieldNode
+		| NormalizedArrayNode<Presentation>
+		| NormalizedFieldNode<Presentation>
 		| NormalizedRenderNode<RenderComponent>
-		| NormalizedSectionNode<RenderComponent>,
-	state: ResolveState<Context, RenderComponent>,
+		| NormalizedSectionNode<RenderComponent, Presentation>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	parent: ParentState,
 	scope: ResolveScope,
 ): ResolvedNodeBase<Context> {
@@ -431,11 +539,16 @@ function resolveParent<Context, RenderComponent>(
 	}
 }
 
-function resolveWithDefault<Value, Context, RenderComponent>(
+function resolveWithDefault<
+	Value,
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
 	key: string,
 	value: Resolvable<Value> | undefined,
 	defaultValue: Value,
-	state: ResolveState<Context, RenderComponent>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	scope: ResolveScope,
 ): Value {
 	if (value === undefined) {
@@ -445,10 +558,15 @@ function resolveWithDefault<Value, Context, RenderComponent>(
 	return resolveResolvable(key, value, state, scope)
 }
 
-function resolveOptional<Value, Context, RenderComponent>(
+function resolveOptional<
+	Value,
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
 	key: string,
 	value: Resolvable<Value> | undefined,
-	state: ResolveState<Context, RenderComponent>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	scope: ResolveScope,
 ): Value | undefined {
 	if (value === undefined) {
@@ -458,10 +576,15 @@ function resolveOptional<Value, Context, RenderComponent>(
 	return resolveResolvable(key, value, state, scope)
 }
 
-function resolveResolvable<Value, Context, RenderComponent>(
+function resolveResolvable<
+	Value,
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
 	key: string,
 	value: Resolvable<Value> | undefined,
-	state: ResolveState<Context, RenderComponent>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	scope: ResolveScope,
 ): Value {
 	if (typeof value !== "function") {
@@ -517,8 +640,12 @@ function resolveResolvable<Value, Context, RenderComponent>(
 	return resolved as Value
 }
 
-function createUiResolverTracker<Context, RenderComponent>(
-	state: ResolveState<Context, RenderComponent>,
+function createUiResolverTracker<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	scope: ResolveScope,
 ): {
 	readonly values: Readonly<Record<string, unknown>>
@@ -585,9 +712,13 @@ function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
 	)
 }
 
-function dependenciesEqual<Context, RenderComponent>(
+function dependenciesEqual<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
 	previous: readonly ResolvedComputedDependency[],
-	state: ResolveState<Context, RenderComponent>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	scope: ResolveScope,
 ): boolean {
 	return previous.every((dependency) =>
@@ -601,9 +732,13 @@ function dependenciesEqual<Context, RenderComponent>(
 	)
 }
 
-function registerResolvedNode<Context, RenderComponent>(
-	node: ResolvedUiNode<Context, RenderComponent>,
-	state: ResolveState<Context, RenderComponent>,
+function registerResolvedNode<
+	Context,
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
+	node: ResolvedUiNode<Context, RenderComponent, Presentation>,
+	state: ResolveState<Context, RenderComponent, Presentation>,
 	scope: ResolveScope,
 ): void {
 	if (!scope.registerNodes) {

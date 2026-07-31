@@ -2,6 +2,7 @@
 
 import { replaceFormStoreRuntime } from "../core/form-store.js"
 import {
+	type AnyUiPresentation,
 	type ArrayFieldPath,
 	type ArrayItemValue,
 	type ControlRegistry,
@@ -22,9 +23,11 @@ import {
 	type PathInput,
 	type PathValue,
 	type StandardSchema,
+	type UiPresentation,
 	type ValidationResult,
 } from "../core/index.js"
 import type { FormDeepPartial, OptionalFieldPath } from "../core/transaction.js"
+import type { ReactUiPresentation } from "./slots.js"
 import {
 	attachClassicSubmission,
 	requestClassicFormSubmit,
@@ -52,11 +55,22 @@ export type FormInstance<
 	Schema extends StandardSchema,
 	Context = unknown,
 	RequiredControls extends ControlRegistry | undefined = undefined,
+	Presentation extends UiPresentation = ReactUiPresentation,
 > = Omit<FormStore<Schema, Context>, "definition" | "replaceOptions"> & {
-	readonly definition: NormalizedFormDefinition<Schema, RequiredControls>
+	readonly definition: NormalizedFormDefinition<
+		Schema,
+		RequiredControls,
+		unknown,
+		Presentation
+	>
 	replaceOptions(options: ReplaceFormOptions<Schema, Context>): void
 	submit(): Promise<void>
 }
+
+export type AnyFormInstance<
+	Schema extends StandardSchema,
+	Context = unknown,
+> = FormInstance<Schema, Context, undefined, AnyUiPresentation>
 
 type FormBinding<Schema extends StandardSchema, Context> = {
 	readonly owner: object
@@ -68,8 +82,14 @@ export class FormInstanceImpl<
 	Schema extends StandardSchema,
 	Context,
 	RequiredControls extends ControlRegistry | undefined = undefined,
+	Presentation extends UiPresentation = ReactUiPresentation,
 > {
-	readonly definition: NormalizedFormDefinition<Schema, RequiredControls>
+	readonly definition: NormalizedFormDefinition<
+		Schema,
+		RequiredControls,
+		unknown,
+		Presentation
+	>
 	readonly schema: Schema
 
 	readonly #store: FormStore<Schema, Context>
@@ -80,7 +100,12 @@ export class FormInstanceImpl<
 	#binding: FormBinding<Schema, Context> | undefined
 
 	constructor(
-		definition: NormalizedFormDefinition<Schema, RequiredControls>,
+		definition: NormalizedFormDefinition<
+			Schema,
+			RequiredControls,
+			unknown,
+			Presentation
+		>,
 		options: UseFormOptions<Schema, Context>,
 	) {
 		this.#baseContext = options.context as Context
@@ -102,7 +127,7 @@ export class FormInstanceImpl<
 		this.definition = definition
 		this.schema = this.#store.schema
 		attachClassicSubmission(
-			this as FormInstance<Schema, Context, RequiredControls>,
+			this as FormInstance<Schema, Context, RequiredControls, Presentation>,
 			this.#store,
 			() => this.#activeOptions.onSubmit,
 		)
@@ -272,7 +297,7 @@ export class FormInstanceImpl<
 
 	submit(): Promise<void> {
 		return requestClassicFormSubmit(
-			this as FormInstance<Schema, Context, RequiredControls>,
+			this as FormInstance<Schema, Context, RequiredControls, Presentation>,
 		)
 	}
 
@@ -294,10 +319,16 @@ export function createForm<
 	Schema extends StandardSchema,
 	Context = unknown,
 	RequiredControls extends ControlRegistry | undefined = undefined,
+	Presentation extends UiPresentation = ReactUiPresentation,
 >(
-	definition: NormalizedFormDefinition<Schema, RequiredControls>,
+	definition: NormalizedFormDefinition<
+		Schema,
+		RequiredControls,
+		unknown,
+		Presentation
+	>,
 	options: UseFormOptions<Schema, Context>,
-): FormInstance<Schema, Context, RequiredControls> {
+): FormInstance<Schema, Context, RequiredControls, Presentation> {
 	return new FormInstanceImpl(definition, options)
 }
 
@@ -305,8 +336,9 @@ export function getFormStore<
 	Schema extends StandardSchema,
 	Context = unknown,
 	RequiredControls extends ControlRegistry | undefined = undefined,
+	Presentation extends UiPresentation = ReactUiPresentation,
 >(
-	form: FormInstance<Schema, Context, RequiredControls>,
+	form: FormInstance<Schema, Context, RequiredControls, Presentation>,
 ): FormStore<Schema, Context> {
 	return getFormInstanceImpl(form).getStore()
 }
@@ -315,9 +347,10 @@ export function getFormInstanceImpl<
 	Schema extends StandardSchema,
 	Context,
 	RequiredControls extends ControlRegistry | undefined,
+	Presentation extends UiPresentation,
 >(
-	form: FormInstance<Schema, Context, RequiredControls>,
-): FormInstanceImpl<Schema, Context, RequiredControls> {
+	form: FormInstance<Schema, Context, RequiredControls, Presentation>,
+): FormInstanceImpl<Schema, Context, RequiredControls, Presentation> {
 	if (form instanceof FormInstanceImpl) {
 		return form
 	}

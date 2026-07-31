@@ -8,6 +8,7 @@ import {
 } from "react"
 
 import type {
+	AnyUiPresentation,
 	FieldPath,
 	FormInput,
 	FormIssue,
@@ -23,26 +24,26 @@ import { FieldControl } from "./control.js"
 import type {
 	FieldsComponent,
 	FieldsProps,
-	FormKitSlots,
+	RuntimeFormKitSlots,
 } from "./create-form-kit.js"
 import { createDomId } from "./dom-id.js"
 import { useFormContext, useFormIdPrefix } from "./form-context.js"
 import { useField, useFormState } from "./hooks.js"
 import type { StructuralNodeName, StructuralRootProps } from "./slots.js"
-import type { FormInstance } from "./use-form.js"
+import type { AnyFormInstance } from "./use-form.js"
 
 type FieldsRendererProps<Schema extends StandardSchema, Context> = {
-	readonly form: FormInstance<Schema, Context>
+	readonly form: AnyFormInstance<Schema, Context>
 	readonly controls: ControlDefinitionRegistry
-	readonly slots: FormKitSlots
+	readonly slots: RuntimeFormKitSlots
 	readonly children?: ReactNode
 }
 
 type GeneratedNodeProps<Schema extends StandardSchema, Context> = {
-	readonly form: FormInstance<Schema, Context>
+	readonly form: AnyFormInstance<Schema, Context>
 	readonly controls: ControlDefinitionRegistry
-	readonly slots: FormKitSlots
-	readonly node: ResolvedUiNode<Context>
+	readonly slots: RuntimeFormKitSlots
+	readonly node: ResolvedUiNode<Context, unknown, AnyUiPresentation>
 }
 
 type StructuralDataProps = {
@@ -61,7 +62,7 @@ type GeneratedRootProps = StructuralRootProps & StructuralDataProps
 
 export function createFieldsComponent(
 	controls: ControlDefinitionRegistry,
-	slots: FormKitSlots,
+	slots: RuntimeFormKitSlots,
 ): FieldsComponent {
 	function Fields({ children }: FieldsProps) {
 		const form = useFormContext()
@@ -107,7 +108,7 @@ function GeneratedNode<Schema extends StandardSchema, Context>({
 	node,
 }: GeneratedNodeProps<Schema, Context>) {
 	const renderNode = useCallback(
-		(child: ResolvedUiNode<Context>, key: string) =>
+		(child: ResolvedUiNode<Context, unknown, AnyUiPresentation>, key: string) =>
 			renderGeneratedNode(form, controls, slots, child, key),
 		[controls, form, slots],
 	)
@@ -152,10 +153,10 @@ function GeneratedNode<Schema extends StandardSchema, Context>({
 }
 
 function renderGeneratedNode<Schema extends StandardSchema, Context>(
-	form: FormInstance<Schema, Context>,
+	form: AnyFormInstance<Schema, Context>,
 	controls: ControlDefinitionRegistry,
-	slots: FormKitSlots,
-	node: ResolvedUiNode<Context>,
+	slots: RuntimeFormKitSlots,
+	node: ResolvedUiNode<Context, unknown, AnyUiPresentation>,
 	key: string,
 ) {
 	return (
@@ -175,7 +176,7 @@ function GeneratedSection<Schema extends StandardSchema, Context>({
 	slots,
 	node,
 }: GeneratedNodeProps<Schema, Context> & {
-	readonly node: ResolvedSectionNode<Context>
+	readonly node: ResolvedSectionNode<Context, unknown, AnyUiPresentation>
 }) {
 	const idPrefix = useFormIdPrefix()
 	const Section = slots.Section
@@ -189,13 +190,14 @@ function GeneratedSection<Schema extends StandardSchema, Context>({
 
 	return (
 		<Section
-			description={node.description}
+			description={node.description as ReactNode}
 			layoutProps={{
 				"data-fokit-layout": "grid",
 				"data-fokit-columns": node.columns,
 			}}
 			rootProps={rootProps}
-			title={node.title}
+			slotOptions={node.slotOptions}
+			title={node.title as ReactNode}
 		>
 			{node.children.map((child) => (
 				<GeneratedNode
@@ -216,7 +218,7 @@ function GeneratedField<Schema extends StandardSchema, Context>({
 	slots,
 	node,
 }: GeneratedNodeProps<Schema, Context> & {
-	readonly node: ResolvedFieldNode<Context>
+	readonly node: ResolvedFieldNode<Context, AnyUiPresentation>
 }) {
 	const idPrefix = useFormIdPrefix()
 	const path = node.path as FieldPath<FormInput<Schema>>
@@ -242,7 +244,7 @@ function GeneratedField<Schema extends StandardSchema, Context>({
 					resolved={node}
 				/>
 			}
-			description={node.description}
+			description={node.description as ReactNode}
 			descriptionProps={
 				descriptionId === undefined ? {} : { id: descriptionId }
 			}
@@ -261,13 +263,14 @@ function GeneratedField<Schema extends StandardSchema, Context>({
 					/>
 				)
 			})}
-			label={node.label}
+			label={node.label as ReactNode}
 			labelProps={{
 				htmlFor: inputId,
 				id: `${inputId}-label`,
 			}}
 			readOnly={node.readOnly}
 			required={node.required}
+			slotOptions={node.slotOptions}
 			rootProps={createStructuralRootProps("field", {
 				path: node.path,
 				className: node.className,

@@ -5,6 +5,7 @@ import type {
 	NormalizedFormDefinition,
 	StandardSchema,
 	UiNode,
+	UiPresentation,
 	UiResolver,
 	UiResolverValues,
 } from "./index.js"
@@ -20,6 +21,9 @@ type ExampleValues = {
 		country: string
 	}
 	companyName?: string
+	contacts?: readonly {
+		readonly value: string
+	}[]
 }
 
 type ExampleContext = {
@@ -319,6 +323,139 @@ describe("resolveUi", () => {
 			unrelatedChange.fieldsByPath.city.options,
 		)
 		expect(contextChange.fieldsByPath.name.label).toBe("Name: Ada")
+	})
+
+	it("resolves and caches structural slot options like other UI resolvers", () => {
+		type Presentation = UiPresentation<
+			string,
+			{ readonly tooltip: string },
+			{ readonly tone: "quiet" | "strong" },
+			{ readonly empty: boolean }
+		>
+		const fieldSlotOptions = vi.fn(({ name }: ExampleValues) => ({
+			tooltip: `Help for ${name}`,
+		}))
+		const sectionSlotOptions = vi.fn(
+			(_values: ExampleValues, { context }: { context: ExampleContext }) => ({
+				tone: context.locked ? ("strong" as const) : ("quiet" as const),
+			}),
+		)
+		const arraySlotOptions = vi.fn(({ contacts }: ExampleValues) => ({
+			empty: contacts?.length === 0,
+		}))
+		const definition = normalizeDefinition<
+			typeof schema,
+			ExampleControls,
+			ExampleContext,
+			never,
+			Presentation
+		>({
+			schema,
+			controls,
+			ui: [
+				{
+					kind: "section",
+					id: "account",
+					slotOptions: sectionSlotOptions,
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							slotOptions: fieldSlotOptions,
+						},
+					],
+				},
+				{
+					kind: "array",
+					path: "contacts",
+					slotOptions: arraySlotOptions,
+					itemDefault: {
+						value: "",
+					},
+					children: [
+						{
+							kind: "field",
+							path: "value",
+							control: "text",
+						},
+					],
+				},
+			],
+		})
+		const context = {
+			locked: false,
+			citiesByCountry: {},
+		} satisfies ExampleContext
+		const values = {
+			name: "Ada",
+			kind: "person",
+			country: "us",
+			city: "nyc",
+			unrelated: "same",
+			contacts: [],
+		} satisfies ExampleValues
+
+		const first = resolveUi(definition, values, context)
+		const unrelatedChange = resolveUi(
+			definition,
+			{ ...values, unrelated: "changed" },
+			context,
+			{ previous: first },
+		)
+		const dependencyChange = resolveUi(
+			definition,
+			{ ...values, name: "Grace", unrelated: "changed" },
+			context,
+			{ previous: unrelatedChange },
+		)
+		const arrayDependencyChange = resolveUi(
+			definition,
+			{
+				...values,
+				name: "Grace",
+				unrelated: "changed",
+				contacts: [{ value: "ada@example.test" }],
+			},
+			context,
+			{ previous: dependencyChange },
+		)
+		const contextChange = resolveUi(
+			definition,
+			{
+				...values,
+				name: "Grace",
+				unrelated: "changed",
+				contacts: [{ value: "ada@example.test" }],
+			},
+			{ ...context, locked: true },
+			{ previous: arrayDependencyChange },
+		)
+		const firstSection = first.nodesById.account
+		const contextSection = contextChange.nodesById.account
+
+		if (firstSection.kind !== "section" || contextSection.kind !== "section") {
+			throw new Error("Expected account to resolve as a section")
+		}
+
+		expect(first.fieldsByPath.name.slotOptions).toEqual({
+			tooltip: "Help for Ada",
+		})
+		expect(firstSection.slotOptions).toEqual({ tone: "quiet" })
+		expect(first.arraysByPath.contacts.slotOptions).toEqual({ empty: true })
+		expect(unrelatedChange.fieldsByPath.name.slotOptions).toBe(
+			first.fieldsByPath.name.slotOptions,
+		)
+		expect(unrelatedChange.arraysByPath.contacts.slotOptions).toBe(
+			first.arraysByPath.contacts.slotOptions,
+		)
+		expect(arrayDependencyChange.arraysByPath.contacts.slotOptions).toEqual({
+			empty: false,
+		})
+		expect(fieldSlotOptions).toHaveBeenCalledTimes(3)
+		expect(sectionSlotOptions).toHaveBeenCalledTimes(2)
+		expect(arraySlotOptions).toHaveBeenCalledTimes(3)
+		expect(contextSection.slotOptions).toEqual({ tone: "strong" })
 	})
 
 	it("tracks conditional dependencies again after the active branch changes", () => {

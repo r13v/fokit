@@ -7,7 +7,11 @@ import type { FormInput, ImperativeFormIssue } from "../core/index.js"
 import { FieldControl } from "./control.js"
 import { createFormKit, type FormKitSlots } from "./create-form-kit.js"
 import { useFormState } from "./hooks.js"
-import type { FieldSlotProps } from "./slots.js"
+import type {
+	ArraySlotProps,
+	FieldSlotProps,
+	SectionSlotProps,
+} from "./slots.js"
 import { type TestValues, testKit, textControl } from "./test-kit.js"
 import { useForm } from "./use-form.js"
 
@@ -19,9 +23,17 @@ type CollisionValues = {
 	}
 }
 type CollisionSchema = StandardSchemaV1<CollisionValues>
+type RichValues = {
+	readonly name: string
+	readonly contacts: readonly {
+		readonly value: string
+	}[]
+}
+type RichSchema = StandardSchemaV1<RichValues>
 
 const schema = {} as TestSchema
 const collisionSchema = {} as CollisionSchema
+const richSchema = {} as RichSchema
 
 function createDefinition() {
 	return testKit.defineForm(schema)({
@@ -249,6 +261,174 @@ describe("createFormKit", () => {
 		)
 		expect(kit.slots.Field).toBe(Field)
 		expectResolvedSlots(kit.slots)
+	})
+
+	it("renders rich structural content and passes resolved slot options", () => {
+		type FieldOptions = {
+			readonly tooltip?: string
+		}
+		type SectionOptions = {
+			readonly headingLevel?: 2 | 3
+		}
+		type ArrayOptions = {
+			readonly emptyText?: string
+		}
+
+		function Field({
+			rootProps,
+			label,
+			labelProps,
+			description,
+			descriptionProps,
+			slotOptions,
+			control,
+		}: FieldSlotProps<FieldOptions>) {
+			return (
+				<div {...rootProps}>
+					<label {...labelProps} htmlFor={labelProps.htmlFor}>
+						{label}
+						{slotOptions?.tooltip === undefined ? null : (
+							<span title={slotOptions.tooltip}>?</span>
+						)}
+					</label>
+					{description === undefined ? null : (
+						<div {...descriptionProps}>{description}</div>
+					)}
+					{control}
+				</div>
+			)
+		}
+
+		function Section({
+			rootProps,
+			layoutProps,
+			title,
+			description,
+			slotOptions,
+			children,
+		}: SectionSlotProps<SectionOptions>) {
+			return (
+				<section {...rootProps} data-heading-level={slotOptions?.headingLevel}>
+					<h2>{title}</h2>
+					<div>{description}</div>
+					<div {...layoutProps}>{children}</div>
+				</section>
+			)
+		}
+
+		function ArraySlot({
+			rootProps,
+			label,
+			labelProps,
+			description,
+			descriptionProps,
+			slotOptions,
+			children,
+		}: ArraySlotProps<ArrayOptions>) {
+			return (
+				<div {...rootProps}>
+					<div {...labelProps}>{label}</div>
+					<div {...descriptionProps}>{description}</div>
+					<output>{slotOptions?.emptyText}</output>
+					{children}
+				</div>
+			)
+		}
+
+		const kit = createFormKit({
+			controls: {
+				text: textControl,
+			},
+			slots: {
+				Field,
+				Section,
+				Array: ArraySlot,
+			},
+		})
+		const definition = kit.defineForm(richSchema)({
+			ui: [
+				{
+					kind: "section",
+					id: "profile",
+					title: (
+						<>
+							Profile <small>optional details</small>
+						</>
+					),
+					description: <a href="/profile-help">How profile data is used</a>,
+					slotOptions: {
+						headingLevel: 3,
+					},
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							label: <span>Display name</span>,
+							description: <a href="/names">Naming policy</a>,
+							slotOptions: ({ name }) => ({
+								tooltip: `Shown as ${name}`,
+							}),
+						},
+					],
+				},
+				{
+					kind: "array",
+					path: "contacts",
+					label: <strong>Contacts</strong>,
+					description: <a href="/contacts">Supported contact types</a>,
+					slotOptions: {
+						emptyText: "No contacts yet",
+					},
+					itemDefault: {
+						value: "",
+					},
+					children: [
+						{
+							kind: "field",
+							path: "value",
+							control: "text",
+							label: "Contact",
+						},
+					],
+				},
+			],
+		})
+
+		render(
+			<kit.AutoForm
+				defaultValues={{
+					name: "Ada",
+					contacts: [],
+				}}
+				definition={definition}
+			/>,
+		)
+
+		expect(screen.getByText("optional details")).toBeTruthy()
+		expect(
+			screen
+				.getByText("How profile data is used")
+				.closest("a")
+				?.getAttribute("href"),
+		).toBe("/profile-help")
+		expect(screen.getByText("?").getAttribute("title")).toBe("Shown as Ada")
+		expect(
+			screen.getByText("Naming policy").closest("a")?.getAttribute("href"),
+		).toBe("/names")
+		expect(
+			screen
+				.getByText("optional details")
+				.closest("section")
+				?.getAttribute("data-heading-level"),
+		).toBe("3")
+		expect(
+			screen
+				.getByText("Supported contact types")
+				.closest("a")
+				?.getAttribute("href"),
+		).toBe("/contacts")
+		expect(screen.getByText("No contacts yet")).toBeTruthy()
 	})
 
 	it("throws when an explicit slot override removes a resolved slot", () => {

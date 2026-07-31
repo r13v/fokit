@@ -1,6 +1,7 @@
 "use client"
 
 import type {
+	AnyUiPresentation,
 	FormDataEntrySpec,
 	FormInput,
 	ResolvedArrayNode,
@@ -12,10 +13,10 @@ import type {
 import { formatPath, getPathValue, parsePath } from "../core/index.js"
 import type { ControlDefinitionRegistry } from "./control.js"
 import { useFormState } from "./hooks.js"
-import type { FormInstance } from "./use-form.js"
+import type { AnyFormInstance } from "./use-form.js"
 
 type HiddenInputsProps<Schema extends StandardSchema, Context> = {
-	readonly form: FormInstance<Schema, Context>
+	readonly form: AnyFormInstance<Schema, Context>
 	readonly controls: ControlDefinitionRegistry
 	readonly compatibilityOwner?: string
 }
@@ -74,7 +75,7 @@ export function HiddenInputs<Schema extends StandardSchema, Context>({
 }
 
 export function assertFormDataCompatible<Context>(
-	snapshot: ReturnType<FormInstance<StandardSchema, Context>["getSnapshot"]>,
+	snapshot: ReturnType<AnyFormInstance<StandardSchema, Context>["getSnapshot"]>,
 	controls: ControlDefinitionRegistry,
 	options: FormDataCompatibilityOptions,
 ): void {
@@ -110,7 +111,7 @@ export function assertFormDataCompatible<Context>(
 
 function createHiddenInputEntries(
 	values: FormInput<StandardSchema>,
-	nodes: readonly ResolvedUiNode[],
+	nodes: readonly ResolvedUiNode<unknown, unknown, AnyUiPresentation>[],
 	controls: ControlDefinitionRegistry,
 ): readonly HiddenInputEntry[] {
 	const state: HiddenEntryState = {
@@ -124,7 +125,7 @@ function createHiddenInputEntries(
 }
 
 function appendNodeEntries(
-	nodes: readonly ResolvedUiNode[],
+	nodes: readonly ResolvedUiNode<unknown, unknown, AnyUiPresentation>[],
 	pathPrefix: string,
 	state: HiddenEntryState,
 ): void {
@@ -148,7 +149,7 @@ function appendNodeEntries(
 }
 
 function appendFieldEntries(
-	node: ResolvedFieldNode,
+	node: ResolvedFieldNode<unknown, AnyUiPresentation>,
 	pathPrefix: string,
 	state: HiddenEntryState,
 ): void {
@@ -186,7 +187,7 @@ function appendFieldEntries(
 }
 
 function appendSectionEntries(
-	node: ResolvedSectionNode,
+	node: ResolvedSectionNode<unknown, unknown, AnyUiPresentation>,
 	pathPrefix: string,
 	state: HiddenEntryState,
 ): void {
@@ -194,7 +195,7 @@ function appendSectionEntries(
 }
 
 function appendArrayEntries(
-	node: ResolvedArrayNode,
+	node: ResolvedArrayNode<unknown, AnyUiPresentation>,
 	pathPrefix: string,
 	state: HiddenEntryState,
 ): void {

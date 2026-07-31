@@ -3,6 +3,7 @@
 import { type ComponentType, createElement } from "react"
 
 import {
+	type AnyUiPresentation,
 	type ControlFormData,
 	type ControlMetadata,
 	type FieldPath,
@@ -17,7 +18,7 @@ import {
 import { createDomId } from "./dom-id.js"
 import { useFormIdPrefix } from "./form-context.js"
 import { type FieldBinding, useField, useFormState } from "./hooks.js"
-import type { FormInstance } from "./use-form.js"
+import type { AnyFormInstance } from "./use-form.js"
 
 export type ControlProps<
 	Value,
@@ -91,13 +92,13 @@ export type FieldControlProps<
 	Context = unknown,
 	Path extends FieldPath<FormInput<Schema>> = FieldPath<FormInput<Schema>>,
 > = {
-	readonly form: FormInstance<Schema, Context>
+	readonly form: AnyFormInstance<Schema, Context>
 	readonly controls: ControlDefinitionRegistry
 	readonly path: Path
 	readonly id?: string
 	readonly descriptionId?: string
 	readonly describedBy?: readonly string[]
-	readonly resolved?: ResolvedFieldNode<Context>
+	readonly resolved?: ResolvedFieldNode<Context, AnyUiPresentation>
 }
 
 export function FieldControl<
@@ -155,7 +156,7 @@ function createControlProps<
 	path,
 }: {
 	readonly field: FieldBinding<PathValue<FormInput<Schema>, Path>>
-	readonly resolved: ResolvedFieldNode<Context>
+	readonly resolved: ResolvedFieldNode<Context, AnyUiPresentation>
 	readonly id: string
 	readonly ariaDescribedBy?: string
 	readonly path: string

@@ -3,6 +3,7 @@
 import { memo, type ReactNode, useCallback, useRef } from "react"
 
 import type {
+	AnyUiPresentation,
 	ArrayFieldPath,
 	ArrayItemMetadata,
 	FormInput,
@@ -13,29 +14,39 @@ import type {
 	ResolvedUiNode,
 	StandardSchema,
 } from "../core/index.js"
-import type { FormKitSlots } from "./create-form-kit.js"
+import type { RuntimeFormKitSlots } from "./create-form-kit.js"
 import { createDomId } from "./dom-id.js"
 import { useFormIdPrefix } from "./form-context.js"
 import { useArrayField, useFormState } from "./hooks.js"
 import type { StructuralNodeName, StructuralRootProps } from "./slots.js"
-import type { FormInstance } from "./use-form.js"
+import type { AnyFormInstance } from "./use-form.js"
 
 type GeneratedArrayProps<Schema extends StandardSchema, Context> = {
-	readonly form: FormInstance<Schema, Context>
-	readonly slots: FormKitSlots
-	readonly node: ResolvedArrayNode<Context>
-	renderNode(node: ResolvedUiNode<Context>, key: string): ReactNode
+	readonly form: AnyFormInstance<Schema, Context>
+	readonly slots: RuntimeFormKitSlots
+	readonly node: ResolvedArrayNode<Context, AnyUiPresentation>
+	renderNode(
+		node: ResolvedUiNode<Context, unknown, AnyUiPresentation>,
+		key: string,
+	): ReactNode
 }
 
 type GeneratedArrayItemProps<Schema extends StandardSchema, Context> = {
-	readonly form: FormInstance<Schema, Context>
-	readonly slots: FormKitSlots
-	readonly node: ResolvedArrayNode<Context>
+	readonly form: AnyFormInstance<Schema, Context>
+	readonly slots: RuntimeFormKitSlots
+	readonly node: ResolvedArrayNode<Context, AnyUiPresentation>
 	readonly item: ArrayItemMetadata
 	readonly itemCount: number
 	readonly itemCountRef: { readonly current: number }
-	readonly children: readonly ResolvedUiNode<Context>[]
-	renderNode(node: ResolvedUiNode<Context>, key: string): ReactNode
+	readonly children: readonly ResolvedUiNode<
+		Context,
+		unknown,
+		AnyUiPresentation
+	>[]
+	renderNode(
+		node: ResolvedUiNode<Context, unknown, AnyUiPresentation>,
+		key: string,
+	): ReactNode
 }
 
 type StructuralDataProps = {
@@ -96,7 +107,7 @@ export function GeneratedArray<Schema extends StandardSchema, Context>({
 		<ArraySlotComponent
 			add={add}
 			canAdd={canAdd}
-			description={node.description}
+			description={node.description as ReactNode}
 			descriptionProps={
 				descriptionId === undefined ? {} : { id: descriptionId }
 			}
@@ -115,8 +126,9 @@ export function GeneratedArray<Schema extends StandardSchema, Context>({
 				)
 			})}
 			invalid={array.meta.invalid}
-			label={node.label}
+			label={node.label as ReactNode}
 			labelProps={labelId === undefined ? {} : { id: labelId }}
+			slotOptions={node.slotOptions}
 			rootProps={createStructuralRootProps("array", {
 				id: arrayId,
 				path: node.path,
@@ -351,8 +363,8 @@ function arrayItemEqual(
 }
 
 function resolvedArrayShellEqual<Context>(
-	previous: ResolvedArrayNode<Context>,
-	next: ResolvedArrayNode<Context>,
+	previous: ResolvedArrayNode<Context, AnyUiPresentation>,
+	next: ResolvedArrayNode<Context, AnyUiPresentation>,
 ): boolean {
 	return (
 		previous.id === next.id &&
@@ -368,13 +380,14 @@ function resolvedArrayShellEqual<Context>(
 		pathSegmentsEqual(previous.pathSegments, next.pathSegments) &&
 		previous.label === next.label &&
 		previous.description === next.description &&
+		Object.is(previous.slotOptions, next.slotOptions) &&
 		Object.is(previous.itemDefault, next.itemDefault)
 	)
 }
 
 function resolvedNodesEqual<Context>(
-	previous: readonly ResolvedUiNode<Context>[],
-	next: readonly ResolvedUiNode<Context>[],
+	previous: readonly ResolvedUiNode<Context, unknown, AnyUiPresentation>[],
+	next: readonly ResolvedUiNode<Context, unknown, AnyUiPresentation>[],
 ): boolean {
 	return (
 		previous.length === next.length &&
@@ -386,8 +399,8 @@ function resolvedNodesEqual<Context>(
 }
 
 function resolvedNodeEqual<Context>(
-	previous: ResolvedUiNode<Context>,
-	next: ResolvedUiNode<Context>,
+	previous: ResolvedUiNode<Context, unknown, AnyUiPresentation>,
+	next: ResolvedUiNode<Context, unknown, AnyUiPresentation>,
 ): boolean {
 	if (
 		previous.kind !== next.kind ||
@@ -413,6 +426,7 @@ function resolvedNodeEqual<Context>(
 				previous.control === next.control &&
 				previous.label === next.label &&
 				previous.description === next.description &&
+				Object.is(previous.slotOptions, next.slotOptions) &&
 				previous.required === next.required &&
 				previous.valuePolicy === next.valuePolicy &&
 				Object.is(previous.options, next.options)
@@ -422,6 +436,7 @@ function resolvedNodeEqual<Context>(
 				next.kind === "section" &&
 				previous.title === next.title &&
 				previous.description === next.description &&
+				Object.is(previous.slotOptions, next.slotOptions) &&
 				previous.columns === next.columns &&
 				resolvedNodesEqual(previous.children, next.children)
 			)

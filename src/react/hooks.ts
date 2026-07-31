@@ -21,7 +21,7 @@ import {
 	type ExternalSelectorOptions,
 	useExternalSelector,
 } from "./use-external-selector.js"
-import type { FormInstance } from "./use-form.js"
+import type { AnyFormInstance } from "./use-form.js"
 
 const emptyIssues = Object.freeze([]) as readonly FormIssue[]
 
@@ -76,7 +76,7 @@ type ArraySelection = {
 }
 
 export function useFormState<Schema extends StandardSchema, Context, Selected>(
-	form: FormInstance<Schema, Context>,
+	form: AnyFormInstance<Schema, Context>,
 	selector: (state: FormSnapshot<FormInput<Schema>, Context>) => Selected,
 	options?: FormStateSelectorOptions<Selected>,
 ): Selected {
@@ -88,7 +88,7 @@ export function useValue<
 	Context,
 	const Path extends FieldPath<FormInput<Schema>>,
 >(
-	form: FormInstance<Schema, Context>,
+	form: AnyFormInstance<Schema, Context>,
 	path: Path,
 	options?: ExternalSelectorOptions<PathValue<FormInput<Schema>, Path>>,
 ): PathValue<FormInput<Schema>, Path> {
@@ -109,7 +109,7 @@ export function useField<
 	Context,
 	const Path extends FieldPath<FormInput<Schema>>,
 >(
-	form: FormInstance<Schema, Context>,
+	form: AnyFormInstance<Schema, Context>,
 	path: Path,
 ): FieldBinding<PathValue<FormInput<Schema>, Path>> {
 	const canonicalPath = formatPath(path)
@@ -175,7 +175,7 @@ export function useArrayField<
 	Context,
 	const Path extends ArrayFieldPath<FormInput<Schema>>,
 >(
-	form: FormInstance<Schema, Context>,
+	form: AnyFormInstance<Schema, Context>,
 	path: Path,
 ): ArrayBinding<ArrayItemValue<FormInput<Schema>, Path>> {
 	const canonicalPath = formatPath(path)

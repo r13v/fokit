@@ -3,10 +3,13 @@ import type { PathSegments } from "./path.js"
 import { formatPath, parsePath } from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
 import type {
+	AnyUiPresentation,
+	CoreUiPresentation,
 	GridColumns,
 	GridSpan,
 	Resolvable,
 	UiNode,
+	UiPresentation,
 	ValuePolicy,
 } from "./ui-types.js"
 import { cloneValue } from "./value.js"
@@ -19,14 +22,20 @@ type NodeScope = {
 	readonly relative: boolean
 }
 
-type NormalizationState<RenderComponent> = {
+type NormalizationState<
+	RenderComponent,
+	Presentation extends UiPresentation,
+> = {
 	readonly controls: ControlRegistry
 	readonly nodeIds: Set<string>
 	readonly pathsByScope: Map<string, Set<string>>
-	readonly nodes: NormalizedUiNode<RenderComponent>[]
-	readonly nodesById: Record<string, NormalizedUiNode<RenderComponent>>
-	readonly fieldsByPath: Record<string, NormalizedFieldNode>
-	readonly arraysByPath: Record<string, NormalizedArrayNode>
+	readonly nodes: NormalizedUiNode<RenderComponent, Presentation>[]
+	readonly nodesById: Record<
+		string,
+		NormalizedUiNode<RenderComponent, Presentation>
+	>
+	readonly fieldsByPath: Record<string, NormalizedFieldNode<Presentation>>
+	readonly arraysByPath: Record<string, NormalizedArrayNode<Presentation>>
 }
 
 type RawFieldNode = Record<string, unknown> & {
@@ -36,6 +45,7 @@ type RawFieldNode = Record<string, unknown> & {
 	readonly control?: unknown
 	readonly label?: unknown
 	readonly description?: unknown
+	readonly slotOptions?: unknown
 	readonly required?: unknown
 	readonly disabled?: unknown
 	readonly readOnly?: unknown
@@ -51,6 +61,7 @@ type RawSectionNode = Record<string, unknown> & {
 	readonly id?: unknown
 	readonly title?: unknown
 	readonly description?: unknown
+	readonly slotOptions?: unknown
 	readonly visible?: unknown
 	readonly disabled?: unknown
 	readonly readOnly?: unknown
@@ -66,6 +77,7 @@ type RawArrayNode = Record<string, unknown> & {
 	readonly path?: unknown
 	readonly label?: unknown
 	readonly description?: unknown
+	readonly slotOptions?: unknown
 	readonly visible?: unknown
 	readonly disabled?: unknown
 	readonly readOnly?: unknown
@@ -93,13 +105,16 @@ type NormalizedNodeBase = {
 	readonly readOnly?: Resolvable<boolean>
 }
 
-export type NormalizedFieldNode = NormalizedNodeBase & {
+export type NormalizedFieldNode<
+	Presentation extends UiPresentation = AnyUiPresentation,
+> = NormalizedNodeBase & {
 	readonly kind: "field"
 	readonly path: string
 	readonly pathSegments: PathSegments
 	readonly control: string
-	readonly label?: Resolvable<string>
-	readonly description?: Resolvable<string>
+	readonly label?: Resolvable<Presentation["content"]>
+	readonly description?: Resolvable<Presentation["content"]>
+	readonly slotOptions?: Resolvable<Presentation["fieldSlotOptions"]>
 	readonly required?: Resolvable<boolean>
 	readonly valuePolicy: ValuePolicy
 	readonly options?: Resolvable<unknown>
@@ -110,50 +125,63 @@ export type NormalizedRenderNode<Component = unknown> = NormalizedNodeBase & {
 	readonly component: Component
 }
 
-export type NormalizedSectionNode<RenderComponent = unknown> =
-	NormalizedNodeBase & {
-		readonly kind: "section"
-		readonly title?: Resolvable<string>
-		readonly description?: Resolvable<string>
-		readonly columns: GridColumns
-		readonly children: readonly NormalizedUiNode<RenderComponent>[]
-	}
+export type NormalizedSectionNode<
+	RenderComponent = unknown,
+	Presentation extends UiPresentation = AnyUiPresentation,
+> = NormalizedNodeBase & {
+	readonly kind: "section"
+	readonly title?: Resolvable<Presentation["content"]>
+	readonly description?: Resolvable<Presentation["content"]>
+	readonly slotOptions?: Resolvable<Presentation["sectionSlotOptions"]>
+	readonly columns: GridColumns
+	readonly children: readonly NormalizedUiNode<RenderComponent, Presentation>[]
+}
 
-export type NormalizedArrayNode = NormalizedNodeBase & {
+export type NormalizedArrayNode<
+	Presentation extends UiPresentation = AnyUiPresentation,
+> = NormalizedNodeBase & {
 	readonly kind: "array"
 	readonly path: string
 	readonly pathSegments: PathSegments
-	readonly label?: Resolvable<string>
-	readonly description?: Resolvable<string>
+	readonly label?: Resolvable<Presentation["content"]>
+	readonly description?: Resolvable<Presentation["content"]>
+	readonly slotOptions?: Resolvable<Presentation["arraySlotOptions"]>
 	readonly itemDefault: unknown | (() => unknown)
-	readonly children: readonly NormalizedRelativeUiNode[]
+	readonly children: readonly NormalizedRelativeUiNode<Presentation>[]
 }
 
-export type NormalizedRelativeUiNode =
-	| NormalizedArrayNode
-	| NormalizedFieldNode
-	| NormalizedSectionNode<never>
+export type NormalizedRelativeUiNode<
+	Presentation extends UiPresentation = AnyUiPresentation,
+> =
+	| NormalizedArrayNode<Presentation>
+	| NormalizedFieldNode<Presentation>
+	| NormalizedSectionNode<never, Presentation>
 
-export type NormalizedUiNode<RenderComponent = unknown> =
-	| NormalizedArrayNode
-	| NormalizedFieldNode
+export type NormalizedUiNode<
+	RenderComponent = unknown,
+	Presentation extends UiPresentation = AnyUiPresentation,
+> =
+	| NormalizedArrayNode<Presentation>
+	| NormalizedFieldNode<Presentation>
 	| ([RenderComponent] extends [never]
 			? never
 			: NormalizedRenderNode<RenderComponent>)
-	| NormalizedSectionNode<RenderComponent>
+	| NormalizedSectionNode<RenderComponent, Presentation>
 
 export type FormDefinition<
 	Schema extends StandardSchema = StandardSchema,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
 	RenderComponent = never,
+	Presentation extends UiPresentation = CoreUiPresentation,
 > = {
 	readonly schema: Schema
 	readonly ui: readonly UiNode<
 		FormInput<NoInferValue<Schema>>,
 		Controls,
 		Context,
-		RenderComponent
+		RenderComponent,
+		Presentation
 	>[]
 }
 
@@ -162,11 +190,13 @@ export type NormalizeDefinitionInput<
 	Controls extends ControlRegistry,
 	Context,
 	RenderComponent = never,
-> = FormDefinition<Schema, Controls, Context, RenderComponent> & {
+	Presentation extends UiPresentation = CoreUiPresentation,
+> = FormDefinition<Schema, Controls, Context, RenderComponent, Presentation> & {
 	readonly controls: Controls
 }
 
 declare const requiredControls: unique symbol
+declare const requiredPresentation: unique symbol
 
 type DefinitionControlRequirement<
 	RequiredControls extends ControlRegistry | undefined,
@@ -181,40 +211,63 @@ type DefinitionControlRequirement<
 			}
 	: object
 
+type DefinitionPresentationRequirement<Presentation extends UiPresentation> = {
+	readonly [requiredPresentation]?: Presentation
+}
+
 export type NormalizedFormDefinition<
 	Schema extends StandardSchema = StandardSchema,
 	RequiredControls extends ControlRegistry | undefined = undefined,
 	RenderComponent = unknown,
+	Presentation extends UiPresentation = AnyUiPresentation,
 > = {
 	readonly schema: Schema
-	readonly ui: readonly NormalizedUiNode<RenderComponent>[]
-	readonly nodes: readonly NormalizedUiNode<RenderComponent>[]
+	readonly ui: readonly NormalizedUiNode<RenderComponent, Presentation>[]
+	readonly nodes: readonly NormalizedUiNode<RenderComponent, Presentation>[]
 	readonly nodesById: Readonly<
-		Record<string, NormalizedUiNode<RenderComponent>>
+		Record<string, NormalizedUiNode<RenderComponent, Presentation>>
 	>
-	readonly fieldsByPath: Readonly<Record<string, NormalizedFieldNode>>
-	readonly arraysByPath: Readonly<Record<string, NormalizedArrayNode>>
-} & DefinitionControlRequirement<RequiredControls>
+	readonly fieldsByPath: Readonly<
+		Record<string, NormalizedFieldNode<Presentation>>
+	>
+	readonly arraysByPath: Readonly<
+		Record<string, NormalizedArrayNode<Presentation>>
+	>
+} & DefinitionControlRequirement<RequiredControls> &
+	DefinitionPresentationRequirement<Presentation>
 
 export function normalizeDefinition<
 	Schema extends StandardSchema,
 	Controls extends ControlRegistry,
 	Context = unknown,
 	RenderComponent = never,
+	Presentation extends UiPresentation = CoreUiPresentation,
 >(
-	input: NormalizeDefinitionInput<Schema, Controls, Context, RenderComponent>,
-): NormalizedFormDefinition<Schema, Controls, RenderComponent> {
-	const state: NormalizationState<RenderComponent> = {
+	input: NormalizeDefinitionInput<
+		Schema,
+		Controls,
+		Context,
+		RenderComponent,
+		Presentation
+	>,
+): NormalizedFormDefinition<Schema, Controls, RenderComponent, Presentation> {
+	const state: NormalizationState<RenderComponent, Presentation> = {
 		controls: input.controls,
 		nodeIds: new Set(),
 		pathsByScope: new Map(),
 		nodes: [],
 		nodesById: Object.create(null) as Record<
 			string,
-			NormalizedUiNode<RenderComponent>
+			NormalizedUiNode<RenderComponent, Presentation>
 		>,
-		fieldsByPath: Object.create(null) as Record<string, NormalizedFieldNode>,
-		arraysByPath: Object.create(null) as Record<string, NormalizedArrayNode>,
+		fieldsByPath: Object.create(null) as Record<
+			string,
+			NormalizedFieldNode<Presentation>
+		>,
+		arraysByPath: Object.create(null) as Record<
+			string,
+			NormalizedArrayNode<Presentation>
+		>,
 	}
 
 	const ui = normalizeChildren(input.ui as readonly unknown[], state, {
@@ -230,16 +283,24 @@ export function normalizeDefinition<
 		nodesById: Object.freeze({ ...state.nodesById }),
 		fieldsByPath: Object.freeze({ ...state.fieldsByPath }),
 		arraysByPath: Object.freeze({ ...state.arraysByPath }),
-	}) as NormalizedFormDefinition<Schema, Controls, RenderComponent>
+	}) as NormalizedFormDefinition<
+		Schema,
+		Controls,
+		RenderComponent,
+		Presentation
+	>
 }
 
-function normalizeChildren<RenderComponent>(
+function normalizeChildren<
+	RenderComponent,
+	Presentation extends UiPresentation,
+>(
 	nodes: readonly unknown[],
-	state: NormalizationState<RenderComponent>,
+	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId?: string,
 	parentColumns?: GridColumns,
-): readonly NormalizedUiNode<RenderComponent>[] {
+): readonly NormalizedUiNode<RenderComponent, Presentation>[] {
 	if (!Array.isArray(nodes)) {
 		throw new TypeError("UI children must be an array")
 	}
@@ -251,13 +312,13 @@ function normalizeChildren<RenderComponent>(
 	)
 }
 
-function normalizeNode<RenderComponent>(
+function normalizeNode<RenderComponent, Presentation extends UiPresentation>(
 	node: unknown,
-	state: NormalizationState<RenderComponent>,
+	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
 	parentColumns: GridColumns | undefined,
-): NormalizedUiNode<RenderComponent> {
+): NormalizedUiNode<RenderComponent, Presentation> {
 	if (!isObjectRecord(node)) {
 		throw new TypeError("UI node must be an object")
 	}
@@ -293,19 +354,19 @@ function normalizeNode<RenderComponent>(
 				state,
 				scope,
 				parentId,
-			) as NormalizedUiNode<RenderComponent>
+			) as NormalizedUiNode<RenderComponent, Presentation>
 		default:
 			throw new TypeError(`Unknown UI node kind "${String(node.kind)}"`)
 	}
 }
 
-function normalizeField<RenderComponent>(
+function normalizeField<RenderComponent, Presentation extends UiPresentation>(
 	node: RawFieldNode,
-	state: NormalizationState<RenderComponent>,
+	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
 	parentColumns: GridColumns | undefined,
-): NormalizedFieldNode {
+): NormalizedFieldNode<Presentation> {
 	const path = normalizeNodePath(node.path, scope.relative)
 	const id = normalizeNodeId(node.id ?? joinId(scope.idPrefix, path), "field")
 	registerPath(path, state, scope)
@@ -313,25 +374,31 @@ function normalizeField<RenderComponent>(
 	const span = normalizeSpan(node.span, parentColumns, "field")
 	const valuePolicy = normalizeValuePolicy(node.valuePolicy)
 	const control = normalizeControl(node.control, state.controls)
-	const normalized: NormalizedFieldNode = deepFreezePlain({
-		id,
-		kind: "field",
-		parentId,
-		scopePath: scope.pathScope,
-		path,
-		pathSegments: parsePath(path),
-		control,
-		label: asResolvable<string>(node.label),
-		description: asResolvable<string>(node.description),
-		required: asResolvable<boolean>(node.required),
-		disabled: asResolvable<boolean>(node.disabled),
-		readOnly: asResolvable<boolean>(node.readOnly),
-		visible: asResolvable<boolean>(node.visible),
-		valuePolicy,
-		className: normalizeClassName(node.className),
-		span,
-		options: asResolvable<unknown>(node.options),
-	})
+	const normalized: NormalizedFieldNode<Presentation> = deepFreezePlainExcept(
+		{
+			id,
+			kind: "field",
+			parentId,
+			scopePath: scope.pathScope,
+			path,
+			pathSegments: parsePath(path),
+			control,
+			label: asResolvable<Presentation["content"]>(node.label),
+			description: asResolvable<Presentation["content"]>(node.description),
+			slotOptions: asResolvable<Presentation["fieldSlotOptions"]>(
+				node.slotOptions,
+			),
+			required: asResolvable<boolean>(node.required),
+			disabled: asResolvable<boolean>(node.disabled),
+			readOnly: asResolvable<boolean>(node.readOnly),
+			visible: asResolvable<boolean>(node.visible),
+			valuePolicy,
+			className: normalizeClassName(node.className),
+			span,
+			options: asResolvable<unknown>(node.options),
+		},
+		["label", "description", "slotOptions"],
+	)
 
 	state.nodes.push(normalized)
 	state.nodesById[id] = normalized
@@ -342,13 +409,13 @@ function normalizeField<RenderComponent>(
 	return normalized
 }
 
-function normalizeSection<RenderComponent>(
+function normalizeSection<RenderComponent, Presentation extends UiPresentation>(
 	node: RawSectionNode,
-	state: NormalizationState<RenderComponent>,
+	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
 	parentColumns: GridColumns | undefined,
-): NormalizedSectionNode<RenderComponent> {
+): NormalizedSectionNode<RenderComponent, Presentation> {
 	const id = normalizeNodeId(node.id, "section")
 	registerNodeId(id, state)
 	const columns = normalizeColumns(node.columns)
@@ -360,34 +427,41 @@ function normalizeSection<RenderComponent>(
 		id,
 		columns,
 	)
-	const normalized: NormalizedSectionNode<RenderComponent> = deepFreezePlain({
-		id,
-		kind: "section",
-		parentId,
-		scopePath: scope.pathScope,
-		title: asResolvable<string>(node.title),
-		description: asResolvable<string>(node.description),
-		disabled: asResolvable<boolean>(node.disabled),
-		readOnly: asResolvable<boolean>(node.readOnly),
-		visible: asResolvable<boolean>(node.visible),
-		className: normalizeClassName(node.className),
-		columns,
-		span,
-		children,
-	})
+	const normalized: NormalizedSectionNode<RenderComponent, Presentation> =
+		deepFreezePlainExcept(
+			{
+				id,
+				kind: "section",
+				parentId,
+				scopePath: scope.pathScope,
+				title: asResolvable<Presentation["content"]>(node.title),
+				description: asResolvable<Presentation["content"]>(node.description),
+				slotOptions: asResolvable<Presentation["sectionSlotOptions"]>(
+					node.slotOptions,
+				),
+				disabled: asResolvable<boolean>(node.disabled),
+				readOnly: asResolvable<boolean>(node.readOnly),
+				visible: asResolvable<boolean>(node.visible),
+				className: normalizeClassName(node.className),
+				columns,
+				span,
+				children,
+			},
+			["title", "description", "slotOptions", "children"],
+		)
 
 	state.nodes.push(normalized)
 	state.nodesById[id] = normalized
 	return normalized
 }
 
-function normalizeArray<RenderComponent>(
+function normalizeArray<RenderComponent, Presentation extends UiPresentation>(
 	node: RawArrayNode,
-	state: NormalizationState<RenderComponent>,
+	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
 	parentColumns: GridColumns | undefined,
-): NormalizedArrayNode {
+): NormalizedArrayNode<Presentation> {
 	const path = normalizeNodePath(node.path, scope.relative)
 	const id = normalizeNodeId(node.id ?? joinId(scope.idPrefix, path), "array")
 	registerPath(path, state, scope)
@@ -403,27 +477,33 @@ function normalizeArray<RenderComponent>(
 		state,
 		childScope,
 		id,
-	) as readonly NormalizedRelativeUiNode[]
-	const normalized: NormalizedArrayNode = deepFreezePlain({
-		id,
-		kind: "array",
-		parentId,
-		scopePath: scope.pathScope,
-		path,
-		pathSegments: parsePath(path),
-		label: asResolvable<string>(node.label),
-		description: asResolvable<string>(node.description),
-		disabled: asResolvable<boolean>(node.disabled),
-		readOnly: asResolvable<boolean>(node.readOnly),
-		visible: asResolvable<boolean>(node.visible),
-		className: normalizeClassName(node.className),
-		span,
-		itemDefault:
-			typeof node.itemDefault === "function"
-				? node.itemDefault
-				: deepFreezePlain(cloneValue(node.itemDefault)),
-		children,
-	})
+	) as readonly NormalizedRelativeUiNode<Presentation>[]
+	const normalized: NormalizedArrayNode<Presentation> = deepFreezePlainExcept(
+		{
+			id,
+			kind: "array",
+			parentId,
+			scopePath: scope.pathScope,
+			path,
+			pathSegments: parsePath(path),
+			label: asResolvable<Presentation["content"]>(node.label),
+			description: asResolvable<Presentation["content"]>(node.description),
+			slotOptions: asResolvable<Presentation["arraySlotOptions"]>(
+				node.slotOptions,
+			),
+			disabled: asResolvable<boolean>(node.disabled),
+			readOnly: asResolvable<boolean>(node.readOnly),
+			visible: asResolvable<boolean>(node.visible),
+			className: normalizeClassName(node.className),
+			span,
+			itemDefault:
+				typeof node.itemDefault === "function"
+					? node.itemDefault
+					: deepFreezePlain(cloneValue(node.itemDefault)),
+			children,
+		},
+		["label", "description", "slotOptions", "children"],
+	)
 
 	state.nodes.push(normalized)
 	state.nodesById[id] = normalized
@@ -434,9 +514,9 @@ function normalizeArray<RenderComponent>(
 	return normalized
 }
 
-function normalizeRender<RenderComponent>(
+function normalizeRender<RenderComponent, Presentation extends UiPresentation>(
 	node: RawRenderNode,
-	state: NormalizationState<RenderComponent>,
+	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
 ): NormalizedRenderNode<RenderComponent> {
@@ -458,7 +538,10 @@ function normalizeRender<RenderComponent>(
 		component: node.component as RenderComponent,
 	})
 
-	const normalizedUiNode = normalized as NormalizedUiNode<RenderComponent>
+	const normalizedUiNode = normalized as NormalizedUiNode<
+		RenderComponent,
+		Presentation
+	>
 	state.nodes.push(normalizedUiNode)
 	state.nodesById[id] = normalizedUiNode
 	return normalized
@@ -493,7 +576,10 @@ function normalizeNodeId(id: unknown, nodeKind: NodeKind): string {
 	return id
 }
 
-function registerNodeId(id: string, state: NormalizationState<unknown>): void {
+function registerNodeId<RenderComponent, Presentation extends UiPresentation>(
+	id: string,
+	state: NormalizationState<RenderComponent, Presentation>,
+): void {
 	if (state.nodeIds.has(id)) {
 		throw new TypeError(`Duplicate node ID "${id}"`)
 	}
@@ -501,9 +587,9 @@ function registerNodeId(id: string, state: NormalizationState<unknown>): void {
 	state.nodeIds.add(id)
 }
 
-function registerPath(
+function registerPath<RenderComponent, Presentation extends UiPresentation>(
 	path: string,
-	state: NormalizationState<unknown>,
+	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 ): void {
 	const scopeKey = scope.pathScope
@@ -631,6 +717,19 @@ function deepFreezePlain<Value>(value: Value): Value {
 		deepFreezePlain(value[key])
 	}
 
+	return Object.freeze(value)
+}
+
+function deepFreezePlainExcept<Value extends Record<string, unknown>>(
+	value: Value,
+	opaqueKeys: readonly (keyof Value)[],
+): Value {
+	const opaque = new Set<PropertyKey>(opaqueKeys)
+	for (const key of Object.keys(value)) {
+		if (!opaque.has(key)) {
+			deepFreezePlain(value[key])
+		}
+	}
 	return Object.freeze(value)
 }
 

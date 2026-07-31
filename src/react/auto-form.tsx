@@ -5,7 +5,7 @@ import type { ControlDefinitionRegistry } from "./control.js"
 import type {
 	AutoFormComponent,
 	AutoFormProps,
-	FormKitSlots,
+	RuntimeFormKitSlots,
 } from "./create-form-kit.js"
 import { ErrorSummary } from "./error-summary.js"
 import { FieldsRenderer } from "./fields.js"
@@ -14,7 +14,18 @@ import { useForm } from "./use-form.js"
 
 export function createAutoFormComponent<
 	Controls extends ControlDefinitionRegistry,
->(controls: Controls, slots: FormKitSlots): AutoFormComponent<Controls> {
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+>(
+	controls: Controls,
+	slots: RuntimeFormKitSlots,
+): AutoFormComponent<
+	Controls,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions
+> {
 	function AutoForm<Schema extends StandardSchema, Context = unknown>({
 		definition,
 		defaultValues,
@@ -27,7 +38,14 @@ export function createAutoFormComponent<
 		onSubmit,
 		children,
 		...formProps
-	}: AutoFormProps<Schema, Context, Controls>) {
+	}: AutoFormProps<
+		Schema,
+		Context,
+		Controls,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions
+	>) {
 		const form = useForm(definition, {
 			defaultValues,
 			context,

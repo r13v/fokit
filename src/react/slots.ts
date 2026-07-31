@@ -4,10 +4,11 @@ import type {
 	CSSProperties,
 	HTMLAttributes,
 	LabelHTMLAttributes,
+	ReactElement,
 	ReactNode,
 } from "react"
 
-import type { FormIssue, GridColumns } from "../core/index.js"
+import type { FormIssue, GridColumns, UiPresentation } from "../core/index.js"
 
 export type StructuralNodeName =
 	| "array"
@@ -27,13 +28,40 @@ export type FokitCssVariable =
 export type FokitStyle = CSSProperties &
 	Partial<Record<FokitCssVariable, string>>
 
+export type ReactUiContent = string | ReactElement
+declare const reactUiPresentationSlotKeys: unique symbol
+type SlotOptionKeys<Options> = [Options] extends [never]
+	? never
+	: unknown extends Options
+		? PropertyKey
+		: [keyof Options] extends [never]
+			? PropertyKey
+			: keyof Options
+
+export type ReactUiPresentation<
+	FieldSlotOptions = never,
+	SectionSlotOptions = never,
+	ArraySlotOptions = never,
+> = UiPresentation<
+	ReactUiContent,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions
+> & {
+	readonly [reactUiPresentationSlotKeys]?: readonly [
+		SlotOptionKeys<FieldSlotOptions>,
+		SlotOptionKeys<SectionSlotOptions>,
+		SlotOptionKeys<ArraySlotOptions>,
+	]
+}
+
 export type StructuralRootProps = Omit<HTMLAttributes<HTMLElement>, "style"> & {
 	readonly "data-fokit-node": StructuralNodeName
 	ref?(element: HTMLElement | null): void
 	readonly style?: FokitStyle
 }
 
-export type SectionSlotProps = {
+export type SectionSlotProps<SlotOptions = never> = {
 	readonly rootProps: StructuralRootProps
 	readonly layoutProps: HTMLAttributes<HTMLElement> & {
 		readonly "data-fokit-layout": "grid"
@@ -41,15 +69,17 @@ export type SectionSlotProps = {
 	}
 	readonly title?: ReactNode
 	readonly description?: ReactNode
+	readonly slotOptions?: Readonly<SlotOptions>
 	readonly children: ReactNode
 }
 
-export type FieldSlotProps = {
+export type FieldSlotProps<SlotOptions = never> = {
 	readonly rootProps: StructuralRootProps
 	readonly label?: ReactNode
 	readonly labelProps: LabelHTMLAttributes<HTMLLabelElement>
 	readonly description?: ReactNode
 	readonly descriptionProps: HTMLAttributes<HTMLElement>
+	readonly slotOptions?: Readonly<SlotOptions>
 	readonly control: ReactNode
 	readonly errors: readonly ReactNode[]
 	readonly disabled: boolean
@@ -57,12 +87,13 @@ export type FieldSlotProps = {
 	readonly required: boolean
 }
 
-export type ArraySlotProps = {
+export type ArraySlotProps<SlotOptions = never> = {
 	readonly rootProps: StructuralRootProps
 	readonly label?: ReactNode
 	readonly labelProps: HTMLAttributes<HTMLElement>
 	readonly description?: ReactNode
 	readonly descriptionProps: HTMLAttributes<HTMLElement>
+	readonly slotOptions?: Readonly<SlotOptions>
 	readonly errors: readonly ReactNode[]
 	readonly invalid: boolean
 	readonly canAdd: boolean

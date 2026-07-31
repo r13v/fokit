@@ -1,4 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
+import type { ReactElement } from "react"
 
 import {
 	type ArrayItemSlotProps,
@@ -193,6 +194,360 @@ type _partialSlotsResolve = Expect<
 >
 
 type _customSlotsResolve = Expect<Equal<typeof kit.slots, FormKitSlots>>
+
+type RichFieldOptions = {
+	readonly tone?: "quiet" | "strong"
+	readonly labelTooltip?: string
+}
+type RichSectionOptions = {
+	readonly headingLevel?: 2 | 3
+}
+type RichArrayOptions = {
+	readonly emptyText?: string
+}
+
+const RichField = (_props: FieldSlotProps<RichFieldOptions>) => null
+const RichSection = (_props: SectionSlotProps<RichSectionOptions>) => null
+const RichArray = (_props: ArraySlotProps<RichArrayOptions>) => null
+const richKit = createFormKit({
+	controls: {
+		text,
+	},
+	slots: {
+		Field: RichField,
+		Section: RichSection,
+		Array: RichArray,
+	},
+})
+
+type _richSlotsResolve = Expect<
+	Equal<
+		typeof richKit.slots,
+		FormKitSlots<RichFieldOptions, RichSectionOptions, RichArrayOptions>
+	>
+>
+
+declare const richContent: ReactElement
+
+const richDefinition = richKit.defineForm(schema)({
+	ui: [
+		{
+			kind: "section",
+			id: "profile",
+			title: richContent,
+			description: () => richContent,
+			slotOptions: {
+				headingLevel: 3,
+			},
+			children: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					label: richContent,
+					description: () => richContent,
+					slotOptions: ({ name }) => ({
+						labelTooltip: name,
+						tone: "quiet",
+					}),
+				},
+			],
+		},
+	],
+})
+
+richKit.defineForm(schema)({
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			slotOptions: {
+				// @ts-expect-error slot options come from the registered Field slot
+				unknownOption: true,
+			},
+		},
+	],
+})
+
+richKit.defineForm(schema)({
+	ui: [
+		{
+			kind: "section",
+			id: "profile",
+			slotOptions: {
+				// @ts-expect-error section options are independent from field options
+				labelTooltip: "Help",
+			},
+			children: [],
+		},
+	],
+})
+
+const coreUiWithRichContent = [
+	{
+		kind: "field",
+		path: "name",
+		control: "text",
+		// @ts-expect-error core UI content remains string-only
+		label: richContent,
+	},
+] satisfies readonly UiNode<ExampleInput, typeof kit.controls>[]
+
+void coreUiWithRichContent
+void richDefinition
+
+type BaseFieldOptions = {
+	readonly tone?: "quiet" | "strong"
+}
+type ExtendedFieldOptions = BaseFieldOptions & {
+	readonly labelTooltip?: string
+}
+type BaseSectionOptions = {
+	readonly density?: "comfortable" | "compact"
+}
+type ExtendedSectionOptions = BaseSectionOptions & {
+	readonly legendTooltip?: string
+}
+type BaseArrayOptions = {
+	readonly controls?: "inline" | "stacked"
+}
+type ExtendedArrayOptions = BaseArrayOptions & {
+	readonly addHint?: string
+}
+
+const BaseField = (_props: FieldSlotProps<BaseFieldOptions>) => null
+const ExtendedField = (_props: FieldSlotProps<ExtendedFieldOptions>) => null
+const BaseSection = (_props: SectionSlotProps<BaseSectionOptions>) => null
+const ExtendedSection = (_props: SectionSlotProps<ExtendedSectionOptions>) =>
+	null
+const BaseArray = (_props: ArraySlotProps<BaseArrayOptions>) => null
+const ExtendedArray = (_props: ArraySlotProps<ExtendedArrayOptions>) => null
+const RequiredTooltipField = (
+	_props: FieldSlotProps<
+		BaseFieldOptions & {
+			readonly labelTooltip: string
+		}
+	>,
+) => null
+const SiblingField = (
+	_props: FieldSlotProps<
+		BaseFieldOptions & { readonly leadingIcon?: ReactElement }
+	>,
+) => null
+const basePresentationKit = createFormKit({
+	controls: {
+		text,
+	},
+	slots: {
+		Field: BaseField,
+		Section: BaseSection,
+		Array: BaseArray,
+	},
+})
+const extendedPresentationKit = basePresentationKit.extend({
+	slots: {
+		Field: ExtendedField,
+		Section: ExtendedSection,
+		Array: ExtendedArray,
+	},
+})
+const siblingPresentationKit = basePresentationKit.extend({
+	slots: {
+		Field: SiblingField,
+	},
+})
+const broadPresentationKit = basePresentationKit.extend({
+	slots: {
+		Field: (_props: FieldSlotProps<unknown>) => null,
+	},
+})
+
+type _extendedPresentationSlots = Expect<
+	Equal<
+		typeof extendedPresentationKit.slots,
+		FormKitSlots<
+			ExtendedFieldOptions,
+			ExtendedSectionOptions,
+			ExtendedArrayOptions
+		>
+	>
+>
+
+basePresentationKit.extend({
+	slots: {
+		// @ts-expect-error replacement slots may only add optional capabilities
+		Field: RequiredTooltipField,
+	},
+})
+
+const basePresentationDefinition = basePresentationKit.defineForm(schema)({
+	ui: [
+		{
+			kind: "section",
+			id: "profile",
+			slotOptions: {
+				density: "compact",
+			},
+			children: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					slotOptions: {
+						tone: "quiet",
+					},
+				},
+			],
+		},
+	],
+})
+const extendedPresentationDefinition = extendedPresentationKit.defineForm(
+	schema,
+)({
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			slotOptions: {
+				tone: "strong",
+				labelTooltip: "Legal name",
+			},
+		},
+	],
+})
+const extendedSectionPresentationDefinition =
+	extendedPresentationKit.defineForm(schema)({
+		ui: [
+			{
+				kind: "section",
+				id: "profile",
+				slotOptions: {
+					density: "comfortable",
+					legendTooltip: "Profile fields",
+				},
+				children: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						slotOptions: {
+							tone: "strong",
+						},
+					},
+				],
+			},
+		],
+	})
+const baseArrayPresentationDefinition = basePresentationKit.defineForm(
+	listSchema,
+)({
+	ui: [
+		{
+			kind: "array",
+			path: "items",
+			slotOptions: {
+				controls: "inline",
+			},
+			itemDefault: {
+				value: "",
+			},
+			children: [
+				{
+					kind: "field",
+					path: "value",
+					control: "text",
+				},
+			],
+		},
+	],
+})
+const extendedArrayPresentationDefinition = extendedPresentationKit.defineForm(
+	listSchema,
+)({
+	ui: [
+		{
+			kind: "array",
+			path: "items",
+			slotOptions: {
+				controls: "stacked",
+				addHint: "Add another item",
+			},
+			itemDefault: {
+				value: "",
+			},
+			children: [
+				{
+					kind: "field",
+					path: "value",
+					control: "text",
+				},
+			],
+		},
+	],
+})
+declare const presentationDefaultValues: ExampleInput
+declare const listPresentationDefaultValues: ListInput
+
+extendedPresentationKit.AutoForm({
+	definition: basePresentationDefinition,
+	defaultValues: presentationDefaultValues,
+})
+broadPresentationKit.AutoForm({
+	definition: basePresentationDefinition,
+	defaultValues: presentationDefaultValues,
+})
+basePresentationKit.AutoForm({
+	// @ts-expect-error a base kit cannot render options introduced by an extension
+	definition: extendedPresentationDefinition,
+	defaultValues: presentationDefaultValues,
+})
+siblingPresentationKit.AutoForm({
+	// @ts-expect-error sibling slot capabilities are not interchangeable
+	definition: extendedPresentationDefinition,
+	defaultValues: presentationDefaultValues,
+})
+basePresentationKit.AutoForm({
+	// @ts-expect-error a base kit cannot render section capabilities from an extension
+	definition: extendedSectionPresentationDefinition,
+	defaultValues: presentationDefaultValues,
+})
+extendedPresentationKit.AutoForm({
+	definition: baseArrayPresentationDefinition,
+	defaultValues: listPresentationDefaultValues,
+})
+basePresentationKit.AutoForm({
+	// @ts-expect-error a base kit cannot render array capabilities from an extension
+	definition: extendedArrayPresentationDefinition,
+	defaultValues: listPresentationDefaultValues,
+})
+
+const basePresentationForm = createForm(basePresentationDefinition, {
+	defaultValues: presentationDefaultValues,
+})
+const extendedPresentationForm = createForm(extendedPresentationDefinition, {
+	defaultValues: presentationDefaultValues,
+})
+
+extendedPresentationKit.Form({ form: basePresentationForm })
+basePresentationKit.Form({
+	// @ts-expect-error manual composition keeps structural slot capabilities
+	form: extendedPresentationForm,
+})
+ActionForm({
+	kit: extendedPresentationKit,
+	definition: basePresentationDefinition,
+	defaultValues: presentationDefaultValues,
+	action: (_formData: FormData) => undefined,
+})
+ActionForm({
+	kit: basePresentationKit,
+	// @ts-expect-error ActionForm keeps structural slot capabilities
+	definition: extendedPresentationDefinition,
+	defaultValues: presentationDefaultValues,
+	action: (_formData: FormData) => undefined,
+})
 
 const exampleDefinition = kit.defineForm(schema).withContext<ExampleContext>({
 	ui: [

@@ -1,6 +1,7 @@
 "use client"
 
 export type {
+	AnyUiPresentation,
 	ArrayCommand,
 	ArrayCommandChange,
 	ArrayFieldPath,
@@ -18,6 +19,7 @@ export type {
 	ControlOptionsOf,
 	ControlRegistry,
 	ControlValueOf,
+	CoreUiPresentation,
 	DisplayFormErrors,
 	FieldMetadata,
 	FieldNode,
@@ -67,6 +69,7 @@ export type {
 	SectionNode,
 	StandardSchema,
 	UiNode,
+	UiPresentation,
 	UiResolver,
 	UiResolverDetails,
 	UiResolverValues,
@@ -161,6 +164,8 @@ export type {
 	FokitCssVariable,
 	FokitNodeName,
 	FokitStyle,
+	ReactUiContent,
+	ReactUiPresentation,
 	SectionSlotProps,
 	StructuralNodeName,
 	StructuralRootProps,

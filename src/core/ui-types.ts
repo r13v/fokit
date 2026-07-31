@@ -13,6 +13,21 @@ export type GridColumns = 1 | 2 | 3 | 4
 export type GridSpan = 1 | 2 | 3 | 4 | "full"
 export type ValuePolicy = "preserve" | "unset"
 
+export type UiPresentation<
+	Content = unknown,
+	FieldSlotOptions = unknown,
+	SectionSlotOptions = unknown,
+	ArraySlotOptions = unknown,
+> = {
+	readonly content: Content
+	readonly fieldSlotOptions: FieldSlotOptions
+	readonly sectionSlotOptions: SectionSlotOptions
+	readonly arraySlotOptions: ArraySlotOptions
+}
+
+export type CoreUiPresentation = UiPresentation<string, never, never, never>
+export type AnyUiPresentation = UiPresentation
+
 export type UiResolverDetails<Context = unknown> = {
 	readonly context: Readonly<Context>
 }
@@ -36,11 +51,16 @@ export type Resolvable<Value, Input = unknown, Context = unknown> =
 	| StaticResolvableValue<Value>
 	| UiResolver<Value, Input, Context>
 
-type FieldNodeBase<Input, Context> = {
+type FieldNodeBase<Input, Context, Presentation extends UiPresentation> = {
 	readonly kind: "field"
 	readonly id?: string
-	readonly label?: Resolvable<string, Input, Context>
-	readonly description?: Resolvable<string, Input, Context>
+	readonly label?: Resolvable<Presentation["content"], Input, Context>
+	readonly description?: Resolvable<Presentation["content"], Input, Context>
+	readonly slotOptions?: Resolvable<
+		Presentation["fieldSlotOptions"],
+		Input,
+		Context
+	>
 	readonly required?: Resolvable<boolean, Input, Context>
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
@@ -110,7 +130,8 @@ type FieldNodeForPath<
 	Controls extends ControlRegistry,
 	Context,
 	Path extends FieldPath<Input>,
-> = FieldNodeBase<Input, Context> & {
+	Presentation extends UiPresentation,
+> = FieldNodeBase<Input, Context, Presentation> & {
 	readonly path: Path
 	readonly valuePolicy?: FieldValuePolicy<Input, Path>
 } & {
@@ -128,8 +149,15 @@ export type FieldNode<
 	Input,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
+	Presentation extends UiPresentation = CoreUiPresentation,
 > = {
-	[Path in FieldPath<Input>]: FieldNodeForPath<Input, Controls, Context, Path>
+	[Path in FieldPath<Input>]: FieldNodeForPath<
+		Input,
+		Controls,
+		Context,
+		Path,
+		Presentation
+	>
 }[FieldPath<Input>]
 
 export type RenderNode<Component = unknown> = {
@@ -143,11 +171,17 @@ export type SectionNode<
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
 	RenderComponent = never,
+	Presentation extends UiPresentation = CoreUiPresentation,
 > = {
 	readonly kind: "section"
 	readonly id: string
-	readonly title?: Resolvable<string, Input, Context>
-	readonly description?: Resolvable<string, Input, Context>
+	readonly title?: Resolvable<Presentation["content"], Input, Context>
+	readonly description?: Resolvable<Presentation["content"], Input, Context>
+	readonly slotOptions?: Resolvable<
+		Presentation["sectionSlotOptions"],
+		Input,
+		Context
+	>
 	readonly visible?: Resolvable<boolean, Input, Context>
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
@@ -158,7 +192,8 @@ export type SectionNode<
 		Input,
 		Controls,
 		Context,
-		RenderComponent
+		RenderComponent,
+		Presentation
 	>[]
 }
 
@@ -172,12 +207,18 @@ type ArrayNodeForPath<
 	Controls extends ControlRegistry,
 	Context,
 	Path extends ArrayFieldPath<Input>,
+	Presentation extends UiPresentation,
 > = {
 	readonly kind: "array"
 	readonly id?: string
 	readonly path: Path
-	readonly label?: Resolvable<string, Input, Context>
-	readonly description?: Resolvable<string, Input, Context>
+	readonly label?: Resolvable<Presentation["content"], Input, Context>
+	readonly description?: Resolvable<Presentation["content"], Input, Context>
+	readonly slotOptions?: Resolvable<
+		Presentation["arraySlotOptions"],
+		Input,
+		Context
+	>
 	readonly visible?: Resolvable<boolean, Input, Context>
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
@@ -189,7 +230,8 @@ type ArrayNodeForPath<
 	readonly children: readonly RelativeUiNode<
 		ArrayItemValue<Input, Path>,
 		Controls,
-		Context
+		Context,
+		Presentation
 	>[]
 }
 
@@ -197,12 +239,14 @@ export type ArrayNode<
 	Input,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
+	Presentation extends UiPresentation = CoreUiPresentation,
 > = {
 	[Path in ArrayFieldPath<Input>]: ArrayNodeForPath<
 		Input,
 		Controls,
 		Context,
-		Path
+		Path,
+		Presentation
 	>
 }[ArrayFieldPath<Input>]
 
@@ -211,17 +255,19 @@ export type UiNode<
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
 	RenderComponent = never,
+	Presentation extends UiPresentation = CoreUiPresentation,
 > =
-	| FieldNode<Input, Controls, Context>
+	| FieldNode<Input, Controls, Context, Presentation>
 	| ([RenderComponent] extends [never] ? never : RenderNode<RenderComponent>)
-	| SectionNode<Input, Controls, Context, RenderComponent>
-	| ArrayNode<Input, Controls, Context>
+	| SectionNode<Input, Controls, Context, RenderComponent, Presentation>
+	| ArrayNode<Input, Controls, Context, Presentation>
 
 export type RelativeUiNode<
 	Input,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
+	Presentation extends UiPresentation = CoreUiPresentation,
 > =
-	| ArrayNode<Input, Controls, Context>
-	| FieldNode<Input, Controls, Context>
-	| SectionNode<Input, Controls, Context>
+	| ArrayNode<Input, Controls, Context, Presentation>
+	| FieldNode<Input, Controls, Context, Presentation>
+	| SectionNode<Input, Controls, Context, never, Presentation>

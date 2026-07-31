@@ -98,8 +98,10 @@ export type {
 	StandardSchema,
 } from "./standard-schema.js"
 export type {
+	AnyUiPresentation,
 	ArrayItemValue,
 	ArrayNode,
+	CoreUiPresentation,
 	FieldNode,
 	GridColumns,
 	GridSpan,
@@ -108,6 +110,7 @@ export type {
 	Resolvable,
 	SectionNode,
 	UiNode,
+	UiPresentation,
 	UiResolver,
 	UiResolverDetails,
 	UiResolverValues,

@@ -62,6 +62,9 @@ type _NoComputedGuard = CoreExports["isComputed"]
 
 type ProfileInput = {
 	readonly name: string
+	readonly contacts?: readonly {
+		readonly value: string
+	}[]
 }
 
 type ProfileOutput = ProfileInput & {
@@ -116,19 +119,37 @@ const text = defineControl<string | undefined>({
 	},
 })
 
+type PublishedFieldOptions = {
+	readonly tooltip?: string
+}
+
+type PublishedSectionOptions = {
+	readonly tone?: "quiet" | "strong"
+}
+
+type PublishedArrayOptions = {
+	readonly emptyText?: string
+}
+
 function Field({
 	rootProps,
 	label,
 	labelProps,
+	description,
+	descriptionProps,
+	slotOptions,
 	control,
 	errors,
-}: FieldSlotProps) {
+}: FieldSlotProps<PublishedFieldOptions>) {
 	return (
-		<div {...rootProps}>
+		<div {...rootProps} data-tooltip={slotOptions?.tooltip}>
 			{label === undefined ? null : (
 				<label {...labelProps} htmlFor={labelProps.htmlFor}>
 					{label}
 				</label>
+			)}
+			{description === undefined ? null : (
+				<div {...descriptionProps}>{description}</div>
 			)}
 			{control}
 			{errors}
@@ -140,11 +161,14 @@ function Section({
 	rootProps,
 	layoutProps,
 	title,
+	description,
+	slotOptions,
 	children,
-}: SectionSlotProps) {
+}: SectionSlotProps<PublishedSectionOptions>) {
 	return (
-		<section {...rootProps}>
+		<section {...rootProps} data-tone={slotOptions?.tone}>
 			{title === undefined ? null : <h2>{title}</h2>}
+			{description}
 			<div {...layoutProps}>{children}</div>
 		</section>
 	)
@@ -154,12 +178,19 @@ function ArraySlot({
 	rootProps,
 	label,
 	labelProps,
+	description,
+	descriptionProps,
+	slotOptions,
 	errors,
 	children,
-}: ArraySlotProps) {
+}: ArraySlotProps<PublishedArrayOptions>) {
 	return (
 		<div {...rootProps}>
 			{label === undefined ? null : <div {...labelProps}>{label}</div>}
+			{description === undefined ? null : (
+				<div {...descriptionProps}>{description}</div>
+			)}
+			<output>{slotOptions?.emptyText}</output>
 			{errors}
 			{children}
 		</div>
@@ -242,6 +273,54 @@ const ui = [
 ] satisfies readonly UiNode<ProfileInput, typeof kit.controls>[]
 
 const definition = kit.defineForm(schema)({ ui })
+const richDefinition = kit.defineForm(schema)({
+	ui: [
+		{
+			kind: "section",
+			id: "profile",
+			title: (
+				<>
+					Profile <small>published package</small>
+				</>
+			),
+			description: <a href="/profile-help">Profile help</a>,
+			slotOptions: {
+				tone: "quiet",
+			},
+			children: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					label: <strong>Name</strong>,
+					description: <a href="/naming-policy">Naming policy</a>,
+					slotOptions: ({ name }) => ({
+						tooltip: `Editing ${name}`,
+					}),
+				},
+			],
+		},
+		{
+			kind: "array",
+			path: "contacts",
+			label: <strong>Contacts</strong>,
+			description: <a href="/contacts-help">Contact help</a>,
+			slotOptions: {
+				emptyText: "No contacts",
+			},
+			itemDefault: {
+				value: "",
+			},
+			children: [
+				{
+					kind: "field",
+					path: "value",
+					control: "text",
+				},
+			],
+		},
+	],
+})
 
 const store = createFormStore({
 	definition,
@@ -273,12 +352,20 @@ void [
 	normalizeDefinition,
 	useArrayField,
 	ExtendedFormProbe,
+	RichFormProbe,
 ]
 
 function defaultValues(): FormInput<typeof schema> {
 	return {
 		name: "Ada Lovelace",
+		contacts: [],
 	}
+}
+
+function RichFormProbe() {
+	return (
+		<kit.AutoForm defaultValues={defaultValues()} definition={richDefinition} />
+	)
 }
 
 const externalForm = createForm(definition, {

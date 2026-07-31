@@ -5,6 +5,7 @@ import type {
 	NormalizedFormDefinition,
 	StandardSchema,
 	UiNode,
+	UiPresentation,
 	UiResolver,
 } from "./index.js"
 import { normalizeDefinition } from "./index.js"
@@ -344,5 +345,97 @@ describe("form definition normalization", () => {
 		])
 
 		expect(definition.fieldsByPath.companyName?.visible).toBe(visible)
+	})
+
+	it("keeps presentation content and structural slot options opaque", () => {
+		type Presentation = UiPresentation<
+			{ readonly text: string },
+			{ readonly tooltip: { readonly text: string } },
+			{ readonly legend: { readonly compact: boolean } },
+			{ readonly controls: { readonly sticky: boolean } }
+		>
+		const fieldLabel = { text: "Name" }
+		const fieldSlotOptions = {
+			tooltip: {
+				text: "Use the legal name",
+			},
+		}
+		const sectionTitle = { text: "Account" }
+		const sectionSlotOptions = {
+			legend: {
+				compact: true,
+			},
+		}
+		const arrayLabel = { text: "Contacts" }
+		const arraySlotOptions = {
+			controls: {
+				sticky: true,
+			},
+		}
+		const definition = normalizeDefinition<
+			typeof schema,
+			ExampleControls,
+			ExampleContext,
+			never,
+			Presentation
+		>({
+			schema,
+			controls,
+			ui: [
+				{
+					kind: "section",
+					id: "account",
+					title: sectionTitle,
+					slotOptions: sectionSlotOptions,
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							label: fieldLabel,
+							slotOptions: fieldSlotOptions,
+						},
+					],
+				},
+				{
+					kind: "array",
+					path: "contacts",
+					label: arrayLabel,
+					slotOptions: arraySlotOptions,
+					itemDefault: {
+						value: "",
+					},
+					children: [
+						{
+							kind: "field",
+							path: "value",
+							control: "text",
+						},
+					],
+				},
+			],
+		})
+		const account = definition.nodesById.account
+
+		if (account.kind !== "section") {
+			throw new Error("Expected account to normalize as a section")
+		}
+
+		expect(definition.fieldsByPath.name.label).toBe(fieldLabel)
+		expect(definition.fieldsByPath.name.slotOptions).toBe(fieldSlotOptions)
+		expect(account.title).toBe(sectionTitle)
+		expect(account.slotOptions).toBe(sectionSlotOptions)
+		expect(definition.arraysByPath.contacts.label).toBe(arrayLabel)
+		expect(definition.arraysByPath.contacts.slotOptions).toBe(arraySlotOptions)
+		expect(Object.isFrozen(fieldLabel)).toBe(false)
+		expect(Object.isFrozen(fieldSlotOptions)).toBe(false)
+		expect(Object.isFrozen(fieldSlotOptions.tooltip)).toBe(false)
+		expect(Object.isFrozen(sectionTitle)).toBe(false)
+		expect(Object.isFrozen(sectionSlotOptions.legend)).toBe(false)
+		expect(Object.isFrozen(arrayLabel)).toBe(false)
+		expect(Object.isFrozen(arraySlotOptions.controls)).toBe(false)
+		expect(Object.isFrozen(definition.fieldsByPath.name)).toBe(true)
+		expect(Object.isFrozen(account)).toBe(true)
+		expect(Object.isFrozen(definition.arraysByPath.contacts)).toBe(true)
 	})
 })

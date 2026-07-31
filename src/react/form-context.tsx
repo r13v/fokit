@@ -3,10 +3,10 @@
 import { createContext, type ReactNode, useContext } from "react"
 
 import type { StandardSchema } from "../core/index.js"
-import type { FormInstance } from "./use-form.js"
+import type { AnyFormInstance, FormInstance } from "./use-form.js"
 
 type FormContextValue = {
-	readonly form: FormInstance<StandardSchema, unknown>
+	readonly form: AnyFormInstance<StandardSchema, unknown>
 	readonly idPrefix: string
 }
 
@@ -16,7 +16,7 @@ export type FormProviderProps<
 	Schema extends StandardSchema,
 	Context = unknown,
 > = {
-	readonly form: FormInstance<Schema, Context>
+	readonly form: AnyFormInstance<Schema, Context>
 	readonly idPrefix?: string
 	readonly children?: ReactNode
 }
@@ -29,7 +29,7 @@ export function FormProvider<Schema extends StandardSchema, Context = unknown>({
 	return (
 		<FormContext.Provider
 			value={{
-				form: form as FormInstance<StandardSchema, unknown>,
+				form: form as AnyFormInstance<StandardSchema, unknown>,
 				idPrefix,
 			}}
 		>

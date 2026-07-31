@@ -33,7 +33,7 @@ import {
 	HiddenInputs,
 } from "../react/hidden-inputs.js"
 import { useFormState } from "../react/hooks.js"
-import type { FokitStyle } from "../react/slots.js"
+import type { FokitStyle, ReactUiPresentation } from "../react/slots.js"
 import { type UseFormOptions, useForm } from "../react/use-form.js"
 import {
 	assertReact19ActionSupport,
@@ -45,13 +45,24 @@ export type ActionFormProps<
 	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
 	Schema extends StandardSchema = StandardSchema,
 	Context = unknown,
+	FieldSlotOptions = never,
+	SectionSlotOptions = never,
+	ArraySlotOptions = never,
 > = NativeFormProps &
 	Omit<UseFormOptions<Schema, Context>, "defaultValues" | "onSubmit"> & {
-		readonly kit: Pick<FormKit<Controls>, "controls" | "slots">
+		readonly kit: Pick<
+			FormKit<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+			"controls" | "slots"
+		>
 		readonly definition: NormalizedFormDefinition<
 			Schema,
 			Controls,
-			ComponentType
+			ComponentType,
+			ReactUiPresentation<
+				NoInfer<FieldSlotOptions>,
+				NoInfer<SectionSlotOptions>,
+				NoInfer<ArraySlotOptions>
+			>
 		>
 		readonly defaultValues: FormInput<Schema>
 		readonly action: NonNullable<ComponentPropsWithoutRef<"form">["action"]>
@@ -64,6 +75,9 @@ export function ActionForm<
 	Controls extends ControlDefinitionRegistry,
 	Schema extends StandardSchema,
 	Context = unknown,
+	FieldSlotOptions = never,
+	SectionSlotOptions = never,
+	ArraySlotOptions = never,
 >({
 	kit,
 	definition,
@@ -79,7 +93,14 @@ export function ActionForm<
 	children,
 	id,
 	...nativeProps
-}: ActionFormProps<Controls, Schema, Context>) {
+}: ActionFormProps<
+	Controls,
+	Schema,
+	Context,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions
+>) {
 	rejectOwnedActionFormProps(nativeProps)
 	assertReact19ActionSupport()
 

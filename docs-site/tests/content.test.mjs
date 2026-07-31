@@ -831,6 +831,21 @@ test("docs TypeScript and verification gates are wired", async () => {
 	assert.match(gitignore, /^docs-site\/src\/pages\.gen\.ts$/m)
 })
 
+test("browser demos share a Markdown fallback with source links", async () => {
+	const fallback = await readText("src/components/markdown-fallback.ts")
+
+	assert.match(fallback, /type:\s*"paragraph"/)
+	assert.match(fallback, /type:\s*"link"/)
+	assert.match(
+		fallback,
+		/https:\/\/github\.com\/r13v\/fokit\/blob\/main\/\$\{sourcePath\}/,
+	)
+	assert.match(
+		fallback,
+		/children:\s*\[\{ type: "text", value: sourcePath \}\]/,
+	)
+})
+
 test("Interactive Lab uses Vocs components and public Fokit defaults", async () => {
 	const wrapper = await readText("src/components/interactive-lab.tsx")
 	const client = await readText("src/components/interactive-lab.client.tsx")
@@ -841,10 +856,10 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 	assert.match(wrapper, /toMarkdown/)
 	assert.match(wrapper, /Interactive Fokit Lab runs only in a browser/)
 	assert.match(wrapper, /createFormKit\(\{ controls: nativeControls \}\)/)
-	assert.match(wrapper, /type:\s*"link"/)
+	assert.match(wrapper, /from "\.\/markdown-fallback"/)
 	assert.match(
 		wrapper,
-		/https:\/\/github\.com\/r13v\/fokit\/blob\/main\/docs-site\/src\/components\/interactive-lab\.client\.tsx/,
+		/docs-site\/src\/components\/interactive-lab\.client\.tsx/,
 	)
 	assert.match(client, /^"use client"/)
 	assert.match(client, /from "\.\.\/snippets\/lab-profile-form"/)
@@ -887,10 +902,10 @@ test("overview proves the public Fokit loop with a live typed form", async () =>
 	assert.match(wrapper, /from "\.\/overview-demo\.client"/)
 	assert.match(wrapper, /toMarkdown/)
 	assert.match(wrapper, /live overview form runs only in a browser/i)
-	assert.match(wrapper, /type:\s*"link"/)
+	assert.match(wrapper, /from "\.\/markdown-fallback"/)
 	assert.match(
 		wrapper,
-		/https:\/\/github\.com\/r13v\/fokit\/blob\/main\/docs-site\/src\/components\/overview-demo\.client\.tsx/,
+		/docs-site\/src\/components\/overview-demo\.client\.tsx/,
 	)
 	assert.match(client, /^"use client"/)
 	assert.match(client, /createFormKit/)
@@ -913,11 +928,8 @@ test("async multiselect guide runs the same typed Floating UI and TanStack Query
 
 	assert.match(wrapper, /from "\.\/async-multiselect-demo\.client"/)
 	assert.match(wrapper, /toMarkdown/)
-	assert.match(wrapper, /type:\s*"link"/)
-	assert.match(
-		wrapper,
-		/https:\/\/github\.com\/r13v\/fokit\/blob\/main\/docs-site\/src\/snippets\/async-multiselect\.tsx/,
-	)
+	assert.match(wrapper, /from "\.\/markdown-fallback"/)
+	assert.match(wrapper, /docs-site\/src\/snippets\/async-multiselect\.tsx/)
 	assert.match(client, /^"use client"/)
 	assert.match(client, /from "\.\.\/snippets\/async-multiselect"/)
 	assert.match(snippet, /from "@floating-ui\/react"/)
@@ -967,8 +979,11 @@ test("six complex examples stay public, documented, networked, and independent",
 			new RegExp(`from "\\.\\.\\/snippets\\/complex-${example.slug}"`),
 		)
 		assert.match(wrapper, /toMarkdown/)
-		assert.match(wrapper, /docs-site\/src\/snippets\/\$\{file\}/)
-		assert.match(wrapper, new RegExp(`"complex-${example.slug}\\.tsx"`))
+		assert.match(wrapper, /from "\.\/markdown-fallback"/)
+		assert.match(
+			wrapper,
+			new RegExp(`"docs-site/src/snippets/complex-${example.slug}\\.tsx"`),
+		)
 		assert.match(snippet, new RegExp(`export function ${example.exportName}`))
 		assert.match(snippet, /from "fokit"/)
 		assert.match(snippet, /from "@tanstack\/react-query"/)

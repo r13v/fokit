@@ -1,6 +1,7 @@
 import type { ReactElement } from "react"
 
 import { AsyncMultiSelectDemoClient } from "./async-multiselect-demo.client"
+import { markdownFallback } from "./markdown-fallback"
 
 export const AsyncMultiSelectDemo = Object.assign(
 	function AsyncMultiSelectDemo(): ReactElement {
@@ -8,34 +9,10 @@ export const AsyncMultiSelectDemo = Object.assign(
 	},
 	{
 		toMarkdown() {
-			return [
-				{
-					type: "paragraph",
-					children: [
-						{
-							type: "text",
-							value:
-								"The live async multiselect runs only in a browser. It stores selected IDs in Fokit, loads matching options through TanStack Query, and manages the popup with Floating UI.",
-						},
-					],
-				},
-				{
-					type: "paragraph",
-					children: [
-						{ type: "text", value: "Source: " },
-						{
-							type: "link",
-							url: "https://github.com/r13v/fokit/blob/main/docs-site/src/snippets/async-multiselect.tsx",
-							children: [
-								{
-									type: "text",
-									value: "docs-site/src/snippets/async-multiselect.tsx",
-								},
-							],
-						},
-					],
-				},
-			]
+			return markdownFallback(
+				"The live async multiselect runs only in a browser. It stores selected IDs in Fokit, loads matching options through TanStack Query, and manages the popup with Floating UI.",
+				"docs-site/src/snippets/async-multiselect.tsx",
+			)
 		},
 	},
 )

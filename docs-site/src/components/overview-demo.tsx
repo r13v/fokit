@@ -1,5 +1,6 @@
 import type { ReactElement } from "react"
 
+import { markdownFallback } from "./markdown-fallback"
 import { OverviewDemoClient } from "./overview-demo.client"
 
 export const OverviewDemo = Object.assign(
@@ -9,32 +10,10 @@ export const OverviewDemo = Object.assign(
 	{
 		toMarkdown() {
 			return [
-				{
-					type: "paragraph",
-					children: [
-						{
-							type: "text",
-							value:
-								"The live overview form runs only in a browser. It renders an explicit profile definition, validates it with Standard Schema, and returns typed output.",
-						},
-					],
-				},
-				{
-					type: "paragraph",
-					children: [
-						{ type: "text", value: "Source: " },
-						{
-							type: "link",
-							url: "https://github.com/r13v/fokit/blob/main/docs-site/src/components/overview-demo.client.tsx",
-							children: [
-								{
-									type: "text",
-									value: "docs-site/src/components/overview-demo.client.tsx",
-								},
-							],
-						},
-					],
-				},
+				...markdownFallback(
+					"The live overview form runs only in a browser. It renders an explicit profile definition, validates it with Standard Schema, and returns typed output.",
+					"docs-site/src/components/overview-demo.client.tsx",
+				),
 				{
 					type: "code",
 					lang: "tsx",

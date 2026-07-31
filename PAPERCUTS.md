@@ -26,3 +26,38 @@ Running a second ad-hoc Playwright probe through `node -e` → nested shell and
 JavaScript quoting produced a syntax error before the probe ran. Prefer a
 focused existing Playwright test (`-g`) over a dense inline script for repeatable
 browser diagnostics.
+
+## 2026-07-31 16:33 — GPT-5
+
+Searching for `markdownFallback` and related implementations → the search
+included a nonexistent root `examples` directory and `rg` exited with a path
+error after returning useful matches. Derive search roots with `rg --files` or
+use the actual `docs-site/src/pages/examples` path.
+
+## 2026-07-31 16:34 — GPT-5
+
+Checking docs-site TypeScript settings before extracting a shared helper → the
+probe assumed a conventional `docs-site/tsconfig.json`, but this workspace uses
+`docs-site/tsconfig.docs.json`. Discover config filenames before passing them
+as explicit `rg` paths.
+
+## 2026-07-31 16:36 — GPT-5
+
+Verifying the shared Markdown fallback refactor → four content tests asserted
+that link-node literals lived inside every wrapper, so behavior-preserving
+extraction made them fail. Test the shared helper's link contract once and each
+wrapper's source-path argument instead of duplicating structural assertions.
+
+## 2026-07-31 16:37 — GPT-5
+
+Re-running the repository check after updating content tests → three long
+assertions missed Biome's multiline formatting and failed the otherwise clean
+check. Apply the formatter's suggested wrapping before the full verification
+pass.
+
+## 2026-07-31 16:38 — GPT-5
+
+Running the Vocs build before its Markdown audit → the build exceeded the
+command's 30-second output window, and the orchestration discarded its session
+ID while the process continued successfully. Preserve and poll long-running
+command session IDs before starting dependent verification.

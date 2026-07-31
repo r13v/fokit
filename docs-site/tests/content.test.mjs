@@ -842,6 +842,23 @@ test("API shell keeps public exports discoverable", async () => {
 	}
 })
 
+test("classic submit docs explain the async lifecycle", async () => {
+	const readme = await readRepositoryText("README.md")
+	const tutorial = await readRepositoryText("docs/tutorial.ru.md")
+	const getStarted = await readText("src/pages/get-started.mdx")
+	const api = await readText("src/pages/api.mdx")
+
+	for (const source of [readme, tutorial, getStarted, api]) {
+		assert.match(source, /Promise<void>/)
+		assert.match(source, /form\.reset\(\.\.\.\)/)
+	}
+
+	assert.match(getStarted, /isSubmitting` set to `true`/)
+	assert.match(getStarted, /do not call `onSubmit` again/)
+	assert.match(api, /rejected promise into a form issue/)
+	assert.match(api, /`form\.submit\(\)` uses the same lifecycle/)
+})
+
 test("core Vocs pages preserve the migrated section groups", async () => {
 	for (const [path, content] of Object.entries(requiredCorePageContent)) {
 		const source = await readText(path)

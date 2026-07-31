@@ -63,6 +63,11 @@ export function ContactForm() {
 Fokit validates the form with `contactSchema`. The submit handler receives the
 schema output after successful validation.
 
+`onSubmit` can return `void` or `Promise<void>`. If it returns a promise, Fokit
+waits for the promise and keeps the form in its submitting state. `kit.Submit`
+stays disabled until the promise settles. Fokit does not reset the form after
+success. Call `form.reset(...)` when saved values must become the new baseline.
+
 ## Responsibility boundary
 
 Fokit owns the form store, update pipeline, validation lifecycle, structural

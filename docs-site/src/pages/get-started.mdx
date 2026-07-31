@@ -143,6 +143,21 @@ passes `FormOutput<typeof profileSchema>` to `onSubmit`.
 This separation lets schema transforms change the output type without replacing
 the editable values.
 
+### `onSubmit` can wait for async work
+
+`onSubmit` can return `void` or `Promise<void>`. Use an async callback when it
+must wait for a client request. For example, use
+`onSubmit={async ({ value }) => { await saveProfile(value) }}`.
+
+Fokit keeps `isSubmitting` set to `true` while it waits. `kit.Submit` stays
+disabled until the promise settles. Concurrent submit attempts use the same
+in-flight promise and do not call `onSubmit` again.
+
+Fokit does not reset the form after success. Call `form.reset(...)` when saved
+values must become the new baseline. A rejected promise is not a validation
+issue. Handle expected request failures in `onSubmit`, and call
+`form.setErrors(...)` when the form must show an issue.
+
 ### UI definition owns structure
 
 `profileDefinition` specifies paths, controls, labels, and presentation options.

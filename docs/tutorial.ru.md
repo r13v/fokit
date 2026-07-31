@@ -303,6 +303,12 @@ resolver. Если опции контрола сами содержат callbac
 
 Это основной путь для сгенерированных форм.
 
+`onSubmit` может вернуть `void` или `Promise<void>`. Если callback возвращает
+Promise, Fokit ждет его завершения и сохраняет `isSubmitting: true`.
+`kit.Submit` остается disabled до завершения Promise. Успешный submit не
+сбрасывает форму автоматически. Вызовите `form.reset(...)`, если сохраненные
+значения должны стать новым baseline.
+
 ## 8. Собирайте форму вручную, когда нужно
 
 Ручная композиция использует тот же instance:
@@ -342,8 +348,8 @@ function ProfileEditor({ context, disabled }) {
 	const form = useForm(profileForm, {
 		context,
 		disabled,
-		onSubmit({ value }) {
-			void saveProfile(value)
+		async onSubmit({ value }) {
+			await saveProfile(value)
 		},
 	})
 

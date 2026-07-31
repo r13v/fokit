@@ -316,13 +316,23 @@ options as opaque payloads.
 | `disabled` | no | Make the complete form unavailable and prevent submission |
 | `readOnly` | no | Prevent edits while keeping the form available for submission |
 | `beforeUpdate`, `onUpdate` | no | Transaction hooks |
-| `onSubmit` | no | Validated classic submit callback |
+| `onSubmit` | no | Validated callback that returns `void` or `Promise<void>` |
 
 Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
 `asyncDebounceMs: 0`.
 
 The submit callback receives `{ value, input, form, formData }`. `value` is
 validated `FormOutput`; `input` is the captured editable shape.
+
+If `onSubmit` returns a promise, Fokit waits for it. `isSubmitting` remains
+`true`, and `kit.Submit` remains disabled until the promise settles. Concurrent
+submit attempts use the same in-flight promise and do not call `onSubmit`
+again.
+
+Fokit does not reset the form after success. Call `form.reset(...)` explicitly
+when saved values must become the new baseline. Fokit does not convert a thrown
+error or rejected promise into a form issue. Handle expected failures in the
+callback and use `form.setErrors(...)` for user-visible issues.
 
 ## useForm
 
@@ -462,7 +472,7 @@ issues atomically.
 
 | Method | Purpose |
 | --- | --- |
-| `submit()` | Request classic native submission after `kit.Form` mounts |
+| `submit()` | Request classic submission and return its in-flight promise |
 | `getSnapshot()` | Read immutable form state |
 | `subscribe(selector, listener, options?)` | Observe selected state outside React |
 | `replaceContext(context)` | Recompute context-dependent UI |
@@ -472,6 +482,10 @@ issues atomically.
 update/submit callbacks. Omitted options return to their defaults. A later
 committed `useForm(form, runtimeOptions)` update remains authoritative while
 the instance is React-bound.
+
+`form.submit()` uses the same lifecycle as a native submit. It resolves without
+calling `onSubmit` when the form is disabled or invalid. It rejects if
+`onSubmit` throws or returns a rejected promise.
 
 Read [Validation and errors](/guides/validation) for visibility and stale-result
 rules.

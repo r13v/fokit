@@ -10,6 +10,7 @@ import { normalizeDefinition } from "../../src/core/index.js"
 import {
 	type ArrayBinding,
 	createForm,
+	extendValueChanges,
 	type FieldBinding,
 	type FormInstance,
 	type FormRuntimeOptions,
@@ -18,6 +19,7 @@ import {
 	useForm,
 	useFormState,
 	useValue,
+	type ValueChange,
 } from "../../src/index.js"
 
 type Equal<Left, Right> =
@@ -56,6 +58,14 @@ type ExampleControls = {
 	readonly text: ControlMetadata<string | undefined>
 	readonly kind: ControlMetadata<ExampleInput["kind"]>
 }
+
+function inspectValueChange(change: ValueChange<ExampleInput>) {
+	if (change.type === "set" && change.path === "kind") {
+		type _kindValue = Expect<Equal<typeof change.value, "person" | "company">>
+	}
+}
+
+void inspectValueChange
 
 declare const schema: ExampleSchema
 
@@ -148,7 +158,27 @@ function TypeHarness() {
 			type _context = Expect<
 				Equal<typeof event.context, Readonly<ExampleContext>>
 			>
-			return [{ type: "set", path: "profile.first", value: "Ada" }]
+			return extendValueChanges(event, [
+				{ type: "set", path: "profile.first", value: "Ada" },
+			])
+		},
+		onUpdate(event) {
+			event.changes.forEach(inspectValueChange)
+		},
+	})
+
+	useForm(definition, {
+		defaultValues: {
+			kind: "person",
+			profile: { first: "Grace", last: "Hopper" },
+			contacts: [],
+		},
+		context: exampleContext,
+		beforeUpdate(event) {
+			return extendValueChanges(event, [
+				// @ts-expect-error replacement values must match their selected path
+				{ type: "set", path: "kind", value: "enterprise" },
+			])
 		},
 	})
 

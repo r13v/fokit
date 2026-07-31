@@ -93,6 +93,15 @@ form.insert("contacts", 0, { value: "ada@example.test", note: "work" })
 form.remove("contacts", 0)
 form.move("contacts", 0, 1)
 
+void form.validatePaths(["profile", "contacts.0.value"])
+form.focusFirstError(["profile.first", "companyName"])
+
+// @ts-expect-error path subsets reject unknown schema paths
+void form.validatePaths(["profile.nickname"])
+
+// @ts-expect-error focus subsets reject unknown schema paths
+form.focusFirstError(["contacts.0.missing"])
+
 // @ts-expect-error appended items must satisfy the selected array item type
 form.append("contacts", { note: "missing value" })
 

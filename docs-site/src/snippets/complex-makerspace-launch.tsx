@@ -9,6 +9,8 @@ import {
 import {
 	type BeforeUpdateEvent,
 	createFormKit,
+	extendValueChanges,
+	type FieldPath,
 	type FormInput,
 	type FormOutput,
 	nativeControls,
@@ -185,6 +187,7 @@ const defaultValues = {
 } satisfies LaunchInput
 
 const kit = createFormKit({ controls: nativeControls })
+const defineLaunch = kit.defineForm(launchSchema)
 const stages = ["identity", "location", "capacity", "publishing"] as const
 const stageLabels = {
 	identity: "Identity",
@@ -192,11 +195,30 @@ const stageLabels = {
 	capacity: "Capacity & media",
 	publishing: "Publishing",
 } satisfies Record<(typeof stages)[number], string>
+const stageValidationPaths = {
+	identity: ["identity"],
+	location: ["location"],
+	capacity: ["capacityBands", "media", "amenities", "accessInstructions"],
+	publishing: ["promotions"],
+} as const satisfies Record<
+	(typeof stages)[number],
+	readonly FieldPath<LaunchInput>[]
+>
 
 function WizardNavigation() {
 	const form = useFormContext<typeof launchSchema, LaunchContext>()
 	const stage = useValue(form, "stage")
 	const index = stages.indexOf(stage)
+	const advance = async (nextStage: LaunchInput["stage"]) => {
+		const paths = stageValidationPaths[stage]
+		const issues = await form.validatePaths(paths)
+		if (issues.length > 0) {
+			queueMicrotask(() => form.focusFirstError(paths))
+			return
+		}
+
+		form.setValue("stage", nextStage)
+	}
 
 	return (
 		<nav className="fokit-complex__wizard" aria-label="Launch stages">
@@ -205,7 +227,14 @@ function WizardNavigation() {
 					<li aria-current={item === stage ? "step" : undefined} key={item}>
 						<button
 							disabled={itemIndex > index + 1}
-							onClick={() => form.setValue("stage", item)}
+							onClick={() => {
+								if (itemIndex === index + 1) {
+									void advance(item)
+									return
+								}
+
+								form.setValue("stage", item)
+							}}
 							type="button"
 						>
 							{itemIndex + 1}. {stageLabels[item]}
@@ -224,7 +253,7 @@ function WizardNavigation() {
 				{index < stages.length - 1 ? (
 					<button
 						className="fokit-complex__primary"
-						onClick={() => form.setValue("stage", stages[index + 1] ?? stage)}
+						onClick={() => void advance(stages[index + 1] ?? stage)}
 						type="button"
 					>
 						Continue to {stageLabels[stages[index + 1] ?? stage]}
@@ -296,209 +325,207 @@ function CoordinatePreview() {
 	)
 }
 
-const launchDefinition = kit
-	.defineForm(launchSchema)
-	.withContext<LaunchContext>({
-		ui: [
-			{ kind: "render", id: "wizard-navigation", component: WizardNavigation },
-			{
-				kind: "section",
-				id: "identity",
-				title: "Makerspace identity",
-				visible: ({ stage }) => stage === "identity",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "identity.name",
-						control: "text",
-						label: "Public name",
-						required: true,
-					},
-					{
-						kind: "field",
-						path: "identity.campusId",
-						control: "select",
-						label: "Campus",
-						options: (_values, { context }) => ({ options: context.campuses }),
-					},
-					{
-						kind: "field",
-						path: "identity.description",
-						control: "textarea",
-						label: "Public description",
-						description: "Explain the work this place makes possible.",
-						span: "full",
-						options: { rows: 5 },
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "location",
-				title: "Location",
-				visible: ({ stage }) => stage === "location",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "location.regionId",
-						control: "select",
-						label: "Region",
-						options: (_values, { context }) => ({ options: context.regions }),
-					},
-					{
-						kind: "field",
-						path: "location.postalCode",
-						control: "text",
-						label: "Postal code",
-					},
-					{ kind: "render", id: "address-lookup", component: AddressLookup },
-					{
-						kind: "field",
-						path: "location.address",
-						control: "text",
-						label: "Street address",
-						span: "full",
-					},
-					{
-						kind: "field",
-						path: "location.latitude",
-						control: "number",
-						label: "Latitude",
-						options: { min: -90, max: 90, step: 0.001 },
-					},
-					{
-						kind: "field",
-						path: "location.longitude",
-						control: "number",
-						label: "Longitude",
-						options: { min: -180, max: 180, step: 0.001 },
-					},
-					{
-						kind: "render",
-						id: "coordinate-preview",
-						component: CoordinatePreview,
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "capacity",
-				title: "Capacity, media, and amenities",
-				visible: ({ stage }) => stage === "capacity",
-				children: [
-					{
-						kind: "array",
-						path: "capacityBands",
-						label: "Capacity bands",
-						itemDefault: { label: "", people: 1, hourlyRate: 0 },
-						children: [
-							{
-								kind: "field",
-								path: "label",
-								control: "text",
-								label: "Band name",
-							},
-							{
-								kind: "field",
-								path: "people",
-								control: "number",
-								label: "People",
-								options: { min: 1, max: 500, step: 1 },
-							},
-							{
-								kind: "field",
-								path: "hourlyRate",
-								control: "number",
-								label: "Hourly rate",
-								options: { min: 0, step: 5 },
-							},
-						],
-					},
-					{
-						kind: "field",
-						path: "media.cover",
-						control: "file",
-						label: "Cover image",
-						options: { accept: "image/*" },
-					},
-					{
-						kind: "array",
-						path: "media.gallery",
-						label: "Gallery",
-						description: "Reorder references without losing row state.",
-						itemDefault: { assetUrl: "", caption: "" },
-						children: [
-							{
-								kind: "field",
-								path: "assetUrl",
-								control: "text",
-								label: "Media URL",
-							},
-							{
-								kind: "field",
-								path: "caption",
-								control: "text",
-								label: "Caption",
-							},
-						],
-					},
-					{
-						kind: "section",
-						id: "amenities",
-						title: "Amenities",
-						columns: 2,
-						children: [
-							{
-								kind: "field",
-								path: "amenities.stepFree",
-								control: "checkbox",
-								label: "Step-free",
-							},
-							{
-								kind: "field",
-								path: "amenities.ventilation",
-								control: "checkbox",
-								label: "Extract ventilation",
-							},
-							{
-								kind: "field",
-								path: "amenities.toolLibrary",
-								control: "checkbox",
-								label: "Tool library",
-							},
-							{
-								kind: "field",
-								path: "amenities.quietZone",
-								control: "checkbox",
-								label: "Quiet zone",
-							},
-						],
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "publishing",
-				title: "Publishing rules",
-				visible: ({ stage }) => stage === "publishing",
-				children: [
-					{
-						kind: "field",
-						path: "accessInstructions",
-						control: "textarea",
-						label: "Access instructions",
-						options: { rows: 4 },
-					},
-					promotionSection("launch", "Launch offer"),
-					promotionSection("student", "Student access"),
-					promotionSection("community", "Community partner"),
-					promotionSection("offPeak", "Off-peak hours"),
-				],
-			},
-		],
-	})
+const launchDefinition = defineLaunch.withContext<LaunchContext>({
+	ui: [
+		{ kind: "render", id: "wizard-navigation", component: WizardNavigation },
+		{
+			kind: "section",
+			id: "identity",
+			title: "Makerspace identity",
+			visible: ({ stage }) => stage === "identity",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "identity.name",
+					control: "text",
+					label: "Public name",
+					required: true,
+				},
+				{
+					kind: "field",
+					path: "identity.campusId",
+					control: "select",
+					label: "Campus",
+					options: (_values, { context }) => ({ options: context.campuses }),
+				},
+				{
+					kind: "field",
+					path: "identity.description",
+					control: "textarea",
+					label: "Public description",
+					description: "Explain the work this place makes possible.",
+					span: "full",
+					options: { rows: 5 },
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "location",
+			title: "Location",
+			visible: ({ stage }) => stage === "location",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "location.regionId",
+					control: "select",
+					label: "Region",
+					options: (_values, { context }) => ({ options: context.regions }),
+				},
+				{
+					kind: "field",
+					path: "location.postalCode",
+					control: "text",
+					label: "Postal code",
+				},
+				{ kind: "render", id: "address-lookup", component: AddressLookup },
+				{
+					kind: "field",
+					path: "location.address",
+					control: "text",
+					label: "Street address",
+					span: "full",
+				},
+				{
+					kind: "field",
+					path: "location.latitude",
+					control: "number",
+					label: "Latitude",
+					options: { min: -90, max: 90, step: 0.001 },
+				},
+				{
+					kind: "field",
+					path: "location.longitude",
+					control: "number",
+					label: "Longitude",
+					options: { min: -180, max: 180, step: 0.001 },
+				},
+				{
+					kind: "render",
+					id: "coordinate-preview",
+					component: CoordinatePreview,
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "capacity",
+			title: "Capacity, media, and amenities",
+			visible: ({ stage }) => stage === "capacity",
+			children: [
+				{
+					kind: "array",
+					path: "capacityBands",
+					label: "Capacity bands",
+					itemDefault: { label: "", people: 1, hourlyRate: 0 },
+					children: [
+						{
+							kind: "field",
+							path: "label",
+							control: "text",
+							label: "Band name",
+						},
+						{
+							kind: "field",
+							path: "people",
+							control: "number",
+							label: "People",
+							options: { min: 1, max: 500, step: 1 },
+						},
+						{
+							kind: "field",
+							path: "hourlyRate",
+							control: "number",
+							label: "Hourly rate",
+							options: { min: 0, step: 5 },
+						},
+					],
+				},
+				{
+					kind: "field",
+					path: "media.cover",
+					control: "file",
+					label: "Cover image",
+					options: { accept: "image/*" },
+				},
+				{
+					kind: "array",
+					path: "media.gallery",
+					label: "Gallery",
+					description: "Reorder references without losing row state.",
+					itemDefault: { assetUrl: "", caption: "" },
+					children: [
+						{
+							kind: "field",
+							path: "assetUrl",
+							control: "text",
+							label: "Media URL",
+						},
+						{
+							kind: "field",
+							path: "caption",
+							control: "text",
+							label: "Caption",
+						},
+					],
+				},
+				{
+					kind: "section",
+					id: "amenities",
+					title: "Amenities",
+					columns: 2,
+					children: [
+						{
+							kind: "field",
+							path: "amenities.stepFree",
+							control: "checkbox",
+							label: "Step-free",
+						},
+						{
+							kind: "field",
+							path: "amenities.ventilation",
+							control: "checkbox",
+							label: "Extract ventilation",
+						},
+						{
+							kind: "field",
+							path: "amenities.toolLibrary",
+							control: "checkbox",
+							label: "Tool library",
+						},
+						{
+							kind: "field",
+							path: "amenities.quietZone",
+							control: "checkbox",
+							label: "Quiet zone",
+						},
+					],
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "publishing",
+			title: "Publishing rules",
+			visible: ({ stage }) => stage === "publishing",
+			children: [
+				{
+					kind: "field",
+					path: "accessInstructions",
+					control: "textarea",
+					label: "Access instructions",
+					options: { rows: 4 },
+				},
+				promotionSection("launch", "Launch offer"),
+				promotionSection("student", "Student access"),
+				promotionSection("community", "Community partner"),
+				promotionSection("offPeak", "Off-peak hours"),
+			],
+		},
+	],
+})
 
 function promotionSection(
 	name: "launch" | "student" | "community" | "offPeak",
@@ -638,18 +665,18 @@ function MakerspaceLaunchForm() {
 
 function clearDisabledPromotions(
 	event: BeforeUpdateEvent<LaunchInput, unknown>,
-): readonly ValueChange[] | undefined {
-	const changes: ValueChange[] = [...event.changes]
+): readonly ValueChange<LaunchInput>[] | undefined {
+	const additions: ValueChange<LaunchInput>[] = []
 	for (const name of ["launch", "student", "community", "offPeak"] as const) {
 		if (
 			event.currentValues.promotions[name].enabled &&
 			!event.nextValues.promotions[name].enabled
 		) {
-			changes.push({ type: "unset", path: `promotions.${name}.percent` })
+			additions.push({ type: "unset", path: `promotions.${name}.percent` })
 		}
 	}
 
-	return changes.length === event.changes.length ? undefined : changes
+	return extendValueChanges(event, additions)
 }
 
 function fakeRequest<Value>(value: Value, delay: number): Promise<Value> {

@@ -9,6 +9,7 @@ import {
 import {
 	type BeforeUpdateEvent,
 	createFormKit,
+	extendValueChanges,
 	type FormInput,
 	type FormOutput,
 	nativeControls,
@@ -131,6 +132,9 @@ const membershipDraft = {
 } satisfies MembershipInput
 
 const kit = createFormKit({ controls: nativeControls })
+const defineMembership = kit.defineForm(membershipSchema)
+const membershipFragment =
+	defineMembership.fragment.withContext<MembershipContext>()
 
 function LadderPreview() {
 	const form = useFormContext<typeof membershipSchema, MembershipContext>()
@@ -225,123 +229,202 @@ function WorkspaceConnection() {
 	)
 }
 
-const membershipDefinition = kit
-	.defineForm(membershipSchema)
-	.withContext<MembershipContext>({
-		ui: [
-			{
-				kind: "section",
-				id: "program",
-				title: "Membership program",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "programName",
-						control: "text",
-						label: "Program name",
+const membershipDefinition = defineMembership.withContext<MembershipContext>({
+	ui: [
+		{
+			kind: "section",
+			id: "program",
+			title: "Membership program",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "programName",
+					control: "text",
+					label: "Program name",
+				},
+				{
+					kind: "field",
+					path: "billingCycle",
+					control: "select",
+					label: "Billing cycle",
+					options: {
+						options: [
+							{ value: "monthly", label: "Monthly" },
+							{ value: "quarterly", label: "Quarterly" },
+							{ value: "annual", label: "Annual" },
+						],
 					},
-					{
-						kind: "field",
-						path: "billingCycle",
-						control: "select",
-						label: "Billing cycle",
-						options: {
-							options: [
-								{ value: "monthly", label: "Monthly" },
-								{ value: "quarterly", label: "Quarterly" },
-								{ value: "annual", label: "Annual" },
-							],
-						},
-					},
-					{
-						kind: "field",
-						path: "workspaceId",
-						control: "select",
-						label: "Member workspace",
-						options: (_values, { context }) => ({
-							options: context.workspaces,
-						}),
-					},
-					{
-						kind: "field",
-						path: "connection.syncExistingMembers",
-						control: "checkbox",
-						label: "Sync existing members",
-					},
-					{
-						kind: "render",
-						id: "workspace-connection",
-						component: WorkspaceConnection,
-					},
-				],
-			},
-			...tierSections(),
-			{ kind: "render", id: "ladder-preview", component: LadderPreview },
-			{
-				kind: "array",
-				path: "pauseWindows",
-				label: "Pause windows",
-				description:
-					"Dates can be entered directly or added from calendar shortcuts.",
-				itemDefault: { startsOn: "", endsOn: "", reason: "" },
-				children: [
-					{ kind: "field", path: "startsOn", control: "date", label: "Starts" },
-					{ kind: "field", path: "endsOn", control: "date", label: "Ends" },
-					{ kind: "field", path: "reason", control: "text", label: "Reason" },
-				],
-			},
-			{ kind: "render", id: "pause-calendar", component: PauseCalendar },
-		],
-	})
+				},
+				{
+					kind: "field",
+					path: "workspaceId",
+					control: "select",
+					label: "Member workspace",
+					options: (_values, { context }) => ({
+						options: context.workspaces,
+					}),
+				},
+				{
+					kind: "field",
+					path: "connection.syncExistingMembers",
+					control: "checkbox",
+					label: "Sync existing members",
+				},
+				{
+					kind: "render",
+					id: "workspace-connection",
+					component: WorkspaceConnection,
+				},
+			],
+		},
+		...tierSections(),
+		{ kind: "render", id: "ladder-preview", component: LadderPreview },
+		{
+			kind: "array",
+			path: "pauseWindows",
+			label: "Pause windows",
+			description:
+				"Dates can be entered directly or added from calendar shortcuts.",
+			itemDefault: { startsOn: "", endsOn: "", reason: "" },
+			children: [
+				{ kind: "field", path: "startsOn", control: "date", label: "Starts" },
+				{ kind: "field", path: "endsOn", control: "date", label: "Ends" },
+				{ kind: "field", path: "reason", control: "text", label: "Reason" },
+			],
+		},
+		{ kind: "render", id: "pause-calendar", component: PauseCalendar },
+	],
+})
 
 function tierSections() {
-	return [
-		tierSection("seed", "Seed tier"),
-		tierSection("sprout", "Sprout tier"),
-		tierSection("canopy", "Canopy tier"),
-		tierSection("founder", "Founder tier"),
-	] as const
-}
-
-function tierSection<
-	const Name extends "seed" | "sprout" | "canopy" | "founder",
->(name: Name, title: string) {
-	return {
-		kind: "section" as const,
-		id: `tier-${name}`,
-		title,
-		children: [
-			{
-				kind: "field" as const,
-				path: `tiers.${name}.discountPercent` as `tiers.${Name}.discountPercent`,
-				control: "number" as const,
-				label: "Reduction percent",
-				options: { min: 0, max: 80, step: 1 },
-			},
-			{
-				kind: "array" as const,
-				path: `tiers.${name}.benefits` as `tiers.${Name}.benefits`,
-				label: "Benefits",
-				itemDefault: { label: "", monthlyLimit: 0 },
-				children: [
-					{
-						kind: "field" as const,
-						path: "label" as const,
-						control: "text" as const,
-						label: "Benefit",
-					},
-					{
-						kind: "field" as const,
-						path: "monthlyLimit" as const,
-						control: "number" as const,
-						label: "Monthly limit",
-						options: { min: 0, step: 1 },
-					},
-				],
-			},
-		],
-	}
+	return membershipFragment("tiers", [
+		{
+			kind: "section",
+			id: "tier-seed",
+			title: "Seed tier",
+			children: [
+				{
+					kind: "field",
+					path: "seed.discountPercent",
+					control: "number",
+					label: "Reduction percent",
+					options: { min: 0, max: 80, step: 1 },
+				},
+				{
+					kind: "array",
+					path: "seed.benefits",
+					label: "Benefits",
+					itemDefault: { label: "", monthlyLimit: 0 },
+					children: [
+						{
+							kind: "field",
+							path: "label",
+							control: "text",
+							label: "Benefit",
+						},
+						{
+							kind: "field",
+							path: "monthlyLimit",
+							control: "number",
+							label: "Monthly limit",
+							options: { min: 0, step: 1 },
+						},
+					],
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "tier-sprout",
+			title: "Sprout tier",
+			children: [
+				{
+					kind: "field",
+					path: "sprout.discountPercent",
+					control: "number",
+					label: "Reduction percent",
+					options: { min: 0, max: 80, step: 1 },
+				},
+				{
+					kind: "array",
+					path: "sprout.benefits",
+					label: "Benefits",
+					itemDefault: { label: "", monthlyLimit: 0 },
+					children: [
+						{ kind: "field", path: "label", control: "text", label: "Benefit" },
+						{
+							kind: "field",
+							path: "monthlyLimit",
+							control: "number",
+							label: "Monthly limit",
+							options: { min: 0, step: 1 },
+						},
+					],
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "tier-canopy",
+			title: "Canopy tier",
+			children: [
+				{
+					kind: "field",
+					path: "canopy.discountPercent",
+					control: "number",
+					label: "Reduction percent",
+					options: { min: 0, max: 80, step: 1 },
+				},
+				{
+					kind: "array",
+					path: "canopy.benefits",
+					label: "Benefits",
+					itemDefault: { label: "", monthlyLimit: 0 },
+					children: [
+						{ kind: "field", path: "label", control: "text", label: "Benefit" },
+						{
+							kind: "field",
+							path: "monthlyLimit",
+							control: "number",
+							label: "Monthly limit",
+							options: { min: 0, step: 1 },
+						},
+					],
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "tier-founder",
+			title: "Founder tier",
+			children: [
+				{
+					kind: "field",
+					path: "founder.discountPercent",
+					control: "number",
+					label: "Reduction percent",
+					options: { min: 0, max: 80, step: 1 },
+				},
+				{
+					kind: "array",
+					path: "founder.benefits",
+					label: "Benefits",
+					itemDefault: { label: "", monthlyLimit: 0 },
+					children: [
+						{ kind: "field", path: "label", control: "text", label: "Benefit" },
+						{
+							kind: "field",
+							path: "monthlyLimit",
+							control: "number",
+							label: "Monthly limit",
+							options: { min: 0, step: 1 },
+						},
+					],
+				},
+			],
+		},
+	])
 }
 
 export function MembershipLadderExample() {
@@ -433,8 +516,8 @@ function MembershipLadderForm() {
 
 function preserveTierOrder(
 	event: BeforeUpdateEvent<MembershipInput, unknown>,
-): readonly ValueChange[] | undefined {
-	const changes: ValueChange[] = [...event.changes]
+): readonly ValueChange<MembershipInput>[] | undefined {
+	const additions: ValueChange<MembershipInput>[] = []
 	const seed = event.nextValues.tiers.seed.discountPercent
 	const sprout = Math.max(seed, event.nextValues.tiers.sprout.discountPercent)
 	const canopy = Math.max(sprout, event.nextValues.tiers.canopy.discountPercent)
@@ -449,7 +532,7 @@ function preserveTierOrder(
 		number,
 	][]) {
 		if (event.nextValues.tiers[name].discountPercent !== value) {
-			changes.push({
+			additions.push({
 				type: "set",
 				path: `tiers.${name}.discountPercent`,
 				value,
@@ -457,7 +540,7 @@ function preserveTierOrder(
 		}
 	}
 
-	return changes.length === event.changes.length ? undefined : changes
+	return extendValueChanges(event, additions)
 }
 
 function fakeRequest<Value>(value: Value, delay: number): Promise<Value> {

@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback } from "react"
-
+import { registerErrorSummaryFocusTarget } from "../core/form-store.js"
 import type { StandardSchema } from "../core/index.js"
 import type { RuntimeFormKitSlots } from "./create-form-kit.js"
 import { useFormIdPrefix } from "./form-context.js"
+import { createIssueKey } from "./form-errors.js"
 import { useFormState } from "./hooks.js"
 import { createErrorMessageRootProps } from "./structural-props.js"
 import type { AnyFormInstance } from "./use-form.js"
@@ -23,11 +23,6 @@ export function ErrorSummary<Schema extends StandardSchema, Context>({
 		form,
 		(snapshot) => snapshot.displayErrors.summary,
 	)
-	const firstSummaryRef = useCallback((element: HTMLElement | null) => {
-		if (element !== null && typeof element.focus !== "function") {
-			throw new TypeError("Fokit summary error root must be focusable")
-		}
-	}, [])
 	const ErrorMessage = slots.ErrorMessage
 
 	return (
@@ -35,16 +30,20 @@ export function ErrorSummary<Schema extends StandardSchema, Context>({
 			{issues.map((issue, index) => (
 				<ErrorMessage
 					issue={issue}
-					key={`${issue.source}:${issue.path ?? "form"}:${issue.message}`}
+					key={createIssueKey(issue, index)}
 					rootProps={createErrorMessageRootProps({
 						id: `${idPrefix}-summary-error-${index}`,
 						path: issue.path,
-						...(index === 0
-							? {
-									tabIndex: -1,
-									ref: firstSummaryRef,
-								}
-							: {}),
+						tabIndex: -1,
+						ref: (element) => {
+							if (element !== null && typeof element.focus !== "function") {
+								throw new TypeError(
+									"Fokit summary error root must be focusable",
+								)
+							}
+
+							registerErrorSummaryFocusTarget(form, index, element)
+						},
 					})}
 				/>
 			))}

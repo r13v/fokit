@@ -37,6 +37,11 @@ Validation output never replaces editable values automatically.
 tree. `kit.defineForm` infers the useful version, checks field paths, and
 rejects incompatible controls.
 
+`DefinitionFragmentPath<Input>` selects definitely present, non-null,
+object-valued non-array scopes.
+`DefinitionFragmentNode` is the opaque schema-bound authoring result of
+`kit.defineForm(schema).fragment(...)`; normalization erases that boundary.
+
 The UI node families are:
 
 - `FieldNode` for one typed field path and control;
@@ -62,6 +67,10 @@ type ContactEmail = PathValue<Draft, "contacts.0.email">
 
 At runtime, paths use canonical dotted strings such as
 `contacts.0.email`.
+
+React render components accept `RenderNodeProps`, containing effective
+`disabled` and `readOnly` booleans. Render-node `visible`, `disabled`, and
+`readOnly` resolver functions use the same schema-bound values as other nodes.
 
 ## Form instances and context
 
@@ -130,6 +139,11 @@ Selectors receive an immutable `FormSnapshot`:
 | `DisplayFormErrors` | Only form and field issues currently exposed to the user |
 | `ValidationStatus` | `unvalidated`, `valid`, or `invalid` |
 | `ValidationOptions` | Mode, revalidation mode, and async debounce |
+| `ValueChange<Input>` | A transaction change whose set path stays correlated with its value type |
+
+`validatePaths` and `focusFirstError` accept readonly arrays of
+`FieldPath<FormInput<Schema>>`. `extendValueChanges` keeps additions correlated
+with the same input type when a `beforeUpdate` hook extends a proposal.
 
 Read [Validation and errors](/guides/validation) before using issue types
 directly.

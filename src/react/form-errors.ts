@@ -1,9 +1,4 @@
-import type {
-	DisplayFormErrors,
-	FormIssue,
-	FormStore,
-	StandardSchema,
-} from "../core/index.js"
+import type { DisplayFormErrors, FormIssue } from "../core/index.js"
 
 export function hasDisplayErrors(errors: DisplayFormErrors): boolean {
 	if (errors.form.length > 0) {
@@ -21,12 +16,4 @@ export function hasDisplayErrors(errors: DisplayFormErrors): boolean {
 
 export function createIssueKey(issue: FormIssue, index: number): string {
 	return `${issue.source}:${issue.path ?? "form"}:${issue.message}:${index}`
-}
-
-export function isFocusableIssuePath<Context>(
-	snapshot: ReturnType<FormStore<StandardSchema, Context>["getSnapshot"]>,
-	path: string,
-): boolean {
-	const field = snapshot.resolvedUi.fieldsByPath[path]
-	return field?.visible === true && !field.disabled && !field.readOnly
 }

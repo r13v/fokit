@@ -86,6 +86,7 @@ export type {
 export {
 	cloneValue,
 	createFormStore,
+	extendValueChanges,
 	formatPath,
 	getPathValue,
 	isAncestorPath,
@@ -114,6 +115,9 @@ export type {
 	AutoFormProps,
 	CreateFormKitOptions,
 	DefineForm,
+	DefineFormFragment,
+	DefinitionFragmentNode,
+	DefinitionFragmentPath,
 	ExtendFormKit,
 	FieldsProps,
 	FormKit,
@@ -158,6 +162,10 @@ export type {
 	NativeTimeOptions,
 } from "./react/native-controls.js"
 export { nativeControls } from "./react/native-controls.js"
+export type {
+	RenderNodeComponent,
+	RenderNodeProps,
+} from "./react/render-node.js"
 export type {
 	ArrayItemSlotProps,
 	ArraySlotProps,

@@ -1,0 +1,136 @@
+---
+title: Async fields
+description: Load suggestions and bespoke field UI without moving request, cache, cancellation, or selected-label state into Fokit.
+showAskAi: false
+---
+
+# Async fields
+
+Fokit owns typed form values; an application data layer owns remote options.
+Keep that seam explicit and async fields stay cancellable, cacheable, and
+testable without giving the form store a second network lifecycle.
+
+## Choose the integration shape
+
+Use a custom control when the async picker is a reusable editor for one value.
+Use a render node when the search UI is local to one form or writes several
+related schema paths. Both shapes keep the selected IDs in Fokit and request
+state outside it.
+
+The complete reusable-control version is the
+[async multiselect guide](/guides/async-multiselect). The render-node shape is
+useful for registry lookup, title suggestions, address resolution, and similar
+product workflows.
+
+## Keep requests in the data layer
+
+TanStack Query passes an `AbortSignal` to the request and caches results by the
+search key. The render component subscribes only to the form values it needs:
+
+```tsx twoslash
+// @jsx: react-jsx
+import { useQuery } from "@tanstack/react-query"
+import {
+	type RenderNodeProps,
+	useFormContext,
+	useValue,
+} from "fokit"
+import { useState } from "react"
+import { z } from "zod"
+
+type Organization = { readonly id: string; readonly name: string }
+const applicationSchema = z.object({ organizationId: z.string().optional() })
+declare function searchOrganizations(
+	search: string,
+	signal: AbortSignal,
+): Promise<readonly Organization[]>
+
+function OrganizationSearch({ disabled, readOnly }: RenderNodeProps) {
+	const form = useFormContext<typeof applicationSchema>()
+	const selectedId = useValue(form, "organizationId")
+	const [search, setSearch] = useState("")
+	const results = useQuery({
+		queryKey: ["organizations", search],
+		queryFn: ({ signal }) => searchOrganizations(search, signal),
+		enabled: search.trim().length >= 2,
+	})
+
+	return (
+		<section aria-busy={results.isFetching}>
+			<input
+				disabled={disabled}
+				onChange={(event) => setSearch(event.currentTarget.value)}
+				readOnly={readOnly}
+				value={search}
+			/>
+			{results.data?.map((organization) => (
+				<button
+					aria-pressed={organization.id === selectedId}
+					disabled={disabled || readOnly}
+					key={organization.id}
+					onClick={() => form.setValue("organizationId", organization.id)}
+					type="button"
+				>
+					{organization.name}
+				</button>
+			))}
+		</section>
+	)
+}
+```
+
+Debounce the search string before it enters the query key when the endpoint
+needs it. Do not use Fokit's schema-validation debounce as a request debounce;
+the two lifecycles answer different questions.
+
+## Preserve selected labels
+
+The form should normally store a stable ID, not a whole remote record. Seed the
+query cache from the loaded record, keep an `initialOptions` list, or load the
+selected ID with a separate query so its label survives a search-result change.
+
+This matters in edit forms: a selected value must remain understandable before
+the user types a new search. It also prevents a temporary empty result from
+silently clearing a valid form value.
+
+## Surface loading and errors deliberately
+
+Loading, empty results, retry, and request failures belong to the async
+component. Submission failures that invalidate a form path belong on the form:
+
+```ts twoslash
+import type { FormInstance } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({ organizationId: z.string().optional() })
+declare const form: FormInstance<typeof schema>
+
+// ---cut---
+form.setErrors([
+	{
+		source: "server",
+		path: "organizationId",
+		message: "That organization is no longer available",
+	},
+])
+```
+
+The server issue clears when that path changes. A transient suggestion request
+failure should usually stay local to the picker so it does not make the whole
+schema invalid.
+
+## Keep the ownership boundary
+
+| Concern | Owner |
+| --- | --- |
+| Selected typed ID or IDs | Fokit form values |
+| Schema validity and submitted output | Standard Schema |
+| Search text, open state, keyboard navigation | Control or render component |
+| Request cache, cancellation, retries | Application data layer |
+| Selected-label hydration | Query cache or loaded record |
+| Rejected submission issue | Fokit server error |
+
+Fokit intentionally has no query adapter or remote-options API. See the
+[research grant](/examples/research-grant) and
+[learning cohort](/examples/learning-cohort) examples for two render-node
+variations, or return to [Production recipes](/advanced).

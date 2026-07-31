@@ -10,7 +10,6 @@ import type {
 	StandardSchema,
 } from "../core/index.js"
 import { isDirtyEqual } from "../core/index.js"
-import { isFocusableIssuePath } from "./form-errors.js"
 import type { FormInstance } from "./form-instance.js"
 
 export type SubmitContext<Schema extends StandardSchema, Context = unknown> = {
@@ -236,12 +235,7 @@ function focusSubmitIssues<Schema extends StandardSchema, Context>(
 		return
 	}
 
-	for (const [path, issues] of snapshot.displayErrors.fields) {
-		if (issues.length === 0 || !isFocusableIssuePath(snapshot, path)) {
-			continue
-		}
-
-		form.focus(path)
+	if (form.focusFirstError()) {
 		return
 	}
 

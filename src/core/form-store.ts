@@ -46,13 +46,7 @@ import {
 	touchMetadataPath,
 } from "./metadata.js"
 import { isPlainObject } from "./object.js"
-import {
-	formatPath,
-	isDescendantPath,
-	isSamePath,
-	type PathInput,
-	pathsOverlap,
-} from "./path.js"
+import { formatPath, type PathInput, pathsOverlap } from "./path.js"
 import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
 import { type ResolvedUiState, resolveUi } from "./resolve-ui.js"
 import type {
@@ -96,6 +90,32 @@ export type FocusTarget = {
 	focus(options?: FocusTargetOptions): void
 }
 
+export const errorSummaryFocusTargetRegistration = Symbol(
+	"fokit.errorSummaryFocusTargetRegistration",
+)
+
+type ErrorSummaryFocusTargetRegistrable = {
+	[errorSummaryFocusTargetRegistration](
+		index: number,
+		element: FocusTarget | null,
+	): void
+}
+
+export function registerErrorSummaryFocusTarget(
+	form: object,
+	index: number,
+	element: FocusTarget | null,
+): void {
+	const register = (form as Partial<ErrorSummaryFocusTargetRegistrable>)[
+		errorSummaryFocusTargetRegistration
+	]
+	if (typeof register !== "function") {
+		throw new TypeError("Fokit error summaries require a Fokit form instance")
+	}
+
+	register.call(form, index, element)
+}
+
 export type UpdateSource =
 	| "array"
 	| "control"
@@ -106,7 +126,7 @@ export type UpdateSource =
 export type BeforeUpdateEvent<Input, Context> = {
 	readonly currentValues: Readonly<Input>
 	readonly nextValues: Readonly<Input>
-	readonly changes: readonly ValueChange[]
+	readonly changes: readonly ValueChange<Input>[]
 	readonly source: UpdateSource
 	readonly context: Readonly<Context>
 }
@@ -114,7 +134,7 @@ export type BeforeUpdateEvent<Input, Context> = {
 export type UpdateEvent<Input, Context> = {
 	readonly previousValues: Readonly<Input>
 	readonly values: Readonly<Input>
-	readonly changes: readonly ValueChange[]
+	readonly changes: readonly ValueChange<Input>[]
 	readonly source: UpdateSource
 	readonly context: Readonly<Context>
 }
@@ -122,7 +142,7 @@ export type UpdateEvent<Input, Context> = {
 export type UpdateHooks<Input, Context> = {
 	readonly beforeUpdate?: (
 		event: BeforeUpdateEvent<Input, Context>,
-	) => false | readonly ValueChange[] | undefined
+	) => false | readonly ValueChange<Input>[] | undefined
 	readonly onUpdate?: (event: UpdateEvent<Input, Context>) => void
 }
 
@@ -136,6 +156,32 @@ export type FormStoreOptions<
 	readonly disabled?: boolean
 	readonly readOnly?: boolean
 	readonly validation?: Partial<ValidationOptions>
+}
+
+type RuntimeBeforeUpdateEvent<Input, Context> = Omit<
+	BeforeUpdateEvent<Input, Context>,
+	"changes"
+> & {
+	readonly changes: readonly ValueChange[]
+}
+
+type RuntimeUpdateEvent<Input, Context> = Omit<
+	UpdateEvent<Input, Context>,
+	"changes"
+> & {
+	readonly changes: readonly ValueChange[]
+}
+
+type RuntimeFormStoreOptions<Schema extends StandardSchema, Context> = Omit<
+	FormStoreOptions<Schema, Context>,
+	"beforeUpdate" | "onUpdate"
+> & {
+	readonly beforeUpdate?: (
+		event: RuntimeBeforeUpdateEvent<FormInput<Schema>, Context>,
+	) => false | readonly ValueChange[] | undefined
+	readonly onUpdate?: (
+		event: RuntimeUpdateEvent<FormInput<Schema>, Context>,
+	) => void
 }
 
 export type FormStoreRuntimeOptions = Pick<
@@ -194,6 +240,9 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 	clearErrors(path?: PathInput): void
 	validate(): Promise<ValidationResult<FormOutput<Schema>>>
 	validate(path: PathInput): Promise<readonly FormIssue[]>
+	validatePaths<Path extends FieldPath<FormInput<Schema>>>(
+		paths: readonly Path[],
+	): Promise<readonly FormIssue[]>
 	batch(callback: () => void): void
 	subscribe<Selected>(
 		selector: FormStoreSelector<FormInput<Schema>, Context, Selected>,
@@ -206,6 +255,9 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 	blur(path: PathInput): void
 	registerFieldRef(path: PathInput, element: FocusTarget | null): void
 	focus(path: PathInput): void
+	focusFirstError<Path extends FieldPath<FormInput<Schema>>>(
+		paths?: readonly Path[],
+	): boolean
 }
 
 type Subscription<Input, Context, Selected = unknown> = {
@@ -286,7 +338,9 @@ export function createFormStore<
 	Schema extends StandardSchema,
 	Context = unknown,
 >(options: FormStoreOptions<Schema, Context>): FormStore<Schema, Context> {
-	return new CoreFormStore(options) as unknown as FormStore<Schema, Context>
+	return new CoreFormStore(
+		options as RuntimeFormStoreOptions<Schema, Context>,
+	) as unknown as FormStore<Schema, Context>
 }
 
 export function replaceFormStoreRuntime<
@@ -387,16 +441,17 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	#validationRevision = 0
 	#validationState: ValidationRuntimeState = createValidationRuntimeState()
 	readonly #focusTargets = new Map<string, FocusTarget>()
+	readonly #summaryFocusTargets = new Map<number, FocusTarget>()
 	#isRunningBeforeUpdate = false
 	#readOnly: boolean
 	readonly #subscriptions = new Set<Subscription<FormInput<Schema>, Context>>()
-	readonly #beforeUpdate: UpdateHooks<
-		FormInput<Schema>,
+	readonly #beforeUpdate: RuntimeFormStoreOptions<
+		Schema,
 		Context
 	>["beforeUpdate"]
-	readonly #onUpdate: UpdateHooks<FormInput<Schema>, Context>["onUpdate"]
+	readonly #onUpdate: RuntimeFormStoreOptions<Schema, Context>["onUpdate"]
 
-	constructor(options: FormStoreOptions<Schema, Context>) {
+	constructor(options: RuntimeFormStoreOptions<Schema, Context>) {
 		this.definition = options.definition
 		this.schema = options.definition.schema
 		this.#context = options.context as Context
@@ -543,8 +598,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		path?: PathInput,
 	): Promise<ValidationResult<FormOutput<Schema>> | readonly FormIssue[]> {
 		this.#cancelScheduledValidation()
-		const canonicalPath =
-			path === undefined ? undefined : this.#normalizeKnownFieldPath(path)
+		const canonicalPath = path === undefined ? undefined : formatPath(path)
 
 		return this.#runValidation({
 			kind: "nonSubmit",
@@ -555,7 +609,26 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				? result
 				: result.success
 					? []
-					: filterPathSubtreeIssues(result.issues, canonicalPath),
+					: filterPathSubsetIssues(result.issues, [canonicalPath]),
+		)
+	}
+
+	validatePaths<Path extends FieldPath<FormInput<Schema>>>(
+		paths: readonly Path[],
+	): Promise<readonly FormIssue[]> {
+		const canonicalPaths = normalizePathSubset(paths, {
+			requireNonEmpty: true,
+		})
+		this.#cancelScheduledValidation()
+
+		return this.#runValidation({
+			kind: "nonSubmit",
+			exposeAll: false,
+			exposePaths: canonicalPaths,
+		}).then((result) =>
+			result.success
+				? []
+				: filterPathSubsetIssues(result.issues, canonicalPaths),
 		)
 	}
 
@@ -770,8 +843,66 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#focusTargets.set(canonicalPath, element)
 	}
 
+	[errorSummaryFocusTargetRegistration](
+		index: number,
+		element: FocusTarget | null,
+	): void {
+		if (element === null) {
+			this.#summaryFocusTargets.delete(index)
+			return
+		}
+
+		this.#summaryFocusTargets.set(index, element)
+	}
+
 	focus(path: PathInput): void {
-		const canonicalPath = formatPath(path)
+		this.#focusFieldPath(formatPath(path))
+	}
+
+	focusFirstError<Path extends FieldPath<FormInput<Schema>>>(
+		paths?: readonly Path[],
+	): boolean {
+		const canonicalPaths =
+			paths === undefined
+				? undefined
+				: normalizePathSubset(paths, { requireNonEmpty: false })
+		if (canonicalPaths?.length === 0) {
+			return false
+		}
+
+		for (const [path, issues] of this.#snapshot.displayErrors.fields) {
+			if (
+				issues.length === 0 ||
+				!pathMatchesSubset(path, canonicalPaths) ||
+				!this.#focusFieldPath(path)
+			) {
+				continue
+			}
+
+			return true
+		}
+
+		for (const [
+			index,
+			issue,
+		] of this.#snapshot.displayErrors.summary.entries()) {
+			const matches =
+				issue.path === undefined
+					? canonicalPaths === undefined
+					: pathMatchesSubset(issue.path, canonicalPaths)
+			const target = this.#summaryFocusTargets.get(index)
+			if (!matches || target === undefined) {
+				continue
+			}
+
+			target.focus()
+			return true
+		}
+
+		return false
+	}
+
+	#focusFieldPath(canonicalPath: string): boolean {
 		const field = this.#snapshot.resolvedUi.fieldsByPath[canonicalPath]
 		if (
 			field === undefined ||
@@ -779,10 +910,16 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			field.disabled ||
 			field.readOnly
 		) {
-			return
+			return false
 		}
 
-		this.#focusTargets.get(canonicalPath)?.focus()
+		const target = this.#focusTargets.get(canonicalPath)
+		if (target === undefined) {
+			return false
+		}
+
+		target.focus()
+		return true
 	}
 
 	#createSnapshot(
@@ -1075,14 +1212,11 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		return Object.freeze(
 			changes.map((change) => {
 				if (change.type === "set") {
-					return createSetChange(
-						this.#normalizeKnownFieldPath(change.path),
-						change.value,
-					)
+					return createSetChange(change.path, change.value)
 				}
 
 				if (change.type === "unset") {
-					return createUnsetChange(this.#normalizeKnownFieldPath(change.path))
+					return createUnsetChange(change.path)
 				}
 
 				const unsupported = change as { readonly type?: unknown }
@@ -1809,16 +1943,40 @@ function asCoreFormStore<Schema extends StandardSchema, Context>(
 	throw new TypeError("Submission requires a Fokit form store")
 }
 
-function filterPathSubtreeIssues(
+function filterPathSubsetIssues(
 	issues: readonly FormIssue[],
-	path: string,
+	paths: readonly string[],
 ): readonly FormIssue[] {
 	return Object.freeze(
 		issues.filter(
 			(issue) =>
 				issue.path !== undefined &&
-				(isSamePath(issue.path, path) || isDescendantPath(issue.path, path)),
+				paths.some((path) => pathsOverlap(issue.path as string, path)),
 		),
+	)
+}
+
+function normalizePathSubset(
+	paths: readonly PathInput[],
+	options: { readonly requireNonEmpty: boolean },
+): readonly string[] {
+	if (!Array.isArray(paths)) {
+		throw new TypeError("Path subsets must be an array of field paths")
+	}
+	if (options.requireNonEmpty && paths.length === 0) {
+		throw new TypeError("validatePaths requires at least one field path")
+	}
+
+	return Object.freeze([...new Set(paths.map((path) => formatPath(path)))])
+}
+
+function pathMatchesSubset(
+	path: string,
+	paths: readonly string[] | undefined,
+): boolean {
+	return (
+		paths === undefined ||
+		paths.some((candidate) => pathsOverlap(path, candidate))
 	)
 }
 

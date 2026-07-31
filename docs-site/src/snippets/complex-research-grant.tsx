@@ -9,12 +9,12 @@ import {
 import {
 	type BeforeUpdateEvent,
 	createFormKit,
+	extendValueChanges,
 	type FormInput,
 	type FormOutput,
 	nativeControls,
 	useFormContext,
 	useFormState,
-	useValue,
 	type ValueChange,
 } from "fokit"
 import { useState } from "react"
@@ -176,8 +176,10 @@ const kit = createFormKit({ controls: nativeControls })
 
 function OrganizationFinder() {
 	const form = useFormContext<typeof grantSchema>()
-	const organizationPath = useValue(form, "organization.path")
-	const selectedId = useValue(form, "organization.registryId")
+	const selectedId = useFormState(
+		form,
+		(snapshot) => snapshot.values.organization.registryId,
+	)
 	const [search, setSearch] = useState("")
 	const records = useQuery({
 		queryKey: ["grant-registry", search],
@@ -189,8 +191,6 @@ function OrganizationFinder() {
 			),
 		staleTime: 30_000,
 	})
-	if (organizationPath !== "registered") return null
-
 	return (
 		<section className="fokit-complex__embedded" aria-label="Registry search">
 			<label>
@@ -317,6 +317,7 @@ const grantDefinition = kit.defineForm(grantSchema)({
 					kind: "render",
 					id: "organization-finder",
 					component: OrganizationFinder,
+					visible: ({ "organization.path": path }) => path === "registered",
 				},
 				{
 					kind: "field",
@@ -551,11 +552,11 @@ function ResearchGrantForm() {
 
 function preserveGrantInvariants(
 	event: BeforeUpdateEvent<GrantInput, unknown>,
-): readonly ValueChange[] | undefined {
-	const replacements: ValueChange[] = [...event.changes]
+): readonly ValueChange<GrantInput>[] | undefined {
+	const additions: ValueChange<GrantInput>[] = []
 
 	if (event.currentValues.applicantKind !== event.nextValues.applicantKind) {
-		replacements.push(
+		additions.push(
 			{ type: "unset", path: "organization.path" },
 			{ type: "unset", path: "organization.registryId" },
 			{ type: "unset", path: "organization.name" },
@@ -566,7 +567,7 @@ function preserveGrantInvariants(
 	if (
 		event.currentValues.organization.path !== event.nextValues.organization.path
 	) {
-		replacements.push(
+		additions.push(
 			{ type: "unset", path: "organization.registryId" },
 			{ type: "unset", path: "organization.name" },
 			{ type: "unset", path: "organization.registrationCountry" },
@@ -574,14 +575,14 @@ function preserveGrantInvariants(
 	}
 
 	if (event.currentValues.payout.method !== event.nextValues.payout.method) {
-		replacements.push(
+		additions.push(
 			event.nextValues.payout.method === "bank"
 				? { type: "unset", path: "payout.walletHandle" }
 				: { type: "unset", path: "payout.bankAccount" },
 		)
 	}
 
-	return replacements.length === event.changes.length ? undefined : replacements
+	return extendValueChanges(event, additions)
 }
 
 function fakeRequest<Value>(value: Value, delay = 280): Promise<Value> {

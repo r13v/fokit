@@ -29,7 +29,8 @@ see cross-section schema issues.
 - Native time controls for browser-managed access-window values.
 - A stable array of equipment rules with row-level booleans and amounts.
 - Form-wide validation that connects decisions from different sections.
-- Transaction replacements that clear disabled policy branches immediately.
+- `extendValueChanges` preserving the initiating transaction while typed
+  dependent policy paths clear immediately.
 - Sequential writes to a policy resource and its public summary.
 
 Request state never becomes an editable field. Fokit owns the policy value;

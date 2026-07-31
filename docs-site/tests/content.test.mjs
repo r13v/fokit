@@ -92,6 +92,13 @@ const canonicalPages = [
 			"Build a searchable multi-select that stores typed IDs in Fokit, loads options with TanStack Query, and delegates popup behavior to Floating UI.",
 	},
 	{
+		path: "src/pages/guides/async-fields.mdx",
+		route: "/guides/async-fields",
+		title: "Async fields",
+		description:
+			"Load suggestions and bespoke field UI without moving request, cache, cancellation, or selected-label state into Fokit.",
+	},
+	{
 		path: "src/pages/guides/styling.mdx",
 		route: "/guides/styling",
 		title: "Styling",
@@ -635,6 +642,23 @@ const requiredGuidePageContent = {
 			"AsyncMultiSelectDemo",
 		],
 	},
+	"src/pages/guides/async-fields.mdx": {
+		headings: [
+			"Choose the integration shape",
+			"Keep requests in the data layer",
+			"Preserve selected labels",
+			"Surface loading and errors deliberately",
+			"Keep the ownership boundary",
+		],
+		terms: [
+			"TanStack Query",
+			"AbortSignal",
+			"RenderNodeProps",
+			"organizationId",
+			"selected-label",
+			"query adapter",
+		],
+	},
 	"src/pages/guides/styling.mdx": {
 		headings: [
 			"Import responsive structure",
@@ -1154,6 +1178,7 @@ test("sidebar follows the learning path before reference material", async () => 
 	const validation = source.indexOf('link: "/guides/validation"')
 	const controls = source.indexOf('link: "/guides/controls"')
 	const asyncMultiselect = source.indexOf('link: "/guides/async-multiselect"')
+	const asyncFields = source.indexOf('link: "/guides/async-fields"')
 	const complexExamples = source.indexOf('link: "/examples"')
 	const api = source.indexOf('link: "/api"')
 	const types = source.indexOf('link: "/types"')
@@ -1165,6 +1190,7 @@ test("sidebar follows the learning path before reference material", async () => 
 		validation,
 		controls,
 		asyncMultiselect,
+		asyncFields,
 		complexExamples,
 		api,
 		types,
@@ -1177,7 +1203,8 @@ test("sidebar follows the learning path before reference material", async () => 
 	assert.ok(uiDefinitions < validation)
 	assert.ok(validation < controls)
 	assert.ok(controls < asyncMultiselect)
-	assert.ok(asyncMultiselect < complexExamples)
+	assert.ok(asyncMultiselect < asyncFields)
+	assert.ok(asyncFields < complexExamples)
 	assert.ok(complexExamples < api)
 	assert.ok(api < types)
 })

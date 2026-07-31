@@ -1,11 +1,13 @@
 "use client"
 
 import type { ComponentType, ElementType, ReactElement, ReactNode } from "react"
-
+import { scopeDefinitionFragment } from "../core/definition-fragment.js"
 import {
+	type FieldPath,
 	type FormInput,
 	type NormalizedFormDefinition,
 	normalizeDefinition,
+	type PathValue,
 	type StandardSchema,
 	type UiNode,
 } from "../core/index.js"
@@ -19,6 +21,7 @@ import {
 	type KitFormComponent,
 	type KitFormProps,
 } from "./form.js"
+import type { RenderNodeComponent } from "./render-node.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -70,13 +73,111 @@ type FormDefinitionInput<
 	SectionSlotOptions,
 	ArraySlotOptions,
 > = {
-	readonly ui: readonly UiNode<
+	readonly ui: readonly (
+		| UiNode<
+				Input,
+				Controls,
+				Context,
+				RenderNodeComponent,
+				ReactUiPresentation<
+					FieldSlotOptions,
+					SectionSlotOptions,
+					ArraySlotOptions
+				>
+		  >
+		| DefinitionFragmentNode<
+				Input,
+				Controls,
+				Context,
+				FieldSlotOptions,
+				SectionSlotOptions,
+				ArraySlotOptions
+		  >
+	)[]
+}
+
+declare const definitionFragmentNodeBrand: unique symbol
+
+export type DefinitionFragmentNode<
+	Input,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+> = {
+	readonly kind?: never
+	readonly [definitionFragmentNodeBrand]: {
+		readonly input: (input: Input) => void
+		readonly controls: (controls: Controls) => void
+		readonly context: (context: Context) => void
+		readonly fieldSlotOptions: () => FieldSlotOptions
+		readonly sectionSlotOptions: () => SectionSlotOptions
+		readonly arraySlotOptions: () => ArraySlotOptions
+	}
+}
+
+type DefinitionFragmentPathFor<Input, Path> =
+	Path extends FieldPath<Input>
+		? PathValue<Input, Path> extends readonly unknown[]
+			? never
+			: PathValue<Input, Path> extends object
+				? Path
+				: never
+		: never
+
+export type DefinitionFragmentPath<Input> = DefinitionFragmentPathFor<
+	Input,
+	FieldPath<Input>
+>
+
+export type DefineFormFragment<
+	Input,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+> = <const Scope extends DefinitionFragmentPath<Input>>(
+	scope: Scope,
+	nodes: readonly UiNode<
+		NonNullable<PathValue<Input, Scope>>,
+		Controls,
+		Context,
+		RenderNodeComponent,
+		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+	>[],
+) => readonly DefinitionFragmentNode<
+	Input,
+	Controls,
+	Context,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions
+>[]
+
+type DefineFormFragmentForSchema<
+	Input,
+	Controls extends ControlDefinitionRegistry,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+> = DefineFormFragment<
+	Input,
+	Controls,
+	unknown,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions
+> & {
+	readonly withContext: <Context>() => DefineFormFragment<
 		Input,
 		Controls,
 		Context,
-		ComponentType,
-		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
-	>[]
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions
+	>
 }
 
 type DefineFormWithContext<
@@ -98,7 +199,7 @@ type DefineFormWithContext<
 ) => NormalizedFormDefinition<
 	Schema,
 	Controls,
-	ComponentType,
+	RenderNodeComponent,
 	ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
 >
 
@@ -122,11 +223,18 @@ type DefineFormForSchema<
 	): NormalizedFormDefinition<
 		Schema,
 		Controls,
-		ComponentType,
+		RenderNodeComponent,
 		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
 	>
 	readonly withContext: DefineFormWithContext<
 		Schema,
+		Input,
+		Controls,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions
+	>
+	readonly fragment: DefineFormFragmentForSchema<
 		Input,
 		Controls,
 		FieldSlotOptions,
@@ -167,7 +275,7 @@ export type AutoFormProps<
 		readonly definition: NormalizedFormDefinition<
 			Schema,
 			Controls,
-			ComponentType,
+			RenderNodeComponent,
 			ReactUiPresentation<
 				FieldSlotOptions,
 				SectionSlotOptions,
@@ -476,9 +584,17 @@ function assembleFormKit(
 	const defineForm = ((schema: unknown) => {
 		const create = (createDefinition: unknown) =>
 			normalizeKitDefinition(schema, createDefinition, controls)
+		const fragment = Object.assign(
+			(scope: string, nodes: readonly unknown[]) =>
+				scopeDefinitionFragment(scope, nodes),
+			{
+				withContext: () => fragment,
+			},
+		)
 
 		return Object.assign(create, {
 			withContext: create,
+			fragment,
 		})
 	}) as DefineForm<ControlDefinitionRegistry, unknown, unknown, unknown>
 
@@ -501,7 +617,7 @@ function normalizeKitDefinition(
 ): NormalizedFormDefinition<
 	StandardSchema,
 	ControlDefinitionRegistry,
-	ComponentType,
+	RenderNodeComponent,
 	ReactUiPresentation<unknown, unknown, unknown>
 > {
 	const input = definitionSource as {
@@ -514,7 +630,7 @@ function normalizeKitDefinition(
 	}) => NormalizedFormDefinition<
 		StandardSchema,
 		ControlDefinitionRegistry,
-		ComponentType,
+		RenderNodeComponent,
 		ReactUiPresentation<unknown, unknown, unknown>
 	>
 

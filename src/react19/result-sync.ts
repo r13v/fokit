@@ -7,7 +7,6 @@ import {
 	type FormStore,
 } from "../core/form-store.js"
 import type { StandardSchema } from "../core/standard-schema.js"
-import { isFocusableIssuePath } from "../react/form-errors.js"
 
 export function syncActionResult<
 	Schema extends StandardSchema,
@@ -36,13 +35,7 @@ function focusActionIssues<Schema extends StandardSchema, Context>(
 	form: FormStore<Schema, Context>,
 	formElement: HTMLFormElement | undefined,
 ): void {
-	const snapshot = form.getSnapshot()
-	for (const [path, issues] of snapshot.displayErrors.fields) {
-		if (issues.length === 0 || !isFocusableIssuePath(snapshot, path)) {
-			continue
-		}
-
-		form.focus(path)
+	if (form.focusFirstError()) {
 		return
 	}
 

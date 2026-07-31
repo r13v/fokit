@@ -204,6 +204,8 @@ const draft = {
 } satisfies CohortInput
 
 const kit = createFormKit({ controls: nativeControls })
+const defineCohort = kit.defineForm(cohortSchema)
+const cohortFragment = defineCohort.fragment
 
 function TitleSuggestions() {
 	const form = useFormContext<typeof cohortSchema>()
@@ -262,7 +264,7 @@ function CohortPreview() {
 	)
 }
 
-const cohortDefinition = kit.defineForm(cohortSchema)({
+const cohortDefinition = defineCohort({
 	ui: [
 		{
 			kind: "section",
@@ -424,129 +426,117 @@ const cohortDefinition = kit.defineForm(cohortSchema)({
 })
 
 function offerSections() {
-	return [
+	return cohortFragment("offers", [
 		{
-			kind: "section" as const,
+			kind: "section",
 			id: "offer-early",
 			title: "Early-bird offer",
-			columns: 2 as const,
+			columns: 2,
 			children: [
 				{
-					kind: "field" as const,
-					path: "offers.earlyBird.enabled" as const,
-					control: "checkbox" as const,
+					kind: "field",
+					path: "earlyBird.enabled",
+					control: "checkbox",
 					label: "Enabled",
 				},
 				{
-					kind: "field" as const,
-					path: "offers.earlyBird.percent" as const,
-					control: "number" as const,
+					kind: "field",
+					path: "earlyBird.percent",
+					control: "number",
 					label: "Reduction percent",
-					visible: ({
-						"offers.earlyBird.enabled": enabled,
-					}: Record<string, unknown>) => Boolean(enabled),
-					valuePolicy: "unset" as const,
+					visible: ({ "earlyBird.enabled": enabled }) => enabled,
+					valuePolicy: "unset",
 					options: { min: 1, max: 80, step: 1 },
 				},
 				{
-					kind: "field" as const,
-					path: "offers.earlyBird.deadline" as const,
-					control: "date" as const,
+					kind: "field",
+					path: "earlyBird.deadline",
+					control: "date",
 					label: "Deadline",
-					visible: ({
-						"offers.earlyBird.enabled": enabled,
-					}: Record<string, unknown>) => Boolean(enabled),
-					valuePolicy: "unset" as const,
+					visible: ({ "earlyBird.enabled": enabled }) => enabled,
+					valuePolicy: "unset",
 				},
 			],
 		},
 		{
-			kind: "section" as const,
+			kind: "section",
 			id: "offer-team",
 			title: "Team offer",
-			columns: 2 as const,
+			columns: 2,
 			children: [
 				{
-					kind: "field" as const,
-					path: "offers.team.enabled" as const,
-					control: "checkbox" as const,
+					kind: "field",
+					path: "team.enabled",
+					control: "checkbox",
 					label: "Enabled",
 				},
 				{
-					kind: "field" as const,
-					path: "offers.team.minimumSeats" as const,
-					control: "number" as const,
+					kind: "field",
+					path: "team.minimumSeats",
+					control: "number",
 					label: "Minimum seats",
-					visible: ({
-						"offers.team.enabled": enabled,
-					}: Record<string, unknown>) => Boolean(enabled),
-					valuePolicy: "unset" as const,
+					visible: ({ "team.enabled": enabled }) => enabled,
+					valuePolicy: "unset",
 					options: { min: 2, step: 1 },
 				},
 				{
-					kind: "field" as const,
-					path: "offers.team.percent" as const,
-					control: "number" as const,
+					kind: "field",
+					path: "team.percent",
+					control: "number",
 					label: "Reduction percent",
-					visible: ({
-						"offers.team.enabled": enabled,
-					}: Record<string, unknown>) => Boolean(enabled),
-					valuePolicy: "unset" as const,
+					visible: ({ "team.enabled": enabled }) => enabled,
+					valuePolicy: "unset",
 					options: { min: 1, max: 80, step: 1 },
 				},
 			],
 		},
 		{
-			kind: "section" as const,
+			kind: "section",
 			id: "offer-scholarship",
 			title: "Scholarship offer",
-			columns: 2 as const,
+			columns: 2,
 			children: [
 				{
-					kind: "field" as const,
-					path: "offers.scholarship.enabled" as const,
-					control: "checkbox" as const,
+					kind: "field",
+					path: "scholarship.enabled",
+					control: "checkbox",
 					label: "Enabled",
 				},
 				{
-					kind: "field" as const,
-					path: "offers.scholarship.reservedSeats" as const,
-					control: "number" as const,
+					kind: "field",
+					path: "scholarship.reservedSeats",
+					control: "number",
 					label: "Reserved seats",
-					visible: ({
-						"offers.scholarship.enabled": enabled,
-					}: Record<string, unknown>) => Boolean(enabled),
-					valuePolicy: "unset" as const,
+					visible: ({ "scholarship.enabled": enabled }) => enabled,
+					valuePolicy: "unset",
 					options: { min: 1, step: 1 },
 				},
 			],
 		},
 		{
-			kind: "section" as const,
+			kind: "section",
 			id: "offer-alumni",
 			title: "Returning learner offer",
-			columns: 2 as const,
+			columns: 2,
 			children: [
 				{
-					kind: "field" as const,
-					path: "offers.alumni.enabled" as const,
-					control: "checkbox" as const,
+					kind: "field",
+					path: "alumni.enabled",
+					control: "checkbox",
 					label: "Enabled",
 				},
 				{
-					kind: "field" as const,
-					path: "offers.alumni.percent" as const,
-					control: "number" as const,
+					kind: "field",
+					path: "alumni.percent",
+					control: "number",
 					label: "Reduction percent",
-					visible: ({
-						"offers.alumni.enabled": enabled,
-					}: Record<string, unknown>) => Boolean(enabled),
-					valuePolicy: "unset" as const,
+					visible: ({ "alumni.enabled": enabled }) => enabled,
+					valuePolicy: "unset",
 					options: { min: 1, max: 80, step: 1 },
 				},
 			],
 		},
-	]
+	])
 }
 
 export function LearningCohortExample() {

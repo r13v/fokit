@@ -9,6 +9,7 @@ import {
 import {
 	type BeforeUpdateEvent,
 	createFormKit,
+	extendValueChanges,
 	type FormInput,
 	type FormOutput,
 	nativeControls,
@@ -863,7 +864,7 @@ function CampaignBuilderForm() {
 
 function clearInactiveTemplate(
 	event: BeforeUpdateEvent<CampaignInput, unknown>,
-): readonly ValueChange[] | undefined {
+): readonly ValueChange<CampaignInput>[] | undefined {
 	if (event.currentValues.template === event.nextValues.template)
 		return undefined
 
@@ -887,12 +888,12 @@ function clearInactiveTemplate(
 		"feedbackPulse.question",
 		"feedbackPulse.responseLimit",
 	] as const
-	return [
-		...event.changes,
+	const additions: ValueChange<CampaignInput>[] = [
 		...paths.map((path) => ({ type: "unset" as const, path })),
 		{ type: "set", path: "payment.mode", value: "free" },
 		{ type: "unset", path: "payment.amount" },
 	]
+	return extendValueChanges(event, additions)
 }
 
 function paymentApplies(template: (typeof templateNames)[number]): boolean {

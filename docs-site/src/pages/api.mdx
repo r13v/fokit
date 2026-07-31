@@ -24,7 +24,7 @@ boundary belongs in the application.
 
 ## createFormKit
 
-```text
+```ts twoslash
 createFormKit({ controls, slots? }) => FormKit
 ```
 
@@ -46,7 +46,7 @@ The returned kit exposes:
 | `controls` | The exact typed control registry |
 | `slots` | Resolved `Field`, `Section`, `Array`, `ArrayItem`, and `ErrorMessage` slots |
 | `extend` | Create an add-only snapshot with local controls or slot replacements |
-| `defineForm` | Normalize a schema and typed UI tree |
+| `defineForm` | Normalize a schema and typed UI tree; its schema-bound function also exposes `fragment` |
 | `AutoForm` | Create an instance and render the complete definition |
 | `Form` | Render the native form shell for an existing instance |
 | `Fields` | Render generated fields inside `kit.Form` |
@@ -57,7 +57,7 @@ or slots.
 
 ## kit.extend
 
-```text
+```tsx twoslash
 kit.extend({ controls?, slots? }) => FormKit
 ```
 
@@ -97,7 +97,7 @@ compatibility follows the same base-to-extension direction through
 
 ## kit.defineForm
 
-```text
+```tsx twoslash
 kit.defineForm(schema)({ ui }) => NormalizedFormDefinition
 kit.defineForm(schema).withContext<Context>({ ui }) => NormalizedFormDefinition
 ```
@@ -130,6 +130,46 @@ const definition = kit.defineForm(schema)({
 })
 ```
 
+### Compose an object fragment
+
+```tsx twoslash
+const define = kit.defineForm(schema)
+define.fragment(objectPath, nodes) => DefinitionFragmentNode[]
+define.fragment.withContext<Context>()(objectPath, nodes)
+```
+
+Fragment field and array paths, plus resolver reads, are relative to the
+selected object. The result is a schema-bound authoring value accepted directly
+as `ui` or spread into the root `ui` array. Normalization erases the fragment
+boundary and produces ordinary absolute nodes.
+
+```ts twoslash
+import { createFormKit, nativeControls } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({
+	profile: z.object({ first: z.string(), last: z.string() }),
+})
+const kit = createFormKit({ controls: nativeControls })
+const define = kit.defineForm(schema)
+
+// ---cut---
+const profile = define.fragment("profile", [
+	{ kind: "field", path: "first", control: "text", label: "First name" },
+	{ kind: "field", path: "last", control: "text", label: "Last name" },
+])
+
+const definition = define.withContext<{ locale: string }>({ ui: profile })
+```
+
+Scopes must be definitely present, non-null, object-valued, and non-array.
+Optional or nullable objects keep absolute nodes so missing-parent types are
+preserved. Array item definitions continue to use the array node's relative
+`children` contract. Explicit section and render IDs remain global across all
+fragment scopes. Context-free fragments may be used in context-aware
+definitions; bind `.withContext<Context>()` only when fragment resolvers require
+that context.
+
 ### Render local React content
 
 Use a render node for arbitrary form-local content that is not a field:
@@ -139,6 +179,7 @@ Use a render node for arbitrary form-local content that is not a field:
 import {
 	createFormKit,
 	nativeControls,
+	type RenderNodeProps,
 	useFormContext,
 	useFormState,
 } from "fokit"
@@ -147,10 +188,10 @@ import { z } from "zod"
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
 
-function NamePreview() {
+function NamePreview({ disabled, readOnly }: RenderNodeProps) {
 	const form = useFormContext<typeof schema>()
 	const name = useFormState(form, (snapshot) => snapshot.values.name)
-	return <output>{name}</output>
+	return <output aria-disabled={disabled || undefined}>{readOnly ? "Locked: " : ""}{name}</output>
 }
 
 // ---cut---
@@ -160,14 +201,19 @@ kit.defineForm(schema)({
 			kind: "render",
 			id: "name-preview",
 			component: NamePreview,
+			visible: ({ name }) => name.length > 0,
 		},
 	],
 })
 ```
 
-The component receives no props and may use public hooks. Fokit provides no
-field, layout, accessibility, or FormData behavior for its contents. Render
-nodes work at the root and inside sections, but not inside array rows.
+Render nodes accept `visible`, `disabled`, and `readOnly`. An invisible node is
+unmounted; a mounted component receives effective `disabled` and `readOnly`
+props after parent and form state are inherited. It may use public hooks for
+values. Fokit provides no field, layout, accessibility, command ownership, or
+FormData behavior for its contents, so the component must honor the flags in
+its arbitrary DOM. Render nodes work at the root and inside sections, but not
+inside array rows.
 
 ### UI resolvers
 
@@ -233,11 +279,11 @@ The `ui` array is a typed tree:
 | `"array"` | required | Repeat relative child nodes for every array item |
 | `"render"` | none | Mount form-local React content with no field contract |
 
-Field, section, and array nodes accept `visible`, `disabled`, and `readOnly` as
+All four node kinds accept `visible`, `disabled`, and `readOnly` as
 either booleans or resolver functions. Those states inherit through sections
 and arrays. They also accept static `className` and `span`; the shipped layout
-uses `span` for direct children of a section grid. Render nodes expose only
-`id` and `component`.
+uses `span` for direct children of a section grid. Render nodes additionally
+require `id` and `component` and receive the resolved interaction props.
 
 `disabled` makes a node unavailable. `readOnly` keeps its controls enabled and
 focusable but prevents changes. See [UI definitions: Choose disabled or
@@ -336,7 +382,7 @@ callback and use `form.setErrors(...)` for user-visible issues.
 
 ## useForm
 
-```text
+```tsx twoslash
 useForm(definition, options) => FormInstance
 useForm(form, runtimeOptions) => same FormInstance
 ```
@@ -453,6 +499,17 @@ The instance is an external store plus typed commands.
 | `batch(callback)` | Commit several commands as one transaction |
 | `reset(values?)` | Restore or replace the baseline |
 
+These value commands accept every typed canonical schema path, even when no UI
+field is registered for it. Generated rendering, field metadata, and
+`ActionForm` serialization still require actual nodes and controls. Array
+structure commands require an array node because they use `itemDefault` and
+stable row metadata.
+
+`beforeUpdate` and `onUpdate` receive path/value-correlated
+`ValueChange<FormInput<Schema>>` entries. `extendValueChanges(event, additions)`
+returns the incoming transaction plus typed additions, or `undefined` when the
+addition list is empty.
+
 ### Arrays
 
 `append`, `insert`, `remove`, and `move` update values, row keys, metadata, and
@@ -463,7 +520,9 @@ issues atomically.
 | Method | Purpose |
 | --- | --- |
 | `validate()` | Validate the form and return transformed output or issues |
-| `validate(path)` | Validate the complete schema and return issues for a subtree |
+| `validate(path)` | Validate the complete schema and return overlapping issues for one path |
+| `validatePaths(paths)` | Validate once and return overlapping issues for one or more typed paths |
+| `focusFirstError(paths?)` | Focus the first displayed editable field or mounted summary in an optional subset; return whether focus moved |
 | `setErrors(issues)` | Install and expose manual or server issues |
 | `clearErrors(path?)` | Clear imperative issues globally or under a path |
 | `blur(path)`, `touch(path)`, `focus(path)` | Manage interaction and focus |
@@ -492,7 +551,7 @@ rules.
 
 ## defineControl
 
-```text
+```tsx twoslash
 defineControl({ component, formData }) => ControlDefinition
 ```
 
@@ -522,27 +581,52 @@ accessibility, read-only, and `FormData` behavior:
 | `time` | `string \| undefined` | `min?: string`, `max?: string`, `step?: number \| "any"` |
 | `file` | `File \| undefined` | `accept?: string`; one file |
 
-`NativeTextType` is `"text"`, `"email"`, `"password"`, `"search"`, `"tel"`,
-or `"url"`; omitted `type` renders `"text"`. `select.options` is required.
-`select.emptyOption` renders a separate `value=""` option and maps it to
-`undefined`; define it whenever the current select value can be `undefined`. If
-`emptyOption` is absent, a normal option with `value=""` remains an empty string.
-The visible native element still submits `""`, so server schemas must normalize
-that value for optional enums. A numeric `time.step` is measured in seconds,
-matching the native input contract.
+#### Text
 
-The exported option contracts are `NativeTextOptions`,
-`NativeTextareaOptions`, `NativeSelectOptions`, `NativeSelectOption`,
-`NativeSelectEmptyOption`, `NativeNumberOptions`, `NativeDateOptions`,
-`NativeTimeOptions`, and `NativeFileOptions`. A field's `options` can also be
-derived from tracked form values or runtime context.
+`NativeTextType` accepts `"text"`, `"email"`, `"password"`, `"search"`,
+`"tel"`, or `"url"`.
+
+If you omit `type`, the control uses `"text"`.
+
+#### Select
+
+`select.options` is required.
+
+Define `select.emptyOption` when the current value can be `undefined`. It adds a
+separate option with `value=""`. Fokit maps this option to `undefined`.
+
+Without `emptyOption`, a normal option with `value=""` remains an empty string.
+
+The visible native element always submits `""` for an empty option. Server
+schemas must normalize `""` when they validate optional enums.
+
+#### Time
+
+A numeric `time.step` specifies a duration in seconds. This behavior matches the
+native input contract.
+
+#### Exported option types
+
+The package exports these option types:
+
+- `NativeTextOptions`
+- `NativeTextareaOptions`
+- `NativeSelectOptions`
+- `NativeSelectOption`
+- `NativeSelectEmptyOption`
+- `NativeNumberOptions`
+- `NativeDateOptions`
+- `NativeTimeOptions`
+- `NativeFileOptions`
+
+A field can derive its `options` from tracked form values or runtime context.
 
 See [Controls and design systems](/guides/controls) for adapter and serializer
 contracts.
 
 ## createDefaultSlots
 
-```text
+```tsx twoslash
 createDefaultSlots({ i18n? }) => FormKitSlots
 ```
 
@@ -553,7 +637,7 @@ the row position and label context.
 
 ## parseFormData
 
-```text
+```tsx twoslash
 parseFormData(formData, schema, options?) => Promise<ParseResult<Output>>
 ```
 

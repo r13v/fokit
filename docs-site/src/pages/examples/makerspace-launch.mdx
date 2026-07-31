@@ -25,6 +25,9 @@ sequential mutations for the place record, media, and release.
 ## What this form stresses
 
 - A wizard composed from normal values, resolver visibility, and a render node.
+- `validatePaths` and `focusFirstError` gating only the current stage while the
+  complete schema still runs.
+- A command-only `stage` schema path with no generated field node.
 - Query-driven select options and an address lookup keyed by a live field.
 - Imperative, typed coordinate updates from the lookup result.
 - Native file handling next to a reorderable media-reference array.

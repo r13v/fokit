@@ -92,6 +92,9 @@ type RawRenderNode = Record<string, unknown> & {
 	readonly kind: "render"
 	readonly id?: unknown
 	readonly component?: unknown
+	readonly visible?: unknown
+	readonly disabled?: unknown
+	readonly readOnly?: unknown
 }
 
 type NormalizedNodeBase = {
@@ -537,6 +540,9 @@ function normalizeRender<RenderComponent, Presentation extends UiPresentation>(
 		parentId,
 		scopePath: scope.pathScope,
 		component: node.component as RenderComponent,
+		visible: asResolvable<boolean>(node.visible),
+		disabled: asResolvable<boolean>(node.disabled),
+		readOnly: asResolvable<boolean>(node.readOnly),
 	})
 
 	const normalizedUiNode = normalized as NormalizedUiNode<

@@ -160,10 +160,17 @@ export type FieldNode<
 	>
 }[FieldPath<Input>]
 
-export type RenderNode<Component = unknown> = {
+export type RenderNode<
+	Component = unknown,
+	Input = unknown,
+	Context = unknown,
+> = {
 	readonly kind: "render"
 	readonly id: string
 	readonly component: Component
+	readonly visible?: Resolvable<boolean, Input, Context>
+	readonly disabled?: Resolvable<boolean, Input, Context>
+	readonly readOnly?: Resolvable<boolean, Input, Context>
 }
 
 export type SectionNode<
@@ -258,7 +265,9 @@ export type UiNode<
 	Presentation extends UiPresentation = CoreUiPresentation,
 > =
 	| FieldNode<Input, Controls, Context, Presentation>
-	| ([RenderComponent] extends [never] ? never : RenderNode<RenderComponent>)
+	| ([RenderComponent] extends [never]
+			? never
+			: RenderNode<RenderComponent, Input, Context>)
 	| SectionNode<Input, Controls, Context, RenderComponent, Presentation>
 	| ArrayNode<Input, Controls, Context, Presentation>
 

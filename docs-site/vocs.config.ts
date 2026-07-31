@@ -45,6 +45,7 @@ export default defineConfig({
 					text: "Async multiselect",
 					link: "/guides/async-multiselect",
 				},
+				{ text: "Async fields", link: "/guides/async-fields" },
 				{ text: "Styling", link: "/guides/styling" },
 				{ text: "React 19 Actions", link: "/guides/react-19-actions" },
 				{ text: "Production recipes", link: "/advanced" },

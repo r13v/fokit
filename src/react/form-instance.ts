@@ -1,6 +1,10 @@
 "use client"
 
-import { replaceFormStoreRuntime } from "../core/form-store.js"
+import {
+	errorSummaryFocusTargetRegistration,
+	registerErrorSummaryFocusTarget,
+	replaceFormStoreRuntime,
+} from "../core/form-store.js"
 import {
 	type AnyUiPresentation,
 	type ArrayFieldPath,
@@ -257,6 +261,12 @@ export class FormInstanceImpl<
 			: this.#store.validate(path)
 	}
 
+	validatePaths<Path extends FieldPath<FormInput<Schema>>>(
+		paths: readonly Path[],
+	): Promise<readonly FormIssue[]> {
+		return this.#store.validatePaths(paths)
+	}
+
 	batch(callback: () => void): void {
 		this.#store.batch(callback)
 	}
@@ -291,8 +301,21 @@ export class FormInstanceImpl<
 		this.#store.registerFieldRef(path, element)
 	}
 
+	[errorSummaryFocusTargetRegistration](
+		index: number,
+		element: FocusTarget | null,
+	): void {
+		registerErrorSummaryFocusTarget(this.#store, index, element)
+	}
+
 	focus(path: PathInput): void {
 		this.#store.focus(path)
+	}
+
+	focusFirstError<Path extends FieldPath<FormInput<Schema>>>(
+		paths?: readonly Path[],
+	): boolean {
+		return this.#store.focusFirstError(paths)
 	}
 
 	submit(): Promise<void> {

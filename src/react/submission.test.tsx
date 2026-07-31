@@ -295,6 +295,45 @@ describe("classic React submission", () => {
 		})
 	})
 
+	it("keeps duplicate summary issues independently keyed and focusable", async () => {
+		const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+		try {
+			render(
+				<kit.AutoForm
+					aria-label="Duplicate summary"
+					definition={kit.defineForm(
+						createSchema(() => ({
+							issues: [
+								{ message: "The profile cannot be saved" },
+								{ message: "The profile cannot be saved" },
+							],
+						})),
+					)({ ui: profileUi })}
+					defaultValues={defaultValues()}
+				>
+					<button type="submit">Save duplicates</button>
+				</kit.AutoForm>,
+			)
+
+			await userEvent.click(
+				screen.getByRole("button", { name: "Save duplicates" }),
+			)
+
+			await waitFor(() => {
+				const issues = screen.getAllByText("The profile cannot be saved")
+				expect(issues).toHaveLength(2)
+				expect(document.activeElement).toBe(issues[0])
+			})
+			expect(
+				consoleError.mock.calls.some((call) =>
+					String(call[0]).includes("same key"),
+				),
+			).toBe(false)
+		} finally {
+			consoleError.mockRestore()
+		}
+	})
+
 	it("keeps submit validation authoritative without installing stale issues after edits", async () => {
 		const validation = createDeferred<StandardSchemaV1.Result<ProfileOutput>>()
 		const validate = vi.fn(() => validation.promise)

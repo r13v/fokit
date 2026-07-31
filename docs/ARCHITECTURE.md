@@ -82,14 +82,14 @@ remain suitable for server-side use.
 | Area | Primary files | Responsibility |
 | --- | --- | --- |
 | Public exports | `src/index.ts`, `src/core/index.ts`, `src/react19/index.ts`, `src/server/index.ts` | Define the supported package surface |
-| Definitions | `src/core/definition.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts` | Type, validate, normalize, and index reusable UI definitions |
+| Definitions | `src/core/definition.ts`, `src/core/definition-fragment.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts` | Type, scope, validate, normalize, and index reusable UI definitions |
 | Paths and values | `src/core/path.ts`, `src/core/path-types.ts`, `src/core/value.ts` | Canonical deep paths and immutable value operations |
 | Runtime store | `src/core/form-store.ts`, `src/core/form-state.ts`, `src/core/transaction.ts` | Transactions, snapshots, subscriptions, reset, focus, and runtime options |
 | Derived state | `src/core/resolve-ui.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, dirty/touched state, issue exposure, and stable array rows |
 | Validation | `src/core/validation.ts`, `src/core/standard-schema.ts` | Standard Schema execution and normalized results |
 | Form kits | `src/react/create-form-kit.tsx`, `src/react/default-slots.tsx`, `src/react/native-controls.tsx` | Bind control and slot registries into a rendering integration |
 | React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to the external store |
-| Rendering | `src/react/fields.tsx`, `src/react/array-field.tsx`, `src/react/control.tsx`, `src/react/slots.ts` | Turn resolved nodes into slots and controls |
+| Rendering | `src/react/fields.tsx`, `src/react/array-field.tsx`, `src/react/control.tsx`, `src/react/render-node.ts`, `src/react/slots.ts` | Turn resolved nodes into slots, controls, and explicit render components |
 | Native forms | `src/react/form.tsx`, `src/react/hidden-inputs.tsx`, `src/react/submission.ts` | Accessibility, `FormData`, reset, and classic submission |
 | React 19 Actions | `src/react19/action-form.tsx`, `src/react19/result-sync.ts`, `src/react19/action-submit.tsx` | Action submission state and server-result reconciliation |
 | Server parsing | `src/server/normalize-form-data.ts`, `src/server/parse-form-data.ts`, `src/server/protocol.ts` | Bounded untrusted input normalization and validation |
@@ -106,6 +106,15 @@ A form has three independent inputs:
 `createFormKit` freezes a control registry and a complete slot registry.
 `kit.defineForm(schema)(definition)` passes the schema, UI tree, and registry
 to `normalizeDefinition`.
+
+The schema-bound define function also exposes `fragment(scope, nodes)` for a
+definitely present object path. The React-free fragment transformer prefixes
+object-relative field and array paths and wraps resolvers so their relative
+reads track final absolute dependencies. Fragments are authoring-only: they are
+erased before `normalizeDefinition`, so runtime code still sees exactly four
+normalized node kinds. Their opaque brand models input, control, and context
+requirements contravariantly, allowing compatible richer definitions without
+admitting a weaker schema or runtime context.
 
 Normalization is a one-time boundary. It canonicalizes paths and defaults,
 checks node IDs and control references, freezes the tree, and builds flat
@@ -139,6 +148,11 @@ The store holds `FormInput<Schema>`. Successful validation and submission
 produce `FormOutput<Schema>`. Schema transforms never overwrite the input
 state.
 
+The baseline is fixed at instance creation until an explicit reset replaces
+it. Loaded forms therefore mount after data is available, remount by product
+identity, or call `reset(loadedValues)` deliberately; a new `defaultValues`
+object identity is never an implicit reset signal.
+
 Runtime context is read-only input to resolvers and controls. It is not copied
 into values, validated, marked dirty, or serialized.
 
@@ -167,6 +181,16 @@ Array commands additionally preserve stable row keys and reindex touched paths
 and issues before the atomic commit. A batch accumulates changes and commits
 once; it is not an alternate update path.
 
+Set, deep-set, unset, and `beforeUpdate` replacement changes use schema-typed
+canonical paths without consulting UI registration. Array structure commands
+still resolve a normalized array node because they require `itemDefault` and
+row metadata. Generated field metadata and Action serialization likewise stay
+tied to actual nodes and controls.
+
+Hook events carry `ValueChange<Input>` so each set path remains correlated with
+its value type. `extendValueChanges` is the small public composition helper for
+preserving an incoming proposal while appending dependent changes.
+
 Public values and snapshots are cloned or frozen at the store boundary.
 Consumers must use commands instead of mutating returned objects.
 
@@ -179,6 +203,11 @@ current values and context. It:
 - expands relative nodes for each current array item;
 - resolves labels, options, slot options, and other derived properties;
 - produces lookup indexes for concrete field and array paths.
+
+Render nodes participate in the same visibility and interaction resolution.
+The React renderer unmounts invisible render nodes and passes effective
+`disabled` and `readOnly` props to mounted components; core still treats the
+component as opaque.
 
 Resolver functions receive a revocable read-only values proxy. Every explicit
 path read becomes a dependency. A previous result is reused while the resolver
@@ -214,7 +243,8 @@ The renderer maps resolved nodes as follows:
 - `field` becomes the kit's `Field` slot and one registered control;
 - `section` becomes the `Section` slot and recursively rendered children;
 - `array` becomes `Array` and `ArrayItem` slots backed by core array commands;
-- `render` mounts the opaque component.
+- `render` mounts the opaque component with effective `disabled` and
+  `readOnly` props.
 
 Slots own semantic structure. Controls own only the interactive value editor
 and must attach the supplied name, ID, ref, and ARIA relationships to the
@@ -235,6 +265,15 @@ Validation can run on change, blur, explicit calls, or submission. Async
 non-submit validation is abortable and revision checked, so stale results
 cannot replace issues for newer values. Debouncing belongs to this lifecycle,
 not to controls.
+
+Explicit path validation always runs the complete schema. `validate(path)` and
+`validatePaths(paths)` limit the issues returned and newly exposed by that call
+to overlapping paths; already exposed issues stay visible. Object-level and
+path-owned cross-field refinements therefore remain authoritative even for a
+wizard stage. Pathless form-level issues stay in raw errors but match no
+non-empty subset; stage-specific refinements must report an owning path.
+`focusFirstError(paths?)` then searches displayed editable fields before the
+mounted summary and reports whether focus moved.
 
 Issues have three sources:
 

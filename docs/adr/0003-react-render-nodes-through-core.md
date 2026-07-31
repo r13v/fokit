@@ -3,6 +3,10 @@
 - Status: Accepted
 - Date: 2026-07-30
 
+The opaque core boundary remains accepted. ADR 0006 replaces this record's
+no-prop and no disabled/read-only consequences with resolved render-node
+interaction state.
+
 ## Context
 
 Generated forms sometimes need a form-local preview, command, or other
@@ -12,11 +16,11 @@ tree into React would break the React-free core boundary.
 
 ## Decision
 
-The UI tree has a separate `render` node with a required ID and no-prop
-component. Core normalizes and resolves the component as an opaque generic
-payload without importing or invoking React; the React renderer alone mounts
-it. Render nodes are allowed at the root and inside sections, but not inside
-array rows.
+The UI tree has a separate `render` node with a required ID and an opaque
+component. Core normalizes and resolves the component as a generic payload
+without importing or invoking React; the React renderer alone mounts it.
+Render nodes are allowed at the root and inside sections, but not inside array
+rows. ADR 0006 defines their resolver-driven interaction state and React props.
 
 ## Considered Options
 
@@ -29,9 +33,10 @@ array rows.
 
 ## Consequences
 
-- Render nodes receive no props and use public form hooks when they need state.
-- They have no automatic path, label, errors, layout, disabled/read-only,
-  accessibility, or serialization behavior.
+- Render nodes use public form hooks when they need values and receive the
+  interaction props defined by ADR 0006.
+- They have no automatic path, label, errors, layout, accessibility, command
+  ownership, or serialization behavior.
 - `ActionForm` renders them but excludes them from compatibility analysis; any
   successful controls they render are application-owned.
 - Definitions containing component references are React-only and cannot cross

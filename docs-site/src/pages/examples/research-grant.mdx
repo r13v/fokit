@@ -29,9 +29,9 @@ then sends the accepted application through a second mutation.
 - An optional enum rendered through `select.emptyOption` without a domain
   sentinel value.
 - Resolver-driven sections and `valuePolicy` cleanup for hidden optional fields.
-- A `beforeUpdate` hook that atomically clears dependent branches.
+- An input-aware `beforeUpdate` hook extended with typed dependent changes.
 - A render node that reads the live Fokit snapshot for a review card.
-- TanStack Query inside a render node for registry search.
+- TanStack Query inside a resolver-visible render node for registry search.
 - Two sequential mutations with server errors installed on the form instance.
 - A schema transform that creates a typed review key for submission.
 

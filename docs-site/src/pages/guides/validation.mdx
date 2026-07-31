@@ -78,7 +78,9 @@ state separate from the feedback a person should see.
 
 - Blur exposes issues owned by the blurred path.
 - Change exposes overlapping issues when change validation runs.
-- `validate(path)` exposes issues for that path and its descendants.
+- `validate(path)` exposes issues that overlap that path as an ancestor, exact
+  match, or descendant.
+- `validatePaths(paths)` exposes the union of several overlapping path groups.
 - `validate()` and submit expose the complete form result.
 - `setErrors` immediately exposes the supplied server or manual issues.
 
@@ -141,8 +143,9 @@ selectively clear them.
 ## Validate deliberately
 
 `validate()` returns transformed schema output on success. `validate(path)`
-still evaluates the complete schema so cross-field refinements stay correct,
-but returns only issues for the requested subtree.
+and `validatePaths(paths)` still evaluate the complete schema so cross-field
+refinements stay correct, but return only issues that overlap the requested
+path subset. The store retains the complete raw schema result.
 
 ```ts twoslash
 import type { FormInstance } from "fokit"
@@ -151,17 +154,35 @@ import { z } from "zod"
 const schema = z.object({
 	age: z.string().transform(Number),
 	email: z.string().email(),
+	profile: z.object({ name: z.string().min(1) }),
 })
 declare const form: FormInstance<typeof schema>
 
 // ---cut---
 const emailIssues = await form.validate("email")
+const stepPaths = ["email", "profile"] as const
+const stepIssues = await form.validatePaths(stepPaths)
+
+if (stepIssues.length > 0) {
+	form.focusFirstError(stepPaths)
+}
+
 const result = await form.validate()
 
 if (result.success) {
 	result.value.age.toFixed(0)
 }
 ```
+
+`validatePaths` requires at least one typed schema path. Paths do not need a UI
+field, so a workflow can validate object scopes that are temporarily unmounted.
+The call exposes its matching subset without hiding issues exposed by earlier
+interactions. A pathless form-level issue remains in raw errors but does not
+belong to a non-empty subset. Give stage-specific and object-specific schema
+refinements a canonical owning path when they should block that subset.
+`focusFirstError(paths?)` returns `true` when it focuses the first mounted,
+visible, editable field or the mounted error summary. Call it after issues are
+displayed; an empty optional focus subset returns `false`.
 
 Imperative validation does not mark fields touched and does not increment the
 submit count.

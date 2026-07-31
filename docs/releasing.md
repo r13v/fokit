@@ -7,7 +7,8 @@ branch push.
 
 ## Maintainer flow
 
-1. Choose the next stable semantic version newer than 0.0.1 because that
+1. Review [UNRELEASED.md](UNRELEASED.md), choose the next stable semantic
+   version newer than 0.0.1 because that
    package version is already published and cannot be reused.
 2. Update `package.json` and `package-lock.json` together. A safe pattern is
    `npm pkg set version=<version>` followed by
@@ -28,8 +29,9 @@ branch push.
 4. Merge the reviewed release PR to `main` only after CI passes.
 5. Confirm GitHub Pages deploys the tested docs artifact at
    `https://r13v.github.io/fokit/`.
-6. Create a stable GitHub Release tagged exactly `v<version>`. Keep release
-   notes and the final version choice as explicit maintainer decisions.
+6. Create a stable GitHub Release tagged exactly `v<version>`. Start from the
+   reviewed unreleased notes, then keep their final wording and the version
+   choice as explicit maintainer decisions.
 7. Wait for `publish.yml`. It validates the tag, repository metadata, lockfile
    version, npm registry availability, full package suite, docs suite, and dry
    run before `npm publish --access public`.

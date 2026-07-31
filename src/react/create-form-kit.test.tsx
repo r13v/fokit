@@ -2,18 +2,19 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import type { FormInput, ImperativeFormIssue } from "../core/index.js"
 import { FieldControl } from "./control.js"
 import { createFormKit, type FormKitSlots } from "./create-form-kit.js"
 import { useFormState } from "./hooks.js"
+import type { RenderNodeProps } from "./render-node.js"
 import type {
 	ArraySlotProps,
 	FieldSlotProps,
 	SectionSlotProps,
 } from "./slots.js"
 import { type TestValues, testKit, textControl } from "./test-kit.js"
-import { useForm } from "./use-form.js"
+import { createForm, useForm } from "./use-form.js"
 
 type TestSchema = StandardSchemaV1<TestValues>
 type CollisionValues = {
@@ -194,6 +195,133 @@ describe("createFormKit", () => {
 		expect(definition.schema).toBe(schema)
 		expectResolvedSlots(kit.slots)
 		expect(Object.isFrozen(kit.slots)).toBe(true)
+	})
+
+	it("scopes reusable object fragments while preserving relative resolver dependencies", () => {
+		type FragmentValues = {
+			readonly account: {
+				readonly name: string
+				readonly contacts: readonly { readonly value: string }[]
+			}
+			readonly unrelated: string
+		}
+		const fragmentSchema = {} as StandardSchemaV1<FragmentValues>
+		const define = testKit.defineForm(fragmentSchema)
+		const label = vi.fn(
+			({ name }: FragmentValues["account"]) => `Name: ${name}`,
+		)
+		const account = define.fragment("account", [
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label,
+			},
+			{
+				kind: "array",
+				path: "contacts",
+				itemDefault: { value: "" },
+				children: [{ kind: "field", path: "value", control: "text" }],
+			},
+		])
+		const definition = define({ ui: account })
+		const form = createForm(definition, {
+			defaultValues: {
+				account: { name: "Ada", contacts: [] },
+				unrelated: "same",
+			},
+		})
+		const initialCalls = label.mock.calls.length
+
+		expect(definition.fieldsByPath["account.name"].path).toBe("account.name")
+		expect(definition.arraysByPath["account.contacts"].path).toBe(
+			"account.contacts",
+		)
+		const contactChild = definition.arraysByPath["account.contacts"].children[0]
+		if (contactChild?.kind !== "field") {
+			throw new Error("Expected a relative contact field")
+		}
+		expect(contactChild.path).toBe("value")
+		expect(
+			form.getSnapshot().resolvedUi.fieldsByPath["account.name"].label,
+		).toBe("Name: Ada")
+
+		form.setValue("unrelated", "changed")
+		expect(label).toHaveBeenCalledTimes(initialCalls)
+
+		form.setValue("account.name", "Grace")
+		expect(label).toHaveBeenCalledTimes(initialCalls + 1)
+		expect(
+			form.getSnapshot().resolvedUi.fieldsByPath["account.name"].label,
+		).toBe("Name: Grace")
+	})
+
+	it("keeps explicit node IDs global across fragment scopes", () => {
+		type FragmentValues = {
+			readonly primary: { readonly name: string }
+			readonly secondary: { readonly name: string }
+		}
+		const fragmentSchema = {} as StandardSchemaV1<FragmentValues>
+		const define = testKit.defineForm(fragmentSchema)
+		const primary = define.fragment("primary", [
+			{ kind: "section", id: "contact", children: [] },
+		])
+		const secondary = define.fragment("secondary", [
+			{ kind: "section", id: "contact", children: [] },
+		])
+
+		expect(() => define({ ui: [...primary, ...secondary] })).toThrow(
+			'Duplicate node ID "contact"',
+		)
+	})
+
+	it("resolves render visibility and passes inherited interaction state", () => {
+		function Status({ disabled, readOnly }: RenderNodeProps) {
+			return (
+				<button
+					data-read-only={readOnly ? "true" : "false"}
+					disabled={disabled}
+					type="button"
+				>
+					Account status
+				</button>
+			)
+		}
+		const definition = testKit.defineForm(schema)({
+			ui: [
+				{ kind: "field", path: "name", control: "text", label: "Name" },
+				{
+					kind: "section",
+					id: "status-section",
+					disabled: true,
+					readOnly: true,
+					children: [
+						{
+							kind: "render",
+							id: "status",
+							component: Status,
+							visible: ({ name }) => name === "Ada",
+						},
+					],
+				},
+			],
+		})
+
+		render(
+			<testKit.AutoForm
+				defaultValues={defaultValues()}
+				definition={definition}
+			/>,
+		)
+
+		const status = screen.getByRole("button", { name: "Account status" })
+		expect((status as HTMLButtonElement).disabled).toBe(true)
+		expect(status.getAttribute("data-read-only")).toBe("true")
+
+		fireEvent.change(screen.getByLabelText("Name"), {
+			target: { value: "Grace" },
+		})
+		expect(screen.queryByRole("button", { name: "Account status" })).toBeNull()
 	})
 
 	it("preserves custom kits while defaulting omitted slots", () => {

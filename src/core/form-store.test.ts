@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-
+import { registerErrorSummaryFocusTarget } from "./form-store.js"
 import type { ControlMetadata, StandardSchema, UiNode } from "./index.js"
 import {
 	createFormStore,
@@ -244,6 +244,41 @@ describe("form store construction and snapshots", () => {
 		form.focus("companyName")
 
 		expect(element.focus).toHaveBeenCalledTimes(1)
+	})
+
+	it("focuses the first editable displayed error before a matching summary", () => {
+		const form = createStore({
+			context: {
+				locked: true,
+				showCompany: true,
+			},
+		})
+		const company = { focus: vi.fn() }
+		const name = { focus: vi.fn() }
+		const firstSummary = { focus: vi.fn() }
+		const matchingSummary = { focus: vi.fn() }
+		form.registerFieldRef("companyName", company)
+		form.registerFieldRef("name", name)
+		registerErrorSummaryFocusTarget(form, 0, firstSummary)
+		registerErrorSummaryFocusTarget(form, 1, matchingSummary)
+		form.setErrors([
+			{ source: "manual", path: "companyName", message: "Company is locked" },
+			{ source: "manual", path: "name", message: "Name is required" },
+			{ source: "manual", path: "missing", message: "Missing data" },
+			{ source: "manual", path: "contacts", message: "Contacts need review" },
+		])
+
+		expect(form.focusFirstError(["companyName"])).toBe(false)
+		expect(form.focusFirstError()).toBe(true)
+		expect(company.focus).not.toHaveBeenCalled()
+		expect(name.focus).toHaveBeenCalledTimes(1)
+		expect(firstSummary.focus).not.toHaveBeenCalled()
+		expect(matchingSummary.focus).not.toHaveBeenCalled()
+
+		expect(form.focusFirstError(["contacts"])).toBe(true)
+		expect(firstSummary.focus).not.toHaveBeenCalled()
+		expect(matchingSummary.focus).toHaveBeenCalledTimes(1)
+		expect(form.focusFirstError([])).toBe(false)
 	})
 
 	it("reevaluates context-dependent UI without changing values, dirty state, or update hooks", () => {

@@ -1,11 +1,6 @@
 "use client"
 
-import {
-	type ComponentType,
-	createElement,
-	type ReactNode,
-	useCallback,
-} from "react"
+import { createElement, type ReactNode, useCallback } from "react"
 
 import type {
 	AnyUiPresentation,
@@ -28,6 +23,7 @@ import { createDomId } from "./dom-id.js"
 import { useFormContext, useFormIdPrefix } from "./form-context.js"
 import { createIssueKey } from "./form-errors.js"
 import { useField, useFormState } from "./hooks.js"
+import type { RenderNodeComponent } from "./render-node.js"
 import {
 	createErrorMessageRootProps,
 	createStructuralRootProps,
@@ -134,7 +130,10 @@ function GeneratedNode<Schema extends StandardSchema, Context>({
 				/>
 			)
 		case "render":
-			return createElement(node.component as ComponentType)
+			return createElement(node.component as RenderNodeComponent, {
+				disabled: node.disabled,
+				readOnly: node.readOnly,
+			})
 		default:
 			throw new TypeError("Unknown resolved UI node kind")
 	}

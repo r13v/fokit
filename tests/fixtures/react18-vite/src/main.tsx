@@ -8,6 +8,7 @@ import {
 	createFormStore,
 	defineControl,
 	type ErrorMessageSlotProps,
+	extendValueChanges,
 	type FieldSlotProps,
 	type FormInput,
 	formatPath,
@@ -23,6 +24,7 @@ import {
 	parseArrayIndex,
 	parsePath,
 	pathsOverlap,
+	type RenderNodeProps,
 	resolveUi,
 	type SectionSlotProps,
 	type StandardSchema,
@@ -62,6 +64,9 @@ type _NoComputedGuard = CoreExports["isComputed"]
 
 type ProfileInput = {
 	readonly name: string
+	readonly settings: {
+		readonly nickname: string
+	}
 	readonly contacts?: readonly {
 		readonly value: string
 	}[]
@@ -224,10 +229,14 @@ const extendedKit = kit.extend({
 	},
 })
 
-function LocalPreview() {
+function LocalPreview({ disabled, readOnly }: RenderNodeProps) {
 	const form = useFormContext<typeof schema>()
 	const name = useValue(form, "name")
-	return <output>{name}</output>
+	return (
+		<output aria-disabled={disabled || undefined} data-read-only={readOnly}>
+			{name}
+		</output>
+	)
 }
 
 const extendedDefinition = extendedKit.defineForm(schema)({
@@ -248,7 +257,7 @@ const extendedDefinition = extendedKit.defineForm(schema)({
 function ExtendedFormProbe() {
 	return (
 		<extendedKit.AutoForm
-			defaultValues={{ name: "Ada Lovelace" }}
+			defaultValues={{ name: "Ada Lovelace", settings: { nickname: "Ada" } }}
 			definition={extendedDefinition}
 		/>
 	)
@@ -272,8 +281,17 @@ const ui = [
 	},
 ] satisfies readonly UiNode<ProfileInput, typeof kit.controls>[]
 
-const definition = kit.defineForm(schema)({ ui })
-const richDefinition = kit.defineForm(schema)({
+const defineProfile = kit.defineForm(schema)
+const settingsFragment = defineProfile.fragment("settings", [
+	{
+		kind: "field",
+		path: "nickname",
+		control: "text",
+		label: "Nickname",
+	},
+])
+const definition = defineProfile({ ui: [...ui, ...settingsFragment] })
+const richDefinition = defineProfile({
 	ui: [
 		{
 			kind: "section",
@@ -325,8 +343,18 @@ const richDefinition = kit.defineForm(schema)({
 const store = createFormStore({
 	definition,
 	defaultValues: defaultValues(),
+	beforeUpdate: (event) =>
+		extendValueChanges(event, [
+			{
+				type: "set",
+				path: "settings.nickname",
+				value: event.nextValues.name,
+			},
+		]),
 })
 store.setValue("name", "Grace Hopper")
+void store.validatePaths(["settings"])
+store.focusFirstError(["settings.nickname"])
 const snapshot = store.getSnapshot()
 const namePath = parsePath("name")
 const updatedValues = setPathValue(snapshot.values, "name", "Grace")
@@ -358,6 +386,7 @@ void [
 function defaultValues(): FormInput<typeof schema> {
 	return {
 		name: "Ada Lovelace",
+		settings: { nickname: "Ada" },
 		contacts: [],
 	}
 }

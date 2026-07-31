@@ -1,7 +1,7 @@
 import { isPlainObject } from "./object.js"
 import type { PathInput } from "./path.js"
 import { formatPath, isDescendantPath, isSamePath } from "./path.js"
-import type { CanonicalArrayIndex, FieldPath } from "./path-types.js"
+import type { CanonicalArrayIndex, FieldPath, PathValue } from "./path-types.js"
 import { isDirtyEqual, setPathValue, unsetPathValue } from "./value.js"
 
 type Primitive = bigint | boolean | null | number | string | symbol | undefined
@@ -62,24 +62,65 @@ type RawValueChange =
 			readonly path: string
 	  }
 
-export type ValueChange<Input = never> = [Input] extends [never]
-	? RawValueChange
-	:
-			| {
-					readonly type: "set"
-					readonly path: FieldPath<Input>
-					readonly value: unknown
-			  }
-			| {
-					readonly type: "unset"
-					readonly path: OptionalFieldPath<Input>
-			  }
+type IsAny<Value> = 0 extends 1 & Value ? true : false
+
+type IsUnknown<Value> =
+	IsAny<Value> extends true
+		? false
+		: unknown extends Value
+			? [Value] extends [unknown]
+				? true
+				: false
+			: false
+
+type SetValueChangeForPath<Input, Path> =
+	Path extends FieldPath<Input>
+		? {
+				readonly type: "set"
+				readonly path: Path
+				readonly value: PathValue<Input, Path>
+			}
+		: never
+
+type SetValueChange<Input> = SetValueChangeForPath<Input, FieldPath<Input>>
+
+type TypedValueChange<Input> =
+	| SetValueChange<Input>
+	| {
+			readonly type: "unset"
+			readonly path: OptionalFieldPath<Input>
+	  }
+
+type ValueChangeBase = {
+	readonly type: "set" | "unset"
+	readonly path: string
+}
+
+export type ValueChange<Input = never> = ValueChangeBase &
+	([Input] extends [never]
+		? RawValueChange
+		: IsAny<Input> extends true
+			? RawValueChange
+			: IsUnknown<Input> extends true
+				? RawValueChange
+				: TypedValueChange<Input>)
 
 export type NormalizedValueChange = RawValueChange
 
 export type ApplyValueChangesResult<Value> = {
 	readonly values: Value
 	readonly changes: readonly NormalizedValueChange[]
+}
+
+export function extendValueChanges<Input>(
+	event: { readonly changes: readonly ValueChange<Input>[] },
+	additions: readonly ValueChange<Input>[],
+): readonly ValueChange<Input>[] | undefined {
+	if (additions.length === 0) {
+		return undefined
+	}
+
+	return Object.freeze([...event.changes, ...additions])
 }
 
 const numericLikePattern = /^[+-]?\d+(?:e[+-]?\d+)?$/i

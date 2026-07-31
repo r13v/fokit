@@ -2,7 +2,6 @@
 
 import {
 	type ComponentPropsWithoutRef,
-	type ComponentType,
 	type FormEvent,
 	type ReactNode,
 	useCallback,
@@ -35,6 +34,7 @@ import {
 } from "../react/hidden-inputs.js"
 import { useFormState } from "../react/hooks.js"
 import { rejectOwnedProps } from "../react/owned-props.js"
+import type { RenderNodeComponent } from "../react/render-node.js"
 import type { FokitStyle, ReactUiPresentation } from "../react/slots.js"
 import { booleanData } from "../react/structural-props.js"
 import { type UseFormOptions, useForm } from "../react/use-form.js"
@@ -60,7 +60,7 @@ export type ActionFormProps<
 		readonly definition: NormalizedFormDefinition<
 			Schema,
 			Controls,
-			ComponentType,
+			RenderNodeComponent,
 			ReactUiPresentation<
 				NoInfer<FieldSlotOptions>,
 				NoInfer<SectionSlotOptions>,

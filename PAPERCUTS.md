@@ -83,3 +83,35 @@ origin and root routes while Playwright probes a local `/fokit/`, so readiness
 and client hydration failed in separate attempts. Build with matching
 `BASE_URL` and `BASE_PATH` before invoking the docs E2E config directly, or add
 a focused script that wires all three preview environment variables.
+
+## 2026-07-31 17:58 — GPT-5
+
+Carrying the full path/value-correlated `ValueChange<Input>` union through
+generic store and React option types → TypeScript hit excessive instantiation
+depth in otherwise small fixtures and then lost unrelated hook inference.
+Keep the correlated public type concrete at consumer boundaries while using a
+wide runtime hook shape inside generic implementations, or redesign the path
+union to defer expansion.
+
+## 2026-07-31 18:39 — GPT-5
+
+Checking fragment-brand variance with the TypeScript compiler API → the root
+TypeScript 7 package exposes only its native CLI/version surface, so
+`createCompilerHost` was unavailable. Use the docs workspace's TypeScript 5.9
+compiler API for in-memory semantic checks until the native package exposes a
+compatible API.
+
+## 2026-07-31 18:48 — GPT-5
+
+Updating the accepted contracts across architecture, specification, and site
+guides in one patch → one stale architecture paragraph caused the complete
+multi-file patch to be rejected. Split cross-document edits into smaller
+patches after reading each exact paragraph, especially when earlier formatting
+passes may have changed line wrapping.
+
+## 2026-07-31 18:55 — GPT-5
+
+Adding fragment coverage to the packed React 18 fixture → TypeScript 5.4 hit
+its instantiation-depth limit while a mapped `DefinitionFragmentPath` inferred
+an otherwise small object scope. Express the path filter as a distributive
+conditional helper so older consumer compilers evaluate one path at a time.

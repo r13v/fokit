@@ -97,6 +97,7 @@ export type {
 	FormOutput,
 	StandardSchema,
 } from "./standard-schema.js"
+export { extendValueChanges } from "./transaction.js"
 export type {
 	AnyUiPresentation,
 	ArrayItemValue,

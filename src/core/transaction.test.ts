@@ -8,10 +8,15 @@ import type {
 	StandardSchema,
 	UiNode,
 } from "./index.js"
-import { createFormStore, normalizeDefinition } from "./index.js"
+import {
+	createFormStore,
+	extendValueChanges,
+	normalizeDefinition,
+} from "./index.js"
 
 type AccountValues = {
 	kind: "person" | "company"
+	workflowStage: "draft" | "ready"
 	profile: {
 		first: string
 		last: string
@@ -50,6 +55,7 @@ const controls = {
 
 const defaultValues = {
 	kind: "company",
+	workflowStage: "draft",
 	profile: {
 		first: "Ada",
 		last: "Lovelace",
@@ -176,6 +182,7 @@ describe("form value transactions", () => {
 
 		expect(form.getValues()).toEqual({
 			kind: "company",
+			workflowStage: "draft",
 			profile: {
 				first: "Grace",
 				last: "Hopper",
@@ -189,6 +196,7 @@ describe("form value transactions", () => {
 
 		expect(form.getValues()).toEqual({
 			kind: "company",
+			workflowStage: "draft",
 			profile: {
 				first: "Grace",
 				last: "Hopper",
@@ -318,20 +326,46 @@ describe("form value transactions", () => {
 			middle: "Byron",
 		})
 
-		const invalidReplacement = createAccountStore({
+		const schemaPathReplacement = createAccountStore({
 			beforeUpdate: () => [
 				{
 					type: "set",
-					path: "profile.nickname",
-					value: "Amazing",
+					path: "workflowStage",
+					value: "ready",
 				},
 			],
 		})
 
-		expect(() => invalidReplacement.setValue("profile.first", "Grace")).toThrow(
-			'Unknown field path "profile.nickname"',
-		)
-		expect(invalidReplacement.getValues()).toEqual(defaultValues)
+		schemaPathReplacement.setValue("profile.first", "Grace")
+		expect(schemaPathReplacement.getValues()).toEqual({
+			...defaultValues,
+			workflowStage: "ready",
+		})
+	})
+
+	it("extends proposed changes without rebuilding the initiating transaction", () => {
+		const form = createAccountStore({
+			beforeUpdate: (event) =>
+				extendValueChanges(event, [
+					{
+						type: "set",
+						path: "workflowStage",
+						value: "ready",
+					},
+				]),
+		})
+
+		form.setValue("profile.first", "Grace")
+
+		expect(form.getValues()).toEqual({
+			...defaultValues,
+			workflowStage: "ready",
+			profile: {
+				...defaultValues.profile,
+				first: "Grace",
+			},
+		})
+		expect(extendValueChanges({ changes: [] }, [])).toBeUndefined()
 	})
 
 	it("rejects nested commands during beforeUpdate and preserves thrown-hook semantics", () => {

@@ -2,7 +2,7 @@
 
 - Status: Normative
 - Supported React versions: 18 and 19
-- Last updated: 2026-07-29
+- Last updated: 2026-07-31
 
 ## Summary
 
@@ -91,6 +91,9 @@ Fokit does not:
   registry;
 - require Tailwind or another CSS framework;
 - include a wizard engine, autosave engine, or remote options loader;
+- include a query adapter or own request, cache, cancellation, or retry state;
+- require headless fields or render-node path declarations to authorize
+  schema-typed value commands;
 - support both controlled and uncontrolled public modes;
 - generically reconstruct arbitrary invalid typed store values from a
   pre-hydration server submission;
@@ -965,9 +968,9 @@ slots must preserve.
 `AutoForm` renders an error summary before generated fields using the same
 `ErrorMessage` slot. The summary contains displayable form-level issues and
 displayable path issues that have no visible owning field or array node.
-Fokit supplies a focus ref and `tabIndex={-1}` to the first summary error as a
-fallback focus target. Manual composition can select and place those issues
-elsewhere.
+Fokit supplies a focus ref and `tabIndex={-1}` to summary errors. Submit focuses
+the first matching summary issue as a fallback target. Manual composition can
+select and place those issues elsewhere.
 
 `Array.add()` creates a fresh item from the node's `itemDefault`. The callback
 is a guarded no-op when `canAdd` is false. Fokit renders each row through
@@ -982,6 +985,8 @@ The returned kit provides:
 ```ts
 kit.defineForm(schema)({ ui });
 kit.defineForm(schema).withContext<Context>({ ui });
+kit.defineForm(schema).fragment(objectPath, nodes);
+kit.defineForm(schema).fragment.withContext<Context>()(objectPath, nodes);
 kit.extend({ controls?, slots? });
 
 kit.Form;
@@ -1110,6 +1115,31 @@ in every build for duplicate paths/IDs, invalid path or ID grammar, unknown
 controls, invalid layout ranges, and unsupported `valuePolicy` values.
 Production does not silently repair an invalid definition.
 
+#### Definition fragments
+
+The schema-bound `defineForm` function exposes `fragment(scope, nodes)` for a
+definitely present, non-null, non-array object-valued schema path. Field and
+array paths inside the fragment are relative to that scope. Resolver value
+reads are relative as well and are tracked against their final absolute paths.
+Sections keep the same scope, while array children retain the existing
+item-relative array semantics. Optional or nullable object scopes continue to
+use absolute definition nodes so their controls and resolvers retain the
+ancestor's `undefined` or `null` possibility.
+
+The returned schema-bound authoring nodes may be used directly as the root
+`ui` value or spread into the root `ui` array. A fragment that needs structural
+grouping contains a section. `fragment.withContext<Context>()` binds the same
+runtime context requirement as a context-aware definition. A context-free
+fragment may be used by a context-aware definition, and a fragment with a
+context requirement may be used when the definition context satisfies that
+requirement.
+
+Fragments are erased before normalization. The normalized definition contains
+only the four ordinary node kinds, absolute field and array paths, and the
+existing indexes. There is no normalized fragment node and no separate
+array-item fragment contract. Explicit section and render IDs inside fragments
+remain global to the complete definition and must be unique across scopes.
+
 ### UI node types
 
 Fokit's React UI tree contains four node kinds:
@@ -1128,12 +1158,18 @@ A render node places arbitrary React content without pretending it is a field:
   kind: 'render',
   id: 'price-preview',
   component: PricePreview,
+  visible: ({ kind }) => kind === 'company',
 }
 ```
 
-Its component receives no props and may use public hooks inside `kit.Form`.
-Fokit owns only node identity, ordering, and mounting. It does not provide a
-path, field copy, issues, layout, inherited interaction props, accessibility,
+Render nodes accept `visible`, `disabled`, and `readOnly` resolvers. An
+invisible node is not mounted. A mounted component receives effective
+`{ disabled, readOnly }` props after form and parent state are inherited and
+may use public hooks inside `kit.Form` for values. The component owns applying
+those flags to its arbitrary DOM and commands.
+
+Fokit otherwise owns only node identity, ordering, and mounting. It does not
+provide a path, field copy, issues, layout, accessibility, command ownership,
 or `FormData` behavior. Render nodes may appear at the root or inside sections,
 but not in `array.children`. `ActionForm` renders them and ignores them during
 control compatibility checks. Because the definition embeds a component
@@ -1289,7 +1325,8 @@ submission before submit-time validation. `readOnly` means present but locked:
 controls remain enabled, named, and focusable, mutation is guarded, and form
 submission remains available. If both flags are true, native disabled behavior
 takes precedence. Fields receive the effective flags, sections pass them to
-descendants, and arrays also apply them to add, remove, and reorder actions.
+descendants, arrays apply them to add, remove, and reorder actions, and render
+components receive them as props.
 
 Both states retain values in the store, schema validation, and submission
 output. `disabled` is an interaction policy, not an implicit data-omission
@@ -1587,6 +1624,8 @@ Default display policy:
 - change validation exposes issues whose paths overlap the changed path;
 - `validate(path)` exposes issues that overlap that path, while `validate()`
   exposes all issues;
+- `validatePaths(paths)` exposes issues that overlap any path in the supplied
+  subset;
 - a submit attempt exposes all issues;
 - `setErrors` is an explicit presentation command and immediately exposes the
   supplied manual or server issues.
@@ -1663,9 +1702,17 @@ Rules:
 - submit always validates the full form;
 - `validate(path)` still runs the complete Standard Schema so cross-field
   refinements remain correct, updates all raw schema issues, and returns only
-  issues at that path and its descendants;
+  issues whose path overlaps the selected path;
+- `validatePaths(paths)` requires one or more typed schema paths, runs the
+  complete Standard Schema once, updates all raw schema issues, returns only
+  issues overlapping any selected path, and exposes that subset without hiding
+  issues exposed by earlier interactions;
+- a pathless form-level issue never overlaps a non-empty path subset; a
+  stage-specific or object-specific refinement must return a canonical owning
+  path when it should block that subset;
 - `validate()` returns `ValidationResult<FormOutput<S>>`, while
-  `validate(path)` returns `Promise<readonly FormIssue[]>`;
+  `validate(path)` and `validatePaths(paths)` return
+  `Promise<readonly FormIssue[]>`;
 - imperative validation does not mark fields touched or increment submit count;
 - asynchronous validation exposes `isValidating`;
 - change-triggered asynchronous validation uses `asyncDebounceMs`;
@@ -1746,6 +1793,11 @@ The actual `set` variant preserves the relationship between `path` and
 `value`; the simplified type above keeps the lifecycle example readable.
 `unset` is typed only for optional paths.
 
+`extendValueChanges(event, additions)` keeps that input-aware correlation. It
+returns a frozen array containing the incoming proposal followed by additions,
+or `undefined` when additions is empty so a hook can accept the original
+proposal without rebuilding it.
+
 `setValues(partial)` accepts a typed deep partial patch. Plain objects merge
 recursively; arrays and non-plain objects replace as complete values. Commands
 inside a batch and replacement changes returned by `beforeUpdate` are applied
@@ -1755,6 +1807,12 @@ Array append, insert, remove, and move commands are normalized into one
 `source: 'array'` transaction while preserving Fokit's internal row keys.
 Invalid paths, non-array targets, and out-of-range indexes throw before a
 transaction begins and do not invoke update hooks.
+
+Value commands and replacement changes accept canonical schema paths whether
+or not a UI node registers them. UI registration still owns generated
+rendering, field metadata, and `FormData` serialization. Array structure
+commands still require a normalized array node because they depend on
+`itemDefault` and stable row metadata.
 
 The pipeline is:
 
@@ -2076,11 +2134,13 @@ form.clearErrors('email');
 
 await form.validate();
 await form.validate('email');
+await form.validatePaths(['profile', 'contacts']);
 await form.submit();
 
 form.reset();
 form.reset(nextDefaultValues);
 form.focus('email');
+form.focusFirstError(['profile', 'contacts']);
 
 form.batch(() => {
   form.setValue('kind', 'person');
@@ -2099,6 +2159,12 @@ need reactive values use `useField`, `useValue`, or `useFormState`.
 
 Fokit does not provide a hook named `useFormApi` that returns a non-reactive
 snapshot.
+
+`focusFirstError(paths?)` searches displayed issues in schema order. It focuses
+the first mounted, visible, enabled, editable field in the optional overlapping
+path subset, then a mounted summary target. It returns whether focus moved. An
+omitted subset includes form-level issues; an explicitly empty subset returns
+`false`.
 
 Imperative subscriptions use the same selector equality semantics and notify
 after a committed transaction. Calling the returned function unsubscribes.
@@ -2713,8 +2779,9 @@ The product has no unresolved public-API questions in this specification:
    type, including its nullable members.
 5. Generated definitions reject duplicate field paths; composite widgets own
    their multiple native elements.
-6. Arbitrary non-field content nodes remain deferred in favor of manual
-   composition and `AutoForm` children.
+6. React definitions may use explicit render nodes with resolver-driven
+   interaction state; they remain outside field, accessibility, and
+   serialization ownership.
 7. React 19 uses a serializable `FormResult` with explicit defaults/submitted
    reset modes.
 8. Every control declares native, serialized, or unavailable `FormData`
@@ -2723,6 +2790,13 @@ The product has no unresolved public-API questions in this specification:
    English unstyled defaults.
 10. The shipped native controls cover text, textarea, select, checkbox,
     number, date, time, and single-file values only.
+11. Object-scoped definition fragments are erased before normalization; array
+    items keep the existing relative-child contract.
+12. Schema paths are commandable and selectively validatable without UI
+    registration; array commands and Action serialization keep their explicit
+    node requirements.
+13. Async fields remain an application data-layer recipe, and loaded baselines
+    remain explicit mount, key, or reset patterns.
 
 Implementation discoveries may refine private algorithms, but changing these
 contracts requires an explicit specification update rather than an implicit

@@ -19,6 +19,7 @@ UI own more of the experience.
 | Show, disable, or remove fields from tracked values | [Conditional fields](/guides/conditional-fields) |
 | Add repeatable rows with stable identity | [Arrays](/guides/arrays) |
 | Connect a component library | [Controls and design systems](/guides/controls) |
+| Load suggestions or bespoke async field UI | [Async fields](/guides/async-fields) |
 | Add responsive structure and product styling | [Styling](/guides/styling) |
 | Submit through a server-first Action | [React 19 Actions](/guides/react-19-actions) |
 
@@ -121,6 +122,17 @@ function ProfileEditor({
 In a real edit screen, avoid replacing `profile` with a new object on every
 render. A successful `reset(profile)` clears touched state, issues, submission
 metadata, and dirty state.
+
+When switching between distinct create/edit records should discard the current
+instance completely, key the component at that product boundary instead:
+
+```tsx twoslash
+<ProfileEditor key={profile.id} profile={profile} />
+```
+
+Use a stable mount after loading for one baseline, `reset(profile)` for an
+explicit in-place baseline replacement, and `key` when identity itself changes.
+`AutoForm` never resets merely because a new `defaultValues` object was created.
 
 ## Treat FormData as untrusted
 

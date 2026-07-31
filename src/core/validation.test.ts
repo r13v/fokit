@@ -179,7 +179,7 @@ describe("Standard Schema validation", () => {
 		expect(form.getSnapshot().errors.fields.size).toBe(0)
 	})
 
-	it("runs the full schema for path validation but returns only subtree issues", async () => {
+	it("runs the full schema for path validation but returns only overlapping issues", async () => {
 		const form = createAccountForm({
 			defaultValues: {
 				name: "",
@@ -209,6 +209,85 @@ describe("Standard Schema validation", () => {
 		expect(snapshot.displayErrors.fields.get("email")).toEqual([
 			expect.objectContaining({ message: "Email is invalid" }),
 		])
+	})
+
+	it("validates several path groups in one schema pass", async () => {
+		const form = createAccountForm({
+			defaultValues: {
+				name: "",
+				email: "not-an-email",
+				contacts: [{ value: "not-an-email" }],
+			},
+		})
+
+		const issues = await form.validatePaths(["name", "email"])
+		const snapshot = form.getSnapshot()
+
+		expect(issues.map((issue) => issue.path)).toEqual(["name", "email"])
+		expect(snapshot.errors.fields.has("contacts.0.value")).toBe(true)
+		expect(snapshot.displayErrors.fields.has("contacts.0.value")).toBe(false)
+	})
+
+	it("validates unrendered schema paths and filters overlapping path subsets", async () => {
+		type WorkflowInput = {
+			profile: {
+				name: string
+			}
+			billing: {
+				code: string
+			}
+		}
+		const workflowSchema = {
+			"~standard": {
+				version: 1,
+				vendor: "fokit-test",
+				validate() {
+					return {
+						issues: [
+							{ message: "Workflow is unavailable" },
+							{ message: "Profile needs review", path: ["profile"] },
+							{ message: "Billing code is invalid", path: ["billing", "code"] },
+						],
+					}
+				},
+			},
+		} as StandardSchema<WorkflowInput>
+		const definition = normalizeDefinition({
+			schema: workflowSchema,
+			controls: {},
+			ui: [],
+		})
+		const createWorkflowForm = () =>
+			createFormStore({
+				definition,
+				defaultValues: {
+					profile: { name: "" },
+					billing: { code: "" },
+				},
+			})
+
+		const singlePathForm = createWorkflowForm()
+		await expect(singlePathForm.validate("profile")).resolves.toEqual([
+			expect.objectContaining({ message: "Profile needs review" }),
+		])
+
+		const subsetForm = createWorkflowForm()
+		await expect(subsetForm.validatePaths(["profile.name"])).resolves.toEqual([
+			expect.objectContaining({ message: "Profile needs review" }),
+		])
+		expect(subsetForm.getSnapshot().errors.fields.get("billing.code")).toEqual([
+			expect.objectContaining({ message: "Billing code is invalid" }),
+		])
+		expect(subsetForm.getSnapshot().errors.form).toEqual([
+			expect.objectContaining({ message: "Workflow is unavailable" }),
+		])
+		expect(subsetForm.getSnapshot().displayErrors.form).toEqual([])
+		expect(
+			subsetForm.getSnapshot().displayErrors.fields.has("billing.code"),
+		).toBe(false)
+		expect(() => subsetForm.validatePaths([])).toThrow(
+			"validatePaths requires at least one field path",
+		)
 	})
 
 	it("uses submit as the default first mode and change as the default revalidation mode", async () => {

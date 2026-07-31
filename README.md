@@ -63,6 +63,12 @@ export function ContactForm() {
 Fokit validates the form with `contactSchema`. The submit handler receives the
 schema output after successful validation.
 
+Larger definitions can compose object-scoped nodes with
+`kit.defineForm(schema).fragment(...)`. Render nodes can derive visibility and
+receive inherited `disabled` and `readOnly` state. Imperative workflows can
+validate typed path groups with `validatePaths(...)` and focus the first
+displayed issue with `focusFirstError(...)` without adding a wizard engine.
+
 `onSubmit` can return `void` or `Promise<void>`. If it returns a promise, Fokit
 waits for the promise and keeps the form in its submitting state. `kit.Submit`
 stays disabled until the promise settles. Fokit does not reset the form after
@@ -121,6 +127,7 @@ npx skills add r13v/fokit --skill fokit
 - [Get started](https://r13v.github.io/fokit/get-started)
 - [Build a production form](https://r13v.github.io/fokit/guides/tutorial)
 - [Validation and errors](https://r13v.github.io/fokit/guides/validation)
+- [Async fields](https://r13v.github.io/fokit/guides/async-fields)
 - [React 19 Actions](https://r13v.github.io/fokit/guides/react-19-actions)
 - [API reference](https://r13v.github.io/fokit/api)
 - [Fokit specification](docs/SPEC.md)

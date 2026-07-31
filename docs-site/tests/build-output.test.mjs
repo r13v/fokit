@@ -47,6 +47,7 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/guides/tutorial.md",
 		"assets/md/guides/ui-definitions.md",
 		"assets/md/guides/validation.md",
+		"assets/md/guides/async-fields.md",
 		"assets/md/examples.md",
 		"assets/md/examples/research-grant.md",
 		"assets/md/examples/studio-policies.md",

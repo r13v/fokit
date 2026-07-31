@@ -9,6 +9,7 @@ import {
 import {
 	type BeforeUpdateEvent,
 	createFormKit,
+	extendValueChanges,
 	type FormInput,
 	type FormOutput,
 	nativeControls,
@@ -506,13 +507,13 @@ function StudioPoliciesForm() {
 
 function preservePolicyInvariants(
 	event: BeforeUpdateEvent<StudioPolicyInput, unknown>,
-): readonly ValueChange[] | undefined {
-	const changes: ValueChange[] = [...event.changes]
+): readonly ValueChange<StudioPolicyInput>[] | undefined {
+	const additions: ValueChange<StudioPolicyInput>[] = []
 	if (
 		event.currentValues.access.earlyEnabled &&
 		!event.nextValues.access.earlyEnabled
 	) {
-		changes.push(
+		additions.push(
 			{ type: "unset", path: "access.earlyFrom" },
 			{ type: "unset", path: "access.earlyFee" },
 		)
@@ -521,7 +522,7 @@ function preservePolicyInvariants(
 		event.currentValues.access.lateEnabled &&
 		!event.nextValues.access.lateEnabled
 	) {
-		changes.push(
+		additions.push(
 			{ type: "unset", path: "access.lateUntil" },
 			{ type: "unset", path: "access.lateFee" },
 		)
@@ -530,23 +531,26 @@ function preservePolicyInvariants(
 		event.currentValues.safeguard.depositRequired &&
 		!event.nextValues.safeguard.depositRequired
 	) {
-		changes.push({ type: "unset", path: "safeguard.amount" })
+		additions.push({ type: "unset", path: "safeguard.amount" })
 	}
 	if (
 		event.currentValues.refreshments.allowed &&
 		!event.nextValues.refreshments.allowed
 	) {
-		changes.push({ type: "unset", path: "refreshments.cateringNoticeHours" })
+		additions.push({
+			type: "unset",
+			path: "refreshments.cateringNoticeHours",
+		})
 	}
 	if (
 		event.currentValues.connectivity.mode !==
 			event.nextValues.connectivity.mode &&
 		event.nextValues.connectivity.mode !== "included"
 	) {
-		changes.push({ type: "unset", path: "connectivity.minimumMbps" })
+		additions.push({ type: "unset", path: "connectivity.minimumMbps" })
 	}
 
-	return changes.length === event.changes.length ? undefined : changes
+	return extendValueChanges(event, additions)
 }
 
 function fakeRequest<Value>(value: Value, delay: number): Promise<Value> {

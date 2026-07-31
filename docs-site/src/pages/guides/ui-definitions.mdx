@@ -58,6 +58,56 @@ belong to the selected control. For example, a number path accepts the shipped
 `required` does not add a validation rule. Generated forms use the Standard
 Schema as the source of truth, so required validation belongs in the schema.
 
+## Reuse object-scoped fragments
+
+Use `define.fragment(scope, nodes)` when several fields belong to one nested
+object. Paths and resolver dependencies inside the fragment are relative to
+that object, while normalization still produces the ordinary four node kinds
+with absolute paths:
+
+```ts twoslash
+import { createFormKit, nativeControls } from "fokit"
+import { z } from "zod"
+
+const schema = z.object({
+	billing: z.object({
+		contact: z.string(),
+		invoiceNote: z.string().optional(),
+	}),
+})
+const kit = createFormKit({ controls: nativeControls })
+const define = kit.defineForm(schema)
+
+// ---cut---
+const billing = define.fragment("billing", [
+	{
+		kind: "field",
+		path: "contact",
+		control: "text",
+		label: ({ contact }) => `Billing contact: ${contact}`,
+	},
+	{
+		kind: "field",
+		path: "invoiceNote",
+		control: "textarea",
+		label: "Invoice note",
+	},
+])
+
+const definition = define({ ui: billing })
+```
+
+The scope must be a definitely present, non-null object-valued schema path.
+Keep absolute nodes for optional or nullable objects so resolver and control
+types preserve the missing-parent possibility. Arrays keep their existing
+`children` contract and item-relative paths. A fragment may contain sections,
+fields, and arrays; put a section inside the fragment when the reused block
+needs structural grouping. Explicit section and render IDs remain global to
+the complete definition, including across fragment scopes. A context-free
+fragment works in a context-aware definition; use
+`define.fragment.withContext<Context>()` only when its resolvers read runtime
+context.
+
 ## Compose structural copy
 
 In React kits, field labels and descriptions, section titles and descriptions,
@@ -174,6 +224,7 @@ an exact position but does not represent one field:
 import {
 	createFormKit,
 	nativeControls,
+	type RenderNodeProps,
 	useFormContext,
 	useFormState,
 } from "fokit"
@@ -182,10 +233,14 @@ import { z } from "zod"
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
 
-function NamePreview() {
+function NamePreview({ disabled, readOnly }: RenderNodeProps) {
 	const form = useFormContext<typeof schema>()
 	const name = useFormState(form, (snapshot) => snapshot.values.name)
-	return <output>{name}</output>
+	return (
+		<output aria-disabled={disabled || undefined} data-read-only={readOnly}>
+			{name}
+		</output>
+	)
 }
 
 // ---cut---
@@ -195,14 +250,20 @@ const definition = kit.defineForm(schema)({
 			kind: "render",
 			id: "name-preview",
 			component: NamePreview,
+			visible: ({ name }) => name.length > 0,
 		},
 	],
 })
 ```
 
-Fokit owns only the render node's ID, order, and mounting. The component
-receives no props; hooks provide form state. Its contents get no automatic
-path, copy, errors, layout, inherited interaction state, accessibility, or
+Render nodes accept `visible`, `disabled`, and `readOnly`. Visibility controls
+mounting, and the component receives the two effective interaction flags after
+form and parent state are inherited. Hooks still provide form values. The
+component must apply those flags to its own buttons, inputs, and accessibility
+state because arbitrary DOM has no automatic control guard.
+
+Fokit otherwise owns only the render node's ID, order, and mounting. Its
+contents get no automatic path, copy, errors, layout, accessibility, or
 FormData behavior. Render nodes are allowed at the root and inside sections,
 but not inside array rows.
 
@@ -236,6 +297,7 @@ only when one of those values changes. The resolver can also read runtime
 | `field` | `label`, `description`, `slotOptions`, `required`, `visible`, `disabled`, `readOnly`, `options` |
 | `section` | `title`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly` |
 | `array` | `label`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly` |
+| `render` | `visible`, `disabled`, `readOnly` |
 
 Structure stays static: paths, controls, children, layout, classes, and array
 defaults are not resolvable. Change resolvable properties for dynamic UI;

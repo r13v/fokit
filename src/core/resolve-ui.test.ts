@@ -99,6 +99,12 @@ describe("resolveUi", () => {
 				kind: "render",
 				id: "summary",
 				component: Summary,
+				visible: ({ name }: ExampleValues) => name === "Ada",
+				disabled: true,
+				readOnly: (
+					_values: ExampleValues,
+					{ context }: { context: ExampleContext },
+				) => context.locked,
 			},
 		])
 
@@ -123,6 +129,9 @@ describe("resolveUi", () => {
 			throw new Error("Expected a render node")
 		}
 		expect(summary.component).toBe(Summary)
+		expect(summary.visible).toBe(true)
+		expect(summary.disabled).toBe(true)
+		expect(summary.readOnly).toBe(false)
 		expect(Summary).not.toHaveBeenCalled()
 	})
 

@@ -161,7 +161,7 @@ function defaultValues(): ProfileValues {
 }
 
 describe("kit.AutoForm and kit.Fields", () => {
-	it("renders no-prop render nodes in definition order with form hooks available", () => {
+	it("renders render nodes in definition order with form hooks available", () => {
 		function NamePreview() {
 			const form = useFormContext<ProfileSchema, ProfileContext>()
 			const name = useFormState(form, (snapshot) => snapshot.values.name)

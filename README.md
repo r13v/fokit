@@ -109,6 +109,7 @@ Apply request, multipart, file-count, and file-size limits before you call
 - [React 19 Actions](https://r13v.github.io/fokit/guides/react-19-actions)
 - [API reference](https://r13v.github.io/fokit/api)
 - [Fokit specification](docs/SPEC.md)
+- [Architecture map](ARCHITECTURE.md)
 - [Styling boundary](docs/adr/0001-styling-and-layout-boundary.md)
 - [Russian tutorial](docs/tutorial.ru.md)
 - [Architecture decisions](docs/adr/)

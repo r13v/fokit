@@ -1636,13 +1636,19 @@ src/index.ts   -> public React 18-safe re-exports
 src/layout.css -> no JavaScript import edge
 ```
 
+The later
+[render-node ADR](../../adr/0003-react-render-nodes-through-core.md) and
+[rich-content ADR](../../adr/0004-rich-structural-content-and-slot-options.md)
+supersede the original restriction on component values in definitions.
+Executable effects remain forbidden.
+
 Forbidden edges:
 
 - `src/core/` to React, React DOM, browser DOM nodes, or `src/react/`;
 - `src/server/` to React, React DOM, controls, or `src/react/`;
 - `src/index.ts` to `src/react19/`;
 - any JavaScript entry to `src/layout.css`;
-- definition objects to application React components or executable effects.
+- definition objects to executable effects.
 
 ### Store invariants
 

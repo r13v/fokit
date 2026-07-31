@@ -1,5 +1,8 @@
 # Fokit
 
+Before changing module boundaries, public entry points, form state,
+submission, or serialization, read [ARCHITECTURE.md](ARCHITECTURE.md).
+
 Run `npm run check` and `npm run knip` before reporting a task done.
 
 ## Creator Vibe Lens

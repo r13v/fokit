@@ -1,7 +1,7 @@
 {
 	"name": "form-please",
 	"version": "1.0.0",
-	"description": "A code-first, schema-validated React form library.",
+	"description": "Build forms with ease",
 	"type": "module",
 	"license": "MIT",
 	"engines": {

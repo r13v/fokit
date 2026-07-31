@@ -100,7 +100,7 @@ test.describe("Form, Please documentation", () => {
 		await expect(
 			page.getByRole("heading", {
 				level: 1,
-				name: "Forms that stay typed, native, and yours",
+				name: "Build forms with ease",
 			}),
 		).toBeVisible()
 		await expect(
@@ -138,7 +138,7 @@ test.describe("Form, Please documentation", () => {
 		const headingContrast = await page
 			.getByRole("heading", {
 				level: 1,
-				name: "Forms that stay typed, native, and yours",
+				name: "Build forms with ease",
 			})
 			.evaluate((heading) => {
 				const parseRgb = (value: string) =>

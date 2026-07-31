@@ -1,12 +1,14 @@
 # Form, Please
 
-Form, Please turns a Standard Schema and a typed UI definition into a React form. It
-keeps form state, validation, rendering, and `FormData` behavior in one
-contract.
+<p align="center">
+  <img src="docs-site/public/brand/form-please-logo.png" alt="Form, Please logo: Hermes Conrad holding a 'Form, Please' coffee mug" width="220" />
+</p>
 
-Use Form, Please when you want reusable typed form definitions without binding them
-to a visual theme. Form, Please does not infer UI from a schema, provide a form
-builder, or style application controls.
+Form, Please turns a Standard Schema and a UI definition into a working
+React form with typed output. It handles state, validation, and submission while
+your application keeps control of components, markup, styling, and product logic.
+
+Start with native controls or bring your own design system.
 
 Form, Please supports React 18 and React 19.
 

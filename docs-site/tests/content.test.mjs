@@ -416,7 +416,7 @@ const requiredCorePageContent = {
 			"Start with the working path",
 		],
 		terms: [
-			"Forms that stay typed, native, and yours",
+			"Build forms with ease",
 			"Schema owns validity",
 			"UI definition owns structure",
 			"Your kit owns rendering",
@@ -1438,7 +1438,7 @@ test("Vocs root page and root CSS replace the custom app shell", async () => {
 	const css = await readText("src/pages/_root.css")
 
 	assert.match(page, /^---\ntitle: Form, Please\ndescription: /)
-	assert.match(page, /# Forms that stay typed, native, and yours/)
+	assert.match(page, /# Build forms with ease/)
 	assert.match(page, /<OverviewDemo \/>/)
 	assert.match(page, /createFormKit\(\{\s*controls: nativeControls/)
 	assert.match(page, /kit\.AutoForm/)

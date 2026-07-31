@@ -90,7 +90,7 @@ export function ActionForm<
 	readOnly,
 	validation,
 	beforeUpdate,
-	onUpdate,
+	afterUpdate,
 	action,
 	result,
 	children,
@@ -119,11 +119,11 @@ export function ActionForm<
 		readOnly,
 		validation,
 		beforeUpdate,
-		onUpdate: (event) => {
+		afterUpdate: (event) => {
 			attemptRef.current?.recordChanges(
 				event.changes.map((change) => change.path),
 			)
-			onUpdate?.(event)
+			afterUpdate?.(event)
 		},
 	})
 	const store = getFormStore(form)

@@ -83,10 +83,10 @@ function createAccountStore(
 			typeof schema,
 			AccountContext
 		>["beforeUpdate"]
-		readonly onUpdate?: FormStoreOptions<
+		readonly afterUpdate?: FormStoreOptions<
 			typeof schema,
 			AccountContext
-		>["onUpdate"]
+		>["afterUpdate"]
 	} = {},
 ) {
 	return createFormStore({
@@ -96,20 +96,20 @@ function createAccountStore(
 			showCompany: true,
 		},
 		beforeUpdate: options.beforeUpdate,
-		onUpdate: options.onUpdate,
+		afterUpdate: options.afterUpdate,
 	})
 }
 
 describe("visibility-driven valuePolicy", () => {
 	it("stabilizes fields that start hidden into the initial baseline", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
+		const afterUpdate = vi.fn()
 		const form = createAccountStore({
 			context: {
 				showCompany: false,
 			},
 			beforeUpdate,
-			onUpdate,
+			afterUpdate,
 		})
 
 		expect(form.getValues()).toEqual({
@@ -121,13 +121,13 @@ describe("visibility-driven valuePolicy", () => {
 		)
 		expect(form.getSnapshot().resolvedUi.fieldsByPath.taxId.visible).toBe(false)
 		expect(beforeUpdate).not.toHaveBeenCalled()
-		expect(onUpdate).not.toHaveBeenCalled()
+		expect(afterUpdate).not.toHaveBeenCalled()
 	})
 
 	it("expands hidden unsets to stability before beforeUpdate and reports them in one update", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createAccountStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createAccountStore({ beforeUpdate, afterUpdate })
 
 		form.setValue("kind", "person")
 
@@ -135,7 +135,7 @@ describe("visibility-driven valuePolicy", () => {
 			kind: "person",
 		})
 		expect(beforeUpdate).toHaveBeenCalledTimes(1)
-		expect(onUpdate).toHaveBeenCalledTimes(1)
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
 		expect(beforeUpdate.mock.calls[0]?.[0].nextValues).toEqual({
 			kind: "person",
 		})
@@ -154,21 +154,21 @@ describe("visibility-driven valuePolicy", () => {
 				path: "taxId",
 			},
 		])
-		expect(onUpdate.mock.calls[0]?.[0]).toMatchObject({
+		expect(afterUpdate.mock.calls[0]?.[0]).toMatchObject({
 			source: "imperative",
 			values: {
 				kind: "person",
 			},
 		})
-		expect(onUpdate.mock.calls[0]?.[0].changes).toEqual(
+		expect(afterUpdate.mock.calls[0]?.[0].changes).toEqual(
 			beforeUpdate.mock.calls[0]?.[0].changes,
 		)
 	})
 
 	it("runs one separate valuePolicy transaction after a context-only hide", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createAccountStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createAccountStore({ beforeUpdate, afterUpdate })
 		const listener = vi.fn()
 
 		form.subscribe(
@@ -196,7 +196,7 @@ describe("visibility-driven valuePolicy", () => {
 			companyName: undefined,
 		})
 		expect(beforeUpdate).toHaveBeenCalledTimes(1)
-		expect(onUpdate).toHaveBeenCalledTimes(1)
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
 		expect(beforeUpdate.mock.calls[0]?.[0]).toMatchObject({
 			source: "valuePolicy",
 			nextValues: {
@@ -219,6 +219,6 @@ describe("visibility-driven valuePolicy", () => {
 		})
 
 		expect(beforeUpdate).toHaveBeenCalledTimes(1)
-		expect(onUpdate).toHaveBeenCalledTimes(1)
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
 	})
 })

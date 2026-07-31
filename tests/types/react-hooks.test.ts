@@ -162,7 +162,7 @@ function TypeHarness() {
 				{ type: "set", path: "profile.first", value: "Ada" },
 			])
 		},
-		onUpdate(event) {
+		afterUpdate(event) {
 			event.changes.forEach(inspectValueChange)
 		},
 	})

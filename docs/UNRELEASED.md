@@ -18,6 +18,8 @@ the entries only when that release is published.
 
 ## Migration notes
 
+- Rename the `onUpdate` option or prop to `afterUpdate`. Its behavior is
+  unchanged: it runs once after a value transaction commits.
 - `ValueChange<Input>` now checks each `set` value against its selected path.
   Existing hooks that paired a path with an incompatible value now fail type
   checking. Use `extendValueChanges(event, additions)` when a hook should keep
@@ -35,4 +37,3 @@ the entries only when that release is published.
 - Context-free fragments may be used in context-aware definitions. Use
   `fragment.withContext<Context>()` when a fragment actually requires context.
   Explicit section and render IDs remain global across fragment scopes.
-

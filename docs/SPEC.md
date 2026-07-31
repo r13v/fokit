@@ -174,7 +174,7 @@ atomically. This includes updates from controls, imperative commands, array
 operations, resets, batches, and hidden-field value policies.
 
 An instance may provide one synchronous `beforeUpdate` hook and one
-`onUpdate` hook. Fokit does not expose an ordered middleware chain. The same
+`afterUpdate` hook. Fokit does not expose an ordered middleware chain. The same
 pipeline is used regardless of where an update originated.
 
 ### Runtime context is not form data
@@ -1785,7 +1785,7 @@ type UpdateHooks<Input, Context> = {
     event: BeforeUpdateEvent<Input, Context>,
   ): false | readonly ValueChange<Input>[] | void;
 
-  onUpdate?(event: UpdateEvent<Input, Context>): void;
+  afterUpdate?(event: UpdateEvent<Input, Context>): void;
 };
 ```
 
@@ -1825,26 +1825,26 @@ The pipeline is:
 5. Apply a replacement to a fresh draft and expand the same required internal
    changes without recursively invoking the hook.
 6. Commit values and value-derived metadata atomically.
-7. Notify subscribers and call `onUpdate` once with all effective changes.
+7. Notify subscribers and call `afterUpdate` once with all effective changes.
 8. Start validation according to the configured lifecycle.
 
 The hooks are form-instance options, not reusable-definition effects. They are
 synchronous, receive read-only snapshots, and cannot mutate the store
 directly. A replacement returned from `beforeUpdate` is final for that hook
 invocation; it does not recursively run the hook. An imperative command
-started later from `onUpdate` creates a new transaction. A nested value command
+started later from `afterUpdate` creates a new transaction. A nested value command
 during `beforeUpdate` is rejected; the hook must return replacement changes
 instead.
 
 Replacement changes pass the same path, command, and `valuePolicy` checks as
 ordinary commands before commit. If `beforeUpdate` throws, the transaction is
-aborted and the exception propagates. If `onUpdate` throws, the already
+aborted and the exception propagates. If `afterUpdate` throws, the already
 committed transaction is not rolled back and the exception propagates.
 
 Error-only and metadata-only commands do not call these hooks. A no-op or
 cancelled value transaction neither notifies value subscribers nor calls
-`onUpdate`. `form.batch` produces one transaction, one `beforeUpdate` call, and
-one `onUpdate` call. Nested batches join the outer batch; an exception before
+`afterUpdate`. `form.batch` produces one transaction, one `beforeUpdate` call, and
+one `afterUpdate` call. Nested batches join the outer batch; an exception before
 commit aborts the whole batch. Initial construction from `defaultValues` is not
 an update and does not call either hook.
 
@@ -1929,7 +1929,7 @@ function AccountEditor() {
     defaultValues,
     context: accountContext,
     beforeUpdate: beforeAccountUpdate,
-    onUpdate: handleAccountUpdate,
+    afterUpdate: handleAccountUpdate,
     onSubmit: async ({ value }) => {
       await saveAccount(value);
     },
@@ -1954,7 +1954,7 @@ detect across independently referenced kit components.
 Consumers may omit `kit.Fields` and build a completely manual form using the
 same instance and hooks.
 
-`context`, `disabled`, `readOnly`, `validation`, `beforeUpdate`, and `onUpdate`
+`context`, `disabled`, `readOnly`, `validation`, `beforeUpdate`, and `afterUpdate`
 are instance-level options accepted by both `useForm` and `kit.AutoForm`.
 Replacing the context reference updates context-dependent controls and
 derived UI without itself marking the form dirty or calling the value-update
@@ -2572,7 +2572,7 @@ definition or an internal shared validator used by browser and server flows.
 - static and derived control options;
 - typed runtime context for derived UI and controls;
 - inherited visibility, disabled, and read-only state;
-- one instance-level `beforeUpdate` and `onUpdate` pair;
+- one instance-level `beforeUpdate` and `afterUpdate` pair;
 - manual composition around generated fields;
 - manual field and form errors;
 - subscriptions and batching.
@@ -2623,7 +2623,7 @@ dependency or public escape hatch.
 
 Multiple ordered interceptors add priority, reentrancy, async, and error
 semantics before Fokit has use cases that require them. One synchronous
-`beforeUpdate` transformation and one post-commit `onUpdate` observer cover
+`beforeUpdate` transformation and one post-commit `afterUpdate` observer cover
 the target scenarios with one deterministic order.
 
 ### Builder classes
@@ -2692,7 +2692,7 @@ Before the API is considered stable, the implementation must prove:
 - `beforeUpdate` can accept, cancel, or replace an atomic batch;
 - `beforeUpdate` observes required `valuePolicy` changes, thrown pre-update
   hooks abort, and thrown post-update hooks do not roll back a commit;
-- `onUpdate` fires exactly once with previous and committed value snapshots;
+- `afterUpdate` fires exactly once with previous and committed value snapshots;
 - control, imperative, reset, batch, and value-policy updates share the same
   transaction semantics;
 - inherited visibility, disabled, and read-only state follows the documented

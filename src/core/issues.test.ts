@@ -94,10 +94,10 @@ function createAccountStore(
 			AccountContext
 		>["beforeUpdate"]
 		readonly context?: AccountContext
-		readonly onUpdate?: FormStoreOptions<
+		readonly afterUpdate?: FormStoreOptions<
 			typeof schema,
 			AccountContext
-		>["onUpdate"]
+		>["afterUpdate"]
 	} = {},
 ) {
 	return createFormStore({
@@ -107,7 +107,7 @@ function createAccountStore(
 			showHidden: false,
 		},
 		beforeUpdate: options.beforeUpdate,
-		onUpdate: options.onUpdate,
+		afterUpdate: options.afterUpdate,
 	})
 }
 
@@ -242,8 +242,8 @@ describe("form issues and display exposure", () => {
 
 	it("replaces imperative sources atomically and clears only imperative exposure", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createAccountStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createAccountStore({ beforeUpdate, afterUpdate })
 		const listener = vi.fn()
 		form.subscribe((snapshot) => snapshot.errors, listener)
 
@@ -297,7 +297,7 @@ describe("form issues and display exposure", () => {
 
 		expect(form.getSnapshot().displayErrors.fields.has("name")).toBe(false)
 		expect(beforeUpdate).not.toHaveBeenCalled()
-		expect(onUpdate).not.toHaveBeenCalled()
+		expect(afterUpdate).not.toHaveBeenCalled()
 		expect(listener).toHaveBeenCalledTimes(4)
 	})
 
@@ -325,8 +325,8 @@ describe("form issues and display exposure", () => {
 
 	it("clears stale server errors on edits and clears all issue state on reset", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createAccountStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createAccountStore({ beforeUpdate, afterUpdate })
 
 		form.setErrors([
 			{
@@ -358,7 +358,7 @@ describe("form issues and display exposure", () => {
 		expect(form.getSnapshot().errors.fields.size).toBe(0)
 		expect(form.getSnapshot().displayErrors.summary).toEqual([])
 		expect(beforeUpdate).toHaveBeenCalledTimes(2)
-		expect(onUpdate).toHaveBeenCalledTimes(2)
+		expect(afterUpdate).toHaveBeenCalledTimes(2)
 	})
 
 	it("maps unsupported Standard Schema paths to form-level issues", () => {

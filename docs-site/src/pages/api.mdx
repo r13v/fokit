@@ -361,7 +361,7 @@ options as opaque payloads.
 | `validation` | no | Partial validation options |
 | `disabled` | no | Make the complete form unavailable and prevent submission |
 | `readOnly` | no | Prevent edits while keeping the form available for submission |
-| `beforeUpdate`, `onUpdate` | no | Transaction hooks |
+| `beforeUpdate`, `afterUpdate` | no | Transaction hooks |
 | `onSubmit` | no | Validated callback that returns `void` or `Promise<void>` |
 
 Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
@@ -505,7 +505,7 @@ field is registered for it. Generated rendering, field metadata, and
 structure commands require an array node because they use `itemDefault` and
 stable row metadata.
 
-`beforeUpdate` and `onUpdate` receive path/value-correlated
+`beforeUpdate` and `afterUpdate` receive path/value-correlated
 `ValueChange<FormInput<Schema>>` entries. `extendValueChanges(event, additions)`
 returns the incoming transaction plus typed additions, or `undefined` when the
 addition list is empty.

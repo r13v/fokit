@@ -1,13 +1,13 @@
 ---
 title: Transaction hooks
-description: Inspect, change, cancel, and observe each atomic form update with beforeUpdate and onUpdate.
+description: Inspect, change, cancel, and observe each atomic form update with beforeUpdate and afterUpdate.
 showAskAi: false
 ---
 
 # Transaction hooks
 
 Transaction hooks apply one rule to every value update. Use `beforeUpdate` to
-change a proposal before Fokit commits it. Use `onUpdate` to observe values
+change a proposal before Fokit commits it. Use `afterUpdate` to observe values
 after Fokit commits them.
 
 ## Choose the correct mechanism
@@ -20,7 +20,7 @@ Use hooks only when the rule applies to the update lifecycle.
 | Remove an optional value when its field becomes hidden | `valuePolicy: "unset"` |
 | Prevent interaction with a field | `disabled` or `readOnly` |
 | Change or cancel one complete value update | `beforeUpdate` |
-| Start an effect after a value update | `onUpdate` |
+| Start an effect after a value update | `afterUpdate` |
 
 Cancellation is not validation. A canceled update does not create a form
 issue. Put validity rules in the schema so the server uses the same rules.
@@ -29,7 +29,7 @@ issue. Put validity rules in the schema so the server uses the same rules.
 
 Each value command enters the same transaction pipeline:
 
-`command → proposal → beforeUpdate → commit → onUpdate`
+`command → proposal → beforeUpdate → commit → afterUpdate`
 
 Fokit completes these actions in order:
 
@@ -37,7 +37,7 @@ Fokit completes these actions in order:
 2. Fokit applies required `valuePolicy` changes to the proposal.
 3. Fokit calls `beforeUpdate` once with the complete proposal.
 4. Fokit commits the effective changes as one atomic update.
-5. Fokit notifies subscribers and calls `onUpdate` once.
+5. Fokit notifies subscribers and calls `afterUpdate` once.
 
 A batch creates one transaction. Nested batches join the outer batch.
 
@@ -63,7 +63,7 @@ empty.
 | Return value | Result |
 | --- | --- |
 | `undefined` | Commit the proposal without a replacement. |
-| `false` | Cancel the complete transaction. Do not call `onUpdate`. |
+| `false` | Cancel the complete transaction. Do not call `afterUpdate`. |
 | `ValueChange[]` | Replace the complete proposal with this change list. |
 
 A returned array does not append changes to the proposal. Use
@@ -87,9 +87,9 @@ The `BeforeUpdateEvent` fields have these meanings:
 The snapshots and change list are read-only. Do not call a value command from
 `beforeUpdate`. Return replacement changes instead.
 
-## Observe a commit with onUpdate
+## Observe a commit with afterUpdate
 
-`onUpdate` runs after commit. Use it to notify application code, update an
+`afterUpdate` runs after commit. Use it to notify application code, update an
 audit trail, or schedule a draft save.
 
 ```tsx
@@ -99,12 +99,12 @@ audit trail, or schedule a draft save.
 The `UpdateEvent` contains `previousValues`, committed `values`, effective
 `changes`, `source`, and `context`.
 
-Fokit does not roll back a commit when `onUpdate` throws. Fokit also does not
+Fokit does not roll back a commit when `afterUpdate` throws. Fokit also does not
 wait for asynchronous work that the hook starts. The application must manage
 debouncing, request cancellation, and stale responses.
 
-Do not use `onUpdate` to keep dependent values synchronized. A value command
-from `onUpdate` starts a new transaction. It can also create an update loop.
+Do not use `afterUpdate` to keep dependent values synchronized. A value command
+from `afterUpdate` starts a new transaction. It can also create an update loop.
 Use `beforeUpdate` when dependent values must commit together.
 
 ## Identify the update source
@@ -133,22 +133,22 @@ Fokit does not call either transaction hook for these operations:
 - a reset that changes only reset metadata.
 
 Fokit calls `beforeUpdate` for a transaction that the hook cancels. Fokit does
-not call `onUpdate` for that transaction.
+not call `afterUpdate` for that transaction.
 
 If `beforeUpdate` throws, Fokit aborts the transaction and propagates the
-error. If `onUpdate` throws, Fokit keeps the committed values and propagates the
+error. If `afterUpdate` throws, Fokit keeps the committed values and propagates the
 error.
 
 ## Use both hooks
 
 The complete example uses `beforeUpdate` for the date invariant. It uses
-`onUpdate` to describe the committed paths.
+`afterUpdate` to describe the committed paths.
 
 ```tsx
 // [!include ~/snippets/transaction-hooks.tsx]
 ```
 
-Configure one `beforeUpdate` hook and one `onUpdate` hook on `AutoForm`,
+Configure one `beforeUpdate` hook and one `afterUpdate` hook on `AutoForm`,
 `useForm`, or `createForm`. Both hooks are synchronous. Fokit does not provide
 a hook middleware chain.
 

@@ -373,7 +373,7 @@ function ProfileEditor({ context, disabled }) {
 
 `beforeUpdate` видит всю предложенную транзакцию. Верните `false`, чтобы
 отменить ее; верните replacement changes, чтобы заменить; верните
-`undefined`, чтобы принять. `onUpdate` срабатывает один раз после commit.
+`undefined`, чтобы принять. `afterUpdate` срабатывает один раз после commit.
 
 ```ts
 beforeUpdate(event) {

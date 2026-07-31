@@ -46,22 +46,22 @@ const definition = normalizeDefinition({
 function createProfileStore(
 	options: {
 		readonly beforeUpdate?: FormStoreOptions<typeof schema>["beforeUpdate"]
-		readonly onUpdate?: FormStoreOptions<typeof schema>["onUpdate"]
+		readonly afterUpdate?: FormStoreOptions<typeof schema>["afterUpdate"]
 	} = {},
 ) {
 	return createFormStore({
 		definition,
 		defaultValues,
 		beforeUpdate: options.beforeUpdate,
-		onUpdate: options.onUpdate,
+		afterUpdate: options.afterUpdate,
 	})
 }
 
 describe("form reset", () => {
 	it("clears touched metadata for a same-value reset without update hooks", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createProfileStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createProfileStore({ beforeUpdate, afterUpdate })
 		const listener = vi.fn()
 
 		form.blur("name")
@@ -74,15 +74,15 @@ describe("form reset", () => {
 		expect(form.getSnapshot().isDirty).toBe(false)
 		expect(form.getSnapshot().metadata.fieldsByPath.name.touched).toBe(false)
 		expect(beforeUpdate).not.toHaveBeenCalled()
-		expect(onUpdate).not.toHaveBeenCalled()
+		expect(afterUpdate).not.toHaveBeenCalled()
 		expect(listener).toHaveBeenCalledTimes(1)
 		expect(listener).toHaveBeenLastCalledWith(false, true)
 	})
 
 	it("passes changed reset values through hooks and makes committed values the clean baseline", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createProfileStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createProfileStore({ beforeUpdate, afterUpdate })
 
 		form.blur("email")
 		form.reset({
@@ -100,7 +100,7 @@ describe("form reset", () => {
 		expect(form.getSnapshot().metadata.fieldsByPath.email.dirty).toBe(false)
 		expect(form.getSnapshot().metadata.fieldsByPath.nickname.dirty).toBe(false)
 		expect(beforeUpdate).toHaveBeenCalledTimes(1)
-		expect(onUpdate).toHaveBeenCalledTimes(1)
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
 		expect(beforeUpdate.mock.calls[0]?.[0]).toMatchObject({
 			source: "reset",
 			currentValues: defaultValues,
@@ -109,7 +109,7 @@ describe("form reset", () => {
 				email: "grace@example.test",
 			},
 		})
-		expect(onUpdate.mock.calls[0]?.[0]).toMatchObject({
+		expect(afterUpdate.mock.calls[0]?.[0]).toMatchObject({
 			source: "reset",
 			previousValues: defaultValues,
 			values: {
@@ -126,10 +126,10 @@ describe("form reset", () => {
 	})
 
 	it("applies no reset metadata when beforeUpdate cancels the value transaction", () => {
-		const onUpdate = vi.fn()
+		const afterUpdate = vi.fn()
 		const form = createProfileStore({
 			beforeUpdate: () => false,
-			onUpdate,
+			afterUpdate,
 		})
 
 		form.blur("name")
@@ -142,11 +142,11 @@ describe("form reset", () => {
 		expect(form.getSnapshot().isTouched).toBe(true)
 		expect(form.getSnapshot().metadata.fieldsByPath.name.touched).toBe(true)
 		expect(form.getSnapshot().isDirty).toBe(false)
-		expect(onUpdate).not.toHaveBeenCalled()
+		expect(afterUpdate).not.toHaveBeenCalled()
 	})
 
 	it("uses beforeUpdate replacement values as the new reset baseline", () => {
-		const onUpdate = vi.fn()
+		const afterUpdate = vi.fn()
 		const form = createProfileStore({
 			beforeUpdate: (event) =>
 				event.source === "reset"
@@ -162,7 +162,7 @@ describe("form reset", () => {
 							},
 						]
 					: undefined,
-			onUpdate,
+			afterUpdate,
 		})
 
 		form.blur("nickname")
@@ -177,8 +177,8 @@ describe("form reset", () => {
 		})
 		expect(form.getSnapshot().isDirty).toBe(false)
 		expect(form.getSnapshot().isTouched).toBe(false)
-		expect(onUpdate).toHaveBeenCalledTimes(1)
-		expect(onUpdate.mock.calls[0]?.[0].changes).toEqual([
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
+		expect(afterUpdate.mock.calls[0]?.[0].changes).toEqual([
 			{
 				type: "set",
 				path: "name",
@@ -197,10 +197,10 @@ describe("form reset", () => {
 		expect(form.getSnapshot().metadata.fieldsByPath.email.dirty).toBe(true)
 		expect(form.getSnapshot().metadata.fieldsByPath.nickname.dirty).toBe(false)
 
-		const noopOnUpdate = vi.fn()
+		const noopAfterUpdate = vi.fn()
 		const replacedWithNoop = createProfileStore({
 			beforeUpdate: (event) => (event.source === "reset" ? [] : undefined),
-			onUpdate: noopOnUpdate,
+			afterUpdate: noopAfterUpdate,
 		})
 		replacedWithNoop.blur("name")
 
@@ -212,6 +212,6 @@ describe("form reset", () => {
 		expect(replacedWithNoop.getValues()).toEqual(defaultValues)
 		expect(replacedWithNoop.getSnapshot().isDirty).toBe(false)
 		expect(replacedWithNoop.getSnapshot().isTouched).toBe(false)
-		expect(noopOnUpdate).not.toHaveBeenCalled()
+		expect(noopAfterUpdate).not.toHaveBeenCalled()
 	})
 })

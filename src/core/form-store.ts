@@ -143,7 +143,7 @@ export type UpdateHooks<Input, Context> = {
 	readonly beforeUpdate?: (
 		event: BeforeUpdateEvent<Input, Context>,
 	) => false | readonly ValueChange<Input>[] | undefined
-	readonly onUpdate?: (event: UpdateEvent<Input, Context>) => void
+	readonly afterUpdate?: (event: UpdateEvent<Input, Context>) => void
 }
 
 export type FormStoreOptions<
@@ -174,12 +174,12 @@ type RuntimeUpdateEvent<Input, Context> = Omit<
 
 type RuntimeFormStoreOptions<Schema extends StandardSchema, Context> = Omit<
 	FormStoreOptions<Schema, Context>,
-	"beforeUpdate" | "onUpdate"
+	"beforeUpdate" | "afterUpdate"
 > & {
 	readonly beforeUpdate?: (
 		event: RuntimeBeforeUpdateEvent<FormInput<Schema>, Context>,
 	) => false | readonly ValueChange[] | undefined
-	readonly onUpdate?: (
+	readonly afterUpdate?: (
 		event: RuntimeUpdateEvent<FormInput<Schema>, Context>,
 	) => void
 }
@@ -449,7 +449,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		Schema,
 		Context
 	>["beforeUpdate"]
-	readonly #onUpdate: RuntimeFormStoreOptions<Schema, Context>["onUpdate"]
+	readonly #afterUpdate: RuntimeFormStoreOptions<Schema, Context>["afterUpdate"]
 
 	constructor(options: RuntimeFormStoreOptions<Schema, Context>) {
 		this.definition = options.definition
@@ -479,7 +479,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		})
 		this.#serverSnapshot = this.#snapshot
 		this.#beforeUpdate = options.beforeUpdate
-		this.#onUpdate = options.onUpdate
+		this.#afterUpdate = options.afterUpdate
 	}
 
 	getSnapshot(): FormSnapshot<FormInput<Schema>, Context> {
@@ -1184,7 +1184,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			resolvedUi,
 		})
 		this.#notify()
-		this.#onUpdate?.(
+		this.#afterUpdate?.(
 			Object.freeze({
 				previousValues,
 				values: this.#snapshot.values,

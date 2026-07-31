@@ -97,14 +97,14 @@ function createAccountStore(
 	options: {
 		readonly beforeUpdate?: FormStoreOptions<typeof schema>["beforeUpdate"]
 		readonly createDefault?: () => Contact
-		readonly onUpdate?: FormStoreOptions<typeof schema>["onUpdate"]
+		readonly afterUpdate?: FormStoreOptions<typeof schema>["afterUpdate"]
 	} = {},
 ): FormStore<typeof schema> {
 	return createFormStore({
 		definition: createDefinition(options.createDefault),
 		defaultValues,
 		beforeUpdate: options.beforeUpdate,
-		onUpdate: options.onUpdate,
+		afterUpdate: options.afterUpdate,
 	})
 }
 
@@ -174,8 +174,12 @@ describe("array commands and row metadata", () => {
 		}
 		const createDefault = vi.fn(() => ({ ...firstDefault }))
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const first = createAccountStore({ createDefault, beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const first = createAccountStore({
+			createDefault,
+			beforeUpdate,
+			afterUpdate,
+		})
 		const second = createAccountStore({ createDefault })
 		const initialKeys = contactKeys(first)
 
@@ -230,20 +234,20 @@ describe("array commands and row metadata", () => {
 		])
 
 		expect(beforeUpdate).toHaveBeenCalledTimes(4)
-		expect(onUpdate).toHaveBeenCalledTimes(4)
+		expect(afterUpdate).toHaveBeenCalledTimes(4)
 		expect(beforeUpdate.mock.calls.map(([event]) => event.source)).toEqual([
 			"array",
 			"array",
 			"array",
 			"array",
 		])
-		expect(onUpdate.mock.calls.map(([event]) => event.source)).toEqual([
+		expect(afterUpdate.mock.calls.map(([event]) => event.source)).toEqual([
 			"array",
 			"array",
 			"array",
 			"array",
 		])
-		expect(onUpdate.mock.calls.map(([event]) => event.changes)).toEqual(
+		expect(afterUpdate.mock.calls.map(([event]) => event.changes)).toEqual(
 			beforeUpdate.mock.calls.map(([event]) => event.changes),
 		)
 	})
@@ -578,8 +582,8 @@ describe("array commands and row metadata", () => {
 
 	it("rejects malformed paths, non-array targets, sparse indexes, and bad moves without side effects", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createAccountStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createAccountStore({ beforeUpdate, afterUpdate })
 		const listener = vi.fn()
 		form.subscribe((snapshot) => snapshot.values, listener)
 
@@ -603,7 +607,7 @@ describe("array commands and row metadata", () => {
 			expect(form.getValues()).toEqual(defaultValues)
 			expect(listener).not.toHaveBeenCalled()
 			expect(beforeUpdate).not.toHaveBeenCalled()
-			expect(onUpdate).not.toHaveBeenCalled()
+			expect(afterUpdate).not.toHaveBeenCalled()
 		}
 	})
 

@@ -124,8 +124,8 @@ export class FormInstanceImpl<
 			readOnly: this.#activeOptions.readOnly,
 			validation: this.#activeOptions.validation,
 			beforeUpdate: (event) => this.#activeOptions.beforeUpdate?.(event),
-			onUpdate: (event) => {
-				this.#activeOptions.onUpdate?.(event)
+			afterUpdate: (event) => {
+				this.#activeOptions.afterUpdate?.(event)
 			},
 		})
 		this.definition = definition
@@ -401,7 +401,7 @@ function copyReplaceOptions<Schema extends StandardSchema, Context>(
 		validation:
 			options.validation === undefined ? undefined : { ...options.validation },
 		beforeUpdate: options.beforeUpdate,
-		onUpdate: options.onUpdate,
+		afterUpdate: options.afterUpdate,
 		onSubmit: options.onSubmit,
 	}
 }

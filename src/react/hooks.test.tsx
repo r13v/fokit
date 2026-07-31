@@ -103,22 +103,22 @@ describe("React form hooks", () => {
 		const latestBeforeUpdate = vi.fn(() => [
 			{ type: "set" as const, path: "name", value: "Katherine" },
 		])
-		const firstOnUpdate = vi.fn()
-		const latestOnUpdate = vi.fn()
+		const firstAfterUpdate = vi.fn()
+		const latestAfterUpdate = vi.fn()
 		const seen: FormInstance<typeof schema, ProfileContext>[] = []
 
 		function View({
 			beforeUpdate,
-			onUpdate,
+			afterUpdate,
 		}: {
 			readonly beforeUpdate?: typeof firstBeforeUpdate
-			readonly onUpdate?: typeof firstOnUpdate
+			readonly afterUpdate?: typeof firstAfterUpdate
 		}) {
 			const form = useForm(definition, {
 				defaultValues: defaultValues(),
 				context: context(),
 				beforeUpdate,
-				onUpdate,
+				afterUpdate,
 			})
 			seen.push(form)
 			const value = useValue(form, "name")
@@ -131,18 +131,21 @@ describe("React form hooks", () => {
 		}
 
 		const { rerender } = render(
-			<View beforeUpdate={firstBeforeUpdate} onUpdate={firstOnUpdate} />,
+			<View beforeUpdate={firstBeforeUpdate} afterUpdate={firstAfterUpdate} />,
 		)
 		rerender(
-			<View beforeUpdate={latestBeforeUpdate} onUpdate={latestOnUpdate} />,
+			<View
+				beforeUpdate={latestBeforeUpdate}
+				afterUpdate={latestAfterUpdate}
+			/>,
 		)
 		fireEvent.click(screen.getByRole("button"))
 
 		expect(new Set(seen).size).toBe(1)
 		expect(firstBeforeUpdate).not.toHaveBeenCalled()
-		expect(firstOnUpdate).not.toHaveBeenCalled()
+		expect(firstAfterUpdate).not.toHaveBeenCalled()
 		expect(latestBeforeUpdate).toHaveBeenCalledTimes(1)
-		expect(latestOnUpdate).toHaveBeenCalledTimes(1)
+		expect(latestAfterUpdate).toHaveBeenCalledTimes(1)
 		expect(screen.getByRole("button").textContent).toBe("Katherine")
 	})
 
@@ -253,24 +256,24 @@ describe("React form hooks", () => {
 	})
 
 	it("fully replaces external runtime options without replacing context", () => {
-		const firstOnUpdate = vi.fn()
-		const latestOnUpdate = vi.fn()
+		const firstAfterUpdate = vi.fn()
+		const latestAfterUpdate = vi.fn()
 		const form = createForm(definition, {
 			defaultValues: defaultValues(),
 			context: context(true),
 			disabled: true,
-			onUpdate: firstOnUpdate,
+			afterUpdate: firstAfterUpdate,
 		})
 
 		form.replaceOptions({
-			onUpdate: latestOnUpdate,
+			afterUpdate: latestAfterUpdate,
 		})
 		form.setValue("name", "Grace")
 
 		expect(form.getSnapshot().context.locked).toBe(true)
 		expect(form.getSnapshot().resolvedUi.disabled).toBe(false)
-		expect(firstOnUpdate).not.toHaveBeenCalled()
-		expect(latestOnUpdate).toHaveBeenCalledTimes(1)
+		expect(firstAfterUpdate).not.toHaveBeenCalled()
+		expect(latestAfterUpdate).toHaveBeenCalledTimes(1)
 	})
 
 	it("applies one React context and option update without an intermediate snapshot", () => {
@@ -517,14 +520,14 @@ describe("React form hooks", () => {
 
 	it("uses the server snapshot for equivalent hydration and skips lifecycle hooks during Strict Mode replay", async () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
+		const afterUpdate = vi.fn()
 
 		function View() {
 			const form = useForm(definition, {
 				defaultValues: defaultValues(),
 				context: context(),
 				beforeUpdate,
-				onUpdate,
+				afterUpdate,
 			})
 			const name = useValue(form, "name")
 			const dirty = useFormState(form, (snapshot) => snapshot.isDirty)
@@ -548,7 +551,7 @@ describe("React form hooks", () => {
 
 		expect(container.textContent).toBe("Ada:false")
 		expect(beforeUpdate).not.toHaveBeenCalled()
-		expect(onUpdate).not.toHaveBeenCalled()
+		expect(afterUpdate).not.toHaveBeenCalled()
 	})
 })
 

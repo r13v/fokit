@@ -100,14 +100,14 @@ function defaultValues(values: Partial<UploadInput> = {}): UploadInput {
 
 describe("classic React reset", () => {
 	it("intercepts native reset buttons and clears same-value metadata without update hooks", async () => {
-		const onUpdate = vi.fn()
+		const afterUpdate = vi.fn()
 
 		render(
 			<kit.AutoForm
 				aria-label="Profile"
 				definition={definition}
 				defaultValues={defaultValues()}
-				onUpdate={onUpdate}
+				afterUpdate={afterUpdate}
 			>
 				<ResetState />
 				<ManualErrorButton />
@@ -125,7 +125,7 @@ describe("classic React reset", () => {
 
 		expect(screen.getByTestId("touched").textContent).toBe("false")
 		expect(screen.queryByText("Manual problem")).toBeNull()
-		expect(onUpdate).not.toHaveBeenCalled()
+		expect(afterUpdate).not.toHaveBeenCalled()
 	})
 
 	it("clears submit metadata on a same-value native reset", async () => {

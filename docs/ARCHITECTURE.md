@@ -174,7 +174,7 @@ For a normal update the store:
    state;
 6. derives a new snapshot and notifies only subscriptions whose selected value
    changed;
-7. calls `onUpdate` and schedules validation when the configured lifecycle
+7. calls `afterUpdate` and schedules validation when the configured lifecycle
    requires it.
 
 Array commands additionally preserve stable row keys and reindex touched paths

@@ -79,7 +79,7 @@ function createStore(
 		readonly defaultValues?: AccountValues
 		readonly context?: AccountContext
 		readonly beforeUpdate?: () => undefined
-		readonly onUpdate?: () => void
+		readonly afterUpdate?: () => void
 	} = {},
 ): FormStore<typeof schema, AccountContext> {
 	return createFormStore({
@@ -94,7 +94,7 @@ function createStore(
 			showCompany: true,
 		},
 		beforeUpdate: options.beforeUpdate,
-		onUpdate: options.onUpdate,
+		afterUpdate: options.afterUpdate,
 	})
 }
 
@@ -283,8 +283,8 @@ describe("form store construction and snapshots", () => {
 
 	it("reevaluates context-dependent UI without changing values, dirty state, or update hooks", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createStore({ beforeUpdate, afterUpdate })
 		const values = form.getValues()
 		const resolvedUi = form.getSnapshot().resolvedUi
 
@@ -300,6 +300,6 @@ describe("form store construction and snapshots", () => {
 		expect(snapshot.resolvedUi).not.toBe(resolvedUi)
 		expect(snapshot.resolvedUi.fieldsByPath.companyName.disabled).toBe(true)
 		expect(beforeUpdate).not.toHaveBeenCalled()
-		expect(onUpdate).not.toHaveBeenCalled()
+		expect(afterUpdate).not.toHaveBeenCalled()
 	})
 })

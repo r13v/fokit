@@ -34,7 +34,7 @@ export function createAutoFormComponent<
 		readOnly,
 		validation,
 		beforeUpdate,
-		onUpdate,
+		afterUpdate,
 		onSubmit,
 		children,
 		...formProps
@@ -53,7 +53,7 @@ export function createAutoFormComponent<
 			readOnly,
 			validation,
 			beforeUpdate,
-			onUpdate,
+			afterUpdate,
 			onSubmit,
 		})
 

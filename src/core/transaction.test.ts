@@ -128,10 +128,10 @@ function createAccountStore(
 			typeof schema,
 			AccountContext
 		>["beforeUpdate"]
-		readonly onUpdate?: FormStoreOptions<
+		readonly afterUpdate?: FormStoreOptions<
 			typeof schema,
 			AccountContext
-		>["onUpdate"]
+		>["afterUpdate"]
 	} = {},
 ): FormStore<typeof schema, AccountContext> {
 	return createFormStore({
@@ -141,7 +141,7 @@ function createAccountStore(
 			region: "EU",
 		},
 		beforeUpdate: options.beforeUpdate,
-		onUpdate: options.onUpdate,
+		afterUpdate: options.afterUpdate,
 	})
 }
 
@@ -212,8 +212,8 @@ describe("form value transactions", () => {
 
 	it("applies batched commands in order so the last overlapping write wins", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createAccountStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createAccountStore({ beforeUpdate, afterUpdate })
 
 		form.batch(() => {
 			form.setValue("profile.first", "Grace")
@@ -231,7 +231,7 @@ describe("form value transactions", () => {
 			last: "Byron",
 		})
 		expect(beforeUpdate).toHaveBeenCalledTimes(1)
-		expect(onUpdate).toHaveBeenCalledTimes(1)
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
 		expect(beforeUpdate.mock.calls[0]?.[0].changes).toEqual([
 			{
 				type: "set",
@@ -252,19 +252,19 @@ describe("form value transactions", () => {
 				value: "Byron",
 			},
 		])
-		expect(onUpdate.mock.calls[0]?.[0].changes).toEqual(
+		expect(afterUpdate.mock.calls[0]?.[0].changes).toEqual(
 			beforeUpdate.mock.calls[0]?.[0].changes,
 		)
-		expect(onUpdate.mock.calls[0]?.[0].previousValues.profile).toEqual(
+		expect(afterUpdate.mock.calls[0]?.[0].previousValues.profile).toEqual(
 			defaultValues.profile,
 		)
-		expect(onUpdate.mock.calls[0]?.[0].source).toBe("imperative")
+		expect(afterUpdate.mock.calls[0]?.[0].source).toBe("imperative")
 	})
 
 	it("skips no-op transactions without notifying subscribers or hooks", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createAccountStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createAccountStore({ beforeUpdate, afterUpdate })
 		const listener = vi.fn()
 		const snapshot = form.getSnapshot()
 		form.subscribe((next) => next.values, listener)
@@ -280,7 +280,7 @@ describe("form value transactions", () => {
 		expect(form.getSnapshot()).toBe(snapshot)
 		expect(listener).not.toHaveBeenCalled()
 		expect(beforeUpdate).not.toHaveBeenCalled()
-		expect(onUpdate).not.toHaveBeenCalled()
+		expect(afterUpdate).not.toHaveBeenCalled()
 	})
 
 	it("lets beforeUpdate accept, cancel, or replace the proposed transaction", () => {
@@ -299,15 +299,15 @@ describe("form value transactions", () => {
 		accepted.setValue("profile.first", "Grace")
 		expect(accepted.getValues().profile.first).toBe("Grace")
 
-		const cancelledOnUpdate = vi.fn()
+		const cancelledAfterUpdate = vi.fn()
 		const cancelled = createAccountStore({
 			beforeUpdate: () => false,
-			onUpdate: cancelledOnUpdate,
+			afterUpdate: cancelledAfterUpdate,
 		})
 
 		cancelled.setValue("profile.first", "Grace")
 		expect(cancelled.getValues()).toEqual(defaultValues)
-		expect(cancelledOnUpdate).not.toHaveBeenCalled()
+		expect(cancelledAfterUpdate).not.toHaveBeenCalled()
 
 		const replaced = createAccountStore({
 			beforeUpdate: () => [
@@ -394,7 +394,7 @@ describe("form value transactions", () => {
 		expect(beforeThrows.getValues()).toEqual(defaultValues)
 
 		const afterThrows = createAccountStore({
-			onUpdate: () => {
+			afterUpdate: () => {
 				throw new Error("after commit")
 			},
 		})
@@ -405,11 +405,11 @@ describe("form value transactions", () => {
 		expect(afterThrows.getValues().profile.first).toBe("Grace")
 	})
 
-	it("allows onUpdate follow-up transactions without merging them into the original commit", () => {
+	it("allows afterUpdate follow-up transactions without merging them into the original commit", () => {
 		let form: FormStore<typeof schema, AccountContext>
 		const events: string[][] = []
 		form = createAccountStore({
-			onUpdate: (event) => {
+			afterUpdate: (event) => {
 				events.push(event.changes.map((change) => change.path))
 				if (event.changes.some((change) => change.path === "profile.first")) {
 					form.setValue("profile.last", "Hopper")
@@ -429,8 +429,8 @@ describe("form value transactions", () => {
 
 	it("commits nested batches as one transaction and aborts uncommitted work on errors", () => {
 		const beforeUpdate = vi.fn()
-		const onUpdate = vi.fn()
-		const form = createAccountStore({ beforeUpdate, onUpdate })
+		const afterUpdate = vi.fn()
+		const form = createAccountStore({ beforeUpdate, afterUpdate })
 
 		form.batch(() => {
 			form.setValue("profile.first", "Grace")
@@ -445,7 +445,7 @@ describe("form value transactions", () => {
 			last: "Hopper",
 		})
 		expect(beforeUpdate).toHaveBeenCalledTimes(1)
-		expect(onUpdate).toHaveBeenCalledTimes(1)
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
 
 		const callbackThrows = createAccountStore()
 		expect(() =>

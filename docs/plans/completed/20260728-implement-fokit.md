@@ -647,7 +647,7 @@ before reset, arrays, validation, or React controls are layered on top.
   semantics and one atomic commit.
 - [x] Test `beforeUpdate` accept/cancel/replace behavior, replacement
   normalization, nested-command rejection, and thrown-hook semantics.
-- [x] Test `onUpdate` once per commit, post-commit exception behavior, nested
+- [x] Test `afterUpdate` once per commit, post-commit exception behavior, nested
   follow-up transactions, and no calls for metadata-only updates.
 - [x] Implement nested batches as one outer transaction and abort the entire
   uncommitted batch when a command or callback throws.
@@ -676,7 +676,7 @@ transaction boundary without introducing loops or partial reset metadata.
   successful committed values become the baseline, and cancelled resets apply
   no reset metadata.
 - [x] Expand visibility-driven `valuePolicy` changes to stability before
-  `beforeUpdate`, and include all effective changes in `onUpdate`.
+  `beforeUpdate`, and include all effective changes in `afterUpdate`.
 - [x] Test that invisible `valuePolicy: "unset"` fields converge without
   update loops and that a context-only visibility change creates one separate
   `source: "valuePolicy"` transaction.
@@ -1282,7 +1282,7 @@ introducing the full contract.
   including accessible label/error wiring and class/root prop preservation.
 - [x] Document dynamic `options` resolver functions backed by runtime context.
 - [x] Document visible/disabled/read-only/value-policy behavior and
-  `beforeUpdate`/`onUpdate` with one deterministic transaction example.
+  `beforeUpdate`/`afterUpdate` with one deterministic transaction example.
 - [x] Document React 18 classic submission separately from server-first React
   19 Actions.
 - [x] Document FormData serializer requirements and Action compatibility
@@ -1659,7 +1659,7 @@ Forbidden edges:
 - Consumers must not mutate snapshots or non-plain retained values.
 - All value mutations pass through one synchronous transaction.
 - `beforeUpdate` sees the complete proposed change including `valuePolicy`;
-  `onUpdate` observes one committed change.
+  `afterUpdate` observes one committed change.
 - Row keys are deterministic store metadata, never submitted values.
 - Validation output never overwrites input values.
 - `validationStatus` applies only to the current value snapshot.

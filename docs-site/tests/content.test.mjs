@@ -74,7 +74,7 @@ const canonicalPages = [
 		route: "/guides/transaction-hooks",
 		title: "Transaction hooks",
 		description:
-			"Inspect, change, cancel, and observe each atomic form update with beforeUpdate and onUpdate.",
+			"Inspect, change, cancel, and observe each atomic form update with beforeUpdate and afterUpdate.",
 	},
 	{
 		path: "src/pages/guides/arrays.mdx",
@@ -237,7 +237,7 @@ const canonicalSnippets = [
 			"preserveDateRange",
 			"extendValueChanges",
 			"BeforeUpdateEvent",
-			"onUpdate",
+			"afterUpdate",
 		],
 	},
 	{
@@ -609,7 +609,7 @@ const requiredGuidePageContent = {
 			"Choose the correct mechanism",
 			"Follow one transaction",
 			"Preserve an invariant with beforeUpdate",
-			"Observe a commit with onUpdate",
+			"Observe a commit with afterUpdate",
 			"Identify the update source",
 			"Know when hooks do not run",
 			"Use both hooks",
@@ -1391,8 +1391,8 @@ test("transaction hooks guide separates transforms from post-commit effects", as
 
 	assert.match(source, /A returned array does not append changes/)
 	assert.match(source, /Do not call a value command from\s+`beforeUpdate`/)
-	assert.match(source, /does\s+not call `onUpdate` for that transaction/)
-	assert.match(source, /does not roll back a commit when `onUpdate` throws/)
+	assert.match(source, /does\s+not call `afterUpdate` for that transaction/)
+	assert.match(source, /does not roll back a commit when `afterUpdate` throws/)
 	assert.match(source, /Put validity rules in the schema/)
 	assert.match(source, /~\/snippets\/transaction-hooks\.tsx/)
 	assert.match(snippet, /Alternative 1: Accept the complete proposal/)

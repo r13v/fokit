@@ -108,7 +108,7 @@ export function ScheduleEditor() {
 			beforeUpdate={preserveDateRange}
 			defaultValues={defaultValues}
 			definition={scheduleDefinition}
-			onUpdate={(event) => setLastUpdate(describeUpdate(event))}
+			afterUpdate={(event) => setLastUpdate(describeUpdate(event))}
 		>
 			<output aria-live="polite">{lastUpdate}</output>
 		</kit.AutoForm>

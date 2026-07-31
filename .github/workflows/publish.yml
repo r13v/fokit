@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable GitHub release tag to publish
+        required: true
+        type: string
 
 concurrency:
   group: release-${{ github.ref }}
@@ -18,15 +24,30 @@ jobs:
       issues: write
       pull-requests: write
     outputs:
-      created: ${{ steps.release.outputs.release_created }}
-      tag: ${{ steps.release.outputs.tag_name }}
+      created: ${{ steps.release.outputs.release_created || steps.retry.outputs.created }}
+      tag: ${{ steps.release.outputs.tag_name || steps.retry.outputs.tag }}
 
     steps:
       - name: Run Release Please
         id: release
+        if: github.event_name == 'push'
         uses: googleapis/release-please-action@v4
         with:
           release-type: node
+
+      - name: Reuse existing GitHub release
+        id: retry
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a stable release tag such as v1.0.0, got: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish to npm
@@ -58,14 +79,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install docs dependencies
+        run: npm ci --prefix docs-site
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
       - name: Verify package
         run: npm run verify
-
-      - name: Install docs dependencies
-        run: npm ci --prefix docs-site
 
       - name: Verify docs site
         run: npm run site:verify

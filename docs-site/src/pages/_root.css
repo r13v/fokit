@@ -43,6 +43,30 @@ a {
 	text-underline-offset: 0.18em;
 }
 
+.form-please-overview-hero {
+	align-items: center;
+	display: grid;
+	gap: clamp(1.5rem, 5vw, 3.5rem);
+	grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+}
+
+.form-please-overview-intro {
+	grid-column: 1;
+	grid-row: 1;
+}
+
+.form-please-overview-intro-text {
+	margin-top: 20px;
+	text-wrap: balance;
+}
+
+.form-please-overview-logo {
+	block-size: auto;
+	grid-column: 2;
+	grid-row: 1;
+	inline-size: 100%;
+}
+
 .form-please-overview-actions {
 	display: flex;
 	flex-wrap: wrap;
@@ -74,6 +98,28 @@ a {
 .form-please-overview-actions a:focus-visible {
 	outline: 2px solid var(--fp-brand-green);
 	outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+	.form-please-overview-hero {
+		gap: 1rem;
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.form-please-overview-intro,
+	.form-please-overview-logo {
+		grid-column: 1;
+	}
+
+	.form-please-overview-logo {
+		grid-row: 1;
+		inline-size: min(55vw, 200px);
+		justify-self: center;
+	}
+
+	.form-please-overview-intro {
+		grid-row: 2;
+	}
 }
 
 .form-please-lab {

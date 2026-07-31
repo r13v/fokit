@@ -1,7 +1,7 @@
 import { defineConfig } from "vocs/config"
 
 export default defineConfig({
-	title: "Fokit",
+	title: "Form, Please",
 	description:
 		"Typed, schema-validated React forms that keep native HTML semantics and your design system.",
 	baseUrl: process.env.BASE_URL ?? "https://r13v.github.io",
@@ -14,9 +14,9 @@ export default defineConfig({
 			dark: "github-dark",
 		},
 	},
-	socials: [{ icon: "github", link: "https://github.com/r13v/fokit" }],
+	socials: [{ icon: "github", link: "https://github.com/r13v/form-please" }],
 	editLink: {
-		link: "https://github.com/r13v/fokit/edit/main/docs-site/:path",
+		link: "https://github.com/r13v/form-please/edit/main/docs-site/:path",
 		text: "Edit this page",
 	},
 	sidebar: [
@@ -73,11 +73,11 @@ export default defineConfig({
 				{ text: "TypeScript", link: "/types" },
 				{
 					text: "LLM documentation index",
-					link: "https://r13v.github.io/fokit/llms.txt",
+					link: "https://r13v.github.io/form-please/llms.txt",
 				},
 				{
 					text: "Full documentation for LLMs",
-					link: "https://r13v.github.io/fokit/llms-full.txt",
+					link: "https://r13v.github.io/form-please/llms-full.txt",
 				},
 			],
 		},

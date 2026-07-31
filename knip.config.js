@@ -10,7 +10,7 @@ export default {
 		mdx: true,
 	},
 	ignore: ["tests/fixtures/**"],
-	ignoreDependencies: ["fokit", "zod"],
+	ignoreDependencies: ["form-please", "zod"],
 	ignoreFiles: [],
 	workspaces: {
 		".": {

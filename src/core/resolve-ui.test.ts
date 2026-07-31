@@ -588,7 +588,7 @@ describe("resolveUi", () => {
 		)
 		const activeChange = resolveUi(
 			definition,
-			{ ...values, kind: "company", companyName: "Fokit" },
+			{ ...values, kind: "company", companyName: "Form Please" },
 			context,
 			{ previous: previousBranchChange },
 		)
@@ -608,7 +608,7 @@ describe("resolveUi", () => {
 		expect(previousBranchChange.fieldsByPath.name.label).toBe(
 			"Company: Difference Engines",
 		)
-		expect(activeChange.fieldsByPath.name.label).toBe("Company: Fokit")
+		expect(activeChange.fieldsByPath.name.label).toBe("Company: Form Please")
 		expect(label).toHaveBeenCalledTimes(3)
 	})
 

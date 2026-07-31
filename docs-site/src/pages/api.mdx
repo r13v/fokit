@@ -1,6 +1,6 @@
 ---
 title: API
-description: Signatures, defaults, and entry-point boundaries for Fokit's public React, core, server, and React 19 APIs.
+description: Signatures, defaults, and entry-point boundaries for the public React, core, server, and React 19 APIs in Form, Please.
 showAskAi: false
 ---
 
@@ -13,13 +13,13 @@ flows behind an API, follow the linked guide.
 
 | Import | Use it for |
 | --- | --- |
-| `fokit` | React kits, native controls, generated forms, hooks, classic submit, and shared types |
-| `fokit/core` | React-free stores, definitions, derived UI, paths, and immutable value helpers |
-| `fokit/server` | Safe FormData normalization, Standard Schema validation, `FormResult`, and `SubmissionIssue` |
-| `fokit/react19` | `ActionForm` and `ActionSubmit` |
-| `fokit/layout.css` | Optional structural layout |
+| `form-please` | React kits, native controls, generated forms, hooks, classic submit, and shared types |
+| `form-please/core` | React-free stores, definitions, derived UI, paths, and immutable value helpers |
+| `form-please/server` | Safe FormData normalization, Standard Schema validation, `FormResult`, and `SubmissionIssue` |
+| `form-please/react19` | `ActionForm` and `ActionSubmit` |
+| `form-please/layout.css` | Optional structural layout |
 
-Start product forms from `fokit`. Import a narrower entry only where that
+Start product forms from `form-please`. Import a narrower entry only where that
 boundary belongs in the application.
 
 ## createFormKit
@@ -32,7 +32,7 @@ createFormKit({ controls, slots? }) => FormKit
 from `createDefaultSlots()` when the kit is created.
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "form-please"
 
 const kit = createFormKit({
 	controls: nativeControls,
@@ -66,7 +66,7 @@ add-only; a duplicate inherited name is a type error and a runtime error.
 Slots are partial replacements. Provide at least one of `controls` or `slots`.
 
 ```ts twoslash
-import { createFormKit, defineControl, nativeControls } from "fokit"
+import { createFormKit, defineControl, nativeControls } from "form-please"
 
 const baseKit = createFormKit({ controls: nativeControls })
 const money = defineControl<number>({
@@ -111,7 +111,7 @@ resolver call are tracked automatically.
 The normalized result is frozen and reusable across form instances.
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -144,7 +144,7 @@ as `ui` or spread into the root `ui` array. Normalization erases the fragment
 boundary and produces ordinary absolute nodes.
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({
@@ -182,7 +182,7 @@ import {
 	type RenderNodeProps,
 	useFormContext,
 	useFormState,
-} from "fokit"
+} from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -210,7 +210,7 @@ kit.defineForm(schema)({
 Render nodes accept `visible`, `disabled`, and `readOnly`. An invisible node is
 unmounted; a mounted component receives effective `disabled` and `readOnly`
 props after parent and form state are inherited. It may use public hooks for
-values. Fokit provides no field, layout, accessibility, command ownership, or
+values. Form, Please provides no field, layout, accessibility, command ownership, or
 FormData behavior for its contents, so the component must honor the flags in
 its arbitrary DOM. Render nodes work at the root and inside sections, but not
 inside array rows.
@@ -225,7 +225,7 @@ property: (values, { context }) => result
 Destructuring reads and tracks only the named paths:
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({
@@ -279,7 +279,7 @@ fromResource(selector, cases) => UiResolver
 `ResourceState` describes availability without owning a request lifecycle:
 
 ```ts twoslash
-import type { ResourceState } from "fokit"
+import type { ResourceState } from "form-please"
 
 type Permission = ResourceState<
 	{ readonly canEdit: boolean },
@@ -291,7 +291,7 @@ Both helpers require `pending`, `success`, and `error` case functions and narrow
 the state passed to each function. `matchResource` maps an immediate state:
 
 ```ts twoslash
-import { matchResource, type ResourceState } from "fokit"
+import { matchResource, type ResourceState } from "form-please"
 
 declare const permission: ResourceState<{ readonly canEdit: boolean }, Error>
 
@@ -311,7 +311,7 @@ import {
 	fromResource,
 	type ResourceState,
 	type UiResolver,
-} from "fokit"
+} from "form-please"
 
 type Input = { readonly kind: "person" | "company" }
 type Context = {
@@ -333,7 +333,7 @@ const disabled = fromResource(
 )
 ```
 
-Selectors and case functions run synchronously. Fokit does not start, cache,
+Selectors and case functions run synchronously. Form, Please does not start, cache,
 retry, or cancel requests, and it does not add query-library states. See
 [Async fields](/guides/async-fields) for field, section, whole-form, skeleton,
 and TanStack Query adapter examples.
@@ -440,13 +440,13 @@ Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
 The submit callback receives `{ value, input, form, formData }`. `value` is
 validated `FormOutput`; `input` is the captured editable shape.
 
-If `onSubmit` returns a promise, Fokit waits for it. `isSubmitting` remains
+If `onSubmit` returns a promise, Form, Please waits for it. `isSubmitting` remains
 `true`, and `kit.Submit` remains disabled until the promise settles. Concurrent
 submit attempts use the same in-flight promise and do not call `onSubmit`
 again.
 
-Fokit does not reset the form after success. Call `form.reset(...)` explicitly
-when saved values must become the new baseline. Fokit does not convert a thrown
+Form, Please does not reset the form after success. Call `form.reset(...)` explicitly
+when saved values must become the new baseline. Form, Please does not convert a thrown
 error or rejected promise into a form issue. Handle expected failures in the
 callback and use `form.setErrors(...)` for user-visible issues.
 
@@ -463,7 +463,7 @@ instance; changing `defaultValues` does not overwrite edits.
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls, useForm } from "fokit"
+import { createFormKit, nativeControls, useForm } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -501,7 +501,7 @@ Use `createForm` when the instance must exist outside a React component:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createForm, createFormKit, nativeControls, useForm } from "fokit"
+import { createForm, createFormKit, nativeControls, useForm } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -632,7 +632,7 @@ The component receives typed `ControlProps`: value, `setValue`, `blur`, native
 input wiring, metadata, options, context, and interaction state.
 
 `formData.mode` is `"native"`, `"hidden"`, or `"none"`. A serializer returns
-the entries used when Fokit must represent the value outside a visible native
+the entries used when Form, Please must represent the value outside a visible native
 control.
 
 `nativeControls` contains `text`, `textarea`, `select`, `checkbox`, `number`,
@@ -666,7 +666,7 @@ If you omit `type`, the control uses `"text"`.
 `select.options` is required.
 
 Define `select.emptyOption` when the current value can be `undefined`. It adds a
-separate option with `value=""`. Fokit maps this option to `undefined`.
+separate option with `value=""`. Form, Please maps this option to `undefined`.
 
 Without `emptyOption`, a normal option with `value=""` remains an empty string.
 
@@ -718,7 +718,7 @@ The parser reconstructs nested values and arrays, rejects unsafe structures,
 then validates with Standard Schema.
 
 ```ts twoslash
-import { parseFormData } from "fokit/server"
+import { parseFormData } from "form-please/server"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string().min(1) })
@@ -741,14 +741,14 @@ Framework-level request and file limits still run first.
 ## React 19
 
 `ActionForm` renders a normalized definition into a native React 19 Action
-form. `ActionSubmit` follows React pending status and Fokit submission state.
-Both come from `fokit/react19`.
+form. `ActionSubmit` follows React pending status and Form, Please submission state.
+Both come from `form-please/react19`.
 
 See the end-to-end [React 19 Actions guide](/guides/react-19-actions).
 
 ## React-free core
 
-Use `fokit/core` in shared packages, non-React runtimes, and focused tests.
+Use `form-please/core` in shared packages, non-React runtimes, and focused tests.
 
 - `createFormStore` creates the immutable external store.
 - Resolver functions in definitions derive UI with tracked value reads.

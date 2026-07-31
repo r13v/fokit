@@ -26,7 +26,7 @@ type Schema = StandardSchemaV1<Values>
 const schema = {
 	"~standard": {
 		version: 1,
-		vendor: "fokit-test",
+		vendor: "form-please-test",
 		validate(value) {
 			const input = value as Values
 			return {
@@ -193,8 +193,8 @@ describe("generated field accessibility", () => {
 			"profile-email-description profile-email-error-0",
 		)
 		expect(email.getAttribute("aria-invalid")).toBe("true")
-		expect(error.getAttribute("data-fokit-node")).toBe("error-message")
-		expect(error.getAttribute("data-fokit-path")).toBe("email")
+		expect(error.getAttribute("data-fp-node")).toBe("error-message")
+		expect(error.getAttribute("data-fp-path")).toBe("email")
 	})
 
 	it("preserves generated label, description, error, and focus props with the default slots", async () => {
@@ -212,12 +212,12 @@ describe("generated field accessibility", () => {
 		)
 
 		const email = screen.getByLabelText("Email") as HTMLInputElement
-		const fieldRoot = email.closest("[data-fokit-node='field']")
+		const fieldRoot = email.closest("[data-fp-node='field']")
 		if (!(fieldRoot instanceof HTMLElement)) {
 			throw new Error("Expected default field root")
 		}
 
-		expect(fieldRoot.getAttribute("data-fokit-path")).toBe("email")
+		expect(fieldRoot.getAttribute("data-fp-path")).toBe("email")
 		expect(fieldRoot.hasAttribute("data-required")).toBe(true)
 		expect(screen.getByText("Email").id).toBe("profile-email-label")
 		expect(screen.getByText("Used for receipts").id).toBe(
@@ -238,8 +238,8 @@ describe("generated field accessibility", () => {
 
 		expect(error.textContent).toBe("Email is invalid")
 		expect(error.id).toBe("profile-email-error-0")
-		expect(error.getAttribute("data-fokit-node")).toBe("error-message")
-		expect(error.getAttribute("data-fokit-path")).toBe("email")
+		expect(error.getAttribute("data-fp-node")).toBe("error-message")
+		expect(error.getAttribute("data-fp-path")).toBe("email")
 		expect(email.getAttribute("aria-describedby")).toBe(
 			"profile-email-description profile-email-error-0",
 		)
@@ -308,8 +308,8 @@ function ErrorMessage({ rootProps, issue }: ErrorMessageSlotProps) {
 
 function pathFrom(rootProps: FieldSlotProps["rootProps"]): string {
 	return String(
-		(rootProps as FieldSlotProps["rootProps"] & { "data-fokit-path": string })[
-			"data-fokit-path"
+		(rootProps as FieldSlotProps["rootProps"] & { "data-fp-path": string })[
+			"data-fp-path"
 		],
 	)
 }

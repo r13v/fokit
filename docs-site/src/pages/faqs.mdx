@@ -1,17 +1,17 @@
 ---
 title: FAQs
-description: Direct answers about when to use Fokit, validation, defaults, design systems, servers, and React versions.
+description: Direct answers about when to use Form, Please, validation, defaults, design systems, servers, and React versions.
 showAskAi: false
 ---
 
 # FAQs
 
-Use these answers to resolve common setup and integration questions. Fokit owns
+Use these answers to resolve common setup and integration questions. Form, Please owns
 form state and native form behavior. Your application owns its visual system.
 
-## Why use Fokit instead of a smaller form hook?
+## Why use Form, Please instead of a smaller form hook?
 
-Use Fokit when a product needs one state model for:
+Use Form, Please when a product needs one state model for:
 
 - schema-owned validation and typed transformations;
 - generated or manual rendering;
@@ -20,21 +20,21 @@ Use Fokit when a product needs one state model for:
 - React 19 support.
 
 For a few uncontrolled inputs and one submit handler, the browser can be the
-simpler tool. See [When to reach for Fokit](/#when-to-reach-for-fokit).
+simpler tool. See [When to reach for Form, Please](/#when-to-reach-for-form-please).
 
-## Does Fokit require Zod?
+## Does Form, Please require Zod?
 
-No. Fokit accepts any schema library that implements Standard Schema. The
+No. Form, Please accepts any schema library that implements Standard Schema. The
 documentation uses Zod because it implements that contract.
 
-## Are Fokit controls controlled or uncontrolled?
+## Are Form, Please controls controlled or uncontrolled?
 
-The Fokit store controls product values. Custom controls read `value` and write
+The Form, Please store controls product values. Custom controls read `value` and write
 changes through `setValue`.
 
 Explicit control serialization preserves native `FormData` behavior. The
 `file` control is the DOM exception. The browser owns the selected file list,
-and Fokit stores the first selected `File | undefined`.
+and Form, Please stores the first selected `File | undefined`.
 
 Read [Controls and design systems](/guides/controls) for the adapter contract.
 
@@ -67,9 +67,9 @@ Changing the `defaultValues` prop does not silently overwrite user edits. The
 [loaded edit-form recipe](/advanced#load-an-edit-form-baseline) shows the
 deliberate reset path.
 
-## Does Fokit support async validation?
+## Does Form, Please support async validation?
 
-Yes. Standard Schema validation can return a promise. Fokit exposes
+Yes. Standard Schema validation can return a promise. Form, Please exposes
 `isValidating` and ignores stale results. Set `asyncDebounceMs` to debounce
 change-triggered asynchronous validation.
 
@@ -86,7 +86,7 @@ Start with `nativeControls`, then replace only the product-specific parts.
 ## Why is there no built-in theme?
 
 Form state does not dictate product styling. `createDefaultSlots()` renders
-accessible unstyled structure. `fokit/layout.css` adds only responsive layout.
+accessible unstyled structure. `form-please/layout.css` adds only responsive layout.
 
 Colors, typography, focus rings, density, and control polish stay in the
 application. Start with the copyable [styling baseline](/guides/styling).
@@ -102,7 +102,7 @@ FormData. See [Conditional fields](/guides/conditional-fields).
 
 ## How do I reset a form?
 
-Call `form.reset()`, or use a native reset button inside `kit.Form`. Fokit
+Call `form.reset()`, or use a native reset button inside `kit.Form`. Form, Please
 resets the store and prevents controlled inputs from resetting independently.
 
 `form.reset(nextValues)` replaces the baseline. Both forms clear dirty,
@@ -110,7 +110,7 @@ touched, validation, issue, and submission metadata.
 
 ## Why does `onSubmit` not run?
 
-The form contains a schema issue. Fokit exposes the visible issues and focuses
+The form contains a schema issue. Form, Please exposes the visible issues and focuses
 the first visible invalid control. Correct the issues, then submit again.
 
 If the issue belongs to a hidden field, check its schema rule and
@@ -128,8 +128,8 @@ form issues automatically. Both paths are covered in
 
 ## How do React 18 and React 19 differ?
 
-The main `fokit` entry supports classic submission in React 18 and React 19.
-React 19 Actions are available only from `fokit/react19`. React 18 consumers do
+The main `form-please` entry supports classic submission in React 18 and React 19.
+React 19 Actions are available only from `form-please/react19`. React 18 consumers do
 not load or typecheck Action-only APIs.
 
 Use the [submission ownership table](/guides/react-19-actions#choose-the-submission-owner)
@@ -141,9 +141,9 @@ No. The store uses external subscriptions. `useValue`, `useField`,
 `useArrayField`, and `useFormState` select focused slices. UI resolvers
 automatically track the paths that they read.
 
-## Does Fokit provide wizards or autosave?
+## Does Form, Please provide wizards or autosave?
 
-No. Fokit does not impose a wizard or autosave abstraction. Keep page
+No. Form, Please does not impose a wizard or autosave abstraction. Keep page
 navigation, draft persistence, and retry policy in application code. Reuse the
 same form instance and typed commands.
 

@@ -12,7 +12,11 @@ const docsPlaywrightConfig = await readOptionalFile("playwright.docs.config.ts")
 const pages = parse(pagesWorkflow) as Record<string, unknown>
 const publish = parse(publishWorkflow) as Record<string, unknown>
 const pagesUrlExpression = "$" + "{{ steps.deployment.outputs.page_url }}"
-const releaseTagExpression = "$" + "{{ github.event.release.tag_name }}"
+const githubRefExpression = "$" + "{{ github.ref }}"
+const releaseCreatedExpression =
+	"$" + "{{ steps.release.outputs.release_created }}"
+const releaseTagExpression = "$" + "{{ steps.release.outputs.tag_name }}"
+const publishTagExpression = "$" + "{{ needs.release.outputs.tag }}"
 
 describe("GitHub Pages workflow", () => {
 	it("deploys verified docs-site output from GitHub Actions", () => {
@@ -25,10 +29,10 @@ describe("GitHub Pages workflow", () => {
 			(step) => step.run === "npm ci --prefix docs-site",
 		)
 		const docsVerifyIndex = buildSteps.findIndex(
-			(step) => step.run === "BASE_PATH=/fokit npm run site:verify",
+			(step) => step.run === "BASE_PATH=/form-please npm run site:verify",
 		)
 		const docsVerifyRunIndex = buildRuns.indexOf(
-			"BASE_PATH=/fokit npm run site:verify",
+			"BASE_PATH=/form-please npm run site:verify",
 		)
 		const artifactIndex = buildSteps.findIndex(
 			(step) => step.uses === "actions/upload-pages-artifact@v4",
@@ -69,7 +73,7 @@ describe("GitHub Pages workflow", () => {
 			"npm ci",
 			"npm ci --prefix docs-site",
 			"npx playwright install --with-deps chromium",
-			"BASE_PATH=/fokit npm run site:verify",
+			"BASE_PATH=/form-please npm run site:verify",
 		])
 		expect(docsInstallIndex).toBeLessThan(docsVerifyIndex)
 		expect(docsVerifyRunIndex).toBeGreaterThan(-1)
@@ -88,7 +92,7 @@ describe("GitHub Pages workflow", () => {
 	})
 
 	it("previews the Vocs build without overriding its base path", () => {
-		expect(docsPlaywrightConfig).toContain("/fokit/")
+		expect(docsPlaywrightConfig).toContain("/form-please/")
 		expect(docsPlaywrightConfig).not.toMatch(/\s--base(?:\s|=)/)
 	})
 
@@ -101,30 +105,57 @@ describe("GitHub Pages workflow", () => {
 })
 
 describe("trusted npm publishing workflow", () => {
-	it("runs only for stable published GitHub Releases with OIDC permissions", () => {
+	it("prepares GitHub releases from conventional commits on main", () => {
+		const releaseJob = job(publish, "release")
+		const steps = workflowSteps(releaseJob)
+
+		expect(publish.name).toBe("Publish")
+		expect(record(record(publish.on).push).branches).toEqual(["main"])
+		expect(publish.permissions).toBeUndefined()
+		expect(record(publish.concurrency)).toEqual({
+			group: `release-${githubRefExpression}`,
+			"cancel-in-progress": false,
+		})
+		expect(releaseJob["runs-on"]).toBe("ubuntu-latest")
+		expect(record(releaseJob.permissions)).toEqual({
+			contents: "write",
+			issues: "write",
+			"pull-requests": "write",
+		})
+		expect(record(releaseJob.outputs)).toEqual({
+			created: releaseCreatedExpression,
+			tag: releaseTagExpression,
+		})
+		expect(steps).toHaveLength(1)
+		expect(steps[0]?.id).toBe("release")
+		expect(steps[0]?.uses).toBe("googleapis/release-please-action@v4")
+		expect(record(steps[0]?.with)["release-type"]).toBe("node")
+	})
+
+	it("publishes only versions released by Release Please with OIDC", () => {
 		const publishJob = job(publish, "publish")
 		const steps = workflowSteps(publishJob)
 
-		expect(publish.name).toBe("Publish")
-		expect(record(record(publish.on).release).types).toEqual(["published"])
-		expect(publishJob.if).toBe("github.event.release.prerelease == false")
-		expect(record(publish.permissions)).toEqual({
+		expect(publishJob.needs).toBe("release")
+		expect(publishJob.if).toBe("needs.release.outputs.created == 'true'")
+		expect(record(publishJob.permissions)).toEqual({
 			contents: "read",
 			"id-token": "write",
 		})
-		expect(record(publish.concurrency)).toEqual({
-			group: `release-${releaseTagExpression}`,
-			"cancel-in-progress": false,
-		})
 		expect(publishJob["runs-on"]).toBe("ubuntu-latest")
 		expect(steps[0]?.uses).toBe("actions/checkout@v6")
+		expect(record(steps[0]?.with).ref).toBe(publishTagExpression)
 		expect(steps[1]?.uses).toBe("actions/setup-node@v6")
 		expect(record(steps[1]?.with)["node-version"]).toBe(24)
 		expect(record(steps[1]?.with)["registry-url"]).toBe(
 			"https://registry.npmjs.org",
 		)
 		expect(record(steps[1]?.with).cache).toBeUndefined()
-		expect(record(publish.permissions).pages).toBeUndefined()
+		expect(record(steps[1]?.with)["package-manager-cache"]).toBe(false)
+		expect(record(publishJob.permissions).pages).toBeUndefined()
+		expect(
+			record(job(publish, "release").permissions)["id-token"],
+		).toBeUndefined()
 		expect(publishJob.environment).toBeUndefined()
 	})
 
@@ -133,8 +164,8 @@ describe("trusted npm publishing workflow", () => {
 		const releaseGuard = steps[2]
 		const runs = steps.map((step) => step.run).filter(Boolean)
 
-		expect(record(releaseGuard?.env).FOKIT_RELEASE_TAG).toBe(
-			releaseTagExpression,
+		expect(record(releaseGuard?.env).FORM_PLEASE_RELEASE_TAG).toBe(
+			publishTagExpression,
 		)
 		expect(runs).toEqual([
 			"node scripts/verify-release.mjs",
@@ -151,8 +182,8 @@ describe("trusted npm publishing workflow", () => {
 		)
 	})
 
-	it("does not configure branch publishing or long-lived npm credentials", () => {
-		expect(publishWorkflow).not.toContain("push:")
+	it("does not configure alternate triggers or long-lived npm credentials", () => {
+		expect(record(publish.on).release).toBeUndefined()
 		expect(publishWorkflow).not.toContain("workflow_dispatch:")
 		expect(publishWorkflow).not.toContain("pull_request:")
 		expect(publishWorkflow).not.toContain("NPM_TOKEN")

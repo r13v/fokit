@@ -177,7 +177,9 @@ function createClassicSubmissionController<
 
 			if (element === undefined) {
 				return Promise.reject(
-					new Error("Cannot submit a Fokit form before kit.Form is mounted"),
+					new Error(
+						"Cannot submit a Form Please form before kit.Form is mounted",
+					),
 				)
 			}
 
@@ -203,7 +205,9 @@ function getController<Schema extends StandardSchema, Context>(
 		form as FormStore<StandardSchema, unknown>,
 	)
 	if (controller === undefined) {
-		throw new TypeError("Fokit form submission controller is not attached")
+		throw new TypeError(
+			"Form Please form submission controller is not attached",
+		)
 	}
 
 	return controller
@@ -240,8 +244,6 @@ function focusSubmitIssues<Schema extends StandardSchema, Context>(
 	}
 
 	formElement
-		.querySelector<HTMLElement>(
-			'[data-fokit-node="error-message"][tabindex="-1"]',
-		)
+		.querySelector<HTMLElement>('[data-fp-node="error-message"][tabindex="-1"]')
 		?.focus()
 }

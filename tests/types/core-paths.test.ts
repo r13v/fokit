@@ -127,7 +127,7 @@ const _dottedKeyPath: FieldPath<{ "address.city": string }> = "address.city"
 const _numericObjectKeyPath: FieldPath<{ 0: string }> = "0"
 
 // @ts-expect-error reserved metadata is not user form data
-const _reservedPath: FieldPath<{ __fokit: string }> = "__fokit"
+const _reservedPath: FieldPath<{ __fp: string }> = "__fp"
 
 // @ts-expect-error array paths are distinct from scalar/object field paths
 const _nonArrayPath: ArrayFieldPath<ExampleInput> = "address.city"

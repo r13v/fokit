@@ -23,7 +23,7 @@ export type FormProviderProps<
 
 export function FormProvider<Schema extends StandardSchema, Context = unknown>({
 	form,
-	idPrefix = "fokit-form",
+	idPrefix = "form-please-form",
 	children,
 }: FormProviderProps<Schema, Context>) {
 	return (
@@ -44,7 +44,7 @@ export function useFormContext<
 >(): FormInstance<Schema, Context> {
 	const form = useContext(FormContext)
 	if (form === null) {
-		throw new Error("Fokit form context is missing")
+		throw new Error("Form Please form context is missing")
 	}
 
 	return form.form as FormInstance<Schema, Context>
@@ -53,7 +53,7 @@ export function useFormContext<
 export function useFormIdPrefix(): string {
 	const form = useContext(FormContext)
 	if (form === null) {
-		throw new Error("Fokit form context is missing")
+		throw new Error("Form Please form context is missing")
 	}
 
 	return form.idPrefix

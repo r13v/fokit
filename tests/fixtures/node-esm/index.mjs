@@ -1,11 +1,15 @@
-import { createDefaultSlots, nativeControls } from "fokit"
-import { createFormStore, normalizeDefinition, parsePath } from "fokit/core"
-import { parseFormData } from "fokit/server"
+import { createDefaultSlots, nativeControls } from "form-please"
+import {
+	createFormStore,
+	normalizeDefinition,
+	parsePath,
+} from "form-please/core"
+import { parseFormData } from "form-please/server"
 
 const schema = {
 	"~standard": {
 		version: 1,
-		vendor: "fokit-smoke",
+		vendor: "form-please-smoke",
 		validate(value) {
 			return { value }
 		},
@@ -48,8 +52,8 @@ if (nativeControls.text.formData.mode !== "native") {
 	throw new Error("ESM root export did not expose nativeControls")
 }
 
-const coreExports = await import("fokit/core")
-const serverExports = await import("fokit/server")
+const coreExports = await import("form-please/core")
+const serverExports = await import("form-please/server")
 
 if ("createDefaultSlots" in coreExports || "nativeControls" in coreExports) {
 	throw new Error("ESM core entry leaked React defaults")
@@ -67,7 +71,7 @@ if (parsePath("tags.0").length !== 2) {
 }
 
 const formData = new FormData()
-formData.append("__fokit.array", "tags")
+formData.append("__fp.array", "tags")
 formData.append("name", "Grace")
 formData.append("tags", "compiler")
 

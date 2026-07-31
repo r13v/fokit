@@ -1,6 +1,6 @@
 ---
 title: Get started
-description: Build and submit your first typed Fokit form, then see how schema, UI, and controls fit together.
+description: Build and submit your first typed form with Form, Please, then see how schema, UI, and controls fit together.
 showAskAi: false
 ---
 
@@ -20,17 +20,17 @@ You need:
 - TypeScript;
 - a schema library that implements Standard Schema.
 
-This guide uses Zod. Fokit does not require Zod or a Zod adapter.
+This guide uses Zod. Form, Please does not require Zod or a Zod adapter.
 
 ## Installation
 
-Install Fokit and the schema library used in this guide:
+Install `form-please` and the schema library used in this guide:
 
 ```sh
-npm install fokit zod
+npm install form-please zod
 ```
 
-Fokit declares React and React DOM as peer dependencies. Both use the range
+Form, Please declares React and React DOM as peer dependencies. Both use the range
 `^18.0.0 || ^19.0.0`.
 
 ## Build your first form
@@ -51,21 +51,21 @@ Complete these checks:
 2. Select Company. The company name field appears.
 3. Select Personal. The company name field disappears.
 4. Replace the contact email with an invalid value.
-5. Submit the form again. Fokit shows the schema issue and focuses the email
+5. Submit the form again. Form, Please shows the schema issue and focuses the email
    control.
 6. Restore a valid email and submit. The handler receives
    `FormOutput<typeof profileSchema>`.
 
 The shipped controls and slots are accessible semantic HTML, not a visual
-theme. For optional structural spacing, import `fokit/layout.css` in your
+theme. For optional structural spacing, import `form-please/layout.css` in your
 application entry point. You can also style the exposed markup yourself.
 
 ## What just happened
 
 ### Schema owns validity
 
-`profileSchema` contains all validation rules. Fokit stores editable
-`FormInput<typeof profileSchema>` values. After successful validation, Fokit
+`profileSchema` contains all validation rules. Form, Please stores editable
+`FormInput<typeof profileSchema>` values. After successful validation, Form, Please
 passes `FormOutput<typeof profileSchema>` to `onSubmit`.
 
 This separation lets schema transforms change the output type without replacing
@@ -77,11 +77,11 @@ the editable values.
 must wait for a client request. For example, use
 `onSubmit={async ({ value }) => { await saveProfile(value) }}`.
 
-Fokit keeps `isSubmitting` set to `true` while it waits. `kit.Submit` stays
+Form, Please keeps `isSubmitting` set to `true` while it waits. `kit.Submit` stays
 disabled until the promise settles. Concurrent submit attempts use the same
 in-flight promise and do not call `onSubmit` again.
 
-Fokit does not reset the form after success. Call `form.reset(...)` when saved
+Form, Please does not reset the form after success. Call `form.reset(...)` when saved
 values must become the new baseline. A rejected promise is not a validation
 issue. Handle expected request failures in `onSubmit`, and call
 `form.setErrors(...)` when the form must show an issue.
@@ -89,7 +89,7 @@ issue. Handle expected request failures in `onSubmit`, and call
 ### UI definition owns structure
 
 `profileDefinition` specifies paths, controls, labels, and presentation options.
-Fokit does not infer the UI from Zod or other schema metadata. A schema change
+Form, Please does not infer the UI from Zod or other schema metadata. A schema change
 therefore cannot silently change the product UI.
 
 ### The kit owns rendering
@@ -108,7 +108,7 @@ reset, blur-first validation, compact default array actions, and live state
 panels. Edit the form. Then compare its values, visible issues, and browser
 submission payload.
 
-### Interactive Fokit Lab
+### Interactive Form, Please Lab
 
 <InteractiveLab />
 
@@ -120,7 +120,7 @@ submission payload.
 - Stable array commands and explicit hidden-value behavior.
 - Granular subscriptions for manual rendering.
 - Native names and `FormData` coordination for classic submission.
-- An isolated `fokit/react19` entry for React 19 Actions.
+- An isolated `form-please/react19` entry for React 19 Actions.
 
 ## Make it yours
 
@@ -129,7 +129,7 @@ design system. Use `defineControl` to replace controls. Override structural
 slots when their markup must change. Use `createDefaultSlots({ i18n })` to
 change the default action labels.
 
-Fokit keeps those choices separate from the reusable form definition. Product
+Form, Please keeps those choices separate from the reusable form definition. Product
 controls can change without rewriting validation, conditions, arrays, or submit
 behavior.
 
@@ -137,8 +137,8 @@ behavior.
 
 ### The form has no visual layout
 
-Import `fokit/layout.css` for the optional responsive structure, or add your own
-styles. Fokit does not ship a visual theme.
+Import `form-please/layout.css` for the optional responsive structure, or add your own
+styles. Form, Please does not ship a visual theme.
 
 ### A required field accepts an empty value
 
@@ -153,7 +153,7 @@ Provide a value for every field in `FormInput<typeof profileSchema>`. Use
 
 ### `onSubmit` does not run
 
-Correct all visible schema issues and submit again. Fokit calls `onSubmit` only
+Correct all visible schema issues and submit again. Form, Please calls `onSubmit` only
 after successful validation.
 
 ## Choose your next step

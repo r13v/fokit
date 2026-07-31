@@ -5,7 +5,7 @@ export function rejectOwnedProps(
 ): void {
 	for (const prop of ownedProps) {
 		if (Object.hasOwn(props, prop)) {
-			throw new TypeError(`Fokit owns the ${prop} ${owner} prop`)
+			throw new TypeError(`Form Please owns the ${prop} ${owner} prop`)
 		}
 	}
 }

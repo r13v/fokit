@@ -345,7 +345,7 @@ describe("React form hooks", () => {
 				</>,
 			),
 		).toThrow(
-			"A Fokit form instance cannot be bound by multiple useForm hooks at the same time",
+			"A Form Please form instance cannot be bound by multiple useForm hooks at the same time",
 		)
 	})
 

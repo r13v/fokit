@@ -18,7 +18,7 @@ export const OverviewDemo = Object.assign(
 					type: "code",
 					lang: "tsx",
 					value:
-						'import { createFormKit, nativeControls } from "fokit"\n\nconst kit = createFormKit({ controls: nativeControls })\n\n<kit.AutoForm definition={profileDefinition} defaultValues={defaultValues} onSubmit={({ value }) => saveProfile(value)} />',
+						'import { createFormKit, nativeControls } from "form-please"\n\nconst kit = createFormKit({ controls: nativeControls })\n\n<kit.AutoForm definition={profileDefinition} defaultValues={defaultValues} onSubmit={({ value }) => saveProfile(value)} />',
 				},
 			]
 		},

@@ -5,7 +5,7 @@ import {
 	type FormInput,
 	type FormOutput,
 	nativeControls,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -64,26 +64,28 @@ export function OverviewDemoClient() {
 
 	return (
 		<section
-			aria-label="Live Fokit profile form"
-			className="fokit-lab fokit-overview-demo"
+			aria-label="Live Form, Please profile form"
+			className="form-please-lab form-please-overview-demo"
 			data-testid="overview-demo"
 		>
-			<p className="fokit-lab__kicker">Live demo</p>
-			<p className="fokit-lab__summary">
+			<p className="form-please-lab__kicker">Live demo</p>
+			<p className="form-please-lab__summary">
 				Edit the profile. Submit it to see the schema-validated output.
 			</p>
 			<kit.AutoForm
-				className="fokit-overview-demo__form"
+				className="form-please-overview-demo__form"
 				defaultValues={defaultValues}
 				definition={profileDefinition}
 				onSubmit={({ value }) => setSaved(value)}
 			>
-				<kit.Submit className="fokit-lab__primary">Save profile</kit.Submit>
+				<kit.Submit className="form-please-lab__primary">
+					Save profile
+				</kit.Submit>
 			</kit.AutoForm>
 			<div
 				aria-atomic="true"
 				aria-live="polite"
-				className="fokit-overview-demo__result"
+				className="form-please-overview-demo__result"
 			>
 				<span>Validated output</span>
 				<pre data-testid="overview-output">

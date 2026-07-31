@@ -19,7 +19,7 @@ registration. UI registration continues to determine generated rendering,
 field and array metadata, and `FormData` serialization; it does not determine
 which schema-owned values application code may change or validate.
 
-Array structure commands still require an array node because Fokit needs its
+Array structure commands still require an array node because Form, Please needs its
 `itemDefault` and stable row metadata. An unrendered value that must cross a
 React 19 Action boundary still requires a field with a serializing control.
 

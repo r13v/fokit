@@ -126,7 +126,7 @@ describe("packed build output", () => {
 			expect(file).not.toMatch(
 				/^(?:src|tests|docs\/plans|docs-site|examples|\.ralphex)\//,
 			)
-			expect(file).not.toMatch(/^fokit-\d+\.\d+\.\d+\.tgz$/)
+			expect(file).not.toMatch(/^form-please-\d+\.\d+\.\d+\.tgz$/)
 		}
 	})
 })

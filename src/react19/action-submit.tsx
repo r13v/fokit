@@ -58,7 +58,7 @@ function getReact19ActionHooks(): {
 		typeof useActionState !== "function"
 	) {
 		throw new TypeError(
-			"fokit/react19 requires React 19 Action support. Use the main fokit entry with kit.Form for React 18.",
+			"form-please/react19 requires React 19 Action support. Use the main form-please entry with kit.Form for React 18.",
 		)
 	}
 

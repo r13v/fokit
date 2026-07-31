@@ -15,7 +15,7 @@ import {
 	useFormContext,
 	useFormState,
 	useValue,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -230,9 +230,12 @@ function TitleSuggestions() {
 	const suggestionsResource = queryToResource(suggestions)
 
 	return (
-		<section className="fokit-complex__embedded" aria-label="Title suggestions">
+		<section
+			className="form-please-complex__embedded"
+			aria-label="Title suggestions"
+		>
 			<strong>Remote title suggestions</strong>
-			<div className="fokit-complex__choice-list">
+			<div className="form-please-complex__choice-list">
 				{matchResource(suggestionsResource, {
 					pending: ({ fetchStatus }) => (
 						<span>
@@ -281,7 +284,7 @@ function CohortPreview() {
 		),
 	}))
 	return (
-		<aside className="fokit-complex__preview" aria-label="Cohort preview">
+		<aside className="form-please-complex__preview" aria-label="Cohort preview">
 			<strong>{preview.title}</strong>
 			<span>
 				{preview.formats} formats · {preview.capacity} aggregate seats
@@ -606,10 +609,12 @@ function LearningCohortForm() {
 	const [notice, setNotice] = useState("Draft loaded from the fake API.")
 
 	if (loadedDraft.isPending)
-		return <section className="fokit-complex">Loading cohort draft…</section>
+		return (
+			<section className="form-please-complex">Loading cohort draft…</section>
+		)
 	if (loadedDraft.isError)
 		return (
-			<section className="fokit-complex">
+			<section className="form-please-complex">
 				Could not load the cohort draft.
 			</section>
 		)
@@ -617,16 +622,16 @@ function LearningCohortForm() {
 	return (
 		<section
 			aria-label="Learning cohort editor example"
-			className="fokit-complex"
+			className="form-please-complex"
 		>
-			<p className="fokit-complex__kicker">Async cohort editor</p>
-			<p className="fokit-complex__summary">
+			<p className="form-please-complex__kicker">Async cohort editor</p>
+			<p className="form-please-complex__summary">
 				Remote title suggestions, movable configuration rows, band validation,
 				media, four offer subforms, and conflict recovery remain typed end to
 				end.
 			</p>
 			<kit.AutoForm
-				className="fokit-complex__form"
+				className="form-please-complex__form"
 				defaultValues={loadedDraft.data}
 				definition={cohortDefinition}
 				onSubmit={async ({ value, form }) => {
@@ -661,8 +666,8 @@ function LearningCohortForm() {
 					}
 				}}
 			>
-				<div className="fokit-complex__actions">
-					<kit.Submit className="fokit-complex__primary">
+				<div className="form-please-complex__actions">
+					<kit.Submit className="form-please-complex__primary">
 						Save cohort
 					</kit.Submit>
 					<span aria-live="polite">

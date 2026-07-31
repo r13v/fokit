@@ -1,13 +1,13 @@
-import "fokit/layout.css"
+import "form-please/layout.css"
 
 import {
 	createFormKit,
 	nativeControls,
 	type StandardSchema,
 	Submit,
-} from "fokit"
-import { ActionForm, ActionSubmit } from "fokit/react19"
-import type { FormResult } from "fokit/server"
+} from "form-please"
+import { ActionForm, ActionSubmit } from "form-please/react19"
+import type { FormResult } from "form-please/server"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
@@ -18,7 +18,7 @@ type ProfileInput = {
 const schema: StandardSchema<ProfileInput> = {
 	"~standard": {
 		version: 1,
-		vendor: "fokit-smoke",
+		vendor: "form-please-smoke",
 		validate(value) {
 			return { value: value as ProfileInput }
 		},

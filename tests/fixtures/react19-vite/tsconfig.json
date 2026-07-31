@@ -11,17 +11,17 @@
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
 		"paths": {
-			"fokit": [
+			"form-please": [
 				"../../../src/index.ts",
-				"./node_modules/fokit/dist/index.d.ts"
+				"./node_modules/form-please/dist/index.d.ts"
 			],
-			"fokit/react19": [
+			"form-please/react19": [
 				"../../../src/react19/index.ts",
-				"./node_modules/fokit/dist/react19.d.ts"
+				"./node_modules/form-please/dist/react19.d.ts"
 			],
-			"fokit/server": [
+			"form-please/server": [
 				"../../../src/server/index.ts",
-				"./node_modules/fokit/dist/server.d.ts"
+				"./node_modules/form-please/dist/server.d.ts"
 			]
 		}
 	},

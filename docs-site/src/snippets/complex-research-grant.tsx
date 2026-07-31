@@ -16,7 +16,7 @@ import {
 	useFormContext,
 	useFormState,
 	type ValueChange,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -192,7 +192,10 @@ function OrganizationFinder() {
 		staleTime: 30_000,
 	})
 	return (
-		<section className="fokit-complex__embedded" aria-label="Registry search">
+		<section
+			className="form-please-complex__embedded"
+			aria-label="Registry search"
+		>
 			<label>
 				Search the independent registry
 				<input
@@ -202,7 +205,7 @@ function OrganizationFinder() {
 					value={search}
 				/>
 			</label>
-			<div className="fokit-complex__choice-list">
+			<div className="form-please-complex__choice-list">
 				{records.isPending ? <span>Checking records…</span> : null}
 				{records.data?.map((record) => (
 					<button
@@ -233,7 +236,10 @@ function GrantPreview() {
 	}))
 
 	return (
-		<aside className="fokit-complex__preview" aria-label="Application preview">
+		<aside
+			className="form-please-complex__preview"
+			aria-label="Application preview"
+		>
 			<strong>{summary.title || "Untitled application"}</strong>
 			<span>
 				{summary.applicantKind === "collective" ? "Collective" : "Individual"}
@@ -503,16 +509,16 @@ function ResearchGrantForm() {
 	return (
 		<section
 			aria-label="Research grant application example"
-			className="fokit-complex"
+			className="form-please-complex"
 		>
-			<p className="fokit-complex__kicker">Branching application</p>
-			<p className="fokit-complex__summary">
+			<p className="form-please-complex__kicker">Branching application</p>
+			<p className="form-please-complex__summary">
 				Applicant identity, registry lookup, settlement route, reporting rules,
 				and a two-request submission all share one typed form state.
 			</p>
 			<kit.AutoForm
 				beforeUpdate={preserveGrantInvariants}
-				className="fokit-complex__form"
+				className="form-please-complex__form"
 				defaultValues={defaultValues}
 				definition={grantDefinition}
 				onSubmit={async ({ value, form }) => {
@@ -533,8 +539,8 @@ function ResearchGrantForm() {
 				}}
 				validation={{ mode: "blur", revalidateMode: "change" }}
 			>
-				<div className="fokit-complex__actions">
-					<kit.Submit className="fokit-complex__primary">
+				<div className="form-please-complex__actions">
+					<kit.Submit className="form-please-complex__primary">
 						Preview and send
 					</kit.Submit>
 					<span aria-live="polite">

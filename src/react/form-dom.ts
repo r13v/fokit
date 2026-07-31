@@ -9,7 +9,7 @@ type ResettableForm = {
 
 export function useGeneratedFormId(explicitId: string | undefined): string {
 	const reactId = useId()
-	return explicitId ?? `fokit-${sanitizeDomId(reactId)}`
+	return explicitId ?? `form-please-${sanitizeDomId(reactId)}`
 }
 
 export function resetFormFromEvent(

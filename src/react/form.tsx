@@ -14,7 +14,7 @@ import { hasDisplayErrors } from "./form-errors.js"
 import { assertFormDataCompatible, HiddenInputs } from "./hidden-inputs.js"
 import { useFormState } from "./hooks.js"
 import { rejectOwnedProps } from "./owned-props.js"
-import type { FokitStyle, ReactUiPresentation } from "./slots.js"
+import type { FormPleaseStyle, ReactUiPresentation } from "./slots.js"
 import { booleanData } from "./structural-props.js"
 import {
 	registerClassicForm,
@@ -27,7 +27,7 @@ export type NativeFormProps = Omit<
 	ComponentPropsWithoutRef<"form">,
 	"action" | "children" | "noValidate" | "onReset" | "onSubmit" | "style"
 > & {
-	readonly style?: FokitStyle
+	readonly style?: FormPleaseStyle
 }
 
 export type KitFormProps<
@@ -89,7 +89,7 @@ export function KitForm<
 				{...nativeProps}
 				data-dirty={booleanData(state.dirty)}
 				data-disabled={booleanData(state.disabled)}
-				data-fokit-node="form"
+				data-fp-node="form"
 				data-invalid={booleanData(state.invalid)}
 				data-readonly={booleanData(state.readOnly)}
 				data-touched={booleanData(state.touched)}

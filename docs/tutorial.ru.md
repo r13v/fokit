@@ -1,4 +1,4 @@
-# Учебник: форма профиля на Fokit
+# Учебник: форма профиля на Form, Please
 
 Этот учебник занимает около 15 минут. В нем собирается форма профиля со
 схемой, готовыми `nativeControls`, слотами по умолчанию, сгенерированными
@@ -8,7 +8,7 @@
 своя разметка, tutorial показывает, как заменить отдельный control или slot.
 
 Публичный English tutorial опубликован как Vocs route:
-`https://r13v.github.io/fokit/guides/tutorial`. Полные проверяемые примеры
+`https://r13v.github.io/form-please/guides/tutorial`. Полные проверяемые примеры
 теперь лежат в canonical snippets:
 
 - `docs-site/src/snippets/form-kit.tsx`
@@ -18,13 +18,13 @@
 ## 1. Установка
 
 ```sh
-npm install fokit zod
+npm install form-please zod
 npm install react react-dom
 ```
 
 ## 2. Опишите схему
 
-Fokit берет input и output типы из Standard Schema. Zod подходит, потому что
+Form, Please берет input и output типы из Standard Schema. Zod подходит, потому что
 реализует этот контракт.
 
 ```ts
@@ -56,14 +56,14 @@ handler получает преобразованный output с `contactCount`
 Для первой формы не нужно писать wrappers вокруг обычных HTML controls:
 
 ```tsx
-import { createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "form-please"
 
 export const kit = createFormKit({
 	controls: nativeControls,
 })
 ```
 
-`nativeControls` - явный registry. Fokit не подбирает controls по Zod-схеме и
+`nativeControls` - явный registry. Form, Please не подбирает controls по Zod-схеме и
 не добавляет их автоматически к вашему registry, потому что control задает тип
 значения и FormData contract.
 
@@ -83,7 +83,7 @@ export const kit = createFormKit({
 - `file`: `File | undefined`, option `accept`.
 
 Если нужен свой дизайн-системный control, он остается обычным
-React-компонентом. Fokit передает типизированное значение, metadata,
+React-компонентом. Form, Please передает типизированное значение, metadata,
 ARIA-связи и политику FormData.
 
 ```tsx
@@ -137,14 +137,14 @@ control не фокусируется, а при `disabled` на уровне ф
 ## 4. Используйте default slots или замените нужные
 
 `slots` в `createFormKit` теперь optional и partial. Если вы не передали slot,
-Fokit использует English default slots: доступную semantic HTML-разметку без
+Form, Please использует English default slots: доступную semantic HTML-разметку без
 темы, CSS, цветов, шрифтов или borders.
 
 Для русских подписей array actions используйте `createDefaultSlots({ i18n })`.
 Каждое сообщение может быть строкой или функцией:
 
 ```tsx
-import { createDefaultSlots } from "fokit"
+import { createDefaultSlots } from "form-please"
 
 const russianSlots = createDefaultSlots({
 	i18n: {
@@ -162,7 +162,7 @@ const russianSlots = createDefaultSlots({
 English defaults.
 
 Заменяйте только те slots, которые нужны дизайну. Custom slot переносит props
-Fokit в вашу разметку и классы:
+Form, Please в вашу разметку и классы:
 
 ```tsx
 function FieldSlot({
@@ -198,7 +198,7 @@ layout props.
 ## 5. Соберите kit и definition
 
 ```ts
-import { createDefaultSlots, createFormKit, nativeControls } from "fokit"
+import { createDefaultSlots, createFormKit, nativeControls } from "form-please"
 
 const slots = createDefaultSlots({
 	i18n: {
@@ -259,11 +259,11 @@ export const profileDefinition = kit
 Resolver пишется обычной функцией прямо в свойстве. Поскольку `defineForm`
 сначала получает схему, TypeScript контекстно типизирует функцию, дополняет
 деструктурируемые пути и выводит `ProfileContext` без generic-параметров на
-resolver. Fokit автоматически запоминает прочитанные пути и пересчитывает
+resolver. Form, Please автоматически запоминает прочитанные пути и пересчитывает
 значение только при их изменении.
 
 `valuePolicy: "unset"` разрешен только для optional путей. Когда поле
-становится невидимым, Fokit удаляет значение через тот же механизм
+становится невидимым, Form, Please удаляет значение через тот же механизм
 транзакций, что и пользовательские изменения.
 
 ## 6. Dynamic options — это resolver
@@ -281,7 +281,7 @@ resolver. Если опции контрола сами содержат callbac
 объекта `options`.
 
 Замена context пересчитывает UI и не делает форму dirty. Если новый UI
-запускает `valuePolicy: "unset"`, Fokit коммитит это изменение отдельно.
+запускает `valuePolicy: "unset"`, Form, Please коммитит это изменение отдельно.
 
 ## 7. Отрендерите AutoForm
 
@@ -306,7 +306,7 @@ resolver. Если опции контрола сами содержат callbac
 Это основной путь для сгенерированных форм.
 
 `onSubmit` может вернуть `void` или `Promise<void>`. Если callback возвращает
-Promise, Fokit ждет его завершения и сохраняет `isSubmitting: true`.
+Promise, Form, Please ждет его завершения и сохраняет `isSubmitting: true`.
 `kit.Submit` остается disabled до завершения Promise. Успешный submit не
 сбрасывает форму автоматически. Вызовите `form.reset(...)`, если сохраненные
 значения должны стать новым baseline.
@@ -414,7 +414,7 @@ if (!result.success) {
 return { status: "success", reset: "submitted" }
 ```
 
-Fokit использует dot paths и array markers с именем `__fokit.array`. Не
+Form, Please использует dot paths и array markers с именем `__fp.array`. Не
 разбирайте отправку через `Object.fromEntries`: repeated values и array markers
 несут структуру.
 
@@ -438,7 +438,7 @@ Fokit использует dot paths и array markers с именем `__fokit.a
 React 19 Actions изолированы:
 
 ```tsx
-import { ActionForm, ActionSubmit } from "fokit/react19"
+import { ActionForm, ActionSubmit } from "form-please/react19"
 
 <ActionForm
 	action={saveProfileAction}
@@ -451,7 +451,7 @@ import { ActionForm, ActionSubmit } from "fokit/react19"
 </ActionForm>
 ```
 
-Action forms работают server-first. Fokit не запускает client validation перед
+Action forms работают server-first. Form, Please не запускает client validation перед
 dispatch. Server Action возвращает serializable `FormResult`, а hydrated form
 применяет ошибки или reset-инструкции.
 
@@ -462,10 +462,10 @@ native control не имеет serializer.
 ## 12. Добавьте layout только при необходимости
 
 ```ts
-import "fokit/layout.css"
+import "form-please/layout.css"
 ```
 
-Stylesheet использует `@layer fokit`, `:where(...)`, container queries и четыре
+Stylesheet использует `@layer fp`, `:where(...)`, container queries и четыре
 spacing variables. Он не задает цвета, шрифты, borders, focus rings или внешний
 вид контролов.
 
@@ -482,7 +482,7 @@ npm run test:docs
 
 ## Граница продукта
 
-Fokit отвечает за типизированную инфраструктуру форм, а schema-to-UI inference,
+Form, Please отвечает за типизированную инфраструктуру форм, а schema-to-UI inference,
 visual builder, remote JSON definitions, темы, middleware chains, wizards,
 autosave, async option loading, devtools и React Native поддержку оставляет
 коду приложения.

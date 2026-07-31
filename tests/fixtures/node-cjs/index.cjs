@@ -1,16 +1,16 @@
-const { createDefaultSlots, nativeControls } = require("fokit")
+const { createDefaultSlots, nativeControls } = require("form-please")
 const {
 	createFormStore,
 	normalizeDefinition,
 	parsePath,
-} = require("fokit/core")
-const serverExports = require("fokit/server")
+} = require("form-please/core")
+const serverExports = require("form-please/server")
 const { parseFormData } = serverExports
 
 const schema = {
 	"~standard": {
 		version: 1,
-		vendor: "fokit-smoke",
+		vendor: "form-please-smoke",
 		validate(value) {
 			return { value }
 		},
@@ -53,7 +53,7 @@ if (nativeControls.text.formData.mode !== "native") {
 	throw new Error("CommonJS root export did not expose nativeControls")
 }
 
-const coreExports = require("fokit/core")
+const coreExports = require("form-please/core")
 
 if ("createDefaultSlots" in coreExports || "nativeControls" in coreExports) {
 	throw new Error("CommonJS core entry leaked React defaults")
@@ -71,7 +71,7 @@ if (parsePath("tags.0").length !== 2) {
 }
 
 const formData = new FormData()
-formData.append("__fokit.array", "tags")
+formData.append("__fp.array", "tags")
 formData.append("name", "Grace")
 formData.append("tags", "compiler")
 

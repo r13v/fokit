@@ -38,7 +38,7 @@ type ValidPathKey<
 			: Key extends "__proto__" | "constructor" | "prototype"
 				? never
 				: IsTopLevel extends true
-					? Key extends "__fokit"
+					? Key extends "__fp"
 						? never
 						: Key
 					: Key

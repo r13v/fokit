@@ -11,14 +11,14 @@ export const InteractiveLab = Object.assign(
 		toMarkdown() {
 			return [
 				...markdownFallback(
-					"The Interactive Fokit Lab runs only in a browser. It demonstrates a generated form, validation, reset, classic submission, array actions, and native FormData.",
+					"The Interactive Form, Please Lab runs only in a browser. It demonstrates a generated form, validation, reset, classic submission, array actions, and native FormData.",
 					"docs-site/src/components/interactive-lab.client.tsx",
 				),
 				{
 					type: "code",
 					lang: "ts",
 					value:
-						'import { createFormKit, nativeControls } from "fokit"\n\nconst kit = createFormKit({ controls: nativeControls })',
+						'import { createFormKit, nativeControls } from "form-please"\n\nconst kit = createFormKit({ controls: nativeControls })',
 				},
 			]
 		},

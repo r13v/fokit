@@ -171,8 +171,8 @@ function validatePropertySegment(segment: string, index: number): void {
 		throw new TypeError(`Path property segment "${segment}" is reserved`)
 	}
 
-	if (index === 0 && segment === "__fokit") {
-		throw new TypeError("Path top-level __fokit namespace is reserved")
+	if (index === 0 && segment === "__fp") {
+		throw new TypeError("Path top-level __fp namespace is reserved")
 	}
 }
 

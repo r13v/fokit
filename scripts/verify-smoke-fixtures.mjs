@@ -35,7 +35,7 @@ const fixtures = [
 	},
 ]
 
-const tempRoot = await mkdtemp(join(tmpdir(), "fokit-smoke-"))
+const tempRoot = await mkdtemp(join(tmpdir(), "form-please-smoke-"))
 
 try {
 	const tarballPath = await packTarball(tempRoot)
@@ -97,16 +97,18 @@ async function runFixture(fixture, tarballPath, tempRoot) {
 async function assertCssResult(fixture, fixtureDirectory) {
 	const cssFiles = await readCssFiles(join(fixtureDirectory, "dist"))
 	const css = cssFiles.map((file) => file.source).join("\n")
-	const hasFokitCss =
-		css.includes("@layer fokit") && css.includes("data-fokit-node")
+	const hasFormPleaseCss =
+		css.includes("@layer fp") && css.includes("data-fp-node")
 
-	if (fixture.css === "present" && !hasFokitCss) {
-		throw new Error(`${fixture.name} did not emit Fokit layout CSS`)
+	if (fixture.css === "present" && !hasFormPleaseCss) {
+		throw new Error(`${fixture.name} did not emit Form Please layout CSS`)
 	}
 
-	if (fixture.css === "absent" && css.includes("fokit")) {
+	if (fixture.css === "absent" && css.includes("form-please")) {
 		const files = cssFiles.map((file) => file.path).join(", ")
-		throw new Error(`${fixture.name} emitted unexpected Fokit CSS in ${files}`)
+		throw new Error(
+			`${fixture.name} emitted unexpected Form Please CSS in ${files}`,
+		)
 	}
 }
 

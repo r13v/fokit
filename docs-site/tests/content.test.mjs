@@ -13,7 +13,7 @@ const requiredDependencies = {
 	"@tanstack/react-query": "5.101.4",
 	"@types/react": "19.2.17",
 	"@types/react-dom": "19.2.3",
-	fokit: "file:..",
+	"form-please": "file:..",
 	react: "19.2.8",
 	"react-dom": "19.2.8",
 	typescript: "5.9.3",
@@ -27,7 +27,7 @@ const canonicalPages = [
 	{
 		path: "src/pages/index.mdx",
 		route: "/",
-		title: "Fokit",
+		title: "Form, Please",
 		description:
 			"Typed, schema-validated React forms that keep native semantics and your design system.",
 		navText: "Overview",
@@ -37,14 +37,14 @@ const canonicalPages = [
 		route: "/get-started",
 		title: "Get started",
 		description:
-			"Build and submit your first typed Fokit form, then see how schema, UI, and controls fit together.",
+			"Build and submit your first typed form with Form, Please, then see how schema, UI, and controls fit together.",
 	},
 	{
 		path: "src/pages/guides/tutorial.mdx",
 		route: "/guides/tutorial",
 		title: "Tutorial",
 		description:
-			"Grow the first Fokit form into a production-ready profile editor with validation, conditional fields, arrays, and typed output.",
+			"Grow your first form built with Form, Please into a production-ready profile editor with validation, conditional fields, arrays, and typed output.",
 		navText: "Build a production form",
 	},
 	{
@@ -59,7 +59,7 @@ const canonicalPages = [
 		route: "/guides/validation",
 		title: "Validation and errors",
 		description:
-			"Control when Fokit validates, when errors become visible, and how server errors recover after editing.",
+			"Control when Form, Please validates, when errors become visible, and how server errors recover after editing.",
 		navText: "Validation & errors",
 	},
 	{
@@ -88,7 +88,7 @@ const canonicalPages = [
 		route: "/guides/controls",
 		title: "Controls",
 		description:
-			"Connect native inputs or a design system to Fokit's typed values, accessibility wiring, and FormData behavior.",
+			"Connect native inputs or a design system to typed Form, Please values, accessibility wiring, and FormData behavior.",
 		navText: "Controls & design systems",
 	},
 	{
@@ -96,14 +96,14 @@ const canonicalPages = [
 		route: "/guides/async-multiselect",
 		title: "Async multiselect",
 		description:
-			"Build a searchable multi-select that stores typed IDs in Fokit, loads options with TanStack Query, and delegates popup behavior to Floating UI.",
+			"Build a searchable multi-select that stores typed IDs in Form, Please, loads options with TanStack Query, and delegates popup behavior to Floating UI.",
 	},
 	{
 		path: "src/pages/guides/async-fields.mdx",
 		route: "/guides/async-fields",
 		title: "Async fields",
 		description:
-			"Load suggestions and bespoke field UI without moving request, cache, cancellation, or selected-label state into Fokit.",
+			"Load suggestions and bespoke field UI without moving request, cache, cancellation, or selected-label state into Form, Please.",
 	},
 	{
 		path: "src/pages/guides/styling.mdx",
@@ -117,21 +117,21 @@ const canonicalPages = [
 		route: "/guides/react-19-actions",
 		title: "React 19 Actions",
 		description:
-			"Connect a Fokit definition to a React 19 Action with safe FormData parsing, pending state, and serializable server errors.",
+			"Connect a Form, Please definition to a React 19 Action with safe FormData parsing, pending state, and serializable server errors.",
 	},
 	{
 		path: "src/pages/advanced.mdx",
 		route: "/advanced",
 		title: "Production recipes",
 		description:
-			"Focused Fokit patterns for manual composition, loaded edit forms, server safety, accessibility, and public-boundary tests.",
+			"Focused Form, Please patterns for manual composition, loaded edit forms, server safety, accessibility, and public-boundary tests.",
 	},
 	{
 		path: "src/pages/examples/index.mdx",
 		route: "/examples",
 		title: "Complex examples",
 		description:
-			"Explore six production-shaped forms that stress branching, arrays, workflows, custom UI, and fake TanStack Query requests without hiding state from Fokit.",
+			"Explore six production-shaped forms that stress branching, arrays, workflows, custom UI, and fake TanStack Query requests without hiding state from Form, Please.",
 	},
 	{
 		path: "src/pages/examples/research-grant.mdx",
@@ -184,7 +184,7 @@ const canonicalPages = [
 		route: "/api",
 		title: "API",
 		description:
-			"Signatures, defaults, and entry-point boundaries for Fokit's public React, core, server, and React 19 APIs.",
+			"Signatures, defaults, and entry-point boundaries for the public React, core, server, and React 19 APIs in Form, Please.",
 	},
 	{
 		path: "src/pages/types.mdx",
@@ -199,7 +199,7 @@ const canonicalPages = [
 		route: "/faqs",
 		title: "FAQs",
 		description:
-			"Direct answers about when to use Fokit, validation, defaults, design systems, servers, and React versions.",
+			"Direct answers about when to use Form, Please, validation, defaults, design systems, servers, and React versions.",
 	},
 ]
 
@@ -412,7 +412,7 @@ const requiredCorePageContent = {
 			"See it work",
 			"One explicit model",
 			"The responsibility boundary",
-			"When to reach for Fokit",
+			"When to reach for Form, Please",
 			"Start with the working path",
 		],
 		terms: [
@@ -460,9 +460,9 @@ const requiredCorePageContent = {
 			"React-free core",
 		],
 		terms: [
-			"fokit/core",
-			"fokit/server",
-			"fokit/react19",
+			"form-please/core",
+			"form-please/server",
+			"form-please/react19",
 			"kit.defineForm",
 			"kit.AutoForm",
 			"kit.Fields",
@@ -529,12 +529,12 @@ const requiredCorePageContent = {
 	},
 	"src/pages/faqs.mdx": {
 		headings: [
-			"Why use Fokit instead of a smaller form hook?",
-			"Does Fokit require Zod?",
-			"Are Fokit controls controlled or uncontrolled?",
+			"Why use Form, Please instead of a smaller form hook?",
+			"Does Form, Please require Zod?",
+			"Are Form, Please controls controlled or uncontrolled?",
 			"Why are complete default values required?",
 			"How do I load an existing profile?",
-			"Does Fokit support async validation?",
+			"Does Form, Please support async validation?",
 			"Can I use an existing component library?",
 			"Why is there no built-in theme?",
 			"What happens when a field becomes hidden?",
@@ -542,7 +542,7 @@ const requiredCorePageContent = {
 			"How do server errors reach fields?",
 			"How do React 18 and React 19 differ?",
 			"Does every field rerender on each change?",
-			"Does Fokit provide wizards or autosave?",
+			"Does Form, Please provide wizards or autosave?",
 		],
 		terms: [
 			"nativeControls",
@@ -573,7 +573,7 @@ const requiredGuidePageContent = {
 			"itemDefault",
 			"resolver function",
 			"valuePolicy",
-			"fokit/layout.css",
+			"form-please/layout.css",
 			"kit.Fields",
 		],
 	},
@@ -655,7 +655,7 @@ const requiredGuidePageContent = {
 			'kind: "array"',
 			"itemDefault",
 			"useArrayField",
-			"__fokit.array",
+			"__fp.array",
 			"parseFormData",
 		],
 	},
@@ -730,9 +730,9 @@ const requiredGuidePageContent = {
 			"Replace markup when selectors are not enough",
 		],
 		terms: [
-			"fokit/layout.css",
-			"--fokit-column-gap",
-			"data-fokit-node",
+			"form-please/layout.css",
+			"--fp-column-gap",
+			"data-fp-node",
 			":focus-visible",
 			"data-invalid",
 		],
@@ -746,7 +746,7 @@ const requiredGuidePageContent = {
 			"Know the compatibility boundary",
 		],
 		terms: [
-			"fokit/react19",
+			"form-please/react19",
 			"ActionForm",
 			"ActionSubmit",
 			"parseFormData",
@@ -896,7 +896,7 @@ test("docs TypeScript and verification gates are wired", async () => {
 	)
 	assert.equal(
 		rootPackageJson.scripts["site:verify"],
-		"npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/fokit npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e && BASE_PATH=/fokit npm run site:build && EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
+		"npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/form-please npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e && BASE_PATH=/form-please npm run site:build && EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
 	)
 	assert.equal(rootPackageJson.scripts.verify.includes("test:docs"), false)
 	assert.deepEqual(knipConfig.workspaces["docs-site"].entry, [
@@ -924,7 +924,7 @@ test("browser demos share a Markdown fallback with source links", async () => {
 	assert.match(fallback, /type:\s*"link"/)
 	assert.match(
 		fallback,
-		/https:\/\/github\.com\/r13v\/fokit\/blob\/main\/\$\{sourcePath\}/,
+		/https:\/\/github\.com\/r13v\/form-please\/blob\/main\/\$\{sourcePath\}/,
 	)
 	assert.match(
 		fallback,
@@ -932,7 +932,7 @@ test("browser demos share a Markdown fallback with source links", async () => {
 	)
 })
 
-test("Interactive Lab uses Vocs components and public Fokit defaults", async () => {
+test("Interactive Lab uses Vocs components and public Form, Please defaults", async () => {
 	const wrapper = await readText("src/components/interactive-lab.tsx")
 	const client = await readText("src/components/interactive-lab.client.tsx")
 	const snippet = await readText("src/snippets/lab-profile-form.tsx")
@@ -940,7 +940,7 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 
 	assert.match(wrapper, /from "\.\/interactive-lab\.client"/)
 	assert.match(wrapper, /toMarkdown/)
-	assert.match(wrapper, /Interactive Fokit Lab runs only in a browser/)
+	assert.match(wrapper, /Interactive Form, Please Lab runs only in a browser/)
 	assert.match(wrapper, /createFormKit\(\{ controls: nativeControls \}\)/)
 	assert.match(wrapper, /from "\.\/markdown-fallback"/)
 	assert.match(
@@ -957,7 +957,7 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 	)
 	assert.doesNotMatch(
 		client,
-		/defineControl|fokit\/layout\.css|locale|localStorage/,
+		/defineControl|form-please\/layout\.css|locale|localStorage/,
 	)
 	assert.doesNotMatch(client, /[А-Яа-яЁё]/)
 	assert.match(snippet, /^"use client"/)
@@ -978,11 +978,11 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 		/import \{ InteractiveLab \} from "\.\.\/components\/interactive-lab"/,
 	)
 	assert.match(getStarted, /~\/snippets\/lab-profile-form\.tsx/)
-	assert.match(getStarted, /^### Interactive Fokit Lab$/m)
+	assert.match(getStarted, /^### Interactive Form, Please Lab$/m)
 	assert.match(getStarted, /<InteractiveLab \/>/)
 })
 
-test("overview proves the public Fokit loop with a live typed form", async () => {
+test("overview proves the public Form, Please loop with a live typed form", async () => {
 	const wrapper = await readText("src/components/overview-demo.tsx")
 	const client = await readText("src/components/overview-demo.client.tsx")
 	const overview = await readText("src/pages/index.mdx")
@@ -1003,7 +1003,7 @@ test("overview proves the public Fokit loop with a live typed form", async () =>
 	assert.match(client, /onSubmit=\{\(\{ value \}\) => setSaved\(value\)\}/)
 	assert.match(overview, /import \{ OverviewDemo \}/)
 	assert.match(overview, /<OverviewDemo \/>/)
-	assert.match(overview, /Fokit does not\s+guess a product UI/)
+	assert.match(overview, /Form, Please does not\s+guess a product UI/)
 })
 
 test("async multiselect guide runs the same typed Floating UI and TanStack Query example it documents", async () => {
@@ -1073,7 +1073,7 @@ test("six complex examples stay public, documented, networked, and independent",
 			new RegExp(`"docs-site/src/snippets/complex-${example.slug}\\.tsx"`),
 		)
 		assert.match(snippet, new RegExp(`export function ${example.exportName}`))
-		assert.match(snippet, /from "fokit"/)
+		assert.match(snippet, /from "form-please"/)
 		assert.match(snippet, /from "@tanstack\/react-query"/)
 		assert.match(snippet, /kit\.defineForm|\.defineForm\(/)
 		assert.match(snippet, /kit\.AutoForm/)
@@ -1176,7 +1176,7 @@ test("Vocs config defines the static English documentation shell", async () => {
 	const source = await readText("vocs.config.ts")
 
 	assert.match(source, /from "vocs\/config"/)
-	assert.match(source, /title:\s*"Fokit"/)
+	assert.match(source, /title:\s*"Form, Please"/)
 	assert.match(
 		source,
 		/description:\s*"Typed, schema-validated React forms that keep native HTML semantics and your design system\."/,
@@ -1189,10 +1189,10 @@ test("Vocs config defines the static English documentation shell", async () => {
 	assert.match(source, /renderStrategy:\s*"full-static"/)
 	assert.match(source, /checkDeadlinks:\s*true/)
 	assert.match(source, /socials:\s*\[\s*\{\s*icon:\s*"github"/)
-	assert.match(source, /link:\s*"https:\/\/github\.com\/r13v\/fokit"/)
+	assert.match(source, /link:\s*"https:\/\/github\.com\/r13v\/form-please"/)
 	assert.match(
 		source,
-		/editLink:\s*\{\s*link:\s*"https:\/\/github\.com\/r13v\/fokit\/edit\/main\/docs-site\/:path"/,
+		/editLink:\s*\{\s*link:\s*"https:\/\/github\.com\/r13v\/form-please\/edit\/main\/docs-site\/:path"/,
 	)
 	assert.match(source, /codeHighlight:\s*\{[\s\S]*light:\s*"github-light"/)
 	assert.match(source, /codeHighlight:\s*\{[\s\S]*dark:\s*"github-dark"/)
@@ -1272,7 +1272,7 @@ test("LLM documentation stays discoverable from the README and site", async () =
 	const config = await readText("vocs.config.ts")
 
 	for (const path of ["llms.txt", "llms-full.txt"]) {
-		const url = `https://r13v.github.io/fokit/${path}`
+		const url = `https://r13v.github.io/form-please/${path}`
 
 		assert.match(readme, new RegExp(escapeRegExp(url)))
 		assert.match(config, new RegExp(escapeRegExp(url)))
@@ -1437,7 +1437,7 @@ test("Vocs root page and root CSS replace the custom app shell", async () => {
 	const page = await readText("src/pages/index.mdx")
 	const css = await readText("src/pages/_root.css")
 
-	assert.match(page, /^---\ntitle: Fokit\ndescription: /)
+	assert.match(page, /^---\ntitle: Form, Please\ndescription: /)
 	assert.match(page, /# Forms that stay typed, native, and yours/)
 	assert.match(page, /<OverviewDemo \/>/)
 	assert.match(page, /createFormKit\(\{\s*controls: nativeControls/)
@@ -1449,9 +1449,9 @@ test("Vocs root page and root CSS replace the custom app shell", async () => {
 	assert.doesNotMatch(page, /[А-Яа-яЁё]/)
 
 	assert.match(css, /@import "@fontsource-variable\/newsreader"/)
-	assert.match(css, /--fokit-brand-green:/)
+	assert.match(css, /--fp-brand-green:/)
 	assert.match(css, /:root\[data-vocs-theme="dark"\]/)
-	assert.match(css, /\.fokit-overview-demo/)
+	assert.match(css, /\.form-please-overview-demo/)
 	assert.match(css, /Newsreader Variable/)
 	assert.doesNotMatch(css, /\.site-shell|\.locale-switch|\.syntax-token/)
 })
@@ -1479,7 +1479,7 @@ test("bespoke SPA files and temporary migration content are removed", async () =
 		const source = await readText(file)
 		assert.doesNotMatch(
 			source,
-			/content\.js|LOCALES|#\/|locale-switch|fokit\.docs\.locale|localStorage/,
+			/content\.js|LOCALES|#\/|locale-switch|form-please\.docs\.locale|localStorage/,
 		)
 		assert.doesNotMatch(source, /@phosphor-icons\/react|syntaxPattern/)
 	}
@@ -1499,17 +1499,20 @@ test("superseded public guides and example copies are deleted", async () => {
 		assert.doesNotMatch(tutorial, new RegExp(escapeRegExp(file)))
 	}
 
-	assert.match(readme, /https:\/\/r13v\.github\.io\/fokit\/get-started/)
+	assert.match(readme, /https:\/\/r13v\.github\.io\/form-please\/get-started/)
 	assert.match(
 		readme,
-		/https:\/\/r13v\.github\.io\/fokit\/guides\/react-19-actions/,
+		/https:\/\/r13v\.github\.io\/form-please\/guides\/react-19-actions/,
 	)
 	assert.match(readme, /docs-site\/src\/snippets\/form-kit\.tsx/)
 	assert.match(
 		readme,
 		/Kudos to \[Evgeniy Ivaha\]\(https:\/\/github\.com\/ivahaev\) for the idea and the\s+example implementation\./,
 	)
-	assert.match(tutorial, /https:\/\/r13v\.github\.io\/fokit\/guides\/tutorial/)
+	assert.match(
+		tutorial,
+		/https:\/\/r13v\.github\.io\/form-please\/guides\/tutorial/,
+	)
 	assert.match(tutorial, /docs-site\/src\/snippets\/form-kit\.tsx/)
 	assert.match(tutorial, /docs-site\/src\/snippets\/basic-form\.tsx/)
 	assert.match(tutorial, /docs-site\/src\/snippets\/server-action\.ts/)

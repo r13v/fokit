@@ -11,13 +11,13 @@
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
 		"paths": {
-			"fokit": [
+			"form-please": [
 				"../../../src/index.ts",
-				"./node_modules/fokit/dist/index.d.ts"
+				"./node_modules/form-please/dist/index.d.ts"
 			],
-			"fokit/core": [
+			"form-please/core": [
 				"../../../src/core/index.ts",
-				"./node_modules/fokit/dist/core.d.ts"
+				"./node_modules/form-please/dist/core.d.ts"
 			]
 		}
 	},

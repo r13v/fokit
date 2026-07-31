@@ -16,7 +16,7 @@ import {
 	useFormContext,
 	useFormState,
 	type ValueChange,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -351,7 +351,10 @@ function CampaignPreview() {
 			.map(([channel]) => channel),
 	}))
 	return (
-		<aside className="fokit-complex__preview" aria-label="Campaign preview">
+		<aside
+			className="form-please-complex__preview"
+			aria-label="Campaign preview"
+		>
 			<strong>{preview.name}</strong>
 			<span>
 				{preview.template} · {preview.channels.join(", ") || "no channels"}
@@ -785,24 +788,31 @@ function CampaignBuilderForm() {
 
 	if (draft.isPending || segments.isPending)
 		return (
-			<section className="fokit-complex">Loading campaign builder…</section>
+			<section className="form-please-complex">
+				Loading campaign builder…
+			</section>
 		)
 	if (draft.isError || segments.isError)
 		return (
-			<section className="fokit-complex">
+			<section className="form-please-complex">
 				Could not load campaign resources.
 			</section>
 		)
 
 	return (
-		<section aria-label="Campaign builder example" className="fokit-complex">
-			<p className="fokit-complex__kicker">Seven-template campaign builder</p>
-			<p className="fokit-complex__summary">
+		<section
+			aria-label="Campaign builder example"
+			className="form-please-complex"
+		>
+			<p className="form-please-complex__kicker">
+				Seven-template campaign builder
+			</p>
+			<p className="form-please-complex__summary">
 				One shared audience and schedule model drives seven distinct payload
 				branches, conditional quantities, payment variants, and create/edit
 				mutations.
 			</p>
-			<fieldset className="fokit-complex__mode">
+			<fieldset className="form-please-complex__mode">
 				<legend>Editor mode</legend>
 				<button
 					aria-pressed={mode === "edit"}
@@ -821,7 +831,7 @@ function CampaignBuilderForm() {
 			</fieldset>
 			<kit.AutoForm
 				beforeUpdate={clearInactiveTemplate}
-				className="fokit-complex__form"
+				className="form-please-complex__form"
 				context={{ segments: segments.data }}
 				defaultValues={mode === "edit" ? draft.data : newCampaign}
 				definition={campaignDefinition}
@@ -847,8 +857,8 @@ function CampaignBuilderForm() {
 					}
 				}}
 			>
-				<div className="fokit-complex__actions">
-					<kit.Submit className="fokit-complex__primary">
+				<div className="form-please-complex__actions">
+					<kit.Submit className="form-please-complex__primary">
 						{mode === "edit" ? "Update campaign" : "Create campaign"}
 					</kit.Submit>
 					<span aria-live="polite">

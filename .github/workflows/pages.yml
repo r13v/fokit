@@ -46,7 +46,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Verify docs site
-        run: BASE_PATH=/fokit npm run site:verify
+        run: BASE_PATH=/form-please npm run site:verify
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4

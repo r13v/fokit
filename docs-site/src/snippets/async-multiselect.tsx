@@ -32,7 +32,7 @@ import {
 	defineControl,
 	type FormInput,
 	nativeControls,
-} from "fokit"
+} from "form-please"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { z } from "zod"
 
@@ -501,11 +501,11 @@ export function AsyncMultiSelectExample() {
 		<QueryClientProvider client={queryClient}>
 			<section
 				aria-label="Async multiselect example"
-				className="fokit-async-demo"
+				className="form-please-async-demo"
 				data-testid="async-multiselect-demo"
 			>
-				<p className="fokit-async-demo__kicker">Live demo</p>
-				<p className="fokit-async-demo__summary">
+				<p className="form-please-async-demo__kicker">Live demo</p>
+				<p className="form-please-async-demo__summary">
 					Open the list and search for “m”. Repeated searches reuse the query
 					cache.
 				</p>

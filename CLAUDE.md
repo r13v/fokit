@@ -15,7 +15,7 @@ Project map:
 
 Conventions:
 - Keep the core and server entries free of React runtime imports.
-- Keep `fokit/react19` declarations unreachable from the main package so React
+- Keep `form-please/react19` declarations unreachable from the main package so React
   18 consumers can install the package.
 - Control registries stay explicit. Use `nativeControls` as the shipped
   unstyled native baseline, compose it with custom `defineControl` entries, and
@@ -23,7 +23,7 @@ Conventions:
 - `createFormKit` requires `controls` but accepts omitted or partial `slots`;
   omitted slots resolve from `createDefaultSlots()`.
 - Default slots are accessible structural fallback markup, not a theme, and do
-  not import `fokit/layout.css`.
+  not import `form-please/layout.css`.
 - Use `parseFormData` for server Action boundaries instead of
   `Object.fromEntries`.
 
@@ -37,4 +37,4 @@ Verification:
   Vocs build, Markdown/output audits, Playwright docs E2E, and a final
   production-base Vocs build for the deployable artifact.
 - Docs-site uses docs-only `vocs`, `waku`, `vite`, and `typescript@5.9.3`; do
-  not add these to the published Fokit package.
+  not add these to the published Form, Please package.

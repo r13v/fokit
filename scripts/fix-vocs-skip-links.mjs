@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url"
 
 const publicRoot = new URL("../docs-site/dist/public/", import.meta.url)
 const skipContentHash = "#vocs-content"
-const runtimeMarker = 'data-fokit-vocs-skip-link-base="true"'
+const runtimeMarker = 'data-fp-vocs-skip-link-base="true"'
 
 if (isMain()) {
 	await patchPublicRoot(process.env.BASE_PATH ?? "/")

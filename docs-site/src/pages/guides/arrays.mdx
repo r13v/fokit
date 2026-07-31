@@ -7,7 +7,7 @@ showAskAi: false
 # Arrays
 
 Array fields combine three things that must move together: values, UI metadata,
-and stable row identity. Fokit updates them atomically so inserting or moving a
+and stable row identity. Form, Please updates them atomically so inserting or moving a
 row does not attach touched state or visible errors to the wrong item.
 
 ## Define an array node
@@ -16,7 +16,7 @@ An array node names the array path, provides a new-item value, and describes
 fields relative to each item.
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({
@@ -74,7 +74,7 @@ readers and as tooltips. Customize those labels once with
 `defaultValues` includes the array exactly as it should appear on first render:
 
 ```ts twoslash
-import type { FormInput } from "fokit"
+import type { FormInput } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({
@@ -108,7 +108,7 @@ import {
 	nativeControls,
 	useArrayField,
 	useForm,
-} from "fokit"
+} from "form-please"
 import { z } from "zod"
 
 const schema = z.object({
@@ -167,12 +167,12 @@ The stable key is UI metadata. It never enters form values or submitted data.
 
 ## Parse arrays from native FormData
 
-Fokit writes `__fokit.array` markers alongside native control entries. Treat
+Form, Please writes `__fp.array` markers alongside native control entries. Treat
 them as an internal transport detail, and do not replace the protocol with
 `Object.fromEntries`, which loses repeated values and array structure.
 
 ```ts twoslash
-import { parseFormData } from "fokit/server"
+import { parseFormData } from "form-please/server"
 import { z } from "zod"
 
 const schema = z.object({

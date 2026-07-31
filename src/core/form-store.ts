@@ -91,7 +91,7 @@ export type FocusTarget = {
 }
 
 export const errorSummaryFocusTargetRegistration = Symbol(
-	"fokit.errorSummaryFocusTargetRegistration",
+	"form-please.errorSummaryFocusTargetRegistration",
 )
 
 type ErrorSummaryFocusTargetRegistrable = {
@@ -110,7 +110,9 @@ export function registerErrorSummaryFocusTarget(
 		errorSummaryFocusTargetRegistration
 	]
 	if (typeof register !== "function") {
-		throw new TypeError("Fokit error summaries require a Fokit form instance")
+		throw new TypeError(
+			"Form Please error summaries require a Form Please form instance",
+		)
 	}
 
 	register.call(form, index, element)
@@ -1940,7 +1942,7 @@ function asCoreFormStore<Schema extends StandardSchema, Context>(
 		return store
 	}
 
-	throw new TypeError("Submission requires a Fokit form store")
+	throw new TypeError("Submission requires a Form Please form store")
 }
 
 function filterPathSubsetIssues(

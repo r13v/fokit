@@ -1,6 +1,6 @@
 ---
 title: React 19 Actions
-description: Connect a Fokit definition to a React 19 Action with safe FormData parsing, pending state, and serializable server errors.
+description: Connect a Form, Please definition to a React 19 Action with safe FormData parsing, pending state, and serializable server errors.
 showAskAi: false
 ---
 
@@ -21,20 +21,20 @@ parsing and validation.
 `ActionForm` does **not** run client validation before dispatch. The Action must
 validate every submission on the server.
 
-Classic forms work in React 18 and 19 from the main `fokit` entry. Action-only
-components live in `fokit/react19`, so React 18 consumers never load their
+Classic forms work in React 18 and 19 from the main `form-please` entry. Action-only
+components live in `form-please/react19`, so React 18 consumers never load their
 declarations.
 
 ## Connect the client form
 
 Keep `createFormKit`, controls, and definitions in the main entry. Import only
-the Action boundary from `fokit/react19`:
+the Action boundary from `form-please/react19`:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "fokit"
-import { ActionForm, ActionSubmit } from "fokit/react19"
-import type { FormResult } from "fokit/server"
+import { createFormKit, nativeControls } from "form-please"
+import { ActionForm, ActionSubmit } from "form-please/react19"
+import type { FormResult } from "form-please/server"
 import { useActionState } from "react"
 import { z } from "zod"
 
@@ -86,19 +86,19 @@ definition as `AutoForm`, emits hidden serializer inputs when needed, and
 applies the returned `FormResult` after hydration.
 
 `ActionSubmit` is an unstyled native button. It combines React Action pending
-status with Fokit's disabled and submitting state.
+status with the disabled and submitting state from Form, Please.
 
 ## Parse on the server
 
-Use `parseFormData` from `fokit/server`. It reconstructs repeated and nested
+Use `parseFormData` from `form-please/server`. It reconstructs repeated and nested
 values, rejects unsafe structures, then runs Standard Schema validation:
 
 ```ts
 // [!include ~/snippets/server-action.ts]
 ```
 
-Do not decode a Fokit submission with `Object.fromEntries`. Repeated values and
-`__fokit.array` markers carry array structure. Browser controls also retain
+Do not decode a Form, Please submission with `Object.fromEntries`. Repeated values and
+`__fp.array` markers carry array structure. Browser controls also retain
 protocol values such as number strings, date strings, absent unchecked
 checkboxes, and `File` objects.
 
@@ -110,7 +110,7 @@ still run before `parseFormData`.
 The Action returns one small transport:
 
 ```ts twoslash
-import type { SubmissionIssue } from "fokit/server"
+import type { SubmissionIssue } from "form-please/server"
 
 // ---cut---
 type FormResult =

@@ -7,7 +7,7 @@ import {
 	type FormInput,
 	nativeControls,
 	type UpdateEvent,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 

@@ -7,8 +7,8 @@ showAskAi: false
 # Transaction hooks
 
 Transaction hooks apply one rule to every value update. Use `beforeUpdate` to
-change a proposal before Fokit commits it. Use `afterUpdate` to observe values
-after Fokit commits them.
+change a proposal before Form, Please commits it. Use `afterUpdate` to observe values
+after Form, Please commits them.
 
 ## Choose the correct mechanism
 
@@ -31,13 +31,13 @@ Each value command enters the same transaction pipeline:
 
 `command → proposal → beforeUpdate → commit → afterUpdate`
 
-Fokit completes these actions in order:
+Form, Please completes these actions in order:
 
-1. Fokit converts the command into `set` and `unset` changes.
-2. Fokit applies required `valuePolicy` changes to the proposal.
-3. Fokit calls `beforeUpdate` once with the complete proposal.
-4. Fokit commits the effective changes as one atomic update.
-5. Fokit notifies subscribers and calls `afterUpdate` once.
+1. Form, Please converts the command into `set` and `unset` changes.
+2. Form, Please applies required `valuePolicy` changes to the proposal.
+3. Form, Please calls `beforeUpdate` once with the complete proposal.
+4. Form, Please commits the effective changes as one atomic update.
+5. Form, Please notifies subscribers and calls `afterUpdate` once.
 
 A batch creates one transaction. Nested batches join the outer batch.
 
@@ -99,7 +99,7 @@ audit trail, or schedule a draft save.
 The `UpdateEvent` contains `previousValues`, committed `values`, effective
 `changes`, `source`, and `context`.
 
-Fokit does not roll back a commit when `afterUpdate` throws. Fokit also does not
+Form, Please does not roll back a commit when `afterUpdate` throws. Form, Please also does not
 wait for asynchronous work that the hook starts. The application must manage
 debouncing, request cancellation, and stale responses.
 
@@ -124,7 +124,7 @@ not add a separate array change type.
 
 ## Know when hooks do not run
 
-Fokit does not call either transaction hook for these operations:
+Form, Please does not call either transaction hook for these operations:
 
 - initial `defaultValues`;
 - a value command that has no effective change;
@@ -132,11 +132,11 @@ Fokit does not call either transaction hook for these operations:
 - a context replacement;
 - a reset that changes only reset metadata.
 
-Fokit calls `beforeUpdate` for a transaction that the hook cancels. Fokit does
+Form, Please calls `beforeUpdate` for a transaction that the hook cancels. Form, Please does
 not call `afterUpdate` for that transaction.
 
-If `beforeUpdate` throws, Fokit aborts the transaction and propagates the
-error. If `afterUpdate` throws, Fokit keeps the committed values and propagates the
+If `beforeUpdate` throws, Form, Please aborts the transaction and propagates the
+error. If `afterUpdate` throws, Form, Please keeps the committed values and propagates the
 error.
 
 ## Use both hooks
@@ -149,7 +149,7 @@ The complete example uses `beforeUpdate` for the date invariant. It uses
 ```
 
 Configure one `beforeUpdate` hook and one `afterUpdate` hook on `AutoForm`,
-`useForm`, or `createForm`. Both hooks are synchronous. Fokit does not provide
+`useForm`, or `createForm`. Both hooks are synchronous. Form, Please does not provide
 a hook middleware chain.
 
 Next, read [Validation and errors](/guides/validation) for schema and issue

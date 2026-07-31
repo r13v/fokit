@@ -372,7 +372,7 @@ describe("React 19 ActionForm", () => {
 		expect(screen.getByTestId("submit-count").textContent).toBe("1")
 	})
 
-	it("renders ActionSubmit as an unstyled native submit button using Fokit and Action pending state", async () => {
+	it("renders ActionSubmit as an unstyled native submit button using Form Please and Action pending state", async () => {
 		const pending = createDeferred<void>()
 
 		render(
@@ -535,11 +535,11 @@ describe("React 19 ActionForm", () => {
 					{...forbiddenFormProps}
 				/>,
 			),
-		).toThrow(/Fokit owns the onSubmit form prop/)
+		).toThrow(/Form Please owns the onSubmit form prop/)
 
 		expect(() =>
 			render(<ActionSubmit {...forbiddenSubmitProps}>Save</ActionSubmit>),
-		).toThrow(/Fokit owns the type submit prop/)
+		).toThrow(/Form Please owns the type submit prop/)
 	})
 })
 
@@ -584,7 +584,7 @@ function NestedSnapshotProbe({
 
 function requireSnapshot<Snapshot>(snapshot: Snapshot | undefined): Snapshot {
 	if (snapshot === undefined) {
-		throw new Error("No Fokit form snapshot was available")
+		throw new Error("No Form Please form snapshot was available")
 	}
 
 	return snapshot
@@ -604,7 +604,7 @@ function createSchema<Input>(
 	return {
 		"~standard": {
 			version: 1,
-			vendor: "fokit-test",
+			vendor: "form-please-test",
 			validate,
 		},
 	} as StandardSchemaV1<Input>

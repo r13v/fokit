@@ -18,7 +18,7 @@ import {
 	useFormState,
 	useValue,
 	type ValueChange,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -141,7 +141,7 @@ function LadderPreview() {
 	const tiers = useFormState(form, (snapshot) => snapshot.values.tiers)
 	return (
 		<aside
-			className="fokit-complex__preview"
+			className="form-please-complex__preview"
 			aria-label="Membership ladder preview"
 		>
 			<strong>Reduction ladder</strong>
@@ -160,11 +160,11 @@ function PauseCalendar() {
 	const values = useValue(form, "pauseWindows")
 	return (
 		<section
-			className="fokit-complex__embedded"
+			className="form-please-complex__embedded"
 			aria-label="Pause calendar shortcuts"
 		>
 			<strong>Calendar shortcuts</strong>
-			<div className="fokit-complex__choice-list">
+			<div className="form-please-complex__choice-list">
 				<button
 					onClick={() =>
 						pauses.append({
@@ -205,7 +205,7 @@ function WorkspaceConnection() {
 	})
 	return (
 		<section
-			className="fokit-complex__embedded"
+			className="form-please-complex__embedded"
 			aria-label="Workspace connection"
 		>
 			<strong>
@@ -463,25 +463,30 @@ function MembershipLadderForm() {
 
 	if (loadedDraft.isPending || workspaces.isPending)
 		return (
-			<section className="fokit-complex">Loading membership ladder…</section>
+			<section className="form-please-complex">
+				Loading membership ladder…
+			</section>
 		)
 	if (loadedDraft.isError || workspaces.isError)
 		return (
-			<section className="fokit-complex">
+			<section className="form-please-complex">
 				Could not load the membership editor.
 			</section>
 		)
 
 	return (
-		<section aria-label="Membership ladder example" className="fokit-complex">
-			<p className="fokit-complex__kicker">Cascading four-tier editor</p>
-			<p className="fokit-complex__summary">
+		<section
+			aria-label="Membership ladder example"
+			className="form-please-complex"
+		>
+			<p className="form-please-complex__kicker">Cascading four-tier editor</p>
+			<p className="form-please-complex__summary">
 				Four nested benefit arrays, monotonic reductions, a remote workspace
 				connection, and calendar-assisted pause windows stay synchronized.
 			</p>
 			<kit.AutoForm
 				beforeUpdate={preserveTierOrder}
-				className="fokit-complex__form"
+				className="form-please-complex__form"
 				context={{ workspaces: workspaces.data }}
 				defaultValues={loadedDraft.data}
 				definition={membershipDefinition}
@@ -501,8 +506,8 @@ function MembershipLadderForm() {
 					}
 				}}
 			>
-				<div className="fokit-complex__actions">
-					<kit.Submit className="fokit-complex__primary">
+				<div className="form-please-complex__actions">
+					<kit.Submit className="form-please-complex__primary">
 						Save membership ladder
 					</kit.Submit>
 					<span aria-live="polite">

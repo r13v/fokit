@@ -2,8 +2,8 @@ import type {
 	DefaultSlotsI18n,
 	NativeSelectOptions,
 	NativeTextOptions,
-} from "fokit"
-import { createDefaultSlots, nativeControls } from "fokit"
+} from "form-please"
+import { createDefaultSlots, nativeControls } from "form-please"
 import {
 	type ControlMetadata,
 	createFormStore,
@@ -12,8 +12,8 @@ import {
 	normalizeDefinition,
 	type StandardSchema,
 	type UiNode,
-} from "fokit/core"
-import { type ParseResult, parseFormData } from "fokit/server"
+} from "form-please/core"
+import { type ParseResult, parseFormData } from "form-please/server"
 
 type ProfileInput = {
 	readonly name: string
@@ -23,7 +23,7 @@ type ProfileInput = {
 const schema: StandardSchema<ProfileInput> = {
 	"~standard": {
 		version: 1,
-		vendor: "fokit-smoke",
+		vendor: "form-please-smoke",
 		validate(value) {
 			return { value: value as ProfileInput }
 		},

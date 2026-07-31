@@ -4,8 +4,8 @@ import type { StructuralNodeName, StructuralRootProps } from "./slots.js"
 type StructuralDataProps = {
 	readonly "aria-describedby"?: string
 	readonly "aria-labelledby"?: string
-	readonly "data-fokit-path"?: string
-	readonly "data-fokit-span"?: string
+	readonly "data-fp-path"?: string
+	readonly "data-fp-span"?: string
 	readonly "data-invalid"?: ""
 	readonly "data-dirty"?: ""
 	readonly "data-disabled"?: ""
@@ -29,8 +29,8 @@ export function createErrorMessageRootProps({
 	readonly ref?: (element: HTMLElement | null) => void
 }): StructuralRootProps {
 	const props: GeneratedRootProps = {
-		"data-fokit-node": "error-message",
-		...(path === undefined ? {} : { "data-fokit-path": path }),
+		"data-fp-node": "error-message",
+		...(path === undefined ? {} : { "data-fp-path": path }),
 		id,
 		...(tabIndex === undefined ? {} : { tabIndex }),
 		...(ref === undefined ? {} : { ref }),
@@ -58,12 +58,12 @@ export function createStructuralRootProps(
 	},
 ): StructuralRootProps {
 	const props: GeneratedRootProps = {
-		"data-fokit-node": nodeName,
+		"data-fp-node": nodeName,
 		...(options.id === undefined ? {} : { id: options.id }),
-		...(options.path === undefined ? {} : { "data-fokit-path": options.path }),
+		...(options.path === undefined ? {} : { "data-fp-path": options.path }),
 		...(options.span === undefined
 			? {}
-			: { "data-fokit-span": String(options.span) }),
+			: { "data-fp-span": String(options.span) }),
 		...(options.className === undefined
 			? {}
 			: { className: options.className }),

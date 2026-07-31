@@ -179,8 +179,8 @@ function GeneratedSection<Schema extends StandardSchema, Context>({
 		<Section
 			description={node.description as ReactNode}
 			layoutProps={{
-				"data-fokit-layout": "grid",
-				"data-fokit-columns": node.columns,
+				"data-fp-layout": "grid",
+				"data-fp-columns": node.columns,
 			}}
 			rootProps={rootProps}
 			slotOptions={node.slotOptions}

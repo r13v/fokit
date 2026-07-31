@@ -38,7 +38,7 @@ export function ErrorSummary<Schema extends StandardSchema, Context>({
 						ref: (element) => {
 							if (element !== null && typeof element.focus !== "function") {
 								throw new TypeError(
-									"Fokit summary error root must be focusable",
+									"Form Please summary error root must be focusable",
 								)
 							}
 

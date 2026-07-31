@@ -12,11 +12,11 @@ contracts only at component or server boundaries.
 
 ## Input and output
 
-Standard Schema may transform submitted values. Fokit keeps the editable input
+Standard Schema may transform submitted values. Form, Please keeps the editable input
 and validated output separate:
 
 ```ts twoslash
-import type { FormInput, FormOutput } from "fokit"
+import type { FormInput, FormOutput } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({
@@ -53,7 +53,7 @@ The UI node families are:
 Use path types when an application API accepts a reusable form path:
 
 ```ts twoslash
-import type { ArrayFieldPath, FieldPath, PathValue } from "fokit"
+import type { ArrayFieldPath, FieldPath, PathValue } from "form-please"
 
 type Draft = {
 	contacts: readonly { email: string }[]
@@ -85,7 +85,7 @@ import type {
 	FormInstance,
 	FormRuntimeOptions,
 	UseFormOptions,
-} from "fokit"
+} from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -112,7 +112,7 @@ complete function type when a standalone resolver needs an annotation.
 accepted by `matchResource` and `fromResource`:
 
 ```ts twoslash
-import type { ResourceState } from "fokit"
+import type { ResourceState } from "form-please"
 
 type Cities = ResourceState<
 	readonly { readonly value: string; readonly label: string }[],
@@ -144,7 +144,7 @@ The main control types are:
 | `ControlValueOf` | Extract the registered value type |
 | `ControlOptionsOf` | Extract the options type |
 | `ControlContextOf` | Extract context requirements |
-| `IsValidControlValue` | Reject values outside Fokit's supported form model |
+| `IsValidControlValue` | Reject values outside the supported Form, Please data model |
 
 The shipped controls expose `NativeTextOptions`, `NativeTextareaOptions`,
 `NativeSelectOptions`, `NativeSelectEmptyOption`, `NativeNumberOptions`,
@@ -185,7 +185,7 @@ Design-system adapters usually need one of five contracts:
 - `ArrayItemSlotProps`;
 - `ErrorMessageSlotProps`.
 
-Each contract carries root props that preserve Fokit's DOM protocol and
+Each contract carries root props that preserve the Form, Please DOM protocol and
 accessible relationships. The default-slot message contract is described by
 `DefaultSlotsI18n`, `DefaultArrayAddI18nData`,
 `DefaultArrayItemI18nData`, and `DefaultSlotI18nValue`.
@@ -201,14 +201,14 @@ Server APIs return discriminated serializable results:
 | `SubmissionIssue` | Serializable schema or server issue |
 | `ParseFormDataOptions` | Safety limits for entry count, paths, depth, and array indexes |
 
-Import server-only types from `fokit/server`:
+Import server-only types from `form-please/server`:
 
 ```ts twoslash
 import type {
 	FormResult,
 	ParseFormDataOptions,
 	SubmissionIssue,
-} from "fokit/server"
+} from "form-please/server"
 
 const result: FormResult = {
 	status: "error",

@@ -6,7 +6,7 @@ import {
 	type FormInput,
 	type FormOutput,
 	nativeControls,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -149,7 +149,7 @@ export const profileDefinition = kit.defineForm(profileSchema)({
 					path: "avatar",
 					control: "file",
 					label: "Avatar",
-					description: "Choose a PNG file. Fokit keeps it in FormData.",
+					description: "Choose a PNG file. Form, Please keeps it in FormData.",
 					options: {
 						accept: "image/png",
 					},
@@ -161,7 +161,7 @@ export const profileDefinition = kit.defineForm(profileSchema)({
 			path: "contacts",
 			label: "Contacts",
 			description:
-				"Add or reorder contacts. Fokit keeps each row with its state.",
+				"Add or reorder contacts. Form, Please keeps each row with its state.",
 			itemDefault: {
 				email: "",
 				label: undefined,

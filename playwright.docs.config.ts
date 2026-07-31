@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test"
 
 const port = Number(process.env.PLAYWRIGHT_DOCS_PORT ?? 4175)
 const host = "127.0.0.1"
-const baseURL = `http://${host}:${port}/fokit/`
+const baseURL = `http://${host}:${port}/form-please/`
 
 export default defineConfig({
 	testDir: "./tests/browser",

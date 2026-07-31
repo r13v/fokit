@@ -5,7 +5,7 @@ import {
 	type FormInput,
 	type FormOutput,
 	nativeControls,
-} from "fokit"
+} from "form-please"
 import { z } from "zod"
 
 // [!region schema]

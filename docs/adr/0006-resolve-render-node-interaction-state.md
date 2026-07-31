@@ -21,7 +21,7 @@ and `readOnly` props.
 
 Core continues to carry the component as an opaque generic value and never
 imports or invokes React. The React component owns applying the supplied flags
-to its arbitrary DOM and commands; Fokit cannot enforce that behavior across
+to its arbitrary DOM and commands; Form, Please cannot enforce that behavior across
 an opaque component boundary. Existing components may ignore the new props.
 
 ## Considered Options
@@ -40,7 +40,7 @@ an opaque component boundary. Existing components may ignore the new props.
 
 - Render components can follow the same conditional and interaction policy as
   structural nodes without becoming field nodes.
-- The component boundary stays explicit: Fokit supplies state, while the
+- The component boundary stays explicit: Form, Please supplies state, while the
   component remains responsible for accessibility and disabled/read-only DOM
   behavior.
 - ADR 0003 remains authoritative for opaque core transport and placement; its

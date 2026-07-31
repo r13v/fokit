@@ -41,7 +41,7 @@ function focusActionIssues<Schema extends StandardSchema, Context>(
 
 	formElement
 		?.querySelector<HTMLElement>(
-			'[data-fokit-node="error-message"][tabindex="-1"]',
+			'[data-fp-node="error-message"][tabindex="-1"]',
 		)
 		?.focus()
 }

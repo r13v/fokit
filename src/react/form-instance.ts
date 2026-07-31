@@ -140,7 +140,7 @@ export class FormInstanceImpl<
 	bind(owner: object, options: FormRuntimeOptions<Schema, Context>): void {
 		if (this.#binding !== undefined && this.#binding.owner !== owner) {
 			throw new Error(
-				"A Fokit form instance cannot be bound by multiple useForm hooks at the same time",
+				"A Form Please form instance cannot be bound by multiple useForm hooks at the same time",
 			)
 		}
 
@@ -378,7 +378,7 @@ export function getFormInstanceImpl<
 		return form
 	}
 
-	throw new TypeError("useForm requires a form created by Fokit")
+	throw new TypeError("useForm requires a form created by Form Please")
 }
 
 function createBinding<Schema extends StandardSchema, Context>(

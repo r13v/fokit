@@ -218,7 +218,7 @@ describe("form store construction and snapshots", () => {
 			kind: "person",
 			contacts: [{ value: "ada@example.test" }],
 		})
-		expect(Object.hasOwn(form.getValues() as object, "__fokit")).toBe(false)
+		expect(Object.hasOwn(form.getValues() as object, "__fp")).toBe(false)
 	})
 
 	it("registers focus refs and focuses only mounted visible editable fields", () => {

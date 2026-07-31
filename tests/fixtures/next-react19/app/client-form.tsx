@@ -10,9 +10,9 @@ import {
 	type FieldSlotProps,
 	type SectionSlotProps,
 	type StandardSchema,
-} from "fokit"
-import { ActionForm, ActionSubmit } from "fokit/react19"
-import type { FormResult } from "fokit/server"
+} from "form-please"
+import { ActionForm, ActionSubmit } from "form-please/react19"
+import type { FormResult } from "form-please/server"
 
 type ClientInput = {
 	readonly name: string
@@ -21,7 +21,7 @@ type ClientInput = {
 const schema: StandardSchema<ClientInput> = {
 	"~standard": {
 		version: 1,
-		vendor: "fokit-smoke",
+		vendor: "form-please-smoke",
 		validate(value) {
 			return { value: value as ClientInput }
 		},

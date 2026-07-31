@@ -1,6 +1,6 @@
 ---
 title: Production recipes
-description: Focused Fokit patterns for manual composition, loaded edit forms, server safety, accessibility, and public-boundary tests.
+description: Focused Form, Please patterns for manual composition, loaded edit forms, server safety, accessibility, and public-boundary tests.
 showAskAi: false
 ---
 
@@ -36,7 +36,7 @@ import {
 	nativeControls,
 	useForm,
 	useFormState,
-} from "fokit"
+} from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -81,7 +81,7 @@ baseline, reset deliberately:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls, useForm } from "fokit"
+import { createFormKit, nativeControls, useForm } from "form-please"
 import { useEffect } from "react"
 import { z } from "zod"
 
@@ -150,7 +150,7 @@ See the complete server round trip in
 
 ## Preserve the accessibility contract
 
-Fokit supplies stable IDs, native names, described-by relationships, issue
+Form, Please supplies stable IDs, native names, described-by relationships, issue
 focus targets, required state, and form semantics. Controls and slots decide
 the final markup, so they must forward the props they receive.
 
@@ -171,7 +171,7 @@ Test forms through the DOM your user receives:
 - test custom controls and slots through the markup they own;
 - test server flows with serializable `FormResult` values.
 
-Use `fokit/core` for focused store invariants. Application tests should not
+Use `form-please/core` for focused store invariants. Application tests should not
 depend on private store fields or generated DOM order.
 
 Return to the [production form tutorial](/guides/tutorial), or use the

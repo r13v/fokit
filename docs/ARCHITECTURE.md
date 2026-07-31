@@ -1,4 +1,4 @@
-# Fokit Architecture
+# Form, Please Architecture
 
 - Status: Descriptive
 - Audience: Maintainers and contributors
@@ -16,18 +16,18 @@ of behavior.
 
 ## Architectural shape
 
-Fokit is one package with four JavaScript entry points and one optional CSS
+Form, Please is one package with four JavaScript entry points and one optional CSS
 entry point:
 
 ```mermaid
 flowchart TD
     App["Application"]
 
-    Main["fokit<br/>React 18 and 19 API"]
-    Core["fokit/core<br/>React-free form engine"]
-    React19["fokit/react19<br/>React 19 Actions adapter"]
-    Server["fokit/server<br/>FormData parsing and validation"]
-    CSS["fokit/layout.css<br/>Optional structural layout"]
+    Main["form-please<br/>React 18 and 19 API"]
+    Core["form-please/core<br/>React-free form engine"]
+    React19["form-please/react19<br/>React 19 Actions adapter"]
+    Server["form-please/server<br/>FormData parsing and validation"]
+    CSS["form-please/layout.css<br/>Optional structural layout"]
 
     ReactLayer["src/react"]
     CoreLayer["src/core"]
@@ -63,9 +63,9 @@ React-free dependency boundary without maintaining a second UI tree.
 
 ## Execution environments
 
-The main `fokit` and `fokit/react19` entries retain `"use client"` directives.
+The main `form-please` and `form-please/react19` entries retain `"use client"` directives.
 Importing either entry from a React Server Component establishes a client
-boundary. `fokit/core` and `fokit/server` contain no client directive or React
+boundary. `form-please/core` and `form-please/server` contain no client directive or React
 runtime import and may be used independently in server-side code.
 
 Client components can still participate in SSR. React subscriptions pass the
@@ -254,10 +254,10 @@ The renderer maps resolved nodes as follows:
 
 Slots own semantic structure. Controls own only the interactive value editor
 and must attach the supplied name, ID, ref, and ARIA relationships to the
-appropriate DOM element. Fokit supplies unstyled accessible default slots and
+appropriate DOM element. Form, Please supplies unstyled accessible default slots and
 an explicit `nativeControls` registry; neither is a visual theme.
 
-The stable `data-fokit-*` and CSS-variable protocol connects structural slots
+The stable `data-fp-*` and CSS-variable protocol connects structural slots
 to the optional `layout.css`. Application controls, typography, color, and
 component styling remain outside the library.
 
@@ -313,7 +313,7 @@ Invalid submissions expose and focus the first eligible issue.
 
 ### React 19 Actions
 
-`ActionForm` is isolated in `fokit/react19`. It verifies React 19 Action
+`ActionForm` is isolated in `form-please/react19`. It verifies React 19 Action
 support, checks that every present field value can be represented in
 `FormData`, and tracks edits made while an Action is pending.
 
@@ -353,7 +353,7 @@ This makes a base definition usable by a compatible extended kit without
 allowing an extension to silently reinterpret an existing field.
 
 New behavior should normally fit one of the existing boundaries: a control, a
-slot, a derived UI property, or an application-level concern. Fokit does not
+slot, a derived UI property, or an application-level concern. Form, Please does not
 provide a middleware chain, schema inference, remote UI language, visual form
 builder, theme, wizard engine, or application persistence layer.
 

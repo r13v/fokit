@@ -28,10 +28,10 @@ const javaScriptEntrypoints = {
 describe("package metadata", () => {
 	it("publishes only the supported package surface", () => {
 		expect(packageJson).toMatchObject({
-			name: "fokit",
+			name: "form-please",
 			license: "MIT",
 			type: "module",
-			homepage: "https://r13v.github.io/fokit/",
+			homepage: "https://r13v.github.io/form-please/",
 			files: ["dist"],
 			sideEffects: ["**/*.css"],
 			peerDependencies: {
@@ -92,18 +92,18 @@ describe("package metadata", () => {
 	})
 
 	it("keeps the optional stylesheet structural and explicitly publishable", async () => {
-		expect(layoutCss).toContain("@layer fokit")
+		expect(layoutCss).toContain("@layer fp")
 		expect(layoutCss).toContain("@container (min-width: 40rem)")
 		expect(layoutCss).toContain("@container (min-width: 64rem)")
 		expect(layoutCss).not.toMatch(/@media\b/)
 		expect(layoutCss).not.toMatch(/resizeobserver/i)
 
-		const cssVariables = new Set(layoutCss.match(/--fokit-[a-z-]+/g) ?? [])
+		const cssVariables = new Set(layoutCss.match(/--fp-[a-z-]+/g) ?? [])
 		expect([...cssVariables].sort()).toEqual([
-			"--fokit-array-item-gap",
-			"--fokit-column-gap",
-			"--fokit-row-gap",
-			"--fokit-stack-gap",
+			"--fp-array-item-gap",
+			"--fp-column-gap",
+			"--fp-row-gap",
+			"--fp-stack-gap",
 		])
 
 		for (const pattern of forbiddenCssPatterns()) {

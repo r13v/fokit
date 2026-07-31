@@ -17,16 +17,16 @@ export type StructuralNodeName =
 	| "field"
 	| "section"
 
-export type FokitNodeName = "form" | StructuralNodeName
+export type FormPleaseNodeName = "form" | StructuralNodeName
 
-export type FokitCssVariable =
-	| "--fokit-array-item-gap"
-	| "--fokit-column-gap"
-	| "--fokit-row-gap"
-	| "--fokit-stack-gap"
+export type FormPleaseCssVariable =
+	| "--fp-array-item-gap"
+	| "--fp-column-gap"
+	| "--fp-row-gap"
+	| "--fp-stack-gap"
 
-export type FokitStyle = CSSProperties &
-	Partial<Record<FokitCssVariable, string>>
+export type FormPleaseStyle = CSSProperties &
+	Partial<Record<FormPleaseCssVariable, string>>
 
 export type ReactUiContent = string | ReactElement
 declare const reactUiPresentationSlotKeys: unique symbol
@@ -56,16 +56,16 @@ export type ReactUiPresentation<
 }
 
 export type StructuralRootProps = Omit<HTMLAttributes<HTMLElement>, "style"> & {
-	readonly "data-fokit-node": StructuralNodeName
+	readonly "data-fp-node": StructuralNodeName
 	ref?(element: HTMLElement | null): void
-	readonly style?: FokitStyle
+	readonly style?: FormPleaseStyle
 }
 
 export type SectionSlotProps<SlotOptions = never> = {
 	readonly rootProps: StructuralRootProps
 	readonly layoutProps: HTMLAttributes<HTMLElement> & {
-		readonly "data-fokit-layout": "grid"
-		readonly "data-fokit-columns": GridColumns
+		readonly "data-fp-layout": "grid"
+		readonly "data-fp-columns": GridColumns
 	}
 	readonly title?: ReactNode
 	readonly description?: ReactNode

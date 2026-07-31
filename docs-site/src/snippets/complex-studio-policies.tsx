@@ -17,7 +17,7 @@ import {
 	useFormContext,
 	useFormState,
 	type ValueChange,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -177,7 +177,7 @@ function PolicyBalance() {
 	}))
 
 	return (
-		<aside className="fokit-complex__preview" aria-label="Policy balance">
+		<aside className="form-please-complex__preview" aria-label="Policy balance">
 			<strong>Live policy balance</strong>
 			<span>
 				{balance.accessOptions} access exception(s) ·{" "}
@@ -481,14 +481,14 @@ function StudioPoliciesForm() {
 
 	if (policies.isPending) {
 		return (
-			<section className="fokit-complex" aria-live="polite">
+			<section className="form-please-complex" aria-live="polite">
 				Loading policy baseline…
 			</section>
 		)
 	}
 	if (policies.isError) {
 		return (
-			<section className="fokit-complex">
+			<section className="form-please-complex">
 				Could not load the policy editor.
 			</section>
 		)
@@ -497,17 +497,17 @@ function StudioPoliciesForm() {
 	return (
 		<section
 			aria-label="Creative studio policies example"
-			className="fokit-complex"
+			className="form-please-complex"
 		>
-			<p className="fokit-complex__kicker">Composite policy editor</p>
-			<p className="fokit-complex__summary">
+			<p className="form-please-complex__kicker">Composite policy editor</p>
+			<p className="form-please-complex__summary">
 				A loaded baseline and an independent catalog feed one definition;
 				conditional policy groups and a reorderable equipment matrix are
 				published to two endpoints.
 			</p>
 			<kit.AutoForm
 				beforeUpdate={preservePolicyInvariants}
-				className="fokit-complex__form"
+				className="form-please-complex__form"
 				context={{ equipment: equipmentResource, savedEquipmentOptions }}
 				defaultValues={policies.data}
 				definition={policyDefinition}
@@ -529,8 +529,8 @@ function StudioPoliciesForm() {
 					}
 				}}
 			>
-				<div className="fokit-complex__actions">
-					<kit.Submit className="fokit-complex__primary">
+				<div className="form-please-complex__actions">
+					<kit.Submit className="form-please-complex__primary">
 						Publish policies
 					</kit.Submit>
 					<span aria-live="polite">

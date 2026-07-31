@@ -2,17 +2,17 @@ import fc from "fast-check"
 import { describe, expect, it } from "vitest"
 
 import { normalizeFormData } from "./normalize-form-data.js"
-import { fokitArrayMarkerName, invalidFormDataCode } from "./protocol.js"
+import { fpArrayMarkerName, invalidFormDataCode } from "./protocol.js"
 
 describe("FormData normalization", () => {
 	it("normalizes objects, indexed arrays, repeated names, markers, strings, and File values", () => {
 		const avatar = new File(["avatar"], "avatar.png", { type: "image/png" })
 		const formData = new FormData()
-		formData.append(fokitArrayMarkerName, "contacts")
-		formData.append(fokitArrayMarkerName, "contacts.0.channels")
-		formData.append(fokitArrayMarkerName, "tags")
-		formData.append(fokitArrayMarkerName, "emptyTags")
-		formData.append(fokitArrayMarkerName, "singleTag")
+		formData.append(fpArrayMarkerName, "contacts")
+		formData.append(fpArrayMarkerName, "contacts.0.channels")
+		formData.append(fpArrayMarkerName, "tags")
+		formData.append(fpArrayMarkerName, "emptyTags")
+		formData.append(fpArrayMarkerName, "singleTag")
 		formData.append("name", "Ada")
 		formData.append("address.city", "London")
 		formData.append("contacts.0.value", "ada@example.test")
@@ -64,12 +64,12 @@ describe("FormData normalization", () => {
 	})
 
 	it.each([
-		["unknown reserved metadata", [["__fokit.extra", "x"]]],
+		["unknown reserved metadata", [["__fp.extra", "x"]]],
 		[
 			"duplicate array markers",
 			[
-				[fokitArrayMarkerName, "tags"],
-				[fokitArrayMarkerName, "tags"],
+				[fpArrayMarkerName, "tags"],
+				[fpArrayMarkerName, "tags"],
 			],
 		],
 		["sparse indexes", [["contacts.1.value", "ada@example.test"]]],
@@ -94,7 +94,7 @@ describe("FormData normalization", () => {
 			[["contacts.1e3.value", "ada@example.test"]],
 		],
 		["prototype mutation paths", [["account.__proto__.polluted", "yes"]]],
-		["malformed marker paths", [[fokitArrayMarkerName, "0.contacts"]]],
+		["malformed marker paths", [[fpArrayMarkerName, "0.contacts"]]],
 	])("rejects %s", (_name, entries) => {
 		const formData = new FormData()
 		for (const [name, value] of entries) {
@@ -108,7 +108,7 @@ describe("FormData normalization", () => {
 
 	it("rejects File array markers", () => {
 		const formData = new FormData()
-		formData.append(fokitArrayMarkerName, new File(["x"], "marker.txt"))
+		formData.append(fpArrayMarkerName, new File(["x"], "marker.txt"))
 
 		const result = normalizeFormData(formData)
 

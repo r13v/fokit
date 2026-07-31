@@ -8,14 +8,14 @@ function collectPageErrors(page: Page): string[] {
 	return errors
 }
 
-test.describe("Fokit documentation", () => {
+test.describe("Form, Please documentation", () => {
 	test("uses clean Vocs routes, sidebar navigation, and direct deep links", async ({
 		page,
 	}, testInfo) => {
 		await page.setViewportSize({ width: 1280, height: 900 })
 		await page.goto("./get-started")
 
-		await expect(page).toHaveURL(/\/fokit\/get-started$/)
+		await expect(page).toHaveURL(/\/form-please\/get-started$/)
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Get started" }),
 		).toBeVisible()
@@ -25,17 +25,17 @@ test.describe("Fokit documentation", () => {
 			sidebar.getByRole("link", { name: "Get started" }),
 		).toHaveAttribute("data-active", "true")
 		await page.screenshot({
-			path: testInfo.outputPath("fokit-get-started.png"),
+			path: testInfo.outputPath("form-please-get-started.png"),
 		})
 
 		await sidebar.getByRole("link", { name: "API", exact: true }).click()
-		await expect(page).toHaveURL(/\/fokit\/api$/)
+		await expect(page).toHaveURL(/\/form-please\/api$/)
 		await expect(
 			page.getByRole("heading", { level: 1, name: "API" }),
 		).toBeVisible()
 
 		await page.goto("./api#createformkit")
-		await expect(page).toHaveURL(/\/fokit\/api#createformkit$/)
+		await expect(page).toHaveURL(/\/form-please\/api#createformkit$/)
 		const createFormKitHeading = page.getByRole("heading", {
 			level: 2,
 			name: "createFormKit",
@@ -59,7 +59,7 @@ test.describe("Fokit documentation", () => {
 		const sidebar = page.locator("nav[data-v-sidebar]")
 		await sidebar.getByRole("link", { name: "Build a production form" }).click()
 
-		await expect(page).toHaveURL(/\/fokit\/guides\/tutorial$/)
+		await expect(page).toHaveURL(/\/form-please\/guides\/tutorial$/)
 		await expect(
 			page.getByRole("heading", {
 				level: 1,
@@ -75,11 +75,11 @@ test.describe("Fokit documentation", () => {
 		await expect(page.getByRole("button", { name: /Ask AI/ })).toHaveCount(0)
 
 		await page.screenshot({
-			path: testInfo.outputPath("fokit-production-tutorial.png"),
+			path: testInfo.outputPath("form-please-production-tutorial.png"),
 		})
 
 		await sidebar.getByRole("link", { name: "Validation & errors" }).click()
-		await expect(page).toHaveURL(/\/fokit\/guides\/validation$/)
+		await expect(page).toHaveURL(/\/form-please\/guides\/validation$/)
 		await expect(
 			page.getByRole("heading", {
 				level: 1,
@@ -105,14 +105,14 @@ test.describe("Fokit documentation", () => {
 		).toBeVisible()
 		await expect(
 			page.getByRole("link", { name: "Build your first form" }),
-		).toHaveAttribute("href", "/fokit/get-started")
+		).toHaveAttribute("href", "/form-please/get-started")
 		await page.screenshot({
 			fullPage: true,
-			path: testInfo.outputPath("fokit-overview.png"),
+			path: testInfo.outputPath("form-please-overview.png"),
 		})
 
 		const demo = page.getByRole("region", {
-			name: "Live Fokit profile form",
+			name: "Live Form, Please profile form",
 		})
 		await expect(demo).toBeVisible()
 		await expect(demo.getByTestId("overview-output")).toContainText(
@@ -127,7 +127,7 @@ test.describe("Fokit documentation", () => {
 		await demo.getByLabel("Email").fill("not-an-email")
 		await demo.getByRole("button", { name: "Save profile" }).click()
 		await expect(
-			demo.locator("[data-fokit-node='error-message']", {
+			demo.locator("[data-fp-node='error-message']", {
 				hasText: "Enter a valid email",
 			}),
 		).toBeVisible()
@@ -175,11 +175,13 @@ test.describe("Fokit documentation", () => {
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 920 })
-		await page.goto("./get-started#interactive-fokit-lab")
+		await page.goto("./get-started#interactive-form-please-lab")
 
-		const lab = page.getByRole("region", { name: "Interactive Fokit Lab" })
+		const lab = page.getByRole("region", {
+			name: "Interactive Form, Please Lab",
+		})
 		await expect(lab.getByTestId("lab-form-data")).toContainText(
-			"__fokit.array=contacts",
+			"__fp.array=contacts",
 			{ timeout: 15_000 },
 		)
 		const name = lab.getByLabel("Name")
@@ -209,7 +211,7 @@ test.describe("Fokit documentation", () => {
 		expect(actionHeights[0]).toBe(actionHeights[1])
 		expect(actionHeights[0]).toBeLessThan(controlHeights[0] ?? 0)
 
-		const actionGroup = lab.locator("[data-fokit-array-item-actions]").first()
+		const actionGroup = lab.locator("[data-fp-array-item-actions]").first()
 		await expect(actionGroup).toBeVisible()
 		await expect(actionGroup).toHaveAttribute("aria-label", "#1")
 		await expect(actionGroup.getByText("#1", { exact: true })).toBeVisible()
@@ -234,7 +236,7 @@ test.describe("Fokit documentation", () => {
 
 		const accentColors = await Promise.all([
 			lab
-				.locator(".fokit-lab__kicker")
+				.locator(".form-please-lab__kicker")
 				.evaluate((element) => getComputedStyle(element).color),
 			lab
 				.getByRole("button", { name: "Save profile" })
@@ -259,7 +261,7 @@ test.describe("Fokit documentation", () => {
 		await email.fill("invalid")
 		await lab.getByRole("button", { name: "Save profile" }).click()
 		const fieldTops = await lab
-			.locator("[data-fokit-node='array-item'] [data-fokit-node='field']")
+			.locator("[data-fp-node='array-item'] [data-fp-node='field']")
 			.evaluateAll((elements) =>
 				elements.map((element) => element.getBoundingClientRect().top),
 			)
@@ -277,12 +279,12 @@ test.describe("Fokit documentation", () => {
 		const skipLink = page.locator("a[data-v-skip-to-content]")
 		await expect(skipLink).toHaveAttribute(
 			"href",
-			/\/fokit\/get-started#vocs-content$/,
+			/\/form-please\/get-started#vocs-content$/,
 		)
 
 		await skipLink.focus()
 		await page.keyboard.press("Enter")
-		await expect(page).toHaveURL(/\/fokit\/get-started#vocs-content$/)
+		await expect(page).toHaveURL(/\/form-please\/get-started#vocs-content$/)
 	})
 
 	test("renders copyable code, rich Twoslash hovers, and static AI Markdown", async ({
@@ -293,7 +295,7 @@ test.describe("Fokit documentation", () => {
 				configurable: true,
 				value: {
 					writeText: async (text: string) => {
-						window.sessionStorage.setItem("fokit-test-clipboard", text)
+						window.sessionStorage.setItem("form-please-test-clipboard", text)
 					},
 				},
 			})
@@ -309,10 +311,11 @@ test.describe("Fokit documentation", () => {
 				await firstCodeBlock.hover()
 				await copyButton.click()
 				return page.evaluate(
-					() => window.sessionStorage.getItem("fokit-test-clipboard") ?? "",
+					() =>
+						window.sessionStorage.getItem("form-please-test-clipboard") ?? "",
 				)
 			})
-			.toContain("npm install fokit zod")
+			.toContain("npm install form-please zod")
 		await expect(
 			firstCodeBlock.getByRole("button", { name: "Copied" }),
 		).toHaveAttribute("data-copied", "true")
@@ -327,7 +330,7 @@ test.describe("Fokit documentation", () => {
 		expect(llmsResponse.ok()).toBe(true)
 		await expect
 			.poll(async () => await llmsResponse.text())
-			.toContain("Build and submit your first typed Fokit form")
+			.toContain("Build and submit your first typed form with Form, Please")
 	})
 
 	test("searches Vocs content under the GitHub Pages base path", async ({
@@ -345,32 +348,36 @@ test.describe("Fokit documentation", () => {
 		await dialog.getByRole("combobox").fill("nativeControls")
 
 		const nativeControlsResult = dialog.locator(
-			'a[href="/fokit/guides/controls#native-controls"]',
+			'a[href="/form-please/guides/controls#native-controls"]',
 		)
 		await expect(nativeControlsResult).toContainText("nativeControls")
 		await nativeControlsResult.click()
-		await expect(page).toHaveURL(/\/fokit\/guides\/controls#native-controls$/)
+		await expect(page).toHaveURL(
+			/\/form-please\/guides\/controls#native-controls$/,
+		)
 		await expect(
 			page.getByRole("heading", { level: 2, name: "Native controls" }),
 		).toBeVisible()
 	})
 
-	test("runs the Fokit lab through validation, conditions, reset, and classic submit", async ({
+	test("runs the Form, Please lab through validation, conditions, reset, and classic submit", async ({
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1280, height: 920 })
-		await page.goto("./get-started#interactive-fokit-lab")
+		await page.goto("./get-started#interactive-form-please-lab")
 
-		const lab = page.getByRole("region", { name: "Interactive Fokit Lab" })
+		const lab = page.getByRole("region", {
+			name: "Interactive Form, Please Lab",
+		})
 		await expect(lab).toBeVisible()
 		await expect(lab.getByTestId("lab-values")).toContainText(
 			'"name": "Ada Lovelace"',
 		)
 		await expect(lab.getByTestId("lab-dirty")).toHaveText("false")
 		await expect(lab.getByTestId("lab-form-data")).toContainText(
-			"__fokit.array=contacts",
+			"__fp.array=contacts",
 		)
-		await expect(lab.locator("[data-fokit-node='field']").first()).toBeVisible()
+		await expect(lab.locator("[data-fp-node='field']").first()).toBeVisible()
 
 		await lab.getByLabel("Name").fill("")
 		await expect(lab.getByLabel("Name")).toHaveAttribute(
@@ -378,7 +385,7 @@ test.describe("Fokit documentation", () => {
 			"Enter your name",
 		)
 		await lab.getByRole("button", { name: "Save profile" }).click()
-		const nameError = lab.locator("[data-fokit-node='error-message']", {
+		const nameError = lab.locator("[data-fp-node='error-message']", {
 			hasText: "Name is required",
 		})
 		await expect(nameError).toBeVisible()
@@ -408,11 +415,13 @@ test.describe("Fokit documentation", () => {
 		page,
 	}) => {
 		await page.setViewportSize({ width: 1180, height: 900 })
-		await page.goto("./get-started#interactive-fokit-lab")
+		await page.goto("./get-started#interactive-form-please-lab")
 
-		const lab = page.getByRole("region", { name: "Interactive Fokit Lab" })
+		const lab = page.getByRole("region", {
+			name: "Interactive Form, Please Lab",
+		})
 		await lab.getByRole("button", { name: "Add contact" }).click()
-		await expect(lab.locator("[data-fokit-node='array-item']")).toHaveCount(2)
+		await expect(lab.locator("[data-fp-node='array-item']")).toHaveCount(2)
 
 		await lab.getByLabel("Email").nth(1).fill("support@example.com")
 		await expect(lab.getByTestId("lab-form-data")).toContainText(
@@ -437,7 +446,7 @@ test.describe("Fokit documentation", () => {
 		)
 
 		await lab.getByRole("button", { name: "Remove contact 1" }).click()
-		await expect(lab.locator("[data-fokit-node='array-item']")).toHaveCount(1)
+		await expect(lab.locator("[data-fp-node='array-item']")).toHaveCount(1)
 		await expect(lab.getByTestId("lab-form-data")).not.toContainText(
 			"contacts.1.email",
 		)
@@ -496,7 +505,7 @@ test.describe("Fokit documentation", () => {
 		)
 
 		await page.screenshot({
-			path: testInfo.outputPath("fokit-async-multiselect.png"),
+			path: testInfo.outputPath("form-please-async-multiselect.png"),
 		})
 	})
 
@@ -538,7 +547,7 @@ test.describe("Fokit documentation", () => {
 		for (const example of examples) {
 			await page.goto(`./examples/${example.slug}`)
 			await expect(page).toHaveURL(
-				new RegExp(`/fokit/examples/${example.slug}$`),
+				new RegExp(`/form-please/examples/${example.slug}$`),
 			)
 			await expect(
 				page.getByRole("heading", { level: 1, name: example.heading }),
@@ -601,7 +610,7 @@ test.describe("Fokit documentation", () => {
 		expect(pageErrors).toEqual([])
 	})
 
-	test("keeps wizard state and cohort conflict recovery inside Fokit", async ({
+	test("keeps wizard state and cohort conflict recovery inside Form, Please", async ({
 		page,
 	}) => {
 		const pageErrors = collectPageErrors(page)
@@ -631,7 +640,7 @@ test.describe("Fokit documentation", () => {
 		await cohort.getByLabel("Cohort title").fill("Reserved cohort")
 		await cohort.getByRole("button", { name: "Save cohort" }).click()
 		await expect(
-			cohort.locator("[data-fokit-node='error-message']", {
+			cohort.locator("[data-fp-node='error-message']", {
 				hasText: "That title is already reserved",
 			}),
 		).toBeVisible()
@@ -651,7 +660,7 @@ test.describe("Fokit documentation", () => {
 		})
 		await expect(membership).toBeVisible({ timeout: 15_000 })
 		const arrayActions = membership
-			.locator("[data-fokit-array-item-actions]")
+			.locator("[data-fp-array-item-actions]")
 			.first()
 		await expect(arrayActions).toBeVisible()
 		await expect(arrayActions).toHaveCSS("display", "flex")
@@ -718,7 +727,7 @@ test.describe("Fokit documentation", () => {
 		const dialog = page.getByRole("dialog")
 		await expect(dialog).toBeVisible()
 		await dialog.getByRole("link", { name: "TypeScript" }).click()
-		await expect(page).toHaveURL(/\/fokit\/types$/)
+		await expect(page).toHaveURL(/\/form-please\/types$/)
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Types" }),
 		).toBeVisible()
@@ -737,7 +746,7 @@ test.describe("Fokit documentation", () => {
 		expect(widths.contentWidth).toBeLessThanOrEqual(widths.layoutWidth + 1)
 
 		await page.screenshot({
-			path: testInfo.outputPath("fokit-docs-mobile.png"),
+			path: testInfo.outputPath("form-please-docs-mobile.png"),
 		})
 	})
 })

@@ -8,7 +8,7 @@ const layoutCss = await readFile(
 )
 const viewport = { width: 1400, height: 900 }
 
-test.describe("fokit/layout.css", () => {
+test.describe("form-please/layout.css", () => {
 	test("uses section container width for one, two, and four effective columns", async ({
 		page,
 	}) => {
@@ -55,14 +55,14 @@ test.describe("fokit/layout.css", () => {
 						].join(""),
 					}),
 					[
-						'<div id="array" data-fokit-node="array">',
-						'<div id="item" data-fokit-node="array-item">',
+						'<div id="array" data-fp-node="array">',
+						'<div id="item" data-fp-node="array-item">',
 						fieldMarkup("item-field"),
 						"</div>",
 						"</div>",
 					].join(""),
 				].join(""),
-				"--fokit-column-gap: 24px; --fokit-row-gap: 18px; --fokit-stack-gap: 7px; --fokit-array-item-gap: 13px;",
+				"--fp-column-gap: 24px; --fp-row-gap: 18px; --fp-stack-gap: 7px; --fp-array-item-gap: 13px;",
 			),
 		})
 
@@ -220,7 +220,7 @@ async function loadLayout(
 }
 
 function formMarkup(children: string, style = ""): string {
-	return `<form data-fokit-node="form" style="${style}">${children}</form>`
+	return `<form data-fp-node="form" style="${style}">${children}</form>`
 }
 
 function sectionMarkup({
@@ -237,11 +237,11 @@ function sectionMarkup({
 	readonly span?: "1" | "2" | "3" | "4" | "full"
 }): string {
 	const spanAttribute =
-		span === undefined ? "" : ` data-fokit-span="${escapeHtml(span)}"`
+		span === undefined ? "" : ` data-fp-span="${escapeHtml(span)}"`
 
 	return [
-		`<section id="${escapeHtml(id)}" data-fokit-node="section"${spanAttribute} style="width: ${width}px;">`,
-		`<div id="${escapeHtml(id)}-grid" data-fokit-layout="grid" data-fokit-columns="${columns}">`,
+		`<section id="${escapeHtml(id)}" data-fp-node="section"${spanAttribute} style="width: ${width}px;">`,
+		`<div id="${escapeHtml(id)}-grid" data-fp-layout="grid" data-fp-columns="${columns}">`,
 		children,
 		"</div>",
 		"</section>",
@@ -249,7 +249,7 @@ function sectionMarkup({
 }
 
 function fieldMarkup(id: string, span: "1" | "2" | "3" | "4" | "full" = "1") {
-	return `<div id="${escapeHtml(id)}" data-fokit-node="field" data-fokit-span="${span}" style="min-height: 24px;"></div>`
+	return `<div id="${escapeHtml(id)}" data-fp-node="field" data-fp-span="${span}" style="min-height: 24px;"></div>`
 }
 
 async function expectFirstRowCount(
@@ -258,7 +258,7 @@ async function expectFirstRowCount(
 	layoutSelector = "#section-grid",
 ) {
 	const firstRow = await page
-		.locator(`${layoutSelector} > [data-fokit-node]`)
+		.locator(`${layoutSelector} > [data-fp-node]`)
 		.evaluateAll((elements) => {
 			const boxes = elements.map((element) => element.getBoundingClientRect())
 			const firstTop = boxes[0]?.top ?? 0

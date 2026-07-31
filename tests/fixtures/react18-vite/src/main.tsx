@@ -39,18 +39,18 @@ import {
 	useFormContext,
 	useFormState,
 	useValue,
-} from "fokit"
+} from "form-please"
 import type { ReactNode } from "react"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
-type MainExports = typeof import("fokit")
-type CoreExports = typeof import("fokit/core")
+type MainExports = typeof import("form-please")
+type CoreExports = typeof import("form-please/core")
 
-// @ts-expect-error React 19 Action APIs must stay isolated under fokit/react19.
+// @ts-expect-error React 19 Action APIs must stay isolated under form-please/react19.
 type _NoActionForm = MainExports["ActionForm"]
 
-// @ts-expect-error React 19 Action APIs must stay isolated under fokit/react19.
+// @ts-expect-error React 19 Action APIs must stay isolated under form-please/react19.
 type _NoActionSubmit = MainExports["ActionSubmit"]
 
 // @ts-expect-error derived UI uses plain resolver functions, not a helper export.
@@ -79,7 +79,7 @@ type ProfileOutput = ProfileInput & {
 const schema: StandardSchema<ProfileInput, ProfileOutput> = {
 	"~standard": {
 		version: 1,
-		vendor: "fokit-smoke",
+		vendor: "form-please-smoke",
 		validate(value) {
 			const input = value as ProfileInput
 			if (input.name.trim() === "") {

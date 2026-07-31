@@ -229,15 +229,15 @@ describe("kit.AutoForm and kit.Fields", () => {
 		}
 		const section = screen.getByTestId("section-profile-account")
 		const nameField = screen.getByTestId("field-name")
-		const layout = section.querySelector("[data-fokit-layout='grid']")
+		const layout = section.querySelector("[data-fp-layout='grid']")
 		const save = screen.getByRole("button", { name: "Save" })
 
 		expect(form.firstElementChild).toBe(section)
-		expect(layout?.getAttribute("data-fokit-columns")).toBe("2")
+		expect(layout?.getAttribute("data-fp-columns")).toBe("2")
 		expect(layout?.firstElementChild).toBe(nameField)
 		expect(nameField.classList.contains("name-field")).toBe(true)
-		expect(nameField.getAttribute("data-fokit-path")).toBe("name")
-		expect(nameField.getAttribute("data-fokit-span")).toBe("1")
+		expect(nameField.getAttribute("data-fp-path")).toBe("name")
+		expect(nameField.getAttribute("data-fp-span")).toBe("1")
 		expect(
 			section.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING,
 		).toBeTruthy()
@@ -251,7 +251,7 @@ describe("kit.AutoForm and kit.Fields", () => {
 		expect(screen.getAllByText("Name must be reviewed")).toHaveLength(1)
 		const hiddenSummary = screen.getByText("Hidden note rejected")
 		const formSummary = screen.getByText("Server rejected the profile")
-		expect(hiddenSummary.getAttribute("data-fokit-node")).toBe("error-message")
+		expect(hiddenSummary.getAttribute("data-fp-node")).toBe("error-message")
 		expect(hiddenSummary.tabIndex).toBe(-1)
 		expect(form.firstElementChild).toBe(hiddenSummary)
 		expect(
@@ -422,8 +422,8 @@ function issue(path: string, message: string): ImperativeFormIssue {
 
 function pathFrom(rootProps: FieldSlotProps["rootProps"]): string {
 	return String(
-		(rootProps as FieldSlotProps["rootProps"] & { "data-fokit-path": string })[
-			"data-fokit-path"
+		(rootProps as FieldSlotProps["rootProps"] & { "data-fp-path": string })[
+			"data-fp-path"
 		],
 	)
 }

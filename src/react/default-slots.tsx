@@ -71,7 +71,7 @@ export function createDefaultSlots(options?: {
 				{errors}
 				{children}
 				<button
-					data-fokit-array-action="add"
+					data-fp-array-action="add"
 					disabled={!canAdd}
 					type="button"
 					onClick={add}
@@ -111,14 +111,14 @@ export function createDefaultSlots(options?: {
 				{children}
 				<fieldset
 					aria-label={`#${actionData.position}`}
-					data-fokit-array-item-actions=""
+					data-fp-array-item-actions=""
 				>
-					<span aria-hidden="true" data-fokit-array-item-position="">
+					<span aria-hidden="true" data-fp-array-item-position="">
 						#{actionData.position}
 					</span>
 					<button
 						aria-label={moveUpLabel}
-						data-fokit-array-action="move-up"
+						data-fp-array-action="move-up"
 						disabled={disabled || readOnly || !canMoveUp}
 						title={moveUpLabel}
 						type="button"
@@ -128,7 +128,7 @@ export function createDefaultSlots(options?: {
 					</button>
 					<button
 						aria-label={moveDownLabel}
-						data-fokit-array-action="move-down"
+						data-fp-array-action="move-down"
 						disabled={disabled || readOnly || !canMoveDown}
 						title={moveDownLabel}
 						type="button"
@@ -138,7 +138,7 @@ export function createDefaultSlots(options?: {
 					</button>
 					<button
 						aria-label={removeLabel}
-						data-fokit-array-action="remove"
+						data-fp-array-action="remove"
 						disabled={disabled || readOnly}
 						title={removeLabel}
 						type="button"

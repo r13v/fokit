@@ -39,10 +39,10 @@ describe("kit.Form and kit.Submit", () => {
 					aria-label="Profile"
 					className="profile-form"
 					data-custom="consumer"
-					data-fokit-node="consumer"
+					data-fp-node="consumer"
 					form={form}
 					id="profile"
-					style={{ "--fokit-row-gap": "12px" }}
+					style={{ "--fp-row-gap": "12px" }}
 				>
 					<button type="button" onClick={() => form.setValue("name", "Grace")}>
 						Change
@@ -59,7 +59,7 @@ describe("kit.Form and kit.Submit", () => {
 		expect(form.id).toBe("profile")
 		expect(form.classList.contains("profile-form")).toBe(true)
 		expect(form.getAttribute("data-custom")).toBe("consumer")
-		expect(form.getAttribute("data-fokit-node")).toBe("form")
+		expect(form.getAttribute("data-fp-node")).toBe("form")
 		expect(form.getAttribute("data-validation-status")).toBe("unvalidated")
 		expect(form.noValidate).toBe(true)
 		expect(form.hasAttribute("data-dirty")).toBe(false)
@@ -83,7 +83,7 @@ describe("kit.Form and kit.Submit", () => {
 			}
 
 			expect(() => render(<View />)).toThrow(
-				new RegExp(`Fokit owns the ${prop} form prop`),
+				new RegExp(`Form Please owns the ${prop} form prop`),
 			)
 		},
 	)

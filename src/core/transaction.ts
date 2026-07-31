@@ -292,8 +292,8 @@ function validatePatchSegment(segment: string, topLevel: boolean): void {
 		throw new TypeError(`setValues patch key "${segment}" is reserved`)
 	}
 
-	if (topLevel && segment === "__fokit") {
-		throw new TypeError("setValues patch top-level __fokit key is reserved")
+	if (topLevel && segment === "__fp") {
+		throw new TypeError("setValues patch top-level __fp key is reserved")
 	}
 
 	if (numericLikePattern.test(segment)) {

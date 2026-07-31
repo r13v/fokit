@@ -39,7 +39,7 @@ type FormDataCompatibilityOptions = {
 	readonly rejectUnavailable: boolean
 }
 
-const fokitArrayMarkerName = "__fokit.array"
+const fpArrayMarkerName = "__fp.array"
 
 export function HiddenInputs<Schema extends StandardSchema, Context>({
 	form,
@@ -210,7 +210,7 @@ function appendArrayEntries(
 		throw new TypeError(`Array path "${path}" does not resolve to an array`)
 	}
 
-	pushHiddenInputEntry(state, fokitArrayMarkerName, path)
+	pushHiddenInputEntry(state, fpArrayMarkerName, path)
 
 	for (const children of node.itemChildren) {
 		appendNodeEntries(children, "", state)
@@ -223,7 +223,7 @@ function appendSerializedEntries(
 ): void {
 	for (const entry of entries) {
 		if (entry.kind === "array") {
-			pushHiddenInputEntry(state, fokitArrayMarkerName, formatPath(entry.name))
+			pushHiddenInputEntry(state, fpArrayMarkerName, formatPath(entry.name))
 			continue
 		}
 

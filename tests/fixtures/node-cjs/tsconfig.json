@@ -9,17 +9,17 @@
 		"skipLibCheck": false,
 		"types": ["node"],
 		"paths": {
-			"fokit": [
+			"form-please": [
 				"../../../dist/index.d.cts",
-				"./node_modules/fokit/dist/index.d.cts"
+				"./node_modules/form-please/dist/index.d.cts"
 			],
-			"fokit/core": [
+			"form-please/core": [
 				"../../../dist/core.d.cts",
-				"./node_modules/fokit/dist/core.d.cts"
+				"./node_modules/form-please/dist/core.d.cts"
 			],
-			"fokit/server": [
+			"form-please/server": [
 				"../../../dist/server.d.cts",
-				"./node_modules/fokit/dist/server.d.cts"
+				"./node_modules/form-please/dist/server.d.cts"
 			]
 		}
 	},

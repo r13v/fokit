@@ -211,7 +211,7 @@ describe("array commands and row metadata", () => {
 			initialKeys[1],
 			afterAppendKeys[2],
 		])
-		expect(Object.hasOwn(first.getValues().contacts[1], "__fokit")).toBe(false)
+		expect(Object.hasOwn(first.getValues().contacts[1], "__fp")).toBe(false)
 
 		first.move("contacts", 3, 0)
 		expect(contactKeys(first)).toEqual([

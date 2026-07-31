@@ -7,9 +7,9 @@ import { fileURLToPath, pathToFileURL } from "node:url"
 import { promisify } from "node:util"
 
 const execFileAsync = promisify(execFile)
-const expectedPackageName = "fokit"
-const expectedRepositoryUrl = "https://github.com/r13v/fokit"
-const expectedGitHubRepository = "r13v/fokit"
+const expectedPackageName = "form-please"
+const expectedRepositoryUrl = "https://github.com/r13v/form-please"
+const expectedGitHubRepository = "r13v/form-please"
 
 export class ReleaseGuardError extends Error {
 	constructor(code, message) {
@@ -217,7 +217,8 @@ async function main() {
 	const packageLock = await readJsonFile(
 		new URL("../package-lock.json", import.meta.url),
 	)
-	const eventTag = process.env.FOKIT_RELEASE_TAG ?? process.env.GITHUB_REF_NAME
+	const eventTag =
+		process.env.FORM_PLEASE_RELEASE_TAG ?? process.env.GITHUB_REF_NAME
 	const result = await verifyRelease({
 		eventTag,
 		githubRepository: process.env.GITHUB_REPOSITORY,

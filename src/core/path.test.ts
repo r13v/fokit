@@ -70,7 +70,7 @@ describe("canonical paths", () => {
 			"user.__proto__.name",
 			"user.prototype.name",
 			"user.constructor.name",
-			"__fokit.array",
+			"__fp.array",
 		]) {
 			expect(() => parsePath(path), path).toThrow(TypeError)
 		}
@@ -86,7 +86,7 @@ describe("canonical paths", () => {
 			["contacts", 1.2],
 			["contacts", Number.MAX_SAFE_INTEGER + 1],
 			["contacts", "__proto__"],
-			["__fokit"],
+			["__fp"],
 			[0],
 		] as const) {
 			expect(() => parsePath(segments), JSON.stringify(segments)).toThrow(

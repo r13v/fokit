@@ -1,6 +1,6 @@
 import type { SubmissionIssue } from "../core/form-result.js"
 
-export const fokitArrayMarkerName = "__fokit.array"
+export const fpArrayMarkerName = "__fp.array"
 export const invalidFormDataCode = "invalid_form_data"
 
 export type ParseFormDataOptions = {

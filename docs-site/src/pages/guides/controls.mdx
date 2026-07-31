@@ -1,12 +1,12 @@
 ---
 title: Controls
-description: Connect native inputs or a design system to Fokit's typed values, accessibility wiring, and FormData behavior.
+description: Connect native inputs or a design system to typed Form, Please values, accessibility wiring, and FormData behavior.
 showAskAi: false
 ---
 
 # Controls and design systems
 
-A Fokit control is the adapter between one typed value and the input component
+A `form-please` control is the adapter between one typed value and the input component
 your product already owns. Wrap a component once, then reuse it across every
 generated and manually composed form.
 
@@ -25,7 +25,7 @@ errors, sections, and array structure.
 
 ## Wrap a product input
 
-The adapter forwards Fokit's value, events, native name, ref, and accessible
+The adapter forwards the Form, Please value, events, native name, ref, and accessible
 relationships into the product component:
 
 ```tsx twoslash
@@ -35,7 +35,7 @@ import {
 	createFormKit,
 	defineControl,
 	nativeControls,
-} from "fokit"
+} from "form-please"
 import type { ComponentPropsWithRef } from "react"
 
 type TextOptions = {
@@ -96,7 +96,7 @@ const kit = createFormKit({
 The registry key becomes the definition discriminator:
 
 ```ts twoslash
-import { createFormKit, defineControl, nativeControls } from "fokit"
+import { createFormKit, defineControl, nativeControls } from "form-please"
 import { z } from "zod"
 
 const productText = defineControl<string | undefined>({
@@ -131,7 +131,7 @@ only where it is needed:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, defineControl, nativeControls } from "fokit"
+import { createFormKit, defineControl, nativeControls } from "form-please"
 
 const productKit = createFormKit({ controls: nativeControls })
 const addressPicker = defineControl<string>({
@@ -185,7 +185,7 @@ protocol still matters: visible unchecked checkboxes are absent, number and
 date entries are strings, and a `File` cannot be represented by a hidden input.
 
 For a complete `mode: "hidden"` widget with a typed array value, read
-[Build an async multiselect](/guides/async-multiselect). It combines Fokit with
+[Build an async multiselect](/guides/async-multiselect). It combines Form, Please with
 TanStack Query while keeping remote options outside synchronous UI resolvers.
 
 ## Native controls
@@ -219,7 +219,7 @@ import {
 	createFormKit,
 	nativeControls,
 	type FieldSlotProps,
-} from "fokit"
+} from "form-please"
 
 function ProductField({
 	rootProps,

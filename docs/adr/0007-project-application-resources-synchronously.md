@@ -6,7 +6,7 @@
 ## Context
 
 Remote options, permissions, and section data may affect derived form UI while
-they load. Letting UI resolvers return promises would make Fokit own pending
+they load. Letting UI resolvers return promises would make Form, Please own pending
 results, stale-result races, cancellation boundaries, and fallback values; an
 async definition node would additionally defer path, control, metadata, and
 serialization topology. Applications already have data layers that own those
@@ -15,7 +15,7 @@ lifecycles.
 ## Decision
 
 Applications own resource loading, caching, cancellation, retry, and the
-choice of whether stale data remains usable. Fokit represents only the current
+choice of whether stale data remains usable. Form, Please represents only the current
 application-supplied availability state through a minimal discriminated
 `ResourceState<Value, Error>` union with `pending`, `success`, and `error`
 branches.
@@ -30,13 +30,13 @@ errors, or accepts a promise-producing UI resolver.
 
 Definitions retain synchronous topology. Fields and sections project resource
 state through their existing resolvable properties and typed `slotOptions`;
-forms use `matchResource` in application composition. Fokit does not infer a
+forms use `matchResource` in application composition. Form, Please does not infer a
 global pending state, suspend `valuePolicy`, or block submission because a
 resource is pending. Those policies remain explicit in each mapping or at the
 form boundary.
 
 TanStack Query and other data libraries integrate through documented adapters,
-not public Fokit dependencies. An adapter may structurally extend a successful
+not public Form, Please dependencies. An adapter may structurally extend a successful
 resource branch with a nested discriminated refresh state, preserving states
 such as idle, pending, paused, and failed refresh without independently
 constructible boolean flags.
@@ -47,7 +47,7 @@ constructible boolean flags.
   second asynchronous lifecycle in the form store and weaken synchronous
   dependency tracking and pure `resolveUi` evaluation.
 - Promise-valued definition nodes defer normalized IDs, paths, controls,
-  metadata, value policies, and serialization and turn Fokit toward a remote UI
+  metadata, value policies, and serialization and turn Form, Please toward a remote UI
   language.
 - Direct TanStack Query support would couple the React-free core and public
   compatibility surface to one application data layer.

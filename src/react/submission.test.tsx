@@ -524,7 +524,7 @@ describe("classic React submission", () => {
 		render(<View />)
 
 		await expect(form?.submit()).rejects.toThrow(
-			"Cannot submit a Fokit form before kit.Form is mounted",
+			"Cannot submit a Form Please form before kit.Form is mounted",
 		)
 	})
 })
@@ -609,7 +609,7 @@ function createSchema(
 	return {
 		"~standard": {
 			version: 1,
-			vendor: "fokit-test",
+			vendor: "form-please-test",
 			validate,
 		},
 	} as TestSchema

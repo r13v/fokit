@@ -790,7 +790,7 @@ describe("native FormData serialization", () => {
 
 		const html = renderToString(element)
 		expect(html).toContain('type="hidden"')
-		expect(html).toContain('name="__fokit.array"')
+		expect(html).toContain('name="__fp.array"')
 		expect(html).toContain('value="contacts"')
 		expect(html).toContain('name="hiddenCode"')
 		expect(html).toContain('name="disabledCode"')
@@ -809,7 +809,7 @@ describe("native FormData serialization", () => {
 		expect(hiddenInput("invisibleNote")?.value).toBe("preserved")
 		expect(hiddenInput("unsetNote")).toBeNull()
 		expect(hiddenInputs("readonlyCode")).toHaveLength(0)
-		expect(hiddenInputs("__fokit.array").map((input) => input.value)).toContain(
+		expect(hiddenInputs("__fp.array").map((input) => input.value)).toContain(
 			"contacts",
 		)
 		expect(
@@ -880,7 +880,7 @@ describe("native FormData serialization", () => {
 				contacts: [],
 			},
 		})
-		expect(new FormData(form).getAll("__fokit.array")).toEqual(["contacts"])
+		expect(new FormData(form).getAll("__fp.array")).toEqual(["contacts"])
 	})
 
 	it("renders hidden serializer entries for manually composed kit.Form", async () => {
@@ -918,7 +918,7 @@ describe("native FormData serialization", () => {
 		expect(hiddenInput("hiddenCode")?.value).toBe("secret")
 		expect(hiddenInput("disabledCode")?.value).toBe("locked")
 		expect(hiddenInput("invisibleNote")?.value).toBe("preserved")
-		expect(formData.getAll("__fokit.array")).toEqual(["contacts"])
+		expect(formData.getAll("__fp.array")).toEqual(["contacts"])
 		expect(parsed).toEqual({
 			success: true,
 			value: controlled,
@@ -954,7 +954,7 @@ describe("native FormData serialization", () => {
 		const formData = new FormData(form)
 		const parsed = await parseFormData(formData, nestedSchema)
 
-		expect(formData.getAll("__fokit.array")).toEqual([
+		expect(formData.getAll("__fp.array")).toEqual([
 			"groups",
 			"groups.0.members",
 			"groups.1.members",
@@ -1346,7 +1346,7 @@ function createSchema<Input, Output>(
 	return {
 		"~standard": {
 			version: 1,
-			vendor: "fokit-test",
+			vendor: "form-please-test",
 			validate,
 		},
 	} as StandardSchemaV1<Input, Output>

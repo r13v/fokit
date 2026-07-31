@@ -55,7 +55,7 @@ type Schema = StandardSchemaV1<Values>
 const schema = {
 	"~standard": {
 		version: 1,
-		vendor: "fokit-test",
+		vendor: "form-please-test",
 		validate(value) {
 			return {
 				value: value as Values,

@@ -1,5 +1,5 @@
 ---
-title: Fokit
+title: Form, Please
 description: Typed, schema-validated React forms that keep native semantics and your design system.
 showAskAi: false
 ---
@@ -8,18 +8,18 @@ import { OverviewDemo } from "../components/overview-demo"
 
 # Forms that stay typed, native, and yours
 
-Fokit is for teams that build complex React forms and want to stop repeating
+Form, Please is for teams that build complex React forms and want to stop repeating
 field wiring. It turns an explicit definition into typed form state and a
 working React form.
 
-Fokit manages validation, conditional fields, arrays, error relationships,
+Form, Please manages validation, conditional fields, arrays, error relationships,
 focus, and native submission. Your application owns the schema library,
 controls, markup, layout, styling, domain rules, and product workflow.
 
 Start with native controls. Follow the guide to render a form and receive typed
 output.
 
-<div className="fokit-overview-actions">
+<div className="form-please-overview-actions">
 
 [Build your first form](/get-started)
 
@@ -37,12 +37,12 @@ valid email address. Submit again to see the typed output.
 
 ## One explicit model
 
-A Fokit form has three parts: a schema for validity, a UI definition for
-structure, and a kit for rendering.
+A form built with Form, Please has three parts: a schema for validity, a UI
+definition for structure, and a kit for rendering.
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls, type FormInput } from "fokit"
+import { createFormKit, nativeControls, type FormInput } from "form-please"
 import { z } from "zod"
 
 const profileSchema = z.object({
@@ -93,13 +93,13 @@ export function ProfileForm() {
 
 ### Schema owns validity
 
-Fokit accepts any Standard Schema implementation. Your schema is the source of
+Form, Please accepts any Standard Schema implementation. Your schema is the source of
 truth for validation. It also defines editable input and validated output.
 
 ### UI definition owns structure
 
 Define fields, sections, arrays, conditions, and layout explicitly.
-Fokit does not guess a product UI from schema metadata. A schema change cannot
+Form, Please does not guess a product UI from schema metadata. A schema change cannot
 silently change the interface.
 
 ### Your kit owns rendering
@@ -110,7 +110,7 @@ the same.
 
 ## The responsibility boundary
 
-| Fokit owns | Your application owns |
+| Form, Please owns | Your application owns |
 | --- | --- |
 | Typed form state and granular subscriptions | The schema library and domain rules |
 | Validation, issues, focus, and submit lifecycle | Field choice, labels, and product workflow |
@@ -120,9 +120,9 @@ the same.
 Use the same definition with `kit.AutoForm`. You can also compose it manually
 with `kit.Form`, `kit.Fields`, and granular hooks.
 
-## When to reach for Fokit
+## When to reach for Form, Please
 
-Use Fokit when a form needs schema validation, typed transformations,
+Use Form, Please when a form needs schema validation, typed transformations,
 conditional fields, stable arrays, generated and manual rendering, or client
 and server submission under one state model.
 

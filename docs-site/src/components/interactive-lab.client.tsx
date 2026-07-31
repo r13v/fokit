@@ -1,6 +1,6 @@
 "use client"
 
-import { useFormContext, useFormState } from "fokit"
+import { useFormContext, useFormState } from "form-please"
 import { type ReactNode, useEffect, useMemo, useState } from "react"
 import {
 	defaultValues,
@@ -16,37 +16,39 @@ export function InteractiveLabClient() {
 
 	return (
 		<section
-			aria-labelledby="interactive-fokit-lab"
-			className="fokit-lab"
+			aria-labelledby="interactive-form-please-lab"
+			className="form-please-lab"
 			data-testid="lab"
 		>
-			<p className="fokit-lab__kicker">Interactive lab</p>
-			<p className="fokit-lab__summary">
+			<p className="form-please-lab__kicker">Interactive lab</p>
+			<p className="form-please-lab__summary">
 				Edit the generated form. Compare its values, visible issues, and
-				FormData. All panels use the same Fokit instance.
+				FormData. All panels use the same Form, Please instance.
 			</p>
 			<kit.AutoForm
-				className="fokit-lab__form"
+				className="form-please-lab__form"
 				defaultValues={defaultValues}
 				definition={profileDefinition}
-				id="interactive-fokit-lab-form"
+				id="interactive-form-please-lab-form"
 				onSubmit={({ value }) => {
 					setLastSubmit(formatSavedMessage(value))
 				}}
 				style={{
-					"--fokit-array-item-gap": "0.85rem",
-					"--fokit-column-gap": "1rem",
-					"--fokit-row-gap": "0.95rem",
-					"--fokit-stack-gap": "1rem",
+					"--fp-array-item-gap": "0.85rem",
+					"--fp-column-gap": "1rem",
+					"--fp-row-gap": "0.95rem",
+					"--fp-stack-gap": "1rem",
 				}}
 				validation={{
 					mode: "blur",
 					revalidateMode: "change",
 				}}
 			>
-				<div className="fokit-lab__actions">
-					<kit.Submit className="fokit-lab__primary">Save profile</kit.Submit>
-					<button className="fokit-lab__secondary" type="reset">
+				<div className="form-please-lab__actions">
+					<kit.Submit className="form-please-lab__primary">
+						Save profile
+					</kit.Submit>
+					<button className="form-please-lab__secondary" type="reset">
 						Reset lab
 					</button>
 				</div>
@@ -67,7 +69,7 @@ function LabInspector({ lastSubmit }: { readonly lastSubmit: string }) {
 			.join(", ") ?? ""
 
 	useEffect(() => {
-		const element = document.getElementById("interactive-fokit-lab-form")
+		const element = document.getElementById("interactive-form-please-lab-form")
 		const nextLines =
 			element instanceof HTMLFormElement
 				? formatFormData(new FormData(element))
@@ -79,19 +81,19 @@ function LabInspector({ lastSubmit }: { readonly lastSubmit: string }) {
 	})
 
 	return (
-		<section className="fokit-lab__inspector" aria-label="Lab inspector">
-			<div className="fokit-lab__submit-state">
+		<section className="form-please-lab__inspector" aria-label="Lab inspector">
+			<div className="form-please-lab__submit-state">
 				<span>Submission result</span>
 				<output data-testid="lab-submission">{lastSubmit}</output>
 			</div>
-			<div className="fokit-lab__inspector-grid">
+			<div className="form-please-lab__inspector-grid">
 				<InspectorPanel title="Values">
 					<pre data-testid="lab-values">
 						<code>{JSON.stringify(snapshot.values, null, 2)}</code>
 					</pre>
 				</InspectorPanel>
 				<InspectorPanel title="State">
-					<dl className="fokit-lab__state-list">
+					<dl className="form-please-lab__state-list">
 						<div>
 							<dt>Dirty</dt>
 							<dd data-testid="lab-dirty">{String(snapshot.isDirty)}</dd>
@@ -141,7 +143,7 @@ function InspectorPanel({
 	readonly children: ReactNode
 }) {
 	return (
-		<section className="fokit-lab__panel">
+		<section className="form-please-lab__panel">
 			<h3>{title}</h3>
 			{children}
 		</section>

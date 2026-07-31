@@ -1,6 +1,6 @@
 ---
 title: Async multiselect
-description: Build a searchable multi-select that stores typed IDs in Fokit, loads options with TanStack Query, and delegates popup behavior to Floating UI.
+description: Build a searchable multi-select that stores typed IDs in Form, Please, loads options with TanStack Query, and delegates popup behavior to Floating UI.
 showAskAi: false
 ---
 
@@ -8,7 +8,7 @@ import { AsyncMultiSelectDemo } from "../../components/async-multiselect-demo"
 
 # Build an async multiselect
 
-An async multiselect is one Fokit field with clear ownership boundaries. Fokit
+An async multiselect is one Form, Please field with clear ownership boundaries. Form, Please
 owns the selected IDs. TanStack Query owns remote loading, cancellation, and
 result caching. Floating UI coordinates popup positioning, dismissal, focus,
 and list navigation. The control keeps only search text and its option-label
@@ -28,11 +28,11 @@ the dropdown.
 
 ## Install the data and interaction layers
 
-Install TanStack Query and Floating UI next to Fokit and your Standard Schema
+Install TanStack Query and Floating UI next to Form, Please and your Standard Schema
 library:
 
 ```sh
-npm install fokit @tanstack/react-query @floating-ui/react zod
+npm install form-please @tanstack/react-query @floating-ui/react zod
 ```
 
 Create one `QueryClient` for the application and render
@@ -79,7 +79,7 @@ Every value read by `queryFn` that changes the result belongs in `queryKey`.
 TanStack Query then caches each search independently. Its query function also
 receives an `AbortSignal`, which the real request should pass to `fetch`.
 
-Fokit UI resolvers remain synchronous. Pass `queryFn` inside the control's
+Form, Please UI resolvers remain synchronous. Pass `queryFn` inside the control's
 `options` object; do not make the `options` resolver itself asynchronous.
 
 ## Preserve selected labels
@@ -95,18 +95,18 @@ form baseline or seed them from an existing TanStack Query cache.
 ## Serialize the array
 
 The popup is a JavaScript widget rather than a successful native form control,
-so its Fokit definition uses `formData.mode: "hidden"`. The serializer emits an
+so its Form, Please definition uses `formData.mode: "hidden"`. The serializer emits an
 array marker plus one repeated entry per selected ID. Empty, single-item, and
 multi-item selections therefore keep the same array shape in `FormData`.
 
-The visible trigger intentionally omits `input.name`; Fokit renders the hidden
+The visible trigger intentionally omits `input.name`; Form, Please renders the hidden
 entries. It still receives `input.id`, `input.ref`, the described-by relation,
 invalid state, and the disabled/read-only policy.
 
 ## Copy the complete example
 
 The complete file below contains the control, Floating UI interactions,
-TanStack Query integration, Fokit definition, deterministic async data source
+TanStack Query integration, Form, Please definition, deterministic async data source
 used by the static site, and the live form shown above.
 
 Replace `searchCities` with an application request such as
@@ -124,7 +124,7 @@ boundary.
 
 ## Know the ownership boundary
 
-- Fokit owns selected IDs, validation, touched/dirty state, and serialization.
+- Form, Please owns selected IDs, validation, touched/dirty state, and serialization.
 - TanStack Query owns request status, cancellation, stale time, and cached
   search results.
 - Floating UI owns positioning, dismissal, focus return, and list navigation.

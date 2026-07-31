@@ -35,7 +35,7 @@ import {
 import { useFormState } from "../react/hooks.js"
 import { rejectOwnedProps } from "../react/owned-props.js"
 import type { RenderNodeComponent } from "../react/render-node.js"
-import type { FokitStyle, ReactUiPresentation } from "../react/slots.js"
+import type { FormPleaseStyle, ReactUiPresentation } from "../react/slots.js"
 import { booleanData } from "../react/structural-props.js"
 import { type UseFormOptions, useForm } from "../react/use-form.js"
 import {
@@ -71,7 +71,7 @@ export type ActionFormProps<
 		readonly action: NonNullable<ComponentPropsWithoutRef<"form">["action"]>
 		readonly result?: FormResult | null
 		readonly children?: ReactNode
-		readonly style?: FokitStyle
+		readonly style?: FormPleaseStyle
 	}
 
 export function ActionForm<
@@ -209,7 +209,7 @@ export function ActionForm<
 				action={action}
 				data-dirty={booleanData(state.dirty)}
 				data-disabled={booleanData(state.disabled)}
-				data-fokit-node="form"
+				data-fp-node="form"
 				data-invalid={booleanData(state.invalid)}
 				data-readonly={booleanData(state.readOnly)}
 				data-touched={booleanData(state.touched)}

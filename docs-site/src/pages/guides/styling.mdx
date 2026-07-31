@@ -6,7 +6,7 @@ showAskAi: false
 
 # Styling
 
-Fokit ships accessible semantic markup and optional responsive structure. Your
+Form, Please ships accessible semantic markup and optional responsive structure. Your
 application owns the visual language: typography, color, borders, focus,
 density, and component polish.
 
@@ -18,15 +18,15 @@ The shortest useful path is:
 
 ## Import responsive structure
 
-Import the stylesheet once when you want Fokit's grid and spacing behavior:
+Import the stylesheet once when you want the Form, Please grid and spacing behavior:
 
 ```ts twoslash
 // @filename: layout-css.d.ts
-declare module "fokit/layout.css" {}
+declare module "form-please/layout.css" {}
 // @filename: example.ts
 
 // ---cut---
-import "fokit/layout.css"
+import "form-please/layout.css"
 ```
 
 The JavaScript entry never imports CSS. Custom kits and server bundles stay in
@@ -48,7 +48,7 @@ Scope product styling through the native form class:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -83,10 +83,10 @@ semantics and visible focus:
 
 ```css
 .profile-form {
-	--fokit-column-gap: 1rem;
-	--fokit-row-gap: 0.9rem;
-	--fokit-stack-gap: 0.75rem;
-	--fokit-array-item-gap: 1rem;
+	--fp-column-gap: 1rem;
+	--fp-row-gap: 0.9rem;
+	--fp-stack-gap: 0.75rem;
+	--fp-array-item-gap: 1rem;
 
 	color: #17211b;
 	max-width: 48rem;
@@ -117,12 +117,12 @@ semantics and visible focus:
 }
 
 .profile-form
-	[data-fokit-node="field"][data-invalid]
+	[data-fp-node="field"][data-invalid]
 	:where(input, textarea, select) {
 	border-color: #b42318;
 }
 
-.profile-form [data-fokit-node="error-message"] {
+.profile-form [data-fp-node="error-message"] {
 	color: #b42318;
 	margin: 0;
 }
@@ -153,8 +153,8 @@ must not rely on color alone—the connected message provides the explanation.
 
 Forms and structural nodes expose stable attributes:
 
-- `data-fokit-node="form" | "field" | "section" | "array" | "array-item"`;
-- `data-fokit-layout="grid"` and `data-fokit-columns`;
+- `data-fp-node="form" | "field" | "section" | "array" | "array-item"`;
+- `data-fp-layout="grid"` and `data-fp-columns`;
 - `data-dirty`, `data-touched`, and `data-invalid`;
 - `data-disabled`, `data-readonly`, and `data-validating`.
 
@@ -165,10 +165,10 @@ Only these structural variables are public:
 
 ```css
 .profile-form {
-	--fokit-column-gap: 1rem;
-	--fokit-row-gap: 0.75rem;
-	--fokit-stack-gap: 0.75rem;
-	--fokit-array-item-gap: 0.75rem;
+	--fp-column-gap: 1rem;
+	--fp-row-gap: 0.75rem;
+	--fp-stack-gap: 0.75rem;
+	--fp-array-item-gap: 0.75rem;
 }
 ```
 

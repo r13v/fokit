@@ -220,7 +220,7 @@ describe("generated arrays", () => {
 			"profile-contacts-error-0",
 		)
 		expect(
-			screen.getByText("Email rejected").getAttribute("data-fokit-path"),
+			screen.getByText("Email rejected").getAttribute("data-fp-path"),
 		).toBe("contacts.0.email")
 		expect(input("contacts.0.name").value).toBe("Ada")
 		expect(input("contacts.0.email").getAttribute("aria-describedby")).toBe(
@@ -268,7 +268,7 @@ describe("generated arrays", () => {
 		fireEvent.click(within(adaRow).getByRole("button", { name: "Move down" }))
 		const movedAdaRow = rowForValue(container, "Ada")
 		expect(movedAdaRow.dataset.mountId).toBe(adaMountId)
-		expect(movedAdaRow.getAttribute("data-fokit-path")).toBe("contacts.1")
+		expect(movedAdaRow.getAttribute("data-fp-path")).toBe("contacts.1")
 		expect(input("contacts.1.name").value).toBe("Ada")
 
 		fireEvent.click(within(movedAdaRow).getByRole("button", { name: "Remove" }))
@@ -540,7 +540,7 @@ function rowForValue(container: HTMLElement, value: string): HTMLElement {
 	const element = Array.from(container.querySelectorAll("input")).find(
 		(inputElement) => inputElement.value === value,
 	)
-	const row = element?.closest("[data-fokit-node='array-item']")
+	const row = element?.closest("[data-fp-node='array-item']")
 	if (!(row instanceof HTMLElement)) {
 		throw new Error(`Expected row for value ${value}`)
 	}
@@ -558,8 +558,8 @@ function childrenCount(children: ArraySlotProps["children"]): number {
 
 function pathFrom(rootProps: FieldSlotProps["rootProps"]): string {
 	return String(
-		(rootProps as FieldSlotProps["rootProps"] & { "data-fokit-path": string })[
-			"data-fokit-path"
+		(rootProps as FieldSlotProps["rootProps"] & { "data-fp-path": string })[
+			"data-fp-path"
 		],
 	)
 }

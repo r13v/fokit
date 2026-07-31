@@ -1,4 +1,4 @@
-import { normalizeDefinition, type StandardSchema } from "fokit/core"
+import { normalizeDefinition, type StandardSchema } from "form-please/core"
 
 import { ClientForm } from "./client-form"
 
@@ -9,7 +9,7 @@ type ServerInput = {
 const schema: StandardSchema<ServerInput> = {
 	"~standard": {
 		version: 1,
-		vendor: "fokit-smoke",
+		vendor: "form-please-smoke",
 		validate(value) {
 			return { value: value as ServerInput }
 		},

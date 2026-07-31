@@ -1,12 +1,12 @@
 ---
 title: Async fields
-description: Load suggestions and bespoke field UI without moving request, cache, cancellation, or selected-label state into Fokit.
+description: Load suggestions and bespoke field UI without moving request, cache, cancellation, or selected-label state into Form, Please.
 showAskAi: false
 ---
 
 # Async fields
 
-Fokit owns typed form values; an application data layer owns remote options.
+Form, Please owns typed form values; an application data layer owns remote options.
 Keep that seam explicit and async fields stay cancellable, cacheable, and
 testable without giving the form store a second network lifecycle.
 
@@ -14,7 +14,7 @@ testable without giving the form store a second network lifecycle.
 
 Use a custom control when the async picker is a reusable editor for one value.
 Use a render node when the search UI is local to one form or writes several
-related schema paths. Both shapes keep the selected IDs in Fokit and request
+related schema paths. Both shapes keep the selected IDs in Form, Please and request
 state outside it.
 
 The complete reusable-control version is the
@@ -34,7 +34,7 @@ import {
 	type RenderNodeProps,
 	useFormContext,
 	useValue,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -80,7 +80,7 @@ function OrganizationSearch({ disabled, readOnly }: RenderNodeProps) {
 ```
 
 Debounce the search string before it enters the query key when the endpoint
-needs it. Do not use Fokit's schema-validation debounce as a request debounce;
+needs it. Do not use the Form, Please schema-validation debounce as a request debounce;
 the two lifecycles answer different questions.
 
 ## Project resource state into fields and sections
@@ -97,7 +97,7 @@ import {
 	nativeControls,
 	type NativeSelectOption,
 	type ResourceState,
-} from "fokit"
+} from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ city: z.string() })
@@ -161,7 +161,7 @@ For a skeleton, use complementary exhaustive resolvers instead of an implicit
 loading flag:
 
 ```ts twoslash
-import { fromResource, type ResourceState } from "fokit"
+import { fromResource, type ResourceState } from "form-please"
 
 declare const cities: ResourceState<readonly string[], Error>
 
@@ -236,7 +236,7 @@ Loading, empty results, retry, and request failures belong to the async
 component. Submission failures that invalidate a form path belong on the form:
 
 ```ts twoslash
-import type { FormInstance } from "fokit"
+import type { FormInstance } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ organizationId: z.string().optional() })
@@ -260,15 +260,15 @@ schema invalid.
 
 | Concern | Owner |
 | --- | --- |
-| Selected typed ID or IDs | Fokit form values |
+| Selected typed ID or IDs | Form, Please values |
 | Schema validity and submitted output | Standard Schema |
 | Search text, open state, keyboard navigation | Control or render component |
 | Request cache, cancellation, retries | Application data layer |
 | Current availability projection | `matchResource` or `fromResource` |
 | Selected-label hydration | Query cache or loaded record |
-| Rejected submission issue | Fokit server error |
+| Rejected submission issue | Form, Please server error |
 
-Fokit intentionally has no query-library dependency or remote-options API. The
+Form, Please intentionally has no query-library dependency or remote-options API. The
 local `queryToResource` helper above is an integration recipe, not package
 state. See [studio policies](/examples/studio-policies) for resource-backed
 resolvable properties, or the [research grant](/examples/research-grant) and

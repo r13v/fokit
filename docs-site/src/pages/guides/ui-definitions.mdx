@@ -66,7 +66,7 @@ that object, while normalization still produces the ordinary four node kinds
 with absolute paths:
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({
@@ -121,7 +121,7 @@ import {
 	createFormKit,
 	nativeControls,
 	type FieldSlotProps,
-} from "fokit"
+} from "form-please"
 import { z } from "zod"
 
 type ProductFieldOptions = {
@@ -205,7 +205,7 @@ independent options type from the slot registered in `createFormKit`. The
 property is also resolvable, so tooltip copy or other presentation data can
 depend on tracked values and runtime context.
 
-The React-free `fokit/core` default remains string-only. React elements and
+The React-free `form-please/core` default remains string-only. React elements and
 slot-option objects are opaque to core normalization: their internals are not
 cloned or frozen. Treat them as immutable after defining the form; mutating an
 opaque object does not notify the form store or trigger a render.
@@ -227,7 +227,7 @@ import {
 	type RenderNodeProps,
 	useFormContext,
 	useFormState,
-} from "fokit"
+} from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -262,7 +262,7 @@ form and parent state are inherited. Hooks still provide form values. The
 component must apply those flags to its own buttons, inputs, and accessibility
 state because arbitrary DOM has no automatic control guard.
 
-Fokit otherwise owns only the render node's ID, order, and mounting. Its
+Form, Please otherwise owns only the render node's ID, order, and mounting. Its
 contents get no automatic path, copy, errors, layout, accessibility, or
 FormData behavior. Render nodes are allowed at the root and inside sections,
 but not inside array rows.
@@ -279,7 +279,7 @@ A section has a required `id`, optional `title` and `description`, and a
 
 Direct children can set `span` to a column count or `"full"`. Inside a section,
 fields default to one column while nested sections and arrays default to the
-full row. Import `fokit/layout.css` for the shipped responsive grid, or forward
+full row. Import `form-please/layout.css` for the shipped responsive grid, or forward
 the same layout props through a custom `Section` slot.
 
 `className` is static escape-hatch metadata for product styling. It does not
@@ -288,7 +288,7 @@ change the form state model.
 ## Derive UI from tracked values
 
 Properties described as resolvable accept either a value or a resolver function.
-Fokit tracks the paths read by the resolver and invalidates its cached result
+Form, Please tracks the paths read by the resolver and invalidates its cached result
 only when one of those values changes. The resolver can also read runtime
 `context` without adding that data to form values.
 

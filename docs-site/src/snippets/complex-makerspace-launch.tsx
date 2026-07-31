@@ -18,7 +18,7 @@ import {
 	useFormState,
 	useValue,
 	type ValueChange,
-} from "fokit"
+} from "form-please"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -221,7 +221,7 @@ function WizardNavigation() {
 	}
 
 	return (
-		<nav className="fokit-complex__wizard" aria-label="Launch stages">
+		<nav className="form-please-complex__wizard" aria-label="Launch stages">
 			<ol>
 				{stages.map((item, itemIndex) => (
 					<li aria-current={item === stage ? "step" : undefined} key={item}>
@@ -242,7 +242,7 @@ function WizardNavigation() {
 					</li>
 				))}
 			</ol>
-			<div className="fokit-complex__actions">
+			<div className="form-please-complex__actions">
 				<button
 					disabled={index === 0}
 					onClick={() => form.setValue("stage", stages[index - 1] ?? stage)}
@@ -252,14 +252,14 @@ function WizardNavigation() {
 				</button>
 				{index < stages.length - 1 ? (
 					<button
-						className="fokit-complex__primary"
+						className="form-please-complex__primary"
 						onClick={() => void advance(stages[index + 1] ?? stage)}
 						type="button"
 					>
 						Continue to {stageLabels[stages[index + 1] ?? stage]}
 					</button>
 				) : (
-					<kit.Submit className="fokit-complex__primary">
+					<kit.Submit className="form-please-complex__primary">
 						Publish makerspace
 					</kit.Submit>
 				)}
@@ -288,7 +288,7 @@ function AddressLookup() {
 	})
 
 	return (
-		<div className="fokit-complex__embedded">
+		<div className="form-please-complex__embedded">
 			<span>
 				{lookup.isFetching
 					? "Resolving postal code…"
@@ -315,7 +315,10 @@ function CoordinatePreview() {
 	const location = useFormState(form, (snapshot) => snapshot.values.location)
 
 	return (
-		<aside className="fokit-complex__preview" aria-label="Coordinate preview">
+		<aside
+			className="form-please-complex__preview"
+			aria-label="Coordinate preview"
+		>
 			<strong>{location.address}</strong>
 			<span>
 				{location.latitude.toFixed(3)}, {location.longitude.toFixed(3)} ·{" "}
@@ -607,12 +610,14 @@ function MakerspaceLaunchForm() {
 
 	if (campuses.isPending || regions.isPending) {
 		return (
-			<section className="fokit-complex">Loading launch references…</section>
+			<section className="form-please-complex">
+				Loading launch references…
+			</section>
 		)
 	}
 	if (campuses.isError || regions.isError) {
 		return (
-			<section className="fokit-complex">
+			<section className="form-please-complex">
 				Could not open the launch wizard.
 			</section>
 		)
@@ -621,17 +626,17 @@ function MakerspaceLaunchForm() {
 	return (
 		<section
 			aria-label="Makerspace launch wizard example"
-			className="fokit-complex"
+			className="form-please-complex"
 		>
-			<p className="fokit-complex__kicker">Four-stage launch wizard</p>
-			<p className="fokit-complex__summary">
+			<p className="form-please-complex__kicker">Four-stage launch wizard</p>
+			<p className="form-please-complex__summary">
 				A form-owned stage controls conditional sections while address lookup,
 				media rows, pricing bands, four offers, and three writes retain one
 				state.
 			</p>
 			<kit.AutoForm
 				beforeUpdate={clearDisabledPromotions}
-				className="fokit-complex__form"
+				className="form-please-complex__form"
 				context={{ campuses: campuses.data, regions: regions.data }}
 				defaultValues={defaultValues}
 				definition={launchDefinition}
@@ -654,7 +659,7 @@ function MakerspaceLaunchForm() {
 					}
 				}}
 			/>
-			<output className="fokit-complex__network" aria-live="polite">
+			<output className="form-please-complex__network" aria-live="polite">
 				{savePlace.isPending || saveMedia.isPending || publish.isPending
 					? "Saving location, media, and release…"
 					: notice}

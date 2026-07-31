@@ -1,6 +1,6 @@
-# Fokit
+# Form, Please
 
-Fokit is a code-first form context that connects schema-owned values to a
+Form, Please is a code-first form context that connects schema-owned values to a
 typed UI definition without making application workflows part of the library.
 
 ## Language

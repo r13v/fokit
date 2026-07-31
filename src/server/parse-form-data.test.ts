@@ -10,7 +10,7 @@ import {
 	parseFormData,
 	type SubmissionIssue,
 } from "./index.js"
-import { fokitArrayMarkerName, invalidFormDataCode } from "./protocol.js"
+import { fpArrayMarkerName, invalidFormDataCode } from "./protocol.js"
 
 type AccountInput = {
 	readonly name: string
@@ -26,7 +26,7 @@ type TestSchema = StandardSchemaV1<AccountInput, AccountOutput>
 describe("parseFormData", () => {
 	it("validates normalized FormData through Standard Schema and returns typed output", async () => {
 		const formData = new FormData()
-		formData.append(fokitArrayMarkerName, "tags")
+		formData.append(fpArrayMarkerName, "tags")
 		formData.append("name", "Ada Lovelace")
 		formData.append("tags", "math")
 		formData.append("tags", "systems")
@@ -57,7 +57,7 @@ describe("parseFormData", () => {
 
 	it("accepts Zod through the Standard Schema contract", async () => {
 		const formData = new FormData()
-		formData.append(fokitArrayMarkerName, "tags")
+		formData.append(fpArrayMarkerName, "tags")
 		formData.append("name", "Grace Hopper")
 		formData.append("tags", "compiler")
 		const schema = z
@@ -99,7 +99,7 @@ describe("parseFormData", () => {
 
 	it("returns one server issue for structural failure and does not call the schema", async () => {
 		const formData = new FormData()
-		formData.append("__fokit.unexpected", "x")
+		formData.append("__fp.unexpected", "x")
 		const validate = vi.fn(() => ({
 			value: { name: "Ada", tags: [], slug: "ada" },
 		}))
@@ -205,7 +205,7 @@ describe("parseFormData", () => {
 
 	it("exposes serializable error transport", async () => {
 		const formData = new FormData()
-		formData.append("__fokit.extra", "x")
+		formData.append("__fp.extra", "x")
 		const result = await parseFormData(
 			formData,
 			createUnknownSchema((value) => ({ value })),
@@ -236,7 +236,7 @@ function createSchema(
 	return {
 		"~standard": {
 			version: 1,
-			vendor: "fokit-test",
+			vendor: "form-please-test",
 			validate,
 		},
 	} as TestSchema
@@ -248,7 +248,7 @@ function createUnknownSchema(
 	return {
 		"~standard": {
 			version: 1,
-			vendor: "fokit-test",
+			vendor: "form-please-test",
 			validate,
 		},
 	}

@@ -1,4 +1,4 @@
-# Fokit Specification
+# Form, Please Specification
 
 - Status: Normative
 - Supported React versions: 18 and 19
@@ -6,7 +6,7 @@
 
 ## Summary
 
-Fokit is a code-first React form library that combines:
+Form, Please is a code-first React form library that combines:
 
 - schema-based validation;
 - type-safe form state;
@@ -16,10 +16,10 @@ Fokit is a code-first React form library that combines:
 - granular subscriptions;
 - client and server submission flows.
 
-Fokit is not a compatibility layer for an existing form library and does not
+Form, Please is not a compatibility layer for an existing form library and does not
 include a migration API.
 
-Fokit owns its store, mutation pipeline, validation lifecycle, and renderer
+Form, Please owns its store, mutation pipeline, validation lifecycle, and renderer
 integration. It borrows proven ideas from other form libraries but is not a
 wrapper around TanStack Form, React Hook Form, or another form manager.
 
@@ -32,8 +32,8 @@ The architecture separates three concerns:
 The form state lives in a single external store. React components subscribe to
 the smallest state slice they need through `useSyncExternalStore`.
 
-Fokit supports React 18 and React 19.
-React 19 Form Actions are provided through an isolated `fokit/react19` entry
+Form, Please supports React 18 and React 19.
+React 19 Form Actions are provided through an isolated `form-please/react19` entry
 point so that the main entry point never imports React 19-only APIs. Support
 for a future React major is added only after its compatibility is covered by
 CI.
@@ -75,7 +75,7 @@ CI.
 
 ## Non-goals
 
-Fokit does not:
+Form, Please does not:
 
 - implement a compatibility or migration layer for another library;
 - wrap or mirror another form state manager;
@@ -108,7 +108,7 @@ serializable rule AST rather than extending the code-first API with exceptions.
 
 ### One source of truth for validity
 
-The Standard Schema is the source of truth for whether data is valid. Fokit
+The Standard Schema is the source of truth for whether data is valid. Form, Please
 must not duplicate `minLength`, `email`, or other validators in its own schema
 language.
 
@@ -137,7 +137,7 @@ A field selects a renderer with one property:
 control: 'select'
 ```
 
-Fokit must not introduce overlapping `type` and `display` discriminators.
+Form, Please must not introduce overlapping `type` and `display` discriminators.
 Value compatibility is checked between the selected path and the registered
 control.
 
@@ -150,7 +150,7 @@ visible: ({ kind }) => kind === 'company'
 ```
 
 The resolver receives a read-only proxy whose properties are canonical form
-paths. Fokit records each property read and reuses the result until one of
+paths. Form, Please records each property read and reuses the result until one of
 those values or the runtime context reference changes. When a resolver takes a
 different branch, the next evaluation replaces its tracked path set.
 
@@ -163,7 +163,7 @@ Applications may project the current state of that data synchronously with
 
 ### One store mode
 
-Fokit exposes one external-store model and one `value`/`setValue` control
+Form, Please exposes one external-store model and one `value`/`setValue` control
 contract. It does not expose separate controlled and uncontrolled modes.
 
 Native controls may optimize their implementation internally, but that must
@@ -176,7 +176,7 @@ atomically. This includes updates from controls, imperative commands, array
 operations, resets, batches, and hidden-field value policies.
 
 An instance may provide one synchronous `beforeUpdate` hook and one
-`afterUpdate` hook. Fokit does not expose an ordered middleware chain. The same
+`afterUpdate` hook. Form, Please does not expose an ordered middleware chain. The same
 pipeline is used regardless of where an update originated.
 
 ### Runtime context is not form data
@@ -186,7 +186,7 @@ resolvers and controls can read it, but context is not copied into `values`,
 validated by the Standard Schema, marked dirty, serialized to `FormData`, or
 included in submission output.
 
-The application replaces the context value when external data changes. Fokit
+The application replaces the context value when external data changes. Form, Please
 treats context as read-only input and reevaluates context-dependent UI without
 making the context update a form-value transaction. If the new UI state
 activates an explicit `valuePolicy`, that policy still uses the normal mutation
@@ -207,7 +207,7 @@ design system. Applications own controls, typography, colors, and component
 styling.
 
 Consumers that want ready-to-use responsive structure may explicitly import
-`fokit/layout.css`. This stylesheet covers only grid, gaps, and responsive
+`form-please/layout.css`. This stylesheet covers only grid, gaps, and responsive
 layout. It is not imported by the JavaScript entry point and is not required
 for correct form behavior.
 
@@ -217,19 +217,19 @@ Controls receive a native `name`, IDs, ARIA relationships, and a ref callback.
 Controls are responsible for attaching these properties to the appropriate DOM
 element or hidden input.
 
-Fokit disables browser constraint validation on its generated native form.
+Form, Please disables browser constraint validation on its generated native form.
 Native `required` and related attributes remain useful for semantics, ARIA, and
 styling, while Standard Schema remains the only validation authority.
 
 ## Package exports
 
-Fokit ships as one npm package with subpath exports:
+Form, Please ships as one npm package with subpath exports:
 
 ```ts
 // React-free core
 import {
   resolveUi,
-} from 'fokit/core';
+} from 'form-please/core';
 
 // React 18 and 19
 import {
@@ -245,22 +245,22 @@ import {
   type DefaultSlotsI18n,
   type NativeSelectOptions,
   type NativeTextOptions,
-} from 'fokit';
+} from 'form-please';
 
 // React 19 only
 import {
   ActionForm,
   ActionSubmit,
-} from 'fokit/react19';
+} from 'form-please/react19';
 
 // No React runtime dependency
 import {
   parseFormData,
   type FormResult,
-} from 'fokit/server';
+} from 'form-please/server';
 
 // Optional responsive structure; never imported automatically
-import 'fokit/layout.css';
+import 'form-please/layout.css';
 ```
 
 Package metadata:
@@ -330,7 +330,7 @@ Package metadata:
 }
 ```
 
-Fokit ships ESM and CommonJS from one explicit export map; unsupported deep
+Form, Please ships ESM and CommonJS from one explicit export map; unsupported deep
 imports are intentionally closed. The ESM files are canonical, and both
 formats preserve module-level `"use client"` directives. Public declarations
 support TypeScript 5.4 and newer and are tested against the oldest supported
@@ -340,11 +340,11 @@ The main declarations are compiled and tested against the lowest supported
 React 18 types. React 19-only types must not appear in declarations reachable
 from the main entry point.
 
-Fokit has no peer dependency on Zod, Valibot, or another schema library.
+Form, Please has no peer dependency on Zod, Valibot, or another schema library.
 Schemas satisfy the Standard Schema interface structurally; consumers do not
 install an adapter for a supported Standard Schema implementation.
 
-The `fokit/react19` requirement is documented and checked at runtime because a
+The `form-please/react19` requirement is documented and checked at runtime because a
 single npm package cannot assign a narrower peer range to one subpath. A
 separate npm package for the React 19 adapter is unnecessary unless subpath
 versioning becomes difficult in practice.
@@ -354,19 +354,19 @@ declaration entry points have no CSS side effect.
 
 The supported subpaths are:
 
-- `fokit` for React hooks, components, controls, and convenience re-exports;
-- `fokit/core` for `resolveUi`, path utilities, and other
+- `form-please` for React hooks, components, controls, and convenience re-exports;
+- `form-please/core` for `resolveUi`, path utilities, and other
   DOM-free, React-free operations;
-- `fokit/react19` for React 19 Action components;
-- `fokit/server` for safe `FormData` normalization and validation;
-- `fokit/layout.css` for the optional structural stylesheet.
+- `form-please/react19` for React 19 Action components;
+- `form-please/server` for safe `FormData` normalization and validation;
+- `form-please/layout.css` for the optional structural stylesheet.
 
 React component and hook modules contain the `"use client"` directive.
-`fokit/core` and `fokit/server` never do. Before publishing, CI builds the
+`form-please/core` and `form-please/server` never do. Before publishing, CI builds the
 package, runs `npm pack`, installs the tarball into React 18, React 19, Vite,
 and Next.js smoke fixtures, and verifies every public subpath.
 
-Fokit is published under the MIT license, matching the permissive convention
+Form, Please is published under the MIT license, matching the permissive convention
 used by the main open-source influences. The package name must be reserved
 before the first public publish, and a matching `LICENSE` file must be present.
 The packed tarball contains built artifacts and public documentation, never
@@ -392,9 +392,9 @@ The canonical public route map is locale-free:
 - `/guides/react-19-actions`
 - `/guides/tutorial`
 
-Production builds use the `/fokit` base path and
+Production builds use the `/form-please` base path and
 `https://r13v.github.io` Vocs base URL, producing public URLs under
-`https://r13v.github.io/fokit`. Local development uses `/` unless a caller
+`https://r13v.github.io/form-please`. Local development uses `/` unless a caller
 provides an explicit environment override. The site must not preserve old hash
 routes, locale-prefixed routes, locale switching, locale persistence, or
 redirects for removed locale URLs. The retained Russian tutorial remains a
@@ -409,10 +409,10 @@ Every displayed TypeScript or TSX code block is checked. Inline lessons use
 Vocs' built-in Twoslash integration. Complete programs are included from
 physical files under `docs-site/src/snippets/` and are covered by
 `docs-site/tsconfig.docs.json`. Twoslash, Shiki, and the docs TypeScript
-compiler are documentation-only dependencies; the published `fokit` package
+compiler are documentation-only dependencies; the published `form-please` package
 does not depend on them or load a browser-side compiler.
 
-The Interactive Fokit Lab is a Vocs client component. It uses the public
+The Interactive Form, Please Lab is a Vocs client component. It uses the public
 `nativeControls` registry and `createDefaultSlots({ i18n })` rather than local
 control or slot implementations, and its generated Markdown fallback must be
 meaningful in page Markdown and LLM artifacts.
@@ -427,7 +427,7 @@ A control describes the value and options accepted by a renderer:
 import {
   defineControl,
   type ControlProps,
-} from 'fokit';
+} from 'form-please';
 
 type TextOptions = {
   placeholder?: string;
@@ -521,7 +521,7 @@ type ControlProps<
 from hidden issues.
 
 The renderer receives `input.ref` as a normal property and attaches it to a DOM
-element. Fokit does not require the renderer component itself to accept a React
+element. Form, Please does not require the renderer component itself to accept a React
 `ref`. This keeps the contract compatible with both React 18 and React 19.
 
 A control that reads application context declares the third `Context` generic
@@ -586,7 +586,7 @@ type ControlFormData<
 
 - `mode: 'native'` means a visible control attaches `input.name` to one or more
   successful native inputs, including radio groups and file inputs;
-- `mode: 'hidden'` means the visible editor omits the name and Fokit renders
+- `mode: 'hidden'` means the visible editor omits the name and Form, Please renders
   serializer-produced hidden inputs during SSR and client rendering;
 - an optional native serializer is used when a preserved field is invisible or
   disabled and therefore has no successful native input;
@@ -594,7 +594,7 @@ type ControlFormData<
 
 The serializer is synchronous and pure. It receives the same resolved options
 and read-only runtime context as the renderer. Value entries produce hidden
-string inputs. An array entry produces Fokit's reserved array marker so an
+string inputs. An array entry produces the reserved Form, Please array marker so an
 empty or single-item collection keeps its array shape. Parsing or coercing
 value strings remains the Standard Schema's responsibility. Although
 `input.name` always contains the canonical name, a `mode: 'hidden'` control
@@ -613,11 +613,11 @@ representation.
 
 ### Native controls
 
-The main `fokit` entry exports `nativeControls`, an explicit registry of
+The main `form-please` entry exports `nativeControls`, an explicit registry of
 unstyled native HTML controls:
 
 ```tsx
-import { createFormKit, nativeControls } from 'fokit';
+import { createFormKit, nativeControls } from 'form-please';
 
 export const kit = createFormKit({
   controls: nativeControls,
@@ -690,7 +690,7 @@ A form kit registers controls and, optionally, structural slots for one
 rendering integration:
 
 ```tsx
-import { createFormKit, nativeControls } from 'fokit';
+import { createFormKit, nativeControls } from 'form-please';
 
 export const kit = createFormKit({
   controls: nativeControls,
@@ -698,7 +698,7 @@ export const kit = createFormKit({
 ```
 
 `controls` remains required because controls define value compatibility and
-native `FormData` behavior. Fokit never infers or silently merges controls
+native `FormData` behavior. Form, Please never infers or silently merges controls
 from the Standard Schema.
 
 `slots` is optional and partial. Omitted slots resolve once per kit by merging
@@ -709,7 +709,7 @@ import {
   createDefaultSlots,
   createFormKit,
   nativeControls,
-} from 'fokit';
+} from 'form-please';
 
 export const kit = createFormKit({
   controls: {
@@ -773,7 +773,7 @@ collision and unknown-control checks stay authoritative.
 
 The default slots are an accessibility baseline, not a design-system wrapper
 or visual theme. They render semantic unstyled HTML, preserve every supplied
-slot prop, and do not import `fokit/layout.css`. Consumers that want the
+slot prop, and do not import `form-please/layout.css`. Consumers that want the
 optional responsive structure still import the CSS subpath explicitly.
 
 Default array-item actions keep their localized strings as accessible names
@@ -844,29 +844,29 @@ type StructuralNodeName =
   | 'array-item'
   | 'error-message';
 
-type FokitNodeName = 'form' | StructuralNodeName;
+type FormPleaseNodeName = 'form' | StructuralNodeName;
 
-type FokitCssVariable =
-  | '--fokit-column-gap'
-  | '--fokit-row-gap'
-  | '--fokit-stack-gap'
-  | '--fokit-array-item-gap';
+type FormPleaseCssVariable =
+  | '--fp-column-gap'
+  | '--fp-row-gap'
+  | '--fp-stack-gap'
+  | '--fp-array-item-gap';
 
-type FokitStyle = React.CSSProperties &
-  Partial<Record<FokitCssVariable, string>>;
+type FormPleaseStyle = React.CSSProperties &
+  Partial<Record<FormPleaseCssVariable, string>>;
 
 type StructuralRootProps =
   Omit<React.HTMLAttributes<HTMLElement>, 'style'> & {
-    'data-fokit-node': StructuralNodeName;
+    'data-fp-node': StructuralNodeName;
     ref?(element: HTMLElement | null): void;
-    style?: FokitStyle;
+    style?: FormPleaseStyle;
   };
 
 type SectionSlotProps<SlotOptions = never> = {
   rootProps: StructuralRootProps;
   layoutProps: React.HTMLAttributes<HTMLElement> & {
-    'data-fokit-layout': 'grid';
-    'data-fokit-columns': GridColumns;
+    'data-fp-layout': 'grid';
+    'data-fp-columns': GridColumns;
   };
   title?: React.ReactNode;
   description?: React.ReactNode;
@@ -910,7 +910,7 @@ type ErrorMessageSlotProps = {
 
 Every structural slot receives mandatory `rootProps`. The slot must spread
 them onto exactly one DOM root and preserve `rootProps.className` when adding
-its own classes. Fokit does not add a wrapper around a custom slot, so a
+its own classes. Form, Please does not add a wrapper around a custom slot, so a
 `Fragment` cannot implement this contract.
 
 `createFormKit` infers the independent `Field`, `Section`, and `Array`
@@ -938,7 +938,7 @@ function Section({
 ```
 
 The section root is the container-query boundary and the layout element is its
-grid descendant. The application slot creates these elements; Fokit does not
+grid descendant. The application slot creates these elements; Form, Please does not
 insert hidden structural wrappers.
 
 The array-item slot contract is:
@@ -957,7 +957,7 @@ type ArrayItemSlotProps = {
 };
 ```
 
-Fokit owns the React key and stable row identity; the slot owns presentation
+Form, Please owns the React key and stable row identity; the slot owns presentation
 and decides which supplied actions to render. Mutation callbacks are guarded
 by the effective disabled/read-only state so a custom slot cannot bypass it.
 
@@ -970,12 +970,12 @@ slots must preserve.
 `AutoForm` renders an error summary before generated fields using the same
 `ErrorMessage` slot. The summary contains displayable form-level issues and
 displayable path issues that have no visible owning field or array node.
-Fokit supplies a focus ref and `tabIndex={-1}` to summary errors. Submit focuses
+Form, Please supplies a focus ref and `tabIndex={-1}` to summary errors. Submit focuses
 the first matching summary issue as a fallback target. Manual composition can
 select and place those issues elsewhere.
 
 `Array.add()` creates a fresh item from the node's `itemDefault`. The callback
-is a guarded no-op when `canAdd` is false. Fokit renders each row through
+is a guarded no-op when `canAdd` is false. Form, Please renders each row through
 `ArrayItem`, owns its key, and passes the resulting rows as `Array.children`.
 
 The five slot prop types are public and are declaration-tested. Adding optional
@@ -1005,7 +1005,7 @@ button props except `type`, passes through `className`, `style`, `aria-*`, and
 `data-*`, and combines a consumer-supplied `disabled` value with the form's
 effective submit-disabled state. It never allows a prop to force-enable a
 disabled or submitting form. Applications may instead render their own
-design-system `<Button type="submit">`; Fokit's form handler still enforces
+design-system `<Button type="submit">`; the form handler in Form, Please still enforces
 disabled and concurrent-submit guards.
 
 ### Form definition
@@ -1144,7 +1144,7 @@ remain global to the complete definition and must be unique across scopes.
 
 ### UI node types
 
-Fokit's React UI tree contains four node kinds:
+The React UI tree in Form, Please contains four node kinds:
 
 ```ts
 type UiNode = FieldNode | SectionNode | ArrayNode | RenderNode;
@@ -1170,7 +1170,7 @@ invisible node is not mounted. A mounted component receives effective
 may use public hooks inside `kit.Form` for values. The component owns applying
 those flags to its arbitrary DOM and commands.
 
-Fokit otherwise owns only node identity, ordering, and mounting. It does not
+Form, Please otherwise owns only node identity, ordering, and mounting. It does not
 provide a path, field copy, issues, layout, accessibility, command ownership,
 or `FormData` behavior. Render nodes may appear at the root or inside sections,
 but not in `array.children`. `ActionForm` renders them and ignores them during
@@ -1185,7 +1185,7 @@ All definition, imperative, issue, subscription, and `FormData` paths use the
 same canonical dot grammar: `address.city` and `contacts.0.value`. Bracket
 syntax is not accepted. Empty segments, property names containing dots,
 numeric object keys, prototype-mutating segments (`__proto__`, `prototype`,
-`constructor`), and the reserved top-level `__fokit` segment are invalid.
+`constructor`), and the reserved top-level `__fp` segment are invalid.
 Array indexes use `0` or a non-zero decimal without a leading zero;
 negative, signed, decimal-point, and zero-padded indexes are non-canonical.
 Every runtime path entry point applies the same checks.
@@ -1277,13 +1277,13 @@ type ArrayNode = {
 Child paths are relative to the array item.
 
 The `ReactUiContent` type applies to definitions created by a React form kit.
-The `fokit/core` definition default remains `string`, so core does not import
+The `form-please/core` definition default remains `string`, so core does not import
 React. Core treats presentation content and structural slot options as opaque:
 it preserves their identity and does not traverse or freeze their internals.
 Consumers treat these values as immutable after normalization; mutating an
 opaque object does not notify the form store.
 
-Array row identity is internal form metadata. Fokit must not require consumers
+Array row identity is internal form metadata. Form, Please must not require consumers
 to add synthetic keys to submitted data.
 
 `itemDefault` is a complete array item. A function is called for every append;
@@ -1308,7 +1308,7 @@ around `kit.Fields`.
 ### Resolved interaction state
 
 Visibility and interaction state are inherited through the UI tree. For each
-node, Fokit resolves:
+node, Form, Please resolves:
 
 ```ts
 effectiveVisible =
@@ -1347,7 +1347,7 @@ Invisible nodes do not render their structural slot or visual control. In
 `ActionForm`, preserved fields under an invisible field, section, or array
 subtree still emit serializer-produced hidden inputs, and arrays emit their
 shape marker, so stored values participate in native submission. Fields
-removed by `valuePolicy: 'unset'` emit nothing. Fokit never hides the visual
+removed by `valuePolicy: 'unset'` emit nothing. Form, Please never hides the visual
 control with CSS.
 
 ## Styling and layout
@@ -1377,18 +1377,18 @@ fragments, viewport breakpoints, or arbitrary CSS values.
 
 ### DOM styling protocol
 
-Fokit exposes styling hooks on the native form and on structural slot roots:
+Form, Please exposes styling hooks on the native form and on structural slot roots:
 `Field`, `Section`, the section layout element, `Array`, `ArrayItem`, and
 `ErrorMessage`. Controls receive their typed control props and decide which
 attributes belong on the actual input or composite widget.
 
 Identity and layout attributes are namespaced:
 
-- `data-fokit-node` identifies a form or structural node;
-- `data-fokit-path` exposes the normalized field or array path when applicable;
-- `data-fokit-span` exposes resolved layout span;
-- `data-fokit-layout="grid"` identifies a section layout element;
-- `data-fokit-columns` exposes the requested section column count.
+- `data-fp-node` identifies a form or structural node;
+- `data-fp-path` exposes the normalized field or array path when applicable;
+- `data-fp-span` exposes resolved layout span;
+- `data-fp-layout="grid"` identifies a section layout element;
+- `data-fp-columns` exposes the requested section column count.
 
 Boolean UI state uses familiar unprefixed attributes and is present only when
 true:
@@ -1410,13 +1410,13 @@ data-validation-status="unvalidated | valid | invalid"
 ```
 
 These attributes are public styling and testing API and follow semantic
-versioning. Fokit does not copy them blindly onto controls because a control
+versioning. Form, Please does not copy them blindly onto controls because a control
 may use Radix, React Aria, MUI, or another library with its own DOM and state
 attribute conventions.
 
-`className` is additive. Fokit includes the definition-level class in
+`className` is additive. Form, Please includes the definition-level class in
 `rootProps.className`; a slot that has its own classes concatenates them and
-must not discard either set. Fokit does not depend on `clsx`,
+must not discard either set. Form, Please does not depend on `clsx`,
 `tailwind-merge`, or any framework-specific conflict resolver.
 
 ### Optional structural stylesheet
@@ -1424,7 +1424,7 @@ must not discard either set. Fokit does not depend on `clsx`,
 Consumers opt in explicitly:
 
 ```ts
-import 'fokit/layout.css';
+import 'form-please/layout.css';
 ```
 
 The file provides only structural behavior:
@@ -1445,18 +1445,18 @@ the same definition adapts independently inside a page, modal, or sidebar:
 - from `64rem`: up to four requested columns.
 
 The base one-column layout remains usable in browsers without container-query
-support. The stylesheet progressively enhances it through `@container`; Fokit
+support. The stylesheet progressively enhances it through `@container`; Form, Please
 does not use `ResizeObserver` or JavaScript layout measurement.
 
-The stylesheet is declared in `@layer fokit` and uses low-specificity
+The stylesheet is declared in `@layer fp` and uses low-specificity
 `:where(...)` selectors. Applications can override it with normal author CSS.
 Its public structural variables are:
 
 ```text
---fokit-column-gap
---fokit-row-gap
---fokit-stack-gap
---fokit-array-item-gap
+--fp-column-gap
+--fp-row-gap
+--fp-stack-gap
+--fp-array-item-gap
 ```
 
 Applications may set these variables on a form or any containing element.
@@ -1479,7 +1479,7 @@ inside a form definition. The resolver receives a read-only path-value proxy
 plus the form's read-only runtime context:
 
 ```ts
-import type { NativeSelectOption } from 'fokit';
+import type { NativeSelectOption } from 'form-please';
 
 type AddressContext = {
   citiesByCountry: Readonly<
@@ -1524,7 +1524,7 @@ Resolver functions:
 
 ### Application resource projection
 
-Fokit exposes a minimal availability state and two exhaustive synchronous
+Form, Please exposes a minimal availability state and two exhaustive synchronous
 matchers:
 
 ```ts
@@ -1558,11 +1558,11 @@ selector and the active case participate in normal dependency tracking.
 
 Application-specific resource unions may structurally extend each branch. For
 example, a successful query result may carry a nested discriminated `refresh`
-state without changing the Fokit helper. The core does not depend on a query
+state without changing the Form, Please helper. The core does not depend on a query
 library and does not convert query booleans into a resource implicitly.
 
 An asynchronous option list must be loaded by application code and passed
-through context or handled by a control-specific data integration. Fokit does
+through context or handled by a control-specific data integration. Form, Please does
 not start requests, cache data, retry, cancel, suspend resolution, or convert
 mapper exceptions into resource errors. Promise-valued selectors and UI
 resolvers are invalid.
@@ -1597,7 +1597,7 @@ type FormState<Input> = {
 };
 ```
 
-Fokit does not expose `canSubmit`. Consumers can derive application
+Form, Please does not expose `canSubmit`. Consumers can derive application
 policy from state, while `kit.Submit` does not become inaccessible merely
 because the last validation result is invalid. Before the first validation,
 validity is `unvalidated`, not implicitly `valid`.
@@ -1619,7 +1619,7 @@ and makes dirty tracking deterministic. Applications load asynchronous data
 before creating the form or call `reset(loadedValues)` when it arrives.
 `defaultValues` is read when the form instance is created; changing that
 option's reference does not implicitly reset user edits.
-Fokit snapshots arrays and plain objects at those boundaries; consumers must
+Form, Please snapshots arrays and plain objects at those boundaries; consumers must
 not mutate values obtained from the form or retained non-plain objects in
 place.
 
@@ -1661,9 +1661,9 @@ type SubmissionIssue = Omit<FormIssue, 'source'> & {
 };
 ```
 
-Standard Schema issue paths are normalized to Fokit field paths. An issue
+Standard Schema issue paths are normalized to Form, Please field paths. An issue
 without a path is a form-level issue. A schema issue path that cannot be
-represented by Fokit's canonical grammar is retained as a form-level issue
+represented by the canonical Form, Please grammar is retained as a form-level issue
 rather than discarded or used for object traversal.
 
 Default display policy:
@@ -1684,7 +1684,7 @@ an unrelated cross-field issue remains hidden until its own path is exposed or
 the whole form is submitted. Visibility is determined by the triggering
 interaction, not merely by issue source.
 
-For every path Fokit derives `displayErrors` from raw field errors and the
+For every path Form, Please derives `displayErrors` from raw field errors and the
 display policy. A field, control, and `data-invalid` all consume this same
 derived list. An invisible field or array has no rendered local issue area;
 once one of its issues is exposed, `AutoForm` places that issue in the form
@@ -1786,7 +1786,7 @@ than implying that only one field validator is running.
 An unexpected schema exception is not a validation issue. Imperative and
 submit validation reject their promise after restoring pending state;
 automatically scheduled change/blur validation reports the exception to the
-host as an uncaught application error. In both cases Fokit atomically retains
+host as an uncaught application error. In both cases Form, Please atomically retains
 the previous issue set and leaves the current values `unvalidated`.
 
 ## Value transactions
@@ -1852,7 +1852,7 @@ inside a batch and replacement changes returned by `beforeUpdate` are applied
 in list order, so the last write to an overlapping path wins.
 
 Array append, insert, remove, and move commands are normalized into one
-`source: 'array'` transaction while preserving Fokit's internal row keys.
+`source: 'array'` transaction while preserving the internal Form, Please row keys.
 Invalid paths, non-array targets, and out-of-range indexes throw before a
 transaction begins and do not invoke update hooks.
 
@@ -1948,23 +1948,23 @@ type NativeFormProps = Omit<
   | 'onSubmit'
   | 'style'
 > & {
-  style?: FokitStyle;
+  style?: FormPleaseStyle;
 };
 ```
 
 This includes `id`, `className`, `style`, `autoComplete`, `aria-*`, and custom
-`data-*` attributes. Fokit-owned event handlers, `noValidate`,
-`data-fokit-*`, `data-validation-status`, and documented state attributes
-cannot be replaced. `style` may set the public Fokit CSS variables for one
+`data-*` attributes. Form, Please-owned event handlers, `noValidate`,
+`data-fp-*`, `data-validation-status`, and documented state attributes
+cannot be replaced. `style` may set the public Form, Please CSS variables for one
 form. Reactive styling should use public state data attributes rather than a
 resolver-based class-name API.
 
-After hydration, Fokit intercepts a native reset event, prevents a DOM-only
+After hydration, Form, Please intercepts a native reset event, prevents a DOM-only
 reset, and calls `form.reset()` so a `<button type="reset">` keeps the
 controlled store and rendered controls synchronized. Before hydration, the
 browser's normal reset behavior restores the server-rendered defaults.
 
-When `id` is omitted, Fokit derives deterministic form and field IDs from
+When `id` is omitted, Form, Please derives deterministic form and field IDs from
 React `useId`. Supplying an explicit form `id` makes it the ID prefix.
 
 ### Manual composition
@@ -2205,7 +2205,7 @@ const unsubscribe = form.subscribe(
 Reading through this API does not subscribe a React component. Components that
 need reactive values use `useField`, `useValue`, or `useFormState`.
 
-Fokit does not provide a hook named `useFormApi` that returns a non-reactive
+Form, Please does not provide a hook named `useFormApi` that returns a non-reactive
 snapshot.
 
 `focusFirstError(paths?)` searches displayed issues in schema order. It focuses
@@ -2245,10 +2245,10 @@ When a field transitions from visible to hidden:
 
 An automatic unset is folded into the current value transaction when
 visibility changed because of that transaction. If a context change alone
-hides the field, Fokit starts one `valuePolicy` transaction.
+hides the field, Form, Please starts one `valuePolicy` transaction.
 
 The validation schema decides whether a hidden value is allowed or required.
-Fokit does not silently exclude hidden fields from schema validation.
+Form, Please does not silently exclude hidden fields from schema validation.
 
 This avoids making UI state an implicit validation rule.
 
@@ -2299,7 +2299,7 @@ Native submit calls `preventDefault()` and follows one lifecycle:
 
 Concurrent submits share the same in-flight promise and do not start another
 validation or callback. A thrown `onSubmit` error is rethrown after submission
-state is restored; Fokit does not convert unexpected exceptions into field
+state is restored; Form, Please does not convert unexpected exceptions into field
 issues. Success never resets automatically.
 
 `kit.Submit` is disabled while the form is disabled or submitting, but not
@@ -2315,8 +2315,8 @@ import { useActionState } from 'react';
 import {
   ActionForm,
   ActionSubmit,
-} from 'fokit/react19';
-import type { FormResult } from 'fokit/server';
+} from 'form-please/react19';
+import type { FormResult } from 'form-please/server';
 
 const [result, action] = useActionState(
   saveAccountAction,
@@ -2335,10 +2335,10 @@ const [result, action] = useActionState(
 </ActionForm>
 ```
 
-`ActionSubmit` combines `useFormStatus` with Fokit's disabled and submitting
-state. `ActionForm` reflects pending Action state into the Fokit instance. The
-base `kit.Submit` uses only Fokit submission state and does not import
-`useFormStatus`. `ActionSubmit` has the same unstyled native-button prop
+`ActionSubmit` combines `useFormStatus` with the disabled and submitting state from
+Form, Please. `ActionForm` reflects pending Action state into the Form, Please
+instance. The base `kit.Submit` uses only Form, Please submission state and does
+not import `useFormStatus`. `ActionSubmit` has the same unstyled native-button prop
 contract as `kit.Submit`.
 
 `ActionForm` keeps the supplied Action directly on the native form. It does not
@@ -2372,7 +2372,7 @@ type FormResult =
     };
 ```
 
-The adapter synchronizes returned issues with the Fokit store. Success retains
+The adapter synchronizes returned issues with the Form, Please store. Success retains
 controlled values by default. `reset: 'defaults'` restores the existing
 baseline, which suits a create form. `reset: 'submitted'` makes the captured
 submitted values the new baseline, which marks a saved edit form clean. Edits
@@ -2394,18 +2394,18 @@ since that submission; a form-level server issue is stale after any such
 change. This is equivalent to applying the result at submission time and then
 replaying the later edits.
 
-In a fully pre-hydration/no-JavaScript round trip, Fokit does not echo an
+In a fully pre-hydration/no-JavaScript round trip, Form, Please does not echo an
 unvalidated raw payload into the typed store. Applications that require this
 for a particular form map serializable action state back to valid
-`defaultValues`; Fokit does not add a second raw-value store to solve it
+`defaultValues`; Form, Please does not add a second raw-value store to solve it
 generically. For the same reason, `reset: 'submitted'` is applied only when
 ActionForm captured a typed submission snapshot; otherwise it is a no-op and
 the application supplies new `defaultValues` explicitly.
 
-An Action exception propagates to React's nearest error boundary. Fokit does
+An Action exception propagates to React's nearest error boundary. Form, Please does
 not synthesize an issue for an unexpected server failure. React's automatic
-reset of uncontrolled form elements does not change the Fokit store because
-Fokit exposes one controlled store mode.
+reset of uncontrolled form elements does not change the Form, Please store because
+Form, Please exposes one controlled store mode.
 
 ## Server API
 
@@ -2417,7 +2417,7 @@ The server helper normalizes `FormData` and validates it:
 import {
   parseFormData,
   type FormResult,
-} from 'fokit/server';
+} from 'form-please/server';
 
 export async function saveAccountAction(
   previousResult: FormResult | null,
@@ -2484,15 +2484,15 @@ declare function parseFormData<S extends StandardSchemaV1>(
 - primitive coercion and business validation belong to Standard Schema.
 
 The exact array marker is a repeated reserved entry whose name is
-`__fokit.array` and whose value is the canonical array path:
+`__fp.array` and whose value is the canonical array path:
 
 ```html
-<input type="hidden" name="__fokit.array" value="contacts">
+<input type="hidden" name="__fp.array" value="contacts">
 ```
 
 An array marker declares shape but never supplies a data value. Multiple array
 paths produce multiple entries with the same reserved name. Unknown
-`__fokit.*` entries, malformed marker paths, and duplicate markers for the
+`__fp.*` entries, malformed marker paths, and duplicate markers for the
 same array path are normalization errors rather than ignored input.
 
 Property names containing dots, empty segments, leading numeric segments,
@@ -2502,7 +2502,7 @@ Mixing scalar and nested use of the same prefix, mixing repeated and explicitly
 indexed forms of one collection, or submitting sparse/non-contiguous indexes
 is a normalization error rather than a guessed structure.
 
-Fokit reserves the `__fokit` top-level path namespace for structural markers.
+Form, Please reserves the `__fp` top-level path namespace for structural markers.
 Reserved metadata is removed before schema validation and is never included in
 the parsed value. `SubmitContext.formData` is the protocol-level native
 `FormData` and may contain these markers; applications forwarding it to a
@@ -2523,18 +2523,18 @@ Normalization failures use `source: 'server'` and a stable
 `code: 'invalid_form_data'`. Schema failures retain `source: 'schema'`.
 
 Framework request-body, multipart-part, file-count, and file-size limits must
-run before `request.formData()` or before calling `parseFormData`; Fokit cannot
+run before `request.formData()` or before calling `parseFormData`; Form, Please cannot
 recover memory already consumed by the framework. Standard Schema still
 validates application-level file rules.
 
-`fokit/server` does not import React or any control component.
+`form-please/server` does not import React or any control component.
 
 ## FormData and control responsibilities
 
 Every control must preserve form submission semantics.
 
 A native text control applies the supplied `name` to its input. A composite
-control uses its `formData` serializer so Fokit renders hidden inputs on the
+control uses its `formData` serializer so Form, Please renders hidden inputs on the
 server and client. `ArrayNode` always emits an array marker, including when it
 has no rows.
 
@@ -2565,7 +2565,7 @@ The shipped `nativeControls` intentionally preserve browser protocols:
 
 Server schemas therefore remain responsible for coercing strings to numbers,
 dates, booleans, optional strings or enums, and application-specific file
-rules. Fokit does not decode native control entries from the React registry on
+rules. Form, Please does not decode native control entries from the React registry on
 the server.
 
 A native control may intentionally follow browser absence semantics, such as
@@ -2618,7 +2618,7 @@ definition or an internal shared validator used by browser and server flows.
 - reactive and imperative append, insert, remove, and move operations;
 - static root classes and public state/layout data attributes;
 - safe native form-prop passthrough;
-- optional responsive structure through `fokit/layout.css`;
+- optional responsive structure through `form-please/layout.css`;
 - static and derived control options;
 - typed runtime context for derived UI and controls;
 - inherited visibility, disabled, and read-only state;
@@ -2640,7 +2640,7 @@ definition or an internal shared validator used by browser and server flows.
 - React Native.
 
 Cross-field mutation is available through the single instance-level
-`beforeUpdate` hook. Fokit deliberately does not provide a middleware chain or
+`beforeUpdate` hook. Form, Please deliberately does not provide a middleware chain or
 store executable effects in reusable definitions.
 
 ## Rejected alternatives
@@ -2653,26 +2653,26 @@ and prevents clean separation of reusable UI from application workflow.
 
 ### A pure headless form manager
 
-A JSX-only API is flexible but gives Fokit little differentiation from React
+A JSX-only API is flexible but gives Form, Please little differentiation from React
 Hook Form or TanStack Form and loses automatic generation, which is a primary
 goal.
 
 ### A wrapper around another form manager
 
 Wrapping TanStack Form or another headless manager would save some initial
-store work, but Fokit's guarantees would then depend on a different mutation
+store work, but the guarantees of Form, Please would then depend on a different mutation
 and rendering lifecycle. Transaction interception, inherited UI state,
 hidden-value policy, and structural slot behavior would either leak the
 wrapped API or require a parallel state model.
 
-Fokit therefore owns the small form core it needs. It may adopt proven
+Form, Please therefore owns the small form core it needs. It may adopt proven
 algorithms and terminology, but another form manager is not a runtime
 dependency or public escape hatch.
 
 ### A general middleware chain
 
 Multiple ordered interceptors add priority, reentrancy, async, and error
-semantics before Fokit has use cases that require them. One synchronous
+semantics before Form, Please has use cases that require them. One synchronous
 `beforeUpdate` transformation and one post-commit `afterUpdate` observer cover
 the target scenarios with one deterministic order.
 
@@ -2705,8 +2705,8 @@ registered slots or through the additive `className` escape hatch.
 ### A mandatory built-in theme
 
 A default visual theme would make the shortest demo attractive but would
-compete with the application's design system and expand Fokit's compatibility
-surface. Fokit's default slots deliberately stop at unstyled semantic markup
+compete with the application's design system and expand the compatibility surface of
+Form, Please. Its default slots deliberately stop at unstyled semantic markup
 and accessible action labels. The optional stylesheet remains structural only
 and is never imported automatically.
 
@@ -2781,7 +2781,7 @@ Before the API is considered stable, the implementation must prove:
   serializer behavior match their documented contracts;
 - native `FormData` parity for control-contract fixtures, empty arrays, absent
   checkboxes, repeated values, dates, times, numbers, selects, and files;
-- exact `__fokit.array` marker behavior and rejection of malformed or unknown
+- exact `__fp.array` marker behavior and rejection of malformed or unknown
   reserved metadata;
 - serializer hidden inputs are present in SSR output and normalize to the same
   schema output as classic submit;
@@ -2812,7 +2812,7 @@ CI must include at least:
 - DOM-free tests for store, validation, paths, safe parsing, and UI resolution;
 - fuzz/property tests for path parsing and value transactions;
 - packed-tarball smoke projects for Vite, Next.js Server/Client Components,
-  ESM import, CommonJS require, `fokit/core`, `fokit/server`, and every package
+  ESM import, CommonJS require, `form-please/core`, `form-please/server`, and every package
   export;
 - package checks with `publint` and Are the Types Wrong;
 - documentation-site verification that runs source-content tests, docs
@@ -2863,7 +2863,7 @@ code-level choice.
 The implementation may reproduce documented behavior and independently apply
 general algorithms from the listed influences. Source code from the local
 reference implementation or another project is copied only when ownership or a
-compatible license is confirmed. In the absence of that confirmation, Fokit
+compatible license is confirmed. In the absence of that confirmation, Form, Please
 uses an independent implementation.
 
 ## Influences

@@ -7,7 +7,7 @@ import {
 } from "../core/path.js"
 import {
 	createInvalidFormDataIssue,
-	fokitArrayMarkerName,
+	fpArrayMarkerName,
 	type ParseFormDataOptions,
 	type ResolvedParseFormDataOptions,
 	resolveParseFormDataOptions,
@@ -80,13 +80,13 @@ function collectEntries(
 			throw new TypeError("FormData contains too many entries")
 		}
 
-		if (name === fokitArrayMarkerName) {
+		if (name === fpArrayMarkerName) {
 			addArrayMarker(value, arrayMarkers, options)
 			continue
 		}
 
 		if (isReservedMetadataName(name)) {
-			throw new TypeError("FormData contains unknown Fokit metadata")
+			throw new TypeError("FormData contains unknown Form Please metadata")
 		}
 
 		const segments = parseFormDataPath(name, options)
@@ -116,13 +116,13 @@ function addArrayMarker(
 	options: ResolvedParseFormDataOptions,
 ): void {
 	if (typeof value !== "string") {
-		throw new TypeError("Fokit array marker values must be strings")
+		throw new TypeError("Form Please array marker values must be strings")
 	}
 
 	const segments = parseFormDataPath(value, options)
 	const path = formatPath(segments, { maxIndex: options.maxArrayIndex })
 	if (arrayMarkers.has(path)) {
-		throw new TypeError("Duplicate Fokit array marker")
+		throw new TypeError("Duplicate Form Please array marker")
 	}
 	arrayMarkers.add(path)
 }
@@ -304,5 +304,5 @@ function createTrieNode(kind?: TrieKind): TrieNode {
 }
 
 function isReservedMetadataName(name: string): boolean {
-	return name === "__fokit" || name.startsWith("__fokit.")
+	return name === "__fp" || name.startsWith("__fp.")
 }

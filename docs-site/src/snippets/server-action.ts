@@ -1,4 +1,4 @@
-import { type FormResult, parseFormData } from "fokit/server"
+import { type FormResult, parseFormData } from "form-please/server"
 import { z } from "zod"
 
 const profileActionSchema = z

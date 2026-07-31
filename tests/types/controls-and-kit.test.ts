@@ -11,9 +11,9 @@ import {
 	defineControl,
 	type ErrorMessageSlotProps,
 	type FieldSlotProps,
-	type FokitCssVariable,
-	type FokitStyle,
 	type FormKitSlots,
+	type FormPleaseCssVariable,
+	type FormPleaseStyle,
 	type NormalizedArrayNode,
 	type Resolvable,
 	type ResolvedArrayNode,
@@ -966,21 +966,21 @@ kit.defineForm(schema).withContext<ExampleContext>({
 
 type _cssVariable = Expect<
 	Equal<
-		FokitCssVariable,
-		| "--fokit-column-gap"
-		| "--fokit-row-gap"
-		| "--fokit-stack-gap"
-		| "--fokit-array-item-gap"
+		FormPleaseCssVariable,
+		| "--fp-column-gap"
+		| "--fp-row-gap"
+		| "--fp-stack-gap"
+		| "--fp-array-item-gap"
 	>
 >
 
-const style: FokitStyle = {
-	"--fokit-column-gap": "1rem",
+const style: FormPleaseStyle = {
+	"--fp-column-gap": "1rem",
 	color: "CanvasText",
 }
 
 const rootProps = {
-	"data-fokit-node": "field",
+	"data-fp-node": "field",
 	className: "field",
 	style,
 } satisfies StructuralRootProps

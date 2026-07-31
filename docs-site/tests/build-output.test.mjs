@@ -79,13 +79,16 @@ test("production output uses GitHub Pages metadata URLs when requested", async (
 	assert.doesNotMatch(html, /http:\/\/127\.0\.0\.1/)
 	assert.match(
 		html,
-		/<link rel="canonical" href="https:\/\/r13v\.github\.io\/fokit\/get-started"/,
+		/<link rel="canonical" href="https:\/\/r13v\.github\.io\/form-please\/get-started"/,
 	)
 	assert.match(
 		html,
-		/<meta property="og:url" content="https:\/\/r13v\.github\.io\/fokit\/get-started"/,
+		/<meta property="og:url" content="https:\/\/r13v\.github\.io\/form-please\/get-started"/,
 	)
-	assert.match(html, /"url":"https:\/\/r13v\.github\.io\/fokit\/get-started"/)
+	assert.match(
+		html,
+		/"url":"https:\/\/r13v\.github\.io\/form-please\/get-started"/,
+	)
 	assert.match(html, /<base href="https:\/\/r13v\.github\.io"/)
 })
 
@@ -111,7 +114,7 @@ test("production output keeps Vocs skip links under the GitHub Pages base path",
 		if (skipTags.length > 0) {
 			assert.match(
 				html,
-				/data-fokit-vocs-skip-link-base="true"/,
+				/data-fp-vocs-skip-link-base="true"/,
 				`${file} should patch hydrated Vocs skip links`,
 			)
 		}
@@ -126,15 +129,15 @@ test("production output keeps Vocs skip links under the GitHub Pages base path",
 	for (const { file, href } of skipLinks) {
 		assert.match(
 			href,
-			/^\/fokit(?:\/|#)/,
-			`${file} skip link should stay under /fokit`,
+			/^\/form-please(?:\/|#)/,
+			`${file} skip link should stay under /form-please`,
 		)
 	}
 })
 
 test("Interactive Lab has meaningful generated Markdown fallbacks", async () => {
 	const fallbackTerms = [
-		"Interactive Fokit Lab",
+		"Interactive Form, Please Lab",
 		"runs only in a browser",
 		"createFormKit({ controls: nativeControls })",
 	]
@@ -153,10 +156,13 @@ test("Interactive Lab has meaningful generated Markdown fallbacks", async () => 
 	}
 
 	const llms = await readFile(new URL("llms.txt", publicRoot), "utf8")
-	assert.match(llms, /Build and submit your first typed Fokit form/)
-	assert.match(llms, /Grow the first Fokit form into a production-ready/)
+	assert.match(llms, /Build and submit your first typed form with Form, Please/)
+	assert.match(
+		llms,
+		/Grow your first form built with Form, Please into a production-ready/,
+	)
 	assert.match(llms, /Describe fields, sections, arrays, layout/)
-	assert.match(llms, /Control when Fokit validates/)
+	assert.match(llms, /Control when Form, Please validates/)
 })
 
 test("overview demo has a meaningful generated Markdown fallback", async () => {
@@ -210,7 +216,7 @@ test("generated Markdown links live demos to their canonical source files", asyn
 
 	for (const { file, path } of sourceLinks) {
 		const source = await readFile(new URL(file, publicRoot), "utf8")
-		const link = `Source: [${path}](https://github.com/r13v/fokit/blob/main/${path})`
+		const link = `Source: [${path}](https://github.com/r13v/form-please/blob/main/${path})`
 
 		assert.match(
 			source,

@@ -73,7 +73,7 @@ function createSchema(
 	return {
 		"~standard": {
 			version: 1,
-			vendor: "fokit-test",
+			vendor: "form-please-test",
 			validate,
 		},
 	} as TestSchema
@@ -240,7 +240,7 @@ describe("Standard Schema validation", () => {
 		const workflowSchema = {
 			"~standard": {
 				version: 1,
-				vendor: "fokit-test",
+				vendor: "form-please-test",
 				validate() {
 					return {
 						issues: [
@@ -538,7 +538,7 @@ describe("Standard Schema validation", () => {
 		const groupSchema = {
 			"~standard": {
 				version: 1,
-				vendor: "fokit-test",
+				vendor: "form-please-test",
 				validate() {
 					return {
 						issues: [

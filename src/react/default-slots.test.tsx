@@ -208,7 +208,7 @@ describe("createDefaultSlots components", () => {
 		expect(
 			container.querySelectorAll("[data-testid='field-root']"),
 		).toHaveLength(1)
-		expect(root.getAttribute("data-fokit-node")).toBe("field")
+		expect(root.getAttribute("data-fp-node")).toBe("field")
 		expect(root.id).toBe("field-name")
 		expect(rootRef).toHaveBeenLastCalledWith(root)
 		expect(input.id).toBe("profile-name")
@@ -232,8 +232,8 @@ describe("createDefaultSlots components", () => {
 						id: "identity",
 					}),
 					layoutProps: {
-						"data-fokit-layout": "grid",
-						"data-fokit-columns": 2,
+						"data-fp-layout": "grid",
+						"data-fp-columns": 2,
 					},
 					title: "Identity",
 					description: "Basic profile fields",
@@ -243,7 +243,7 @@ describe("createDefaultSlots components", () => {
 		)
 
 		const section = screen.getByTestId("section-root")
-		const layout = container.querySelector("[data-fokit-layout='grid']")
+		const layout = container.querySelector("[data-fp-layout='grid']")
 		if (!(layout instanceof HTMLElement)) {
 			throw new Error("Expected section layout root")
 		}
@@ -252,13 +252,13 @@ describe("createDefaultSlots components", () => {
 			container.querySelectorAll("[data-testid='section-root']"),
 		).toHaveLength(1)
 		expect(section.tagName).toBe("SECTION")
-		expect(section.getAttribute("data-fokit-node")).toBe("section")
+		expect(section.getAttribute("data-fp-node")).toBe("section")
 		expect(screen.getByRole("heading", { level: 2, name: "Identity" })).toBe(
 			screen.getByText("Identity"),
 		)
 		expect(screen.getByText("Basic profile fields").tagName).toBe("P")
-		expect(layout.getAttribute("data-fokit-layout")).toBe("grid")
-		expect(layout.getAttribute("data-fokit-columns")).toBe("2")
+		expect(layout.getAttribute("data-fp-layout")).toBe("grid")
+		expect(layout.getAttribute("data-fp-columns")).toBe("2")
 		expect(within(layout).getByTestId("section-child")).toBeTruthy()
 	})
 
@@ -298,7 +298,7 @@ describe("createDefaultSlots components", () => {
 		expect(
 			container.querySelectorAll("[data-testid='array-root']"),
 		).toHaveLength(1)
-		expect(root.getAttribute("data-fokit-node")).toBe("array")
+		expect(root.getAttribute("data-fp-node")).toBe("array")
 		expect(root.getAttribute("aria-labelledby")).toBe("contacts-label")
 		expect(root.getAttribute("aria-describedby")).toBe(
 			"contacts-description contacts-error-0",
@@ -307,9 +307,7 @@ describe("createDefaultSlots components", () => {
 		expect(screen.getByText("People to notify").id).toBe("contacts-description")
 		expect(screen.getByRole("alert").id).toBe("contacts-error-0")
 		expect(screen.getByTestId("array-child").textContent).toBe("Ada")
-		expect(button("Add item").getAttribute("data-fokit-array-action")).toBe(
-			"add",
-		)
+		expect(button("Add item").getAttribute("data-fp-array-action")).toBe("add")
 
 		fireEvent.click(button("Add item"))
 		expect(add).toHaveBeenCalledTimes(1)
@@ -353,11 +351,11 @@ describe("createDefaultSlots components", () => {
 		expect(
 			container.querySelectorAll("[data-testid='item-root']"),
 		).toHaveLength(1)
-		expect(root.getAttribute("data-fokit-node")).toBe("array-item")
+		expect(root.getAttribute("data-fp-node")).toBe("array-item")
 		expect(root.id).toBe("contacts.1")
 		expect(screen.getByTestId("item-child").textContent).toBe("Grace")
 		const actions = screen.getByRole("group", { name: "#2" })
-		expect(actions.getAttribute("data-fokit-array-item-actions")).toBe("")
+		expect(actions.getAttribute("data-fp-array-item-actions")).toBe("")
 		expect(within(actions).getByText("#2").getAttribute("aria-hidden")).toBe(
 			"true",
 		)
@@ -447,7 +445,7 @@ describe("createDefaultSlots components", () => {
 		expect(alert.tagName).toBe("P")
 		expect(alert.id).toBe("profile-email-error-0")
 		expect(alert.tabIndex).toBe(-1)
-		expect(alert.getAttribute("data-fokit-node")).toBe("error-message")
+		expect(alert.getAttribute("data-fp-node")).toBe("error-message")
 		expect(alert.textContent).toBe("Email is invalid")
 		expect(rootRef).toHaveBeenLastCalledWith(alert)
 	})
@@ -492,8 +490,8 @@ function sectionProps(props: Partial<SectionSlotProps> = {}): SectionSlotProps {
 	return {
 		rootProps: rootProps("section"),
 		layoutProps: {
-			"data-fokit-layout": "grid",
-			"data-fokit-columns": 1,
+			"data-fp-layout": "grid",
+			"data-fp-columns": 1,
 		},
 		children: null,
 		...props,
@@ -546,7 +544,7 @@ function rootProps(
 	props: Record<string, unknown> = {},
 ): StructuralRootProps {
 	return {
-		"data-fokit-node": node,
+		"data-fp-node": node,
 		...props,
 	} as StructuralRootProps
 }

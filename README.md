@@ -1,30 +1,30 @@
-# Fokit
+# Form, Please
 
-Fokit turns a Standard Schema and a typed UI definition into a React form. It
+Form, Please turns a Standard Schema and a typed UI definition into a React form. It
 keeps form state, validation, rendering, and `FormData` behavior in one
 contract.
 
-Use Fokit when you want reusable typed form definitions without binding them
-to a visual theme. Fokit does not infer UI from a schema, provide a form
+Use Form, Please when you want reusable typed form definitions without binding them
+to a visual theme. Form, Please does not infer UI from a schema, provide a form
 builder, or style application controls.
 
-Fokit supports React 18 and React 19.
+Form, Please supports React 18 and React 19.
 
 ## Install
 
-Install Fokit in an existing React application:
+Install `form-please` in an existing React application:
 
 ```sh
-npm install fokit zod
+npm install form-please zod
 ```
 
-`react` and `react-dom` are peer dependencies. Fokit accepts any Standard
+`react` and `react-dom` are peer dependencies. Form, Please accepts any Standard
 Schema implementation. This example uses Zod.
 
 ## Create a form
 
 ```tsx
-import { createFormKit, nativeControls } from "fokit"
+import { createFormKit, nativeControls } from "form-please"
 import { z } from "zod"
 
 const contactSchema = z.object({
@@ -60,7 +60,7 @@ export function ContactForm() {
 }
 ```
 
-Fokit validates the form with `contactSchema`. The submit handler receives the
+Form, Please validates the form with `contactSchema`. The submit handler receives the
 schema output after successful validation.
 
 Larger definitions can compose object-scoped nodes with
@@ -69,14 +69,14 @@ receive inherited `disabled` and `readOnly` state. Imperative workflows can
 validate typed path groups with `validatePaths(...)` and focus the first
 displayed issue with `focusFirstError(...)` without adding a wizard engine.
 
-`onSubmit` can return `void` or `Promise<void>`. If it returns a promise, Fokit
+`onSubmit` can return `void` or `Promise<void>`. If it returns a promise, Form, Please
 waits for the promise and keeps the form in its submitting state. `kit.Submit`
-stays disabled until the promise settles. Fokit does not reset the form after
+stays disabled until the promise settles. Form, Please does not reset the form after
 success. Call `form.reset(...)` when saved values must become the new baseline.
 
 ## Responsibility boundary
 
-Fokit owns the form store, update pipeline, validation lifecycle, structural
+Form, Please owns the form store, update pipeline, validation lifecycle, structural
 rendering, and native form integration.
 
 You choose the schema and control registry. Your application owns visual
@@ -87,17 +87,17 @@ registered controls by name. It does not embed a design system.
 
 | Import | Purpose |
 | --- | --- |
-| `fokit` | React form kits, native controls, generated forms, hooks, and shared types |
-| `fokit/core` | React-free stores, definitions, paths, UI resolution, and value helpers |
-| `fokit/server` | Bounded `FormData` parsing and Standard Schema validation |
-| `fokit/react19` | `ActionForm` and `ActionSubmit` for React 19 |
-| `fokit/layout.css` | Optional structural grid and spacing CSS |
+| `form-please` | React form kits, native controls, generated forms, hooks, and shared types |
+| `form-please/core` | React-free stores, definitions, paths, UI resolution, and value helpers |
+| `form-please/server` | Bounded `FormData` parsing and Standard Schema validation |
+| `form-please/react19` | `ActionForm` and `ActionSubmit` for React 19 |
+| `form-please/layout.css` | Optional structural grid and spacing CSS |
 
 The main JavaScript entry does not import CSS. Import the structural stylesheet
 when you need it:
 
 ```ts
-import "fokit/layout.css"
+import "form-please/layout.css"
 ```
 
 ## Stable defaults
@@ -114,23 +114,23 @@ Apply request, multipart, file-count, and file-size limits before you call
 
 ## Agent skill
 
-Install the Fokit skill with [skills](https://github.com/vercel-labs/skills):
+Install the Form, Please skill with [skills](https://github.com/vercel-labs/skills):
 
 ```sh
-npx skills add r13v/fokit --skill fokit
+npx skills add r13v/form-please --skill form-please
 ```
 
 ## Documentation
 
-- [LLM documentation index](https://r13v.github.io/fokit/llms.txt)
-- [Full documentation for LLMs](https://r13v.github.io/fokit/llms-full.txt)
-- [Get started](https://r13v.github.io/fokit/get-started)
-- [Build a production form](https://r13v.github.io/fokit/guides/tutorial)
-- [Validation and errors](https://r13v.github.io/fokit/guides/validation)
-- [Async fields](https://r13v.github.io/fokit/guides/async-fields)
-- [React 19 Actions](https://r13v.github.io/fokit/guides/react-19-actions)
-- [API reference](https://r13v.github.io/fokit/api)
-- [Fokit specification](docs/SPEC.md)
+- [LLM documentation index](https://r13v.github.io/form-please/llms.txt)
+- [Full documentation for LLMs](https://r13v.github.io/form-please/llms-full.txt)
+- [Get started](https://r13v.github.io/form-please/get-started)
+- [Build a production form](https://r13v.github.io/form-please/guides/tutorial)
+- [Validation and errors](https://r13v.github.io/form-please/guides/validation)
+- [Async fields](https://r13v.github.io/form-please/guides/async-fields)
+- [React 19 Actions](https://r13v.github.io/form-please/guides/react-19-actions)
+- [API reference](https://r13v.github.io/form-please/api)
+- [Form, Please specification](docs/SPEC.md)
 - [Architecture map](docs/ARCHITECTURE.md)
 - [Styling boundary](docs/adr/0001-styling-and-layout-boundary.md)
 - [Russian tutorial](docs/tutorial.ru.md)

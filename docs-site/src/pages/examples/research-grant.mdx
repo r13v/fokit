@@ -11,7 +11,7 @@ import { ResearchGrantDemo } from "../../components/research-grant-demo"
 This application changes shape according to who applies, how a collective is
 represented, which settlement route it uses, and its reporting status. The
 long-lived project fields remain stable while branch-specific identity and
-payment values are removed in the same Fokit transaction that changes their
+payment values are removed in the same Form, Please transaction that changes their
 discriminator.
 
 ## Try the complete flow
@@ -30,7 +30,7 @@ then sends the accepted application through a second mutation.
   sentinel value.
 - Resolver-driven sections and `valuePolicy` cleanup for hidden optional fields.
 - An input-aware `beforeUpdate` hook extended with typed dependent changes.
-- A render node that reads the live Fokit snapshot for a review card.
+- A render node that reads the live Form, Please snapshot for a review card.
 - TanStack Query inside a resolver-visible render node for registry search.
 - Two sequential mutations with server errors installed on the form instance.
 - A schema transform that creates a typed review key for submission.

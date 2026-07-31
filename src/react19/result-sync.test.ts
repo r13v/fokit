@@ -254,7 +254,7 @@ function createSchema(validate: Schema["~standard"]["validate"]): Schema {
 	return {
 		"~standard": {
 			version: 1,
-			vendor: "fokit-test",
+			vendor: "form-please-test",
 			validate,
 		},
 	} as Schema

@@ -1,6 +1,6 @@
 ---
 title: Tutorial
-description: Grow the first Fokit form into a production-ready profile editor with validation, conditional fields, arrays, and typed output.
+description: Grow your first form built with Form, Please into a production-ready profile editor with validation, conditional fields, arrays, and typed output.
 showAskAi: false
 ---
 
@@ -21,7 +21,7 @@ submit.
 ## Before you start
 
 Complete [Get started](/get-started) first. This tutorial uses the same React
-and TypeScript application with Fokit and Zod installed.
+and TypeScript application with `form-please` and Zod installed.
 
 The tutorial uses two adjacent files:
 
@@ -74,7 +74,7 @@ controls edit. `FormOutput` is the shape that successful validation produces.
 ```
 
 The editable input does not contain `contactCount`. The validated output
-contains it. Fokit keeps these types separate in definitions, hooks, and submit
+contains it. Form, Please keeps these types separate in definitions, hooks, and submit
 callbacks.
 
 The schema also contains the cross-field company rule. The same rule works in
@@ -89,7 +89,7 @@ A kit binds control names to React components and `FormData` behavior:
 // [!include ~/snippets/form-kit.tsx:kit]
 ```
 
-Fokit supplies accessible semantic defaults for omitted slots. Replace a
+Form, Please supplies accessible semantic defaults for omitted slots. Replace a
 control or slot only when the product needs different markup.
 
 ## Describe the product UI
@@ -100,14 +100,14 @@ decisions explicit:
 - `companyName` depends on `accountType` and is removed when hidden;
 - `contacts` supplies a complete new-row value and relative child fields.
 
-The schema-bound resolver function infers each value that it reads. Fokit tracks
+The schema-bound resolver function infers each value that it reads. Form, Please tracks
 those paths and reuses the result until a tracked value changes. The function
 is synchronous and pure.
 
 `valuePolicy: "unset"` removes `companyName` when the field becomes hidden. This
 policy is valid because `companyName` is optional in editable input.
 
-The array node does not add hidden IDs to your values. Fokit keeps stable row
+The array node does not add hidden IDs to your values. Form, Please keeps stable row
 keys as UI metadata while paths, touched state, and visible issues move with
 the logical row.
 
@@ -126,7 +126,7 @@ Successful submission does not reset the form. After you persist the value,
 choose the baseline that your product needs:
 
 ```ts twoslash
-import type { FormInstance } from "fokit"
+import type { FormInstance } from "form-please"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -145,17 +145,17 @@ which is the usual edit-form behavior after a successful save.
 ### The company field does not clear
 
 Set `valuePolicy: "unset"` on the field. Keep `companyName` optional in
-`FormInput`, because Fokit must be able to remove it.
+`FormInput`, because Form, Please must be able to remove it.
 
 ### A new contact starts with missing properties
 
-Make `itemDefault` a complete contact input. Fokit uses this value when the user
+Make `itemDefault` a complete contact input. Form, Please uses this value when the user
 adds a row.
 
 ### A contact loses its touched state after reordering
 
-Use the array commands from Fokit. Do not reorder only the values in application
-code. Fokit keeps row identity and field state together.
+Use the array commands exposed by Form, Please. Do not reorder only the values
+in application code. Form, Please keeps row identity and field state together.
 
 ### Submit produces no output
 

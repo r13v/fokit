@@ -1,5 +1,5 @@
 {
-	"name": "fokit-docs-site",
+	"name": "form-please-docs-site",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -19,7 +19,7 @@
 		"@tanstack/react-query": "5.101.4",
 		"@types/react": "19.2.17",
 		"@types/react-dom": "19.2.3",
-		"fokit": "file:..",
+		"form-please": "file:..",
 		"react": "19.2.8",
 		"react-dom": "19.2.8",
 		"typescript": "5.9.3",

@@ -214,11 +214,11 @@ state as a nested union, so contradictory combinations such as
 // [!include ~/snippets/query-to-resource.ts]
 ```
 
-This generic adapter assumes successful data is not `undefined`, which matches
-the usual query contract. If `undefined` is valid data in an application, adapt
-a query-specific sentinel or result shape instead of guessing from `data`.
-`QueryResourceState` structurally satisfies what `fromResource` needs while
-retaining query-specific `fetchStatus` and `refresh` details in narrowed cases.
+The adapter uses TanStack Query's `isRefetchError` discriminant to preserve
+stale data after a failed refresh, including when `undefined` is itself a valid
+successful value. `QueryResourceState` structurally satisfies what
+`fromResource` needs while retaining query-specific `fetchStatus` and `refresh`
+details in narrowed cases.
 
 ## Preserve selected labels
 
@@ -270,6 +270,7 @@ schema invalid.
 
 Fokit intentionally has no query-library dependency or remote-options API. The
 local `queryToResource` helper above is an integration recipe, not package
-state. See the [research grant](/examples/research-grant) and
-[learning cohort](/examples/learning-cohort) examples for two render-node
-variations, or return to [Production recipes](/advanced).
+state. See [studio policies](/examples/studio-policies) for resource-backed
+resolvable properties, or the [research grant](/examples/research-grant) and
+[learning cohort](/examples/learning-cohort) examples for render-node
+variations. You can also return to [Production recipes](/advanced).

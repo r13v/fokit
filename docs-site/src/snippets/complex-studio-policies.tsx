@@ -119,6 +119,7 @@ type StudioPolicyOutput = FormOutput<typeof studioPolicySchema>
 type EquipmentOption = { readonly value: string; readonly label: string }
 type PolicyContext = {
 	readonly equipment: QueryResourceState<readonly EquipmentOption[], Error>
+	readonly savedEquipmentOptions: readonly EquipmentOption[]
 }
 
 const baseline = {
@@ -148,8 +149,12 @@ const baseline = {
 	animals: { policy: "assistance-only", notes: undefined },
 } satisfies StudioPolicyInput
 
-const equipmentCatalog: readonly EquipmentOption[] = [
+const savedEquipmentOptions: readonly EquipmentOption[] = [
 	{ value: "lighting-grid", label: "Lighting grid" },
+]
+
+const equipmentCatalog: readonly EquipmentOption[] = [
+	...savedEquipmentOptions,
 	{ value: "ceramic-kiln", label: "Ceramic kiln" },
 	{ value: "audio-console", label: "Audio console" },
 	{ value: "laser-cutter", label: "Laser cutter" },
@@ -347,9 +352,13 @@ const policyDefinition = kit
 						control: "select",
 						label: "Equipment",
 						options: fromResource((_values, { context }) => context.equipment, {
-							pending: () => ({ options: [] }),
+							pending: (_state, _values, { context }) => ({
+								options: context.savedEquipmentOptions,
+							}),
 							success: ({ value }) => ({ options: value }),
-							error: () => ({ options: [] }),
+							error: (_state, _values, { context }) => ({
+								options: context.savedEquipmentOptions,
+							}),
 						}),
 					},
 					{
@@ -499,7 +508,7 @@ function StudioPoliciesForm() {
 			<kit.AutoForm
 				beforeUpdate={preservePolicyInvariants}
 				className="fokit-complex__form"
-				context={{ equipment: equipmentResource }}
+				context={{ equipment: equipmentResource, savedEquipmentOptions }}
 				defaultValues={policies.data}
 				definition={policyDefinition}
 				onSubmit={async ({ value, form }) => {

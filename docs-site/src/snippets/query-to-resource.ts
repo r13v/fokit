@@ -41,7 +41,7 @@ export function queryToResource<Value, Error>(
 			refresh: refreshState<Error>(query.fetchStatus),
 		}
 	}
-	if (query.data !== undefined) {
+	if (query.isRefetchError) {
 		return {
 			status: "success",
 			value: query.data,

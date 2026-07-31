@@ -4,6 +4,9 @@
 	"description": "A code-first, schema-validated React form library.",
 	"type": "module",
 	"license": "MIT",
+	"engines": {
+		"node": ">=24"
+	},
 	"files": [
 		"dist"
 	],

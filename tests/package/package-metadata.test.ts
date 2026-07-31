@@ -39,6 +39,9 @@ describe("package metadata", () => {
 				"react-dom": "^18.0.0 || ^19.0.0",
 			},
 			exports: expectedExports(),
+			engines: {
+				node: ">=24",
+			},
 		})
 		expect(Object.keys(packageJson.exports)).toEqual([
 			".",
@@ -53,6 +56,7 @@ describe("package metadata", () => {
 		)
 		expect(packageLock.version).toBe(packageJson.version)
 		expect(packageLock.packages[""].version).toBe(packageJson.version)
+		expect(packageLock.packages[""].engines).toEqual(packageJson.engines)
 	})
 
 	it("does not retain npm-init entry-point metadata", () => {

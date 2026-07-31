@@ -47,6 +47,29 @@ describe("matchResource", () => {
 		expect(result).toBe("paused")
 	})
 
+	it("maps pending and error states through their matching branches", () => {
+		const pending = { status: "pending" } as const
+		const failure = new Error("offline")
+
+		expect(
+			matchResource(pending, {
+				pending: (state) => state,
+				success: () => null,
+				error: () => null,
+			}),
+		).toBe(pending)
+		expect(
+			matchResource(
+				{ status: "error", error: failure },
+				{
+					pending: () => null,
+					success: () => null,
+					error: ({ error }) => error,
+				},
+			),
+		).toBe(failure)
+	})
+
 	it("rejects unsupported runtime states instead of choosing a fallback", () => {
 		expect(() =>
 			matchResource({ status: "cancelled" } as never, {

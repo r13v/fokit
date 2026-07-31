@@ -149,6 +149,11 @@ const publicApiTerms = [
 
 const canonicalSnippets = [
 	{
+		target: "src/snippets/lab-profile-form.tsx",
+		include: "~/snippets/lab-profile-form.tsx",
+		terms: ["profileDefinition", "Account type", "visible:"],
+	},
+	{
 		target: "src/snippets/form-kit.tsx",
 		include: "~/snippets/form-kit.tsx",
 		terms: ["createFormKit", "visible:", "profileSchema"],
@@ -647,6 +652,7 @@ test("docs TypeScript and verification gates are wired", async () => {
 test("Interactive Lab uses Vocs components and public Fokit defaults", async () => {
 	const wrapper = await readText("src/components/interactive-lab.tsx")
 	const client = await readText("src/components/interactive-lab.client.tsx")
+	const snippet = await readText("src/snippets/lab-profile-form.tsx")
 	const getStarted = await readText("src/pages/get-started.mdx")
 
 	assert.match(wrapper, /from "\.\/interactive-lab\.client"/)
@@ -659,23 +665,34 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 		/https:\/\/github\.com\/r13v\/fokit\/blob\/main\/docs-site\/src\/components\/interactive-lab\.client\.tsx/,
 	)
 	assert.match(client, /^"use client"/)
-	assert.match(client, /createDefaultSlots/)
-	assert.match(client, /nativeControls/)
-	assert.match(client, /controls:\s*nativeControls/)
-	assert.match(client, /slots:\s*createDefaultSlots\(\{\s*i18n:/)
-	assert.match(client, /arrayAdd:\s*"Add contact"/)
-	assert.match(client, /arrayRemove:\s*\(\{ position \}\) =>/)
-	assert.match(client, /arrayMoveUp:\s*\(\{ position \}\) =>/)
-	assert.match(client, /arrayMoveDown:\s*\(\{ position \}\) =>/)
+	assert.match(client, /from "\.\.\/snippets\/lab-profile-form"/)
+	assert.match(client, /profileKit\.extend/)
+	assert.match(client, /profileDefinition/)
+	assert.doesNotMatch(client, /kit\.defineForm/)
+	assert.match(client, /ArrayItem:\s*ContactArrayItemSlot/)
+	assert.match(client, /Move contact \$\{position\} up/)
+	assert.match(client, /Move contact \$\{position\} down/)
+	assert.match(client, /Remove contact \$\{position\}/)
 	assert.doesNotMatch(
 		client,
 		/defineControl|fokit\/layout\.css|locale|localStorage/,
 	)
 	assert.doesNotMatch(client, /[А-Яа-яЁё]/)
+	assert.match(snippet, /^"use client"/)
+	assert.match(snippet, /createDefaultSlots/)
+	assert.match(snippet, /createFormKit/)
+	assert.match(snippet, /controls:\s*nativeControls/)
+	assert.match(snippet, /arrayAdd:\s*"Add contact"/)
+	assert.match(
+		snippet,
+		/visible:\s*\(\{ accountType \}\) => accountType === "company"/,
+	)
+	assert.match(snippet, /export function ProfileForm/)
 	assert.match(
 		getStarted,
 		/import \{ InteractiveLab \} from "\.\.\/components\/interactive-lab"/,
 	)
+	assert.match(getStarted, /~\/snippets\/lab-profile-form\.tsx/)
 	assert.match(getStarted, /^### Interactive Fokit Lab$/m)
 	assert.match(getStarted, /<InteractiveLab \/>/)
 })

@@ -37,82 +37,8 @@ Fokit declares React and React DOM as peer dependencies. Both use the range
 
 Create a `ProfileForm.tsx` file and add this component:
 
-```tsx twoslash
-// @jsx: react-jsx
-"use client"
-
-import {
-	createFormKit,
-	type FormInput,
-	type FormOutput,
-	nativeControls,
-} from "fokit"
-import { useState } from "react"
-import { z } from "zod"
-
-const profileSchema = z.object({
-	name: z.string().min(1, "Name is required"),
-	email: z.string().email("Enter a valid email"),
-	newsletter: z.boolean(),
-})
-
-const defaultValues = {
-	name: "Ada Lovelace",
-	email: "ada@example.com",
-	newsletter: true,
-} satisfies FormInput<typeof profileSchema>
-
-const kit = createFormKit({
-	controls: nativeControls,
-})
-
-const profileDefinition = kit.defineForm(profileSchema)({
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-			required: true,
-			options: { autoComplete: "name" },
-		},
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-			required: true,
-			options: { type: "email", autoComplete: "email" },
-		},
-		{
-			kind: "field",
-			path: "newsletter",
-			control: "checkbox",
-			label: "Send me product news",
-		},
-	],
-})
-
-export function ProfileForm() {
-	const [saved, setSaved] = useState<FormOutput<typeof profileSchema>>()
-
-	return (
-		<>
-			<kit.AutoForm
-				definition={profileDefinition}
-				defaultValues={defaultValues}
-				onSubmit={({ value }) => setSaved(value)}
-			>
-				<kit.Submit>Save profile</kit.Submit>
-			</kit.AutoForm>
-			<pre aria-live="polite">
-				{saved === undefined
-					? "Submit the form to see typed output."
-					: JSON.stringify(saved, null, 2)}
-			</pre>
-		</>
-	)
-}
+```tsx
+// [!include ~/snippets/lab-profile-form.tsx]
 ```
 
 Render `<ProfileForm />` in your application.
@@ -122,10 +48,12 @@ Render `<ProfileForm />` in your application.
 Complete these checks:
 
 1. Submit the prefilled form. The page shows the validated profile as JSON.
-2. Replace the email with an invalid value.
-3. Submit the form again. Fokit shows the schema issue and focuses the email
+2. Select Company. The company name field appears.
+3. Select Personal. The company name field disappears.
+4. Replace the contact email with an invalid value.
+5. Submit the form again. Fokit shows the schema issue and focuses the email
    control.
-4. Restore a valid email and submit. The handler receives
+6. Restore a valid email and submit. The handler receives
    `FormOutput<typeof profileSchema>`.
 
 The shipped controls and slots are accessible semantic HTML, not a visual
@@ -175,9 +103,10 @@ hooks.
 
 ## Try the production loop
 
-The lab below adds conditions, arrays, reset, blur-first validation, stable
-row identity, and native `FormData`. Edit the form. Then compare its values,
-visible issues, and browser submission payload.
+The lab below uses the same `profileDefinition` and `defaultValues`. It adds
+reset, blur-first validation, custom array actions, and live state panels. Edit
+the form. Then compare its values, visible issues, and browser submission
+payload.
 
 ### Interactive Fokit Lab
 
@@ -229,8 +158,8 @@ after successful validation.
 
 ## Choose your next step
 
-- [Build a production form](/guides/tutorial) to add validation timing, a
-  conditional field, arrays, and transformed output.
+- [Build a production form](/guides/tutorial) to configure validation timing
+  and examine conditions, arrays, and transformed output in detail.
 - [UI definitions](/guides/ui-definitions) to understand fields, sections,
   arrays, layout, and derived state.
 - [Validation and errors](/guides/validation) for timing, visibility, and

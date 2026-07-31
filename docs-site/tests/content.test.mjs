@@ -897,6 +897,18 @@ test("sidebar follows the learning path before reference material", async () => 
 	assert.ok(api < types)
 })
 
+test("LLM documentation stays discoverable from the README and site", async () => {
+	const readme = await readRepositoryText("README.md")
+	const config = await readText("vocs.config.ts")
+
+	for (const path of ["llms.txt", "llms-full.txt"]) {
+		const url = `https://r13v.github.io/fokit/${path}`
+
+		assert.match(readme, new RegExp(escapeRegExp(url)))
+		assert.match(config, new RegExp(escapeRegExp(url)))
+	}
+})
+
 test("Vocs pages expose the canonical English route map", async () => {
 	const config = await readText("vocs.config.ts")
 

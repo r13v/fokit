@@ -106,9 +106,18 @@ import "fokit/layout.css"
 Apply request, multipart, file-count, and file-size limits before you call
 `parseFormData`.
 
+## Agent skill
+
+Install the Fokit skill with [skills](https://github.com/vercel-labs/skills):
+
+```sh
+npx skills add r13v/fokit --skill fokit
+```
+
 ## Documentation
 
-- [Documentation for LLMs](https://r13v.github.io/fokit/llms.txt)
+- [LLM documentation index](https://r13v.github.io/fokit/llms.txt)
+- [Full documentation for LLMs](https://r13v.github.io/fokit/llms-full.txt)
 - [Get started](https://r13v.github.io/fokit/get-started)
 - [Build a production form](https://r13v.github.io/fokit/guides/tutorial)
 - [Validation and errors](https://r13v.github.io/fokit/guides/validation)

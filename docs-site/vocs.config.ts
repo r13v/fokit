@@ -56,6 +56,14 @@ export default defineConfig({
 			items: [
 				{ text: "API", link: "/api" },
 				{ text: "TypeScript", link: "/types" },
+				{
+					text: "LLM documentation index",
+					link: "https://r13v.github.io/fokit/llms.txt",
+				},
+				{
+					text: "Full documentation for LLMs",
+					link: "https://r13v.github.io/fokit/llms-full.txt",
+				},
 			],
 		},
 		{

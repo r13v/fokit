@@ -41,6 +41,10 @@ export default defineConfig({
 				},
 				{ text: "Arrays", link: "/guides/arrays" },
 				{ text: "Controls & design systems", link: "/guides/controls" },
+				{
+					text: "Async multiselect",
+					link: "/guides/async-multiselect",
+				},
 				{ text: "Styling", link: "/guides/styling" },
 				{ text: "React 19 Actions", link: "/guides/react-19-actions" },
 				{ text: "Production recipes", link: "/advanced" },

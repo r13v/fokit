@@ -108,6 +108,7 @@ Apply request, multipart, file-count, and file-size limits before you call
 
 ## Documentation
 
+- [Documentation for LLMs](https://r13v.github.io/fokit/llms.txt)
 - [Get started](https://r13v.github.io/fokit/get-started)
 - [Build a production form](https://r13v.github.io/fokit/guides/tutorial)
 - [Validation and errors](https://r13v.github.io/fokit/guides/validation)

@@ -7,7 +7,10 @@ const siteRoot = new URL("../", import.meta.url)
 const repositoryRoot = new URL("../", siteRoot)
 
 const requiredDependencies = {
+	"@floating-ui/react": "0.27.20",
 	"@fontsource-variable/newsreader": "5.3.0",
+	"@heroicons/react": "2.2.0",
+	"@tanstack/react-query": "5.101.4",
 	"@types/react": "19.2.17",
 	"@types/react-dom": "19.2.3",
 	fokit: "file:..",
@@ -82,6 +85,13 @@ const canonicalPages = [
 		navText: "Controls & design systems",
 	},
 	{
+		path: "src/pages/guides/async-multiselect.mdx",
+		route: "/guides/async-multiselect",
+		title: "Async multiselect",
+		description:
+			"Build a searchable multi-select that stores typed IDs in Fokit, loads options with TanStack Query, and delegates popup behavior to Floating UI.",
+	},
+	{
 		path: "src/pages/guides/styling.mdx",
 		route: "/guides/styling",
 		title: "Styling",
@@ -152,6 +162,11 @@ const canonicalSnippets = [
 		target: "src/snippets/server-action.ts",
 		include: "~/snippets/server-action.ts",
 		terms: ["parseFormData", "FormResult", "saveProfileAction"],
+	},
+	{
+		target: "src/snippets/async-multiselect.tsx",
+		include: "~/snippets/async-multiselect.tsx",
+		terms: ["defineControl", "useQuery", "useFloating", "QueryClientProvider"],
 	},
 ]
 
@@ -411,6 +426,28 @@ const requiredGuidePageContent = {
 			"ArrayItem",
 		],
 	},
+	"src/pages/guides/async-multiselect.mdx": {
+		headings: [
+			"See it work",
+			"Install the data and interaction layers",
+			"Keep one field value",
+			"Delegate popup behavior",
+			"Load options declaratively",
+			"Preserve selected labels",
+			"Serialize the array",
+			"Copy the complete example",
+			"Know the ownership boundary",
+		],
+		terms: [
+			"TanStack Query",
+			"Floating UI",
+			"QueryClientProvider",
+			"AbortSignal",
+			'formData.mode: "hidden"',
+			"initialOptions",
+			"AsyncMultiSelectDemo",
+		],
+	},
 	"src/pages/guides/styling.mdx": {
 		headings: [
 			"Import responsive structure",
@@ -657,6 +694,37 @@ test("overview proves the public Fokit loop with a live typed form", async () =>
 	assert.match(overview, /Fokit does not\s+guess a product UI/)
 })
 
+test("async multiselect guide runs the same typed Floating UI and TanStack Query example it documents", async () => {
+	const wrapper = await readText("src/components/async-multiselect-demo.tsx")
+	const client = await readText(
+		"src/components/async-multiselect-demo.client.tsx",
+	)
+	const snippet = await readText("src/snippets/async-multiselect.tsx")
+	const guide = await readText("src/pages/guides/async-multiselect.mdx")
+
+	assert.match(wrapper, /from "\.\/async-multiselect-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/async-multiselect"/)
+	assert.match(snippet, /from "@floating-ui\/react"/)
+	assert.match(snippet, /useFloating\(/)
+	assert.match(snippet, /useDismiss\(context\)/)
+	assert.match(snippet, /useListNavigation\(context/)
+	assert.match(snippet, /<FloatingFocusManager/)
+	assert.match(snippet, /from "@tanstack\/react-query"/)
+	assert.match(
+		snippet,
+		/queryKey:\s*\[\.\.\.options\.queryKey, debouncedSearch\]/,
+	)
+	assert.match(snippet, /queryFn:\s*\(\{ signal \}\)/)
+	assert.match(snippet, /placeholderData:\s*keepPreviousData/)
+	assert.match(snippet, /mode:\s*"hidden"/)
+	assert.match(snippet, /kind:\s*"array" as const/)
+	assert.match(snippet, /QueryClientProvider/)
+	assert.match(guide, /<AsyncMultiSelectDemo \/>/)
+	assert.match(guide, /~\/snippets\/async-multiselect\.tsx/)
+})
+
 test("canonical TypeScript snippets are physical files covered by docs typecheck", async () => {
 	const tsconfig = await readJson("tsconfig.docs.json")
 	const includeSet = new Set(tsconfig.include)
@@ -788,6 +856,7 @@ test("sidebar follows the learning path before reference material", async () => 
 	const uiDefinitions = source.indexOf('link: "/guides/ui-definitions"')
 	const validation = source.indexOf('link: "/guides/validation"')
 	const controls = source.indexOf('link: "/guides/controls"')
+	const asyncMultiselect = source.indexOf('link: "/guides/async-multiselect"')
 	const api = source.indexOf('link: "/api"')
 	const types = source.indexOf('link: "/types"')
 
@@ -797,6 +866,7 @@ test("sidebar follows the learning path before reference material", async () => 
 		uiDefinitions,
 		validation,
 		controls,
+		asyncMultiselect,
 		api,
 		types,
 	]) {
@@ -807,7 +877,8 @@ test("sidebar follows the learning path before reference material", async () => 
 	assert.ok(tutorial < uiDefinitions)
 	assert.ok(uiDefinitions < validation)
 	assert.ok(validation < controls)
-	assert.ok(controls < api)
+	assert.ok(controls < asyncMultiselect)
+	assert.ok(asyncMultiselect < api)
 	assert.ok(api < types)
 })
 

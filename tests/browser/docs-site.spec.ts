@@ -340,6 +340,63 @@ test.describe("Fokit documentation", () => {
 		)
 	})
 
+	test("searches, toggles, and submits the async multiselect", async ({
+		page,
+	}, testInfo) => {
+		await page.setViewportSize({ width: 1280, height: 920 })
+		await page.goto("./guides/async-multiselect")
+
+		const demo = page.getByRole("region", {
+			name: "Async multiselect example",
+		})
+		await expect(demo).toBeVisible()
+		await expect(
+			demo.getByRole("button", { name: "Remove Tokyo" }),
+		).toBeVisible()
+		await expect(demo.getByText("+1", { exact: true })).toBeVisible()
+
+		await demo.getByRole("button", { name: "Open options" }).click()
+		const search = demo.getByRole("combobox", { name: "Search cities" })
+		await expect(search).toBeFocused()
+		await search.fill("m")
+
+		const options = demo.getByRole("option")
+		await expect(options).toHaveCount(3)
+		await expect(demo.getByRole("option", { name: "Moscow" })).toHaveAttribute(
+			"aria-selected",
+			"true",
+		)
+		await expect(demo.getByRole("option", { name: "Mumbai" })).toHaveAttribute(
+			"aria-selected",
+			"true",
+		)
+		await expect(demo.getByRole("option", { name: "Rome" })).toHaveAttribute(
+			"aria-selected",
+			"false",
+		)
+		await search.press("ArrowDown")
+		await expect(demo.getByRole("option", { name: "Moscow" })).toBeFocused()
+
+		await demo.getByRole("option", { name: "Moscow" }).click()
+		await demo.getByRole("option", { name: "Rome" }).click()
+		await demo.getByRole("button", { name: "Close", exact: true }).click()
+		await expect(
+			demo.getByRole("button", { name: "Open options" }),
+		).toBeFocused()
+
+		await expect(
+			demo.getByRole("button", { name: "Remove Moscow" }),
+		).toHaveCount(0)
+		await demo.getByRole("button", { name: "Save selection" }).click()
+		await expect(demo.getByTestId("async-multiselect-output")).toContainText(
+			"Saved: tokyo, istanbul, mumbai, rome",
+		)
+
+		await page.screenshot({
+			path: testInfo.outputPath("fokit-async-multiselect.png"),
+		})
+	})
+
 	test("uses responsive Vocs navigation without horizontal scrolling", async ({
 		page,
 	}, testInfo) => {

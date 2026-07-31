@@ -1,7 +1,7 @@
 # Fokit
 
 Before changing module boundaries, public entry points, form state,
-submission, or serialization, read [ARCHITECTURE.md](ARCHITECTURE.md).
+submission, or serialization, read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Run `npm run check` and `npm run knip` before reporting a task done.
 

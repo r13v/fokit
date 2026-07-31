@@ -68,9 +68,9 @@ export function OverviewDemoClient() {
 			className="fokit-lab fokit-overview-demo"
 			data-testid="overview-demo"
 		>
-			<p className="fokit-lab__kicker">Live public package</p>
+			<p className="fokit-lab__kicker">Live demo</p>
 			<p className="fokit-lab__summary">
-				Edit the profile, submit it, and see the schema-validated output.
+				Edit the profile. Submit it to see the schema-validated output.
 			</p>
 			<kit.AutoForm
 				className="fokit-overview-demo__form"

@@ -8,14 +8,16 @@ import { OverviewDemo } from "../components/overview-demo"
 
 # Forms that stay typed, native, and yours
 
-Fokit turns an explicit form definition into a production-ready React form. It
-handles state, validation, dynamic UI, arrays, accessible error relationships,
-and native submission while your application keeps its controls, markup, and
-visual language.
+Fokit is for teams that build complex React forms and want to stop repeating
+field wiring. It turns an explicit definition into typed form state and a
+working React form.
 
-Use it when handwritten field wiring has become the risky part of a form, but
-handing the UI to a theme or schema-to-form generator would be an even bigger
-compromise.
+Fokit manages validation, conditional fields, arrays, error relationships,
+focus, and native submission. Your application owns the schema library,
+controls, markup, layout, styling, domain rules, and product workflow.
+
+Start with native controls. Follow the guide to render a form and receive typed
+output.
 
 <div className="fokit-overview-actions">
 
@@ -27,16 +29,16 @@ compromise.
 
 ## See it work
 
-This form is running the public package with `nativeControls` and the accessible
-default slots. Clear the email to see schema validation, then submit a valid
-profile to see the typed output.
+This form uses the public package, `nativeControls`, and the default accessible
+slots. Clear the email address. Submit the form to see the schema error. Enter a
+valid email address. Submit again to see the typed output.
 
 <OverviewDemo />
 
 ## One explicit model
 
-The shortest path has three parts: a schema that owns validity, a UI definition
-that owns structure, and a kit that maps control names to renderers.
+A Fokit form has three parts: a schema for validity, a UI definition for
+structure, and a kit for rendering.
 
 ```tsx twoslash
 // @jsx: react-jsx
@@ -91,21 +93,20 @@ export function ProfileForm() {
 
 ### Schema owns validity
 
-Fokit accepts any Standard Schema implementation. The schema is the single
-source of truth for validation and for the difference between editable input
-and submitted output.
+Fokit accepts any Standard Schema implementation. Your schema is the source of
+truth for validation. It also defines editable input and validated output.
 
 ### UI definition owns structure
 
-Fields, sections, arrays, conditions, and layout stay explicit. Fokit does not
-guess a product UI from validation metadata, so changing a schema never silently
-changes what a user sees.
+Define fields, sections, arrays, conditions, and layout explicitly.
+Fokit does not guess a product UI from schema metadata. A schema change cannot
+silently change the interface.
 
 ### Your kit owns rendering
 
-Start with `nativeControls`, then replace controls and structural slots with
-your design-system components. The form definition and state model do not have
-to change when the renderer does.
+Start with `nativeControls`. Replace controls and structural slots with your
+design-system components when needed. The form definition and state model stay
+the same.
 
 ## The responsibility boundary
 
@@ -116,30 +117,31 @@ to change when the renderer does.
 | Stable arrays and dynamic UI resolution | Controls, slots, styling, and layout |
 | Native names and FormData coordination | Server persistence and business effects |
 
-This boundary lets the same definition render through `kit.AutoForm` or be
-composed manually with `kit.Form`, `kit.Fields`, and granular hooks.
+Use the same definition with `kit.AutoForm`. You can also compose it manually
+with `kit.Form`, `kit.Fields`, and granular hooks.
 
 ## When to reach for Fokit
 
-Fokit is a fit when a product needs schema-owned validation, typed
-transformations, dynamic fields, stable arrays, generated and manual rendering,
-or client and server submission under one state model.
+Use Fokit when a form needs schema validation, typed transformations,
+conditional fields, stable arrays, generated and manual rendering, or client
+and server submission under one state model.
 
-If the form is a handful of uncontrolled inputs and a submit handler, native
-HTML may already be the smaller and better tool.
+For a small form with uncontrolled inputs and one submit handler, native HTML
+is usually the smaller tool.
 
 ## Start with the working path
 
-- [Get started](/get-started) to build and submit the profile form.
-- [UI definitions](/guides/ui-definitions) to map fields, sections, arrays,
-  render nodes, layout, and derived state.
-- [Build a production form](/guides/tutorial) to add validation, conditional
-  fields, and arrays.
-- [Controls and design systems](/guides/controls) to connect an existing
-  component library.
+Start with [Get started](/get-started). Build and submit the profile form before
+you add production features.
+
+- [Build a production form](/guides/tutorial) to add conditional fields and
+  arrays.
+- [UI definitions](/guides/ui-definitions) to define sections, layout, render
+  nodes, and derived state.
+- [Controls and design systems](/guides/controls) to connect your component
+  library.
 - [Styling](/guides/styling) to add structural CSS or replace the markup.
-- [React 19 Actions](/guides/react-19-actions) when the server Action owns the
-  submission boundary.
+- [React 19 Actions](/guides/react-19-actions) to connect a server Action.
 
 ## Kudos
 

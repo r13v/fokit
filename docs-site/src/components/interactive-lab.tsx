@@ -15,7 +15,7 @@ export const InteractiveLab = Object.assign(
 						{
 							type: "text",
 							value:
-								"The Interactive Fokit Lab is a browser-only lab. It uses the same generated form definition, validation, reset, classic submit, array actions, and native FormData behavior shown on the page.",
+								"The Interactive Fokit Lab runs only in a browser. It demonstrates a generated form, validation, reset, classic submission, array actions, and native FormData.",
 						},
 					],
 				},

@@ -614,7 +614,7 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 
 	assert.match(wrapper, /from "\.\/interactive-lab\.client"/)
 	assert.match(wrapper, /toMarkdown/)
-	assert.match(wrapper, /browser-only lab/)
+	assert.match(wrapper, /Interactive Fokit Lab runs only in a browser/)
 	assert.match(wrapper, /createFormKit\(\{ controls: nativeControls \}\)/)
 	assert.match(client, /^"use client"/)
 	assert.match(client, /createDefaultSlots/)
@@ -645,7 +645,7 @@ test("overview proves the public Fokit loop with a live typed form", async () =>
 
 	assert.match(wrapper, /from "\.\/overview-demo\.client"/)
 	assert.match(wrapper, /toMarkdown/)
-	assert.match(wrapper, /live overview form is browser-only/i)
+	assert.match(wrapper, /live overview form runs only in a browser/i)
 	assert.match(client, /^"use client"/)
 	assert.match(client, /createFormKit/)
 	assert.match(client, /controls:\s*nativeControls/)
@@ -741,7 +741,7 @@ test("Vocs config defines the static English documentation shell", async () => {
 	assert.match(source, /title:\s*"Fokit"/)
 	assert.match(
 		source,
-		/description:\s*"Code-first, schema-validated React forms without giving up native HTML semantics\."/,
+		/description:\s*"Typed, schema-validated React forms that keep native HTML semantics and your design system\."/,
 	)
 	assert.match(
 		source,

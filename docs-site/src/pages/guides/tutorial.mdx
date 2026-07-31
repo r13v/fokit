@@ -6,55 +6,37 @@ showAskAi: false
 
 # Build a production form
 
-This tutorial continues the form from [Get started](/get-started). You will keep
-one schema, one UI definition, and one kit while adding the behavior that makes
-a form survive real product work:
+This tutorial extends the form from [Get started](/get-started). You will keep
+one schema, one UI definition, and one kit. You will add:
 
-- validation that stays quiet until it is useful;
+- validation that starts after blur and updates after a change;
 - a company field that appears only when relevant;
 - repeatable contacts with stable row identity;
 - transformed, typed output at submit.
 
-The finished form still uses the shipped native controls. Connecting your
-design system is a separate rendering decision, not a rewrite of form state.
+The completed editor starts with valid profile data. It shows field issues after
+blur, removes an irrelevant company value, and reports the contact count after
+submit.
 
-## Model editable input and saved output
+## Before you start
 
-The schema owns validity and transformations. `FormInput` is the shape edited
-by controls; `FormOutput` is the shape delivered after successful validation.
+Complete [Get started](/get-started) first. This tutorial uses the same React
+and TypeScript application with Fokit and Zod installed.
 
-```tsx
-// [!include ~/snippets/form-kit.tsx:schema]
-```
+The tutorial uses two adjacent files:
 
-The editable input has no `contactCount`. The validated output does. Fokit
-keeps those types separate through definitions, hooks, and submit callbacks.
+- `form-kit.tsx` contains the schema, kit, definition, and default values.
+- `basic-form.tsx` contains the React component.
 
-Cross-field validation also stays in the schema. The company rule therefore
-works in client validation and in server parsing without duplicating business
-logic in a component.
+The finished form uses the shipped native controls. You can connect your design
+system later without changing the schema or form state.
 
-## Create one kit
+## Render and submit
 
-A kit binds control names to React components and FormData behavior:
-
-```tsx
-// [!include ~/snippets/form-kit.tsx:kit]
-```
-
-Omitted slots resolve to accessible semantic defaults. Start here; replace a
-control or slot only when your product needs different markup.
-
-## Describe the product UI
-
-The definition maps typed schema paths to controls. It also makes two product
-decisions explicit:
-
-- `companyName` depends on `accountType` and is removed when hidden;
-- `contacts` supplies a complete new-row value and relative child fields.
+Create `form-kit.tsx`, then copy the complete model and UI definition:
 
 <details>
-<summary>Copy the complete schema, kit, and definition</summary>
+<summary>Copy the complete form-kit.tsx file</summary>
 
 ```tsx
 // [!include ~/snippets/form-kit.tsx]
@@ -62,32 +44,72 @@ decisions explicit:
 
 </details>
 
-The schema-bound resolver function infers every value it reads. Fokit tracks
-those paths automatically and reuses the result until a tracked value changes.
-The resolver is synchronous and pure.
-`valuePolicy: "unset"` is allowed because `companyName` is optional in
-editable input.
-
-The array node does not add hidden IDs to your values. Fokit keeps stable row
-keys as UI metadata while paths, touched state, and visible issues move with
-the logical row.
-
-## Render and submit
-
-`kit.AutoForm` creates the form instance, renders the definition, validates on
-the selected lifecycle, and calls `onSubmit` with `ProfileOutput`.
+Create `basic-form.tsx` next to `form-kit.tsx`. Add this component:
 
 ```tsx
 // [!include ~/snippets/basic-form.tsx]
 ```
 
-Try these paths in the form:
+Render `<ProfileEditor />` in your application. `kit.AutoForm` creates the form
+instance and renders the definition. It also runs the selected validation
+lifecycle and passes `ProfileOutput` to `onSubmit`.
+
+## Verify the completed form
+
+Complete these checks in order:
 
 1. Clear the name and blur it. The field shows its schema issue.
 2. Choose Company. The company field appears.
 3. Switch back to Personal. `companyName` leaves the stored input.
 4. Add, reorder, or remove a contact. Its row state stays attached correctly.
 5. Submit. The callback receives transformed output with `contactCount`.
+
+## Model editable input and saved output
+
+The schema owns validation and transformations. `FormInput` is the shape that
+controls edit. `FormOutput` is the shape that successful validation produces.
+
+```tsx
+// [!include ~/snippets/form-kit.tsx:schema]
+```
+
+The editable input does not contain `contactCount`. The validated output
+contains it. Fokit keeps these types separate in definitions, hooks, and submit
+callbacks.
+
+The schema also contains the cross-field company rule. The same rule works in
+client validation and server parsing. You do not need to duplicate it in a
+component.
+
+## Create one kit
+
+A kit binds control names to React components and `FormData` behavior:
+
+```tsx
+// [!include ~/snippets/form-kit.tsx:kit]
+```
+
+Fokit supplies accessible semantic defaults for omitted slots. Replace a
+control or slot only when the product needs different markup.
+
+## Describe the product UI
+
+The definition maps typed schema paths to controls. It makes two product
+decisions explicit:
+
+- `companyName` depends on `accountType` and is removed when hidden;
+- `contacts` supplies a complete new-row value and relative child fields.
+
+The schema-bound resolver function infers each value that it reads. Fokit tracks
+those paths and reuses the result until a tracked value changes. The function
+is synchronous and pure.
+
+`valuePolicy: "unset"` removes `companyName` when the field becomes hidden. This
+policy is valid because `companyName` is optional in editable input.
+
+The array node does not add hidden IDs to your values. Fokit keeps stable row
+keys as UI metadata while paths, touched state, and visible issues move with
+the logical row.
 
 ## Know what is already handled
 
@@ -100,8 +122,8 @@ This form now has:
 - stable array commands and accessible default action labels;
 - a clear boundary for custom controls and structural slots.
 
-Success does not reset automatically. After persisting the value, choose the
-baseline your product needs:
+Successful submission does not reset the form. After you persist the value,
+choose the baseline that your product needs:
 
 ```ts twoslash
 import type { FormInstance } from "fokit"
@@ -117,6 +139,28 @@ form.reset(saved)
 
 `reset(saved)` replaces both current values and the dirty-comparison baseline,
 which is the usual edit-form behavior after a successful save.
+
+## Fix common implementation problems
+
+### The company field does not clear
+
+Set `valuePolicy: "unset"` on the field. Keep `companyName` optional in
+`FormInput`, because Fokit must be able to remove it.
+
+### A new contact starts with missing properties
+
+Make `itemDefault` a complete contact input. Fokit uses this value when the user
+adds a row.
+
+### A contact loses its touched state after reordering
+
+Use the array commands from Fokit. Do not reorder only the values in application
+code. Fokit keeps row identity and field state together.
+
+### Submit produces no output
+
+Correct the visible schema issues and submit again. `onSubmit` runs only after
+successful validation.
 
 ## Take the right next branch
 

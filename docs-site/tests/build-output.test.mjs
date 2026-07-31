@@ -126,7 +126,7 @@ test("production output keeps Vocs skip links under the GitHub Pages base path",
 test("Interactive Lab has meaningful generated Markdown fallbacks", async () => {
 	const fallbackTerms = [
 		"Interactive Fokit Lab",
-		"browser-only lab",
+		"runs only in a browser",
 		"createFormKit({ controls: nativeControls })",
 	]
 	const fallbackFiles = ["assets/md/get-started.md", "llms-full.txt"]
@@ -152,8 +152,8 @@ test("Interactive Lab has meaningful generated Markdown fallbacks", async () => 
 
 test("overview demo has a meaningful generated Markdown fallback", async () => {
 	const fallbackTerms = [
-		"live overview form is browser-only",
-		"validates with Standard Schema",
+		"live overview form runs only in a browser",
+		"validates it with Standard Schema",
 		"createFormKit({ controls: nativeControls })",
 	]
 	const fallbackFiles = ["assets/md/index.md", "llms-full.txt"]

@@ -8,32 +8,39 @@ import { InteractiveLab } from "../components/interactive-lab"
 
 # Get started
 
-Build a working, schema-validated form and receive typed output on submit. The
-path is deliberately explicit: the schema owns validity, the UI definition owns
-structure, and the kit owns rendering.
+Build a schema-validated form and receive typed output when the user submits it.
+At the end, you will have a working profile form, a visible validation error,
+and a clear next step.
 
-Fokit works with React 18+, TypeScript 5+, and any schema library that
-implements Standard Schema. This guide uses Zod in an existing React
-application.
+## Before you start
+
+You need:
+
+- an existing React 18 or React 19 application;
+- TypeScript;
+- a schema library that implements Standard Schema.
+
+This guide uses Zod. Fokit does not require Zod or a Zod adapter.
 
 ## Installation
+
+Install Fokit and the schema library used in this guide:
 
 ```sh
 npm install fokit zod
 ```
 
-React and React DOM are peer dependencies with the range
-`^18.0.0 || ^19.0.0`. Zod is only the example schema library; Fokit does not
-require it or an adapter.
+Fokit declares React and React DOM as peer dependencies. Both use the range
+`^18.0.0 || ^19.0.0`.
 
 ## Build your first form
 
-Put this component in your application and render `<ProfileForm />`. It starts
-with the same profile shown on the overview page, validates on submit, and shows
-the schema-validated output.
+Create a `ProfileForm.tsx` file and add this component:
 
 ```tsx twoslash
 // @jsx: react-jsx
+"use client"
+
 import {
 	createFormKit,
 	type FormInput,
@@ -108,43 +115,54 @@ export function ProfileForm() {
 }
 ```
 
-Submit once, then replace the email with an invalid value and submit again.
-Fokit exposes the schema issue beside the field and focuses the first invalid
-control. Restore a valid email and the handler receives
-`FormOutput<typeof profileSchema>`.
+Render `<ProfileForm />` in your application.
+
+## Verify the result
+
+Complete these checks:
+
+1. Submit the prefilled form. The page shows the validated profile as JSON.
+2. Replace the email with an invalid value.
+3. Submit the form again. Fokit shows the schema issue and focuses the email
+   control.
+4. Restore a valid email and submit. The handler receives
+   `FormOutput<typeof profileSchema>`.
 
 The shipped controls and slots are accessible semantic HTML, not a visual
-theme. Import `fokit/layout.css` in your application entry point when you want
-optional structural spacing, or style the exposed markup yourself.
+theme. For optional structural spacing, import `fokit/layout.css` in your
+application entry point. You can also style the exposed markup yourself.
 
 ## What just happened
 
 ### Schema owns validity
 
-`profileSchema` is the only validation language in the example. Fokit stores
-editable `FormInput<typeof profileSchema>` and passes validated
-`FormOutput<typeof profileSchema>` to `onSubmit`, so schema transforms can
-produce a different output type without replacing editable values.
+`profileSchema` contains all validation rules. Fokit stores editable
+`FormInput<typeof profileSchema>` values. After successful validation, Fokit
+passes `FormOutput<typeof profileSchema>` to `onSubmit`.
+
+This separation lets schema transforms change the output type without replacing
+the editable values.
 
 ### UI definition owns structure
 
-`profileDefinition` explicitly chooses paths, controls, labels, and presentation
-options. Fokit does not infer UI from Zod or other schema metadata. That keeps a
-domain-schema change from silently changing the product experience.
+`profileDefinition` specifies paths, controls, labels, and presentation options.
+Fokit does not infer the UI from Zod or other schema metadata. A schema change
+therefore cannot silently change the product UI.
 
 ### The kit owns rendering
 
-`createFormKit({ controls: nativeControls })` maps control names to shipped
-native renderers and fills in accessible default structural slots.
-`kit.AutoForm` creates the form instance and renders the definition. The same
-definition can later be composed manually with `kit.Form`, `kit.Fields`, and
-granular hooks.
+`createFormKit({ controls: nativeControls })` maps control names to the shipped
+native renderers. It also supplies accessible structural slots.
+
+`kit.AutoForm` creates the form instance and renders the definition. You can
+later render the same definition with `kit.Form`, `kit.Fields`, and granular
+hooks.
 
 ## Try the production loop
 
-The lab below uses the same public model with conditions, arrays, reset,
-submit-first validation, stable row identity, and native `FormData`. Edit the
-form and compare its values, exposed issues, and browser submission payload.
+The lab below adds conditions, arrays, reset, blur-first validation, stable
+row identity, and native `FormData`. Edit the form. Then compare its values,
+visible issues, and browser submission payload.
 
 ### Interactive Fokit Lab
 
@@ -153,30 +171,53 @@ form and compare its values, exposed issues, and browser submission payload.
 ## What you get out of the box
 
 - Schema-owned synchronous or asynchronous validation.
-- Typed editable input and validated submit output.
+- Typed editable values and validated submit output.
 - Accessible labels, descriptions, issue relationships, and first-error focus.
 - Stable array commands and explicit hidden-value behavior.
-- Granular subscriptions when generated rendering is not enough.
+- Granular subscriptions for manual rendering.
 - Native names and `FormData` coordination for classic submission.
 - An isolated `fokit/react19` entry for React 19 Actions.
 
 ## Make it yours
 
-`nativeControls` and the default slots are a working baseline, not a design
-system. Replace controls with `defineControl`, override one or more structural
-slots, or call `createDefaultSlots({ i18n })` when the default action labels need
-to change.
+`nativeControls` and the default slots are a working baseline. They are not a
+design system. Use `defineControl` to replace controls. Override structural
+slots when their markup must change. Use `createDefaultSlots({ i18n })` to
+change the default action labels.
 
 Fokit keeps those choices separate from the reusable form definition. Product
 controls can change without rewriting validation, conditions, arrays, or submit
 behavior.
 
+## Fix common setup problems
+
+### The form has no visual layout
+
+Import `fokit/layout.css` for the optional responsive structure, or add your own
+styles. Fokit does not ship a visual theme.
+
+### A required field accepts an empty value
+
+Add the rule to the schema. The UI option `required: true` marks the control as
+required in presentation, native state, and ARIA. It does not add a validation
+rule.
+
+### TypeScript rejects `defaultValues`
+
+Provide a value for every field in `FormInput<typeof profileSchema>`. Use
+`undefined` only when the input type permits it.
+
+### `onSubmit` does not run
+
+Correct all visible schema issues and submit again. Fokit calls `onSubmit` only
+after successful validation.
+
 ## Choose your next step
 
+- [Build a production form](/guides/tutorial) to add validation timing, a
+  conditional field, arrays, and transformed output.
 - [UI definitions](/guides/ui-definitions) to understand fields, sections,
-  arrays, layout, and derived interaction state.
-- [Build a production form](/guides/tutorial) to add validation, a conditional
-  field, arrays, and typed output without changing the core model.
+  arrays, layout, and derived state.
 - [Validation and errors](/guides/validation) for timing, visibility, and
   recoverable server feedback.
 - [Controls and design systems](/guides/controls) to connect product inputs and

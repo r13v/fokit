@@ -15,7 +15,7 @@ export const OverviewDemo = Object.assign(
 						{
 							type: "text",
 							value:
-								"The live overview form is browser-only. It renders an explicit profile definition, validates with Standard Schema, and returns typed output from the public Fokit package.",
+								"The live overview form runs only in a browser. It renders an explicit profile definition, validates it with Standard Schema, and returns typed output.",
 						},
 					],
 				},

@@ -1,89 +1,123 @@
-# fokit
+# Fokit
 
-Fokit is a code-first, schema-validated React form library with a React-free
-core, explicit control registries, accessible default slots, generated React
-forms, granular subscriptions, safe FormData parsing, an isolated React 19
-Action adapter, and optional structural CSS.
+Fokit turns a Standard Schema and a typed UI definition into a React form. It
+keeps form state, validation, rendering, and `FormData` behavior in one
+contract.
+
+Use Fokit when you want reusable typed form definitions without binding them
+to a visual theme. Fokit does not infer UI from a schema, provide a form
+builder, or style application controls.
+
+Fokit supports React 18 and React 19.
 
 ## Install
+
+Install Fokit in an existing React application:
 
 ```sh
 npm install fokit zod
 ```
 
-React is a peer dependency. Fokit supports React `^18.0.0 || ^19.0.0`; React
-19 Actions live only under `fokit/react19` so React 18 consumers can use the
-main package without React 19-only declarations.
+`react` and `react-dom` are peer dependencies. Fokit accepts any Standard
+Schema implementation. This example uses Zod.
 
-Fokit accepts any Standard Schema implementation. The examples use Zod because
-Zod implements the Standard Schema contract.
+## Create a form
 
-## Package entries
+```tsx
+import { createFormKit, nativeControls } from "fokit"
+import { z } from "zod"
 
-- `fokit`: React kit APIs, default slots, native controls, hooks, generated
-  forms, and shared public types.
-- `fokit/core`: React-free store, path, definition, derived UI, and value
-  helpers.
-- `fokit/server`: safe FormData normalization, Standard Schema validation,
-  `FormResult`, and `SubmissionIssue`.
-- `fokit/react19`: React 19 Action components.
-- `fokit/layout.css`: optional structural layout CSS. Import it explicitly:
+const contactSchema = z.object({
+	email: z.string().email("Enter a valid email"),
+})
+
+const kit = createFormKit({
+	controls: nativeControls,
+})
+
+const contactForm = kit.defineForm(contactSchema)({
+	ui: [
+		{
+			kind: "field",
+			path: "email",
+			control: "text",
+			label: "Email",
+			options: { type: "email" },
+		},
+	],
+})
+
+export function ContactForm() {
+	return (
+		<kit.AutoForm
+			definition={contactForm}
+			defaultValues={{ email: "" }}
+			onSubmit={({ value }) => console.log(value.email)}
+		>
+			<kit.Submit>Send</kit.Submit>
+		</kit.AutoForm>
+	)
+}
+```
+
+Fokit validates the form with `contactSchema`. The submit handler receives the
+schema output after successful validation.
+
+## Responsibility boundary
+
+Fokit owns the form store, update pipeline, validation lifecycle, structural
+rendering, and native form integration.
+
+You choose the schema and control registry. Your application owns visual
+components, styling, data loading, and persistence. A form definition selects
+registered controls by name. It does not embed a design system.
+
+## Package entry points
+
+| Import | Purpose |
+| --- | --- |
+| `fokit` | React form kits, native controls, generated forms, hooks, and shared types |
+| `fokit/core` | React-free stores, definitions, paths, UI resolution, and value helpers |
+| `fokit/server` | Bounded `FormData` parsing and Standard Schema validation |
+| `fokit/react19` | `ActionForm` and `ActionSubmit` for React 19 |
+| `fokit/layout.css` | Optional structural grid and spacing CSS |
+
+The main JavaScript entry does not import CSS. Import the structural stylesheet
+when you need it:
 
 ```ts
 import "fokit/layout.css"
 ```
 
-The main JavaScript entry never imports the CSS automatically.
+## Stable defaults
 
-## Start here
+- Omitted slots use unstyled, semantic markup. Built-in array actions use
+  English labels.
+- Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
+  `asyncDebounceMs: 0`.
+- `parseFormData` defaults are `maxEntries: 1_000`, `maxPathLength: 1_024`,
+  `maxDepth: 32`, and `maxArrayIndex: 10_000`.
 
-- [Overview](https://r13v.github.io/fokit/)
+Apply request, multipart, file-count, and file-size limits before you call
+`parseFormData`.
+
+## Documentation
+
 - [Get started](https://r13v.github.io/fokit/get-started)
 - [Build a production form](https://r13v.github.io/fokit/guides/tutorial)
 - [Validation and errors](https://r13v.github.io/fokit/guides/validation)
-- [API reference](https://r13v.github.io/fokit/api)
 - [React 19 Actions](https://r13v.github.io/fokit/guides/react-19-actions)
+- [API reference](https://r13v.github.io/fokit/api)
 - [Fokit specification](docs/SPEC.md)
-- [Styling boundary ADR](docs/adr/0001-styling-and-layout-boundary.md)
-- [Russian repository tutorial](docs/tutorial.ru.md)
+- [Styling boundary](docs/adr/0001-styling-and-layout-boundary.md)
+- [Russian tutorial](docs/tutorial.ru.md)
 - [Architecture decisions](docs/adr/)
 - [Release process](docs/releasing.md)
 
-Copyable examples live in `docs-site/src/snippets/form-kit.tsx`,
-`docs-site/src/snippets/basic-form.tsx`, and
-`docs-site/src/snippets/server-action.ts`; `npm run test:docs` typechecks
-them.
-
-## Shortest kit
-
-```tsx
-import { createFormKit, nativeControls } from "fokit"
-
-export const kit = createFormKit({
-	controls: nativeControls,
-})
-```
-
-Omitted slots resolve to English, unstyled, accessible structural markup.
-Controls stay explicit because their value and FormData behavior are part of
-the public form contract. Add custom controls by composing a registry, and
-override any slot by passing a partial `slots` object.
-
-Use `kit.extend({ controls, slots })` when one form needs add-only controls or
-local slot replacements while remaining compatible with definitions from a
-shared base kit. Use an explicit `render` UI node for form-local React content
-that intentionally owns no field, accessibility, or FormData contract.
-
-## Configuration
-
-Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
-`asyncDebounceMs: 0`. Pass `validation` to `useForm` or `AutoForm` to override
-them per form instance.
-
-`parseFormData` accepts safety limits for server parsing: `maxEntries` defaults
-to `1000`, `maxPathLength` to `1024`, `maxDepth` to `32`, and `maxArrayIndex` to
-`10000`. Framework request, multipart, file-count, and file-size limits should
-run before calling `parseFormData`.
+Canonical, typechecked examples live in
+[`form-kit.tsx`](docs-site/src/snippets/form-kit.tsx),
+[`basic-form.tsx`](docs-site/src/snippets/basic-form.tsx), and
+[`server-action.ts`](docs-site/src/snippets/server-action.ts).
 
 ## Kudos
 

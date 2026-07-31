@@ -89,7 +89,7 @@ const profileDefinition = kit.defineForm(profileSchema)({
 			kind: "section",
 			id: "account",
 			title: "Profile",
-			description: "A compact account form rendered from AutoForm.",
+			description: "Edit a personal or company profile.",
 			columns: 2,
 			children: [
 				{
@@ -97,7 +97,7 @@ const profileDefinition = kit.defineForm(profileSchema)({
 					path: "name",
 					control: "text",
 					label: "Name",
-					description: "Required before a classic submit can succeed.",
+					description: "Enter a name before you submit the form.",
 					required: true,
 					options: {
 						placeholder: "Enter your name",
@@ -150,7 +150,7 @@ const profileDefinition = kit.defineForm(profileSchema)({
 					path: "avatar",
 					control: "file",
 					label: "Avatar",
-					description: "PNG files stay native in FormData.",
+					description: "Choose a PNG file. Fokit keeps it in FormData.",
 					options: {
 						accept: "image/png",
 					},
@@ -161,7 +161,8 @@ const profileDefinition = kit.defineForm(profileSchema)({
 			kind: "array",
 			path: "contacts",
 			label: "Contacts",
-			description: "Array rows keep stable keys while values reorder.",
+			description:
+				"Add or reorder contacts. Fokit keeps each row with its state.",
 			itemDefault: {
 				email: "",
 				label: undefined,
@@ -195,7 +196,9 @@ const profileDefinition = kit.defineForm(profileSchema)({
 })
 
 export function InteractiveLabClient() {
-	const [lastSubmit, setLastSubmit] = useState("No submission yet")
+	const [lastSubmit, setLastSubmit] = useState(
+		"Submit the form to see the result.",
+	)
 
 	return (
 		<section
@@ -203,10 +206,10 @@ export function InteractiveLabClient() {
 			className="fokit-lab"
 			data-testid="lab"
 		>
-			<p className="fokit-lab__kicker">Live public package</p>
+			<p className="fokit-lab__kicker">Interactive lab</p>
 			<p className="fokit-lab__summary">
-				Edit the generated form, then compare values, exposed issues, and native
-				FormData from the same Fokit instance.
+				Edit the generated form. Compare its values, visible issues, and
+				FormData. All panels use the same Fokit instance.
 			</p>
 			<kit.AutoForm
 				className="fokit-lab__form"
@@ -264,7 +267,7 @@ function LabInspector({ lastSubmit }: { readonly lastSubmit: string }) {
 	return (
 		<section className="fokit-lab__inspector" aria-label="Lab inspector">
 			<div className="fokit-lab__submit-state">
-				<span>Last submit</span>
+				<span>Submission result</span>
 				<output data-testid="lab-submission">{lastSubmit}</output>
 			</div>
 			<div className="fokit-lab__inspector-grid">
@@ -297,16 +300,16 @@ function LabInspector({ lastSubmit }: { readonly lastSubmit: string }) {
 						</div>
 					</dl>
 				</InspectorPanel>
-				<InspectorPanel title="Exposed issues">
+				<InspectorPanel title="Visible issues">
 					<pre data-testid="lab-issues">
 						<code>
 							{issueLines.length === 0
-								? "No exposed issues"
+								? "No visible issues"
 								: issueLines.join("\n")}
 						</code>
 					</pre>
 				</InspectorPanel>
-				<InspectorPanel title="Native FormData">
+				<InspectorPanel title="Current FormData">
 					<pre data-testid="lab-form-data">
 						<code>{formDataLines.join("\n")}</code>
 					</pre>

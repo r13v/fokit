@@ -3,7 +3,7 @@ import { defineConfig } from "vocs/config"
 export default defineConfig({
 	title: "Fokit",
 	description:
-		"Code-first, schema-validated React forms without giving up native HTML semantics.",
+		"Typed, schema-validated React forms that keep native HTML semantics and your design system.",
 	baseUrl: process.env.BASE_URL ?? "https://r13v.github.io",
 	basePath: process.env.BASE_PATH ?? "/",
 	renderStrategy: "full-static",

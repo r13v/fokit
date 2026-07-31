@@ -319,14 +319,3 @@ function lockfileForVersion(version: string) {
 		},
 	}
 }
-
-async function readOptionalFile(path: string): Promise<string> {
-	try {
-		return await readFile(new URL(path, import.meta.url), "utf8")
-	} catch (error) {
-		if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-			return ""
-		}
-		throw error
-	}
-}

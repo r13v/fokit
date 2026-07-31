@@ -134,3 +134,17 @@ Building the docs site after adding a guide → Vocs rejected nine pre-existing
 `twoslash` fences in `advanced.mdx` and `api.mdx` because they contain
 pseudo-signatures or undeclared JSX. Mark pseudocode as text or make each
 example self-contained before using `twoslash`.
+
+## 2026-07-31 22:21 — GPT-5
+
+Running the required repository check after a documentation-only architecture
+session → Biome reported the unrelated `readOptionalFile` helper in
+`tests/package/release-contract.test.ts` as unused. Remove the stale helper or
+restore its intended caller so clean checks do not retain a warning.
+
+## 2026-07-31 22:23 — GPT-5
+
+Trying to verify only the changed glossary, ADR, and papercut Markdown files →
+Biome ignores all three paths and exits with `No files were processed`. Use
+the repository-wide check plus `git diff --check`, or add a dedicated Markdown
+lint command for documentation-only changes.

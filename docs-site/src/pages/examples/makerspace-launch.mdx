@@ -1,0 +1,44 @@
+---
+title: Makerspace launch wizard
+description: A four-stage wizard with form-owned navigation, remote address resolution, coordinates, media, capacity pricing, promotions, and sequential publishing.
+showAskAi: false
+---
+
+import { MakerspaceLaunchDemo } from "../../components/makerspace-launch-demo"
+
+# Makerspace launch wizard
+
+The current stage is part of the form value, so navigation and conditional UI
+cannot drift apart. Moving between stages preserves identity, resolved location,
+media, pricing rows, amenities, access instructions, and four promotion
+subforms in one Fokit store.
+
+## Try the complete flow
+
+Move through all four stages. Edit the postal code and apply the asynchronous
+address result, then adjust coordinates. Add and reorder capacity or gallery
+rows. The final stage validates all retained stages and performs three
+sequential mutations for the place record, media, and release.
+
+<MakerspaceLaunchDemo />
+
+## What this form stresses
+
+- A wizard composed from normal values, resolver visibility, and a render node.
+- Query-driven select options and an address lookup keyed by a live field.
+- Imperative, typed coordinate updates from the lookup result.
+- Native file handling next to a reorderable media-reference array.
+- Cross-row capacity pricing validation.
+- Four independent promotion sections with conditional amounts.
+- A three-request publish sequence with one form-level recovery message.
+
+Fokit deliberately does not provide a wizard engine. This example shows the
+smallest explicit composition that keeps the workflow inspectable.
+
+## Copy the source
+
+```tsx
+// [!include ~/snippets/complex-makerspace-launch.tsx]
+```
+
+Compare the other workflows in [Complex form examples](/examples).

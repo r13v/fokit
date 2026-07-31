@@ -47,6 +47,13 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/guides/tutorial.md",
 		"assets/md/guides/ui-definitions.md",
 		"assets/md/guides/validation.md",
+		"assets/md/examples.md",
+		"assets/md/examples/research-grant.md",
+		"assets/md/examples/studio-policies.md",
+		"assets/md/examples/makerspace-launch.md",
+		"assets/md/examples/learning-cohort.md",
+		"assets/md/examples/membership-ladder.md",
+		"assets/md/examples/campaign-builder.md",
 		"llms.txt",
 		"llms-full.txt",
 		"sitemap.xml",
@@ -185,6 +192,17 @@ test("generated Markdown links live demos to their canonical source files", asyn
 			file: "assets/md/guides/async-multiselect.md",
 			path: "docs-site/src/snippets/async-multiselect.tsx",
 		},
+		...[
+			"research-grant",
+			"studio-policies",
+			"makerspace-launch",
+			"learning-cohort",
+			"membership-ladder",
+			"campaign-builder",
+		].map((slug) => ({
+			file: `assets/md/examples/${slug}.md`,
+			path: `docs-site/src/snippets/complex-${slug}.tsx`,
+		})),
 	]
 	const llms = await readFile(new URL("llms-full.txt", publicRoot), "utf8")
 

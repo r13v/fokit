@@ -783,3 +783,282 @@ a {
 		inline-size: 100%;
 	}
 }
+
+.fokit-complex {
+	--complex-border: color-mix(
+		in srgb,
+		var(--fokit-brand-border) 62%,
+		transparent
+	);
+	--complex-control-height: 2.7rem;
+	background: linear-gradient(
+		145deg,
+		color-mix(in srgb, var(--fokit-brand-panel) 94%, var(--fokit-brand-green)),
+		var(--fokit-brand-panel) 35rem
+	);
+	border: 1px solid var(--complex-border);
+	border-radius: 12px;
+	color: var(--fokit-brand-ink);
+	display: grid;
+	gap: 1rem;
+	margin-block: 1.5rem;
+	padding: clamp(1rem, 2.8vw, 1.6rem);
+}
+
+.fokit-complex__kicker {
+	color: var(--fokit-brand-green);
+	font-size: 0.78rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	margin: 0;
+	text-transform: uppercase;
+}
+
+.fokit-complex__summary {
+	color: var(--fokit-brand-muted);
+	margin: 0;
+	max-width: 74ch;
+}
+
+.fokit-complex__form {
+	display: grid;
+	gap: 1rem;
+}
+
+.fokit-complex [data-fokit-node="section"],
+.fokit-complex [data-fokit-node="array"],
+.fokit-complex__preview,
+.fokit-complex__embedded,
+.fokit-complex__wizard {
+	background: color-mix(in srgb, var(--fokit-brand-surface) 87%, transparent);
+	border: 1px solid var(--complex-border);
+	border-radius: 10px;
+	display: grid;
+	gap: 0.9rem;
+	padding: 1rem;
+}
+
+.fokit-complex [data-fokit-node="section"] > h2,
+.fokit-complex [data-fokit-node="section"] > h3 {
+	font-family: inherit;
+	font-size: 1.05rem;
+	font-weight: 800;
+	margin: 0;
+}
+
+.fokit-complex [data-fokit-node="section"] > p,
+.fokit-complex [data-fokit-node="array"] > p,
+.fokit-complex [data-fokit-node="field"] > p {
+	color: var(--fokit-brand-muted);
+	font-size: 0.88rem;
+	margin: 0;
+}
+
+.fokit-complex [data-fokit-layout="grid"] {
+	display: grid;
+	gap: 0.9rem;
+	grid-template-columns: 1fr;
+}
+
+.fokit-complex [data-fokit-layout="grid"][data-fokit-columns="2"] {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fokit-complex [data-fokit-node="field"] {
+	display: grid;
+	gap: 0.4rem;
+	min-width: 0;
+}
+
+.fokit-complex [data-fokit-node="field"][data-fokit-span="full"],
+.fokit-complex [data-fokit-layout="grid"] > .fokit-complex__embedded,
+.fokit-complex [data-fokit-layout="grid"] > .fokit-complex__preview,
+.fokit-complex [data-fokit-layout="grid"] > [data-fokit-node="array"],
+.fokit-complex [data-fokit-layout="grid"] > [data-fokit-node="section"] {
+	grid-column: 1 / -1;
+}
+
+.fokit-complex [data-fokit-node="field"] > label,
+.fokit-complex [data-fokit-node="array"] > div:first-child,
+.fokit-complex .fokit-complex__embedded > label,
+.fokit-complex .fokit-complex__embedded > strong {
+	font-size: 0.9rem;
+	font-weight: 800;
+}
+
+.fokit-complex input:not([type="checkbox"]),
+.fokit-complex select,
+.fokit-complex textarea {
+	background: var(--fokit-brand-surface);
+	border: 1px solid var(--complex-border);
+	border-radius: 7px;
+	box-sizing: border-box;
+	color: var(--fokit-brand-ink);
+	font: inherit;
+	min-block-size: var(--complex-control-height);
+	min-width: 0;
+	padding: 0.6rem 0.68rem;
+	width: 100%;
+}
+
+.fokit-complex input[type="checkbox"] {
+	block-size: 1rem;
+	inline-size: 1rem;
+}
+
+.fokit-complex input:not([type="checkbox"]),
+.fokit-complex select {
+	block-size: var(--complex-control-height);
+}
+
+.fokit-complex input:focus,
+.fokit-complex select:focus,
+.fokit-complex textarea:focus,
+.fokit-complex button:focus-visible {
+	outline: 2px solid var(--fokit-brand-green);
+	outline-offset: 2px;
+}
+
+.fokit-complex [data-invalid] input,
+.fokit-complex [data-invalid] select,
+.fokit-complex [data-invalid] textarea {
+	border-color: var(--fokit-brand-rust);
+}
+
+.fokit-complex [data-fokit-node="error-message"] {
+	color: var(--fokit-brand-rust);
+	font-size: 0.88rem;
+	font-weight: 750;
+	margin: 0;
+}
+
+.fokit-complex button {
+	align-items: center;
+	background: var(--fokit-brand-surface);
+	border: 1px solid var(--complex-border);
+	border-radius: 7px;
+	color: var(--fokit-brand-ink);
+	cursor: pointer;
+	display: inline-flex;
+	font: inherit;
+	font-weight: 750;
+	justify-content: center;
+	min-height: var(--complex-control-height);
+	padding: 0.58rem 0.75rem;
+}
+
+.fokit-complex button:disabled {
+	cursor: not-allowed;
+	opacity: 0.48;
+}
+
+.fokit-complex .fokit-complex__primary {
+	background: var(--fokit-brand-green);
+	border-color: var(--fokit-brand-green);
+	color: var(--fokit-brand-on-accent);
+}
+
+.fokit-complex [data-fokit-node="array"] {
+	align-items: start;
+}
+
+.fokit-complex [data-fokit-node="array"] > button {
+	justify-self: start;
+}
+
+.fokit-complex [data-fokit-node="array-item"] {
+	align-items: start;
+	border-block-start: 1px solid var(--complex-border);
+	display: grid;
+	gap: 0.75rem;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	padding-block-start: 0.9rem;
+}
+
+.fokit-complex__actions,
+.fokit-complex__choice-list,
+.fokit-complex__mode {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.65rem;
+}
+
+.fokit-complex__mode {
+	border: 0;
+	margin: 0;
+	padding: 0;
+}
+
+.fokit-complex__mode > legend {
+	font-size: 0.9rem;
+	font-weight: 800;
+	margin-block-end: 0.55rem;
+}
+
+.fokit-complex__actions > span,
+.fokit-complex__choice-list > span,
+.fokit-complex__network {
+	color: var(--fokit-brand-muted);
+	font-size: 0.88rem;
+}
+
+.fokit-complex__preview {
+	background: color-mix(
+		in srgb,
+		var(--fokit-brand-green) 9%,
+		var(--fokit-brand-surface)
+	);
+	gap: 0.25rem;
+}
+
+.fokit-complex__preview > span {
+	color: var(--fokit-brand-muted);
+	font-size: 0.9rem;
+}
+
+.fokit-complex__embedded {
+	background: color-mix(
+		in srgb,
+		var(--fokit-brand-panel) 72%,
+		var(--fokit-brand-surface)
+	);
+}
+
+.fokit-complex .fokit-complex__embedded > label {
+	display: grid;
+	gap: 0.4rem;
+}
+
+.fokit-complex__choice-list button[aria-pressed="true"],
+.fokit-complex__mode button[aria-pressed="true"] {
+	background: color-mix(
+		in srgb,
+		var(--fokit-brand-green) 14%,
+		var(--fokit-brand-surface)
+	);
+	border-color: var(--fokit-brand-green);
+}
+
+.fokit-complex__wizard ol {
+	display: grid;
+	gap: 0.5rem;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.fokit-complex__wizard li[aria-current="step"] button {
+	background: var(--fokit-brand-green);
+	border-color: var(--fokit-brand-green);
+	color: var(--fokit-brand-on-accent);
+}
+
+@media (max-width: 760px) {
+	.fokit-complex [data-fokit-layout="grid"][data-fokit-columns="2"],
+	.fokit-complex [data-fokit-node="array-item"],
+	.fokit-complex__wizard ol {
+		grid-template-columns: 1fr;
+	}
+}

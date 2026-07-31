@@ -1,6 +1,12 @@
 import { Buffer } from "node:buffer"
 
-import { expect, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
+
+function collectPageErrors(page: Page): string[] {
+	const errors: string[] = []
+	page.on("pageerror", (error) => errors.push(error.message))
+	return errors
+}
 
 test.describe("Fokit documentation", () => {
 	test("uses clean Vocs routes, sidebar navigation, and direct deep links", async ({
@@ -489,6 +495,196 @@ test.describe("Fokit documentation", () => {
 		await page.screenshot({
 			path: testInfo.outputPath("fokit-async-multiselect.png"),
 		})
+	})
+
+	test("renders all six complex examples on clean routes", async ({ page }) => {
+		const pageErrors = collectPageErrors(page)
+		const examples = [
+			{
+				slug: "research-grant",
+				heading: "Research grant application",
+				region: "Research grant application example",
+			},
+			{
+				slug: "studio-policies",
+				heading: "Creative studio policies",
+				region: "Creative studio policies example",
+			},
+			{
+				slug: "makerspace-launch",
+				heading: "Makerspace launch wizard",
+				region: "Makerspace launch wizard example",
+			},
+			{
+				slug: "learning-cohort",
+				heading: "Learning cohort editor",
+				region: "Learning cohort editor example",
+			},
+			{
+				slug: "membership-ladder",
+				heading: "Membership ladder",
+				region: "Membership ladder example",
+			},
+			{
+				slug: "campaign-builder",
+				heading: "Campaign builder",
+				region: "Campaign builder example",
+			},
+		]
+
+		for (const example of examples) {
+			await page.goto(`./examples/${example.slug}`)
+			await expect(page).toHaveURL(
+				new RegExp(`/fokit/examples/${example.slug}$`),
+			)
+			await expect(
+				page.getByRole("heading", { level: 1, name: example.heading }),
+			).toBeVisible()
+			await expect(
+				page.getByRole("region", { name: example.region }),
+			).toBeVisible()
+		}
+
+		await page.setViewportSize({ width: 390, height: 844 })
+		await page.goto("./examples/campaign-builder")
+		await expect(
+			page.getByRole("region", { name: "Campaign builder example" }),
+		).toBeVisible()
+		const widths = await page.evaluate(() => ({
+			page: document.documentElement.scrollWidth,
+			viewport: document.documentElement.clientWidth,
+		}))
+		expect(widths.page).toBeLessThanOrEqual(widths.viewport + 1)
+		expect(pageErrors).toEqual([])
+	})
+
+	test("runs the branching grant and composite policy request flows", async ({
+		page,
+	}) => {
+		const pageErrors = collectPageErrors(page)
+		await page.goto("./examples/research-grant")
+		const grant = page.getByRole("region", {
+			name: "Research grant application example",
+		})
+
+		await grant.getByLabel("Applying as").selectOption("collective")
+		await grant.getByLabel("Representation").selectOption("registered")
+		await grant.getByLabel("Search the independent registry").fill("Open")
+		await grant
+			.getByRole("button", { name: "Open Field Assembly · CA" })
+			.click()
+		await grant.getByLabel("Disbursement route").selectOption("digital-wallet")
+		await expect(grant.getByLabel("Settlement account")).toHaveCount(0)
+		await grant.getByLabel("Wallet handle").fill("mina-public")
+		await grant.getByLabel("I confirm that the application is accurate").check()
+		await grant.getByRole("button", { name: "Preview and send" }).click()
+		await expect(grant.getByText(/passed preview and was sent/)).toBeVisible()
+
+		await page.goto("./examples/studio-policies")
+		const policies = page.getByRole("region", {
+			name: "Creative studio policies example",
+		})
+		await policies.getByLabel("Allow early access").uncheck()
+		await expect(policies.getByLabel("Earliest arrival")).toHaveCount(0)
+		await policies.getByRole("button", { name: "Publish policies" }).click()
+		await expect(
+			policies.getByText(/published with 1 equipment rule/),
+		).toBeVisible()
+		expect(pageErrors).toEqual([])
+	})
+
+	test("keeps wizard state and cohort conflict recovery inside Fokit", async ({
+		page,
+	}) => {
+		const pageErrors = collectPageErrors(page)
+		await page.goto("./examples/makerspace-launch")
+		const wizard = page.getByRole("region", {
+			name: "Makerspace launch wizard example",
+		})
+		await wizard.getByRole("button", { name: "Continue to Location" }).click()
+		await wizard.getByLabel("Postal code").fill("Z99")
+		await wizard.getByRole("button", { name: "Apply resolved address" }).click()
+		await expect(wizard.getByLabel("Street address")).toHaveValue(
+			"12 Workshop Crescent",
+		)
+		await wizard
+			.getByRole("button", { name: "Continue to Capacity & media" })
+			.click()
+		await wizard.getByRole("button", { name: "Continue to Publishing" }).click()
+		await wizard.getByRole("button", { name: "Publish makerspace" }).click()
+		await expect(
+			wizard.getByText(/published with 1 gallery item/),
+		).toBeVisible()
+
+		await page.goto("./examples/learning-cohort")
+		const cohort = page.getByRole("region", {
+			name: "Learning cohort editor example",
+		})
+		await cohort.getByLabel("Cohort title").fill("Reserved cohort")
+		await cohort.getByRole("button", { name: "Save cohort" }).click()
+		await expect(
+			cohort.locator("[data-fokit-node='error-message']", {
+				hasText: "That title is already reserved",
+			}),
+		).toBeVisible()
+		await expect(cohort.getByLabel("Cohort title")).toHaveValue(
+			"Reserved cohort",
+		)
+		expect(pageErrors).toEqual([])
+	})
+
+	test("cascades membership tiers and switches all campaign variants", async ({
+		page,
+	}) => {
+		const pageErrors = collectPageErrors(page)
+		await page.goto("./examples/membership-ladder")
+		const membership = page.getByRole("region", {
+			name: "Membership ladder example",
+		})
+		await membership.getByLabel("Reduction percent").first().fill("30")
+		await expect(membership.getByText(/Seed 30% → Sprout 30%/)).toBeVisible()
+		await expect(membership.getByText(/Canopy 30% → Founder 30%/)).toBeVisible()
+		await membership.getByRole("button", { name: "Add winter closure" }).click()
+		await expect(membership.getByLabel("Starts")).toHaveCount(2)
+		await membership.getByRole("button", { name: "Connect" }).click()
+		await expect(
+			membership.getByRole("button", { name: "Disconnect" }),
+		).toBeVisible()
+		await membership
+			.getByRole("button", { name: "Save membership ladder" })
+			.click()
+		await expect(
+			membership.getByText(/Membership revision \d+ saved/),
+		).toBeVisible()
+
+		await page.goto("./examples/campaign-builder")
+		const campaign = page.getByRole("region", {
+			name: "Campaign builder example",
+		})
+		const template = campaign.getByLabel("Campaign template")
+		await campaign.getByRole("button", { name: "Start new campaign" }).click()
+		await campaign.getByRole("button", { name: "Create campaign" }).click()
+		await expect(campaign.getByText(/Created campaign-\d+/)).toBeVisible()
+		await campaign.getByRole("button", { name: "Edit loaded draft" }).click()
+		await campaign.getByRole("button", { name: "Update campaign" }).click()
+		await expect(campaign.getByText(/Updated campaign-204/)).toBeVisible()
+		const variants = [
+			["newsletter", "Newsletter content"],
+			["product-launch", "Product launch"],
+			["event-invite", "Event invitation"],
+			["fundraiser", "Fundraiser"],
+			["course-drop", "Course release"],
+			["community-update", "Community update"],
+			["feedback-pulse", "Feedback pulse"],
+		] as const
+
+		for (const [value, heading] of variants) {
+			await template.selectOption(value)
+			await expect(
+				campaign.getByRole("heading", { level: 2, name: heading }),
+			).toBeVisible()
+		}
+		expect(pageErrors).toEqual([])
 	})
 
 	test("uses responsive Vocs navigation without horizontal scrolling", async ({

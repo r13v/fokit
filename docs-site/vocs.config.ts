@@ -51,6 +51,19 @@ export default defineConfig({
 			],
 		},
 		{
+			text: "Examples",
+			collapsed: false,
+			items: [
+				{ text: "Complex examples", link: "/examples" },
+				{ text: "Research grant", link: "/examples/research-grant" },
+				{ text: "Studio policies", link: "/examples/studio-policies" },
+				{ text: "Makerspace launch", link: "/examples/makerspace-launch" },
+				{ text: "Learning cohort", link: "/examples/learning-cohort" },
+				{ text: "Membership ladder", link: "/examples/membership-ladder" },
+				{ text: "Campaign builder", link: "/examples/campaign-builder" },
+			],
+		},
+		{
 			text: "Reference",
 			collapsed: false,
 			items: [

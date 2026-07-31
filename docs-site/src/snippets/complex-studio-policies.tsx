@@ -1,0 +1,556 @@
+"use client"
+
+import {
+	QueryClient,
+	QueryClientProvider,
+	useMutation,
+	useQuery,
+} from "@tanstack/react-query"
+import {
+	type BeforeUpdateEvent,
+	createFormKit,
+	type FormInput,
+	type FormOutput,
+	nativeControls,
+	useFormContext,
+	useFormState,
+	type ValueChange,
+} from "fokit"
+import { useState } from "react"
+import { z } from "zod"
+
+const studioPolicySchema = z
+	.object({
+		access: z.object({
+			earlyEnabled: z.boolean(),
+			earlyFrom: z.string().optional(),
+			earlyFee: z.number().min(0).optional(),
+			lateEnabled: z.boolean(),
+			lateUntil: z.string().optional(),
+			lateFee: z.number().min(0).optional(),
+		}),
+		safeguard: z.object({
+			depositRequired: z.boolean(),
+			amount: z.number().min(0).optional(),
+			currency: z.enum(["USD", "EUR", "GBP"]),
+		}),
+		youth: z.object({
+			policy: z.enum(["all-ages", "sixteen-plus", "adults-only"]),
+			guardianRequired: z.boolean(),
+			quietHours: z.string().optional(),
+		}),
+		equipment: z
+			.array(
+				z.object({
+					assetId: z.string().min(1, "Choose equipment"),
+					mandatoryBriefing: z.boolean(),
+					replacementValue: z.number().min(0),
+				}),
+			)
+			.min(1, "Add at least one equipment rule"),
+		refreshments: z.object({
+			allowed: z.boolean(),
+			cateringNoticeHours: z.number().int().min(0).optional(),
+		}),
+		connectivity: z.object({
+			mode: z.enum(["included", "request", "offline"]),
+			minimumMbps: z.number().int().min(1).optional(),
+		}),
+		animals: z.object({
+			policy: z.enum(["assistance-only", "approval", "not-allowed"]),
+			notes: z.string().optional(),
+		}),
+	})
+	.superRefine((value, context) => {
+		if (value.access.earlyEnabled && value.access.earlyFrom === undefined) {
+			context.addIssue({
+				code: "custom",
+				path: ["access", "earlyFrom"],
+				message: "Set the earliest access time",
+			})
+		}
+		if (value.access.lateEnabled && value.access.lateUntil === undefined) {
+			context.addIssue({
+				code: "custom",
+				path: ["access", "lateUntil"],
+				message: "Set the latest departure time",
+			})
+		}
+		if (value.safeguard.depositRequired && (value.safeguard.amount ?? 0) < 50) {
+			context.addIssue({
+				code: "custom",
+				path: ["safeguard", "amount"],
+				message: "Deposits start at 50",
+			})
+		}
+		if (value.youth.policy === "all-ages" && !value.youth.guardianRequired) {
+			context.addIssue({
+				code: "custom",
+				path: ["youth", "guardianRequired"],
+				message: "All-ages sessions require a guardian policy",
+			})
+		}
+		if (
+			value.connectivity.mode === "included" &&
+			(value.connectivity.minimumMbps ?? 0) < 25
+		) {
+			context.addIssue({
+				code: "custom",
+				path: ["connectivity", "minimumMbps"],
+				message: "Published connectivity must be at least 25 Mbps",
+			})
+		}
+	})
+	.transform((value) => ({
+		...value,
+		equipmentReplacementTotal: value.equipment.reduce(
+			(total, item) => total + item.replacementValue,
+			0,
+		),
+	}))
+
+type StudioPolicyInput = FormInput<typeof studioPolicySchema>
+type StudioPolicyOutput = FormOutput<typeof studioPolicySchema>
+
+type EquipmentOption = { readonly value: string; readonly label: string }
+type PolicyContext = { readonly equipment: readonly EquipmentOption[] }
+
+const baseline = {
+	access: {
+		earlyEnabled: true,
+		earlyFrom: "08:00",
+		earlyFee: 35,
+		lateEnabled: false,
+		lateUntil: undefined,
+		lateFee: undefined,
+	},
+	safeguard: { depositRequired: true, amount: 300, currency: "USD" },
+	youth: {
+		policy: "sixteen-plus",
+		guardianRequired: false,
+		quietHours: "After 20:00, amplified audio must remain below 75 dB.",
+	},
+	equipment: [
+		{
+			assetId: "lighting-grid",
+			mandatoryBriefing: true,
+			replacementValue: 900,
+		},
+	],
+	refreshments: { allowed: true, cateringNoticeHours: 48 },
+	connectivity: { mode: "included", minimumMbps: 200 },
+	animals: { policy: "assistance-only", notes: undefined },
+} satisfies StudioPolicyInput
+
+const equipmentCatalog: readonly EquipmentOption[] = [
+	{ value: "lighting-grid", label: "Lighting grid" },
+	{ value: "ceramic-kiln", label: "Ceramic kiln" },
+	{ value: "audio-console", label: "Audio console" },
+	{ value: "laser-cutter", label: "Laser cutter" },
+]
+
+const kit = createFormKit({ controls: nativeControls })
+
+function PolicyBalance() {
+	const form = useFormContext<typeof studioPolicySchema, PolicyContext>()
+	const balance = useFormState(form, (snapshot) => ({
+		accessOptions:
+			Number(snapshot.values.access.earlyEnabled) +
+			Number(snapshot.values.access.lateEnabled),
+		restrictedEquipment: snapshot.values.equipment.filter(
+			(item) => item.mandatoryBriefing,
+		).length,
+		deposit: snapshot.values.safeguard.depositRequired
+			? snapshot.values.safeguard.amount
+			: 0,
+	}))
+
+	return (
+		<aside className="fokit-complex__preview" aria-label="Policy balance">
+			<strong>Live policy balance</strong>
+			<span>
+				{balance.accessOptions} access exception(s) ·{" "}
+				{balance.restrictedEquipment} briefing rule(s) · {balance.deposit ?? 0}{" "}
+				held as safeguard
+			</span>
+		</aside>
+	)
+}
+
+const policyDefinition = kit
+	.defineForm(studioPolicySchema)
+	.withContext<PolicyContext>({
+		ui: [
+			{
+				kind: "section",
+				id: "access",
+				title: "Access windows",
+				description: "Opening exceptions carry their own times and fees.",
+				columns: 2,
+				children: [
+					{
+						kind: "field",
+						path: "access.earlyEnabled",
+						control: "checkbox",
+						label: "Allow early access",
+					},
+					{
+						kind: "field",
+						path: "access.earlyFrom",
+						control: "text",
+						label: "Earliest arrival",
+						visible: ({ "access.earlyEnabled": enabled }) => enabled,
+						valuePolicy: "unset",
+						options: { placeholder: "08:00" },
+					},
+					{
+						kind: "field",
+						path: "access.earlyFee",
+						control: "number",
+						label: "Early access fee",
+						visible: ({ "access.earlyEnabled": enabled }) => enabled,
+						valuePolicy: "unset",
+						options: { min: 0, step: 5 },
+					},
+					{
+						kind: "field",
+						path: "access.lateEnabled",
+						control: "checkbox",
+						label: "Allow late departure",
+					},
+					{
+						kind: "field",
+						path: "access.lateUntil",
+						control: "text",
+						label: "Latest departure",
+						visible: ({ "access.lateEnabled": enabled }) => enabled,
+						valuePolicy: "unset",
+						options: { placeholder: "22:00" },
+					},
+					{
+						kind: "field",
+						path: "access.lateFee",
+						control: "number",
+						label: "Late departure fee",
+						visible: ({ "access.lateEnabled": enabled }) => enabled,
+						valuePolicy: "unset",
+						options: { min: 0, step: 5 },
+					},
+				],
+			},
+			{
+				kind: "section",
+				id: "safeguards",
+				title: "Safeguards and age policy",
+				columns: 2,
+				children: [
+					{
+						kind: "field",
+						path: "safeguard.depositRequired",
+						control: "checkbox",
+						label: "Hold a refundable deposit",
+					},
+					{
+						kind: "field",
+						path: "safeguard.amount",
+						control: "number",
+						label: "Deposit amount",
+						visible: ({ "safeguard.depositRequired": required }) => required,
+						valuePolicy: "unset",
+						options: { min: 0, step: 25 },
+					},
+					{
+						kind: "field",
+						path: "safeguard.currency",
+						control: "select",
+						label: "Currency",
+						options: {
+							options: [
+								{ value: "USD", label: "USD" },
+								{ value: "EUR", label: "EUR" },
+								{ value: "GBP", label: "GBP" },
+							],
+						},
+					},
+					{
+						kind: "field",
+						path: "youth.policy",
+						control: "select",
+						label: "Age policy",
+						options: {
+							options: [
+								{ value: "all-ages", label: "All ages" },
+								{ value: "sixteen-plus", label: "16 and older" },
+								{ value: "adults-only", label: "Adults only" },
+							],
+						},
+					},
+					{
+						kind: "field",
+						path: "youth.guardianRequired",
+						control: "checkbox",
+						label: "Require a guardian for minors",
+						visible: ({ "youth.policy": policy }) => policy !== "adults-only",
+					},
+					{
+						kind: "field",
+						path: "youth.quietHours",
+						control: "textarea",
+						label: "Quiet-hours rule",
+						valuePolicy: "unset",
+						span: "full",
+						options: { rows: 3 },
+					},
+				],
+			},
+			{
+				kind: "array",
+				path: "equipment",
+				label: "Equipment rules",
+				description: "Each row retains stable identity while it moves.",
+				itemDefault: {
+					assetId: "",
+					mandatoryBriefing: false,
+					replacementValue: 0,
+				},
+				children: [
+					{
+						kind: "field",
+						path: "assetId",
+						control: "select",
+						label: "Equipment",
+						options: (_values, { context }) => ({
+							options: context.equipment,
+						}),
+					},
+					{
+						kind: "field",
+						path: "mandatoryBriefing",
+						control: "checkbox",
+						label: "Briefing required",
+					},
+					{
+						kind: "field",
+						path: "replacementValue",
+						control: "number",
+						label: "Replacement value",
+						options: { min: 0, step: 50 },
+					},
+				],
+			},
+			{
+				kind: "section",
+				id: "shared-services",
+				title: "Shared services",
+				columns: 2,
+				children: [
+					{
+						kind: "field",
+						path: "refreshments.allowed",
+						control: "checkbox",
+						label: "Allow catered refreshments",
+					},
+					{
+						kind: "field",
+						path: "refreshments.cateringNoticeHours",
+						control: "number",
+						label: "Catering notice in hours",
+						visible: ({ "refreshments.allowed": allowed }) => allowed,
+						valuePolicy: "unset",
+						options: { min: 0, step: 1 },
+					},
+					{
+						kind: "field",
+						path: "connectivity.mode",
+						control: "select",
+						label: "Connectivity",
+						options: {
+							options: [
+								{ value: "included", label: "Included" },
+								{ value: "request", label: "Available by request" },
+								{ value: "offline", label: "Offline space" },
+							],
+						},
+					},
+					{
+						kind: "field",
+						path: "connectivity.minimumMbps",
+						control: "number",
+						label: "Published minimum Mbps",
+						visible: ({ "connectivity.mode": mode }) => mode === "included",
+						valuePolicy: "unset",
+						options: { min: 1, step: 5 },
+					},
+					{
+						kind: "field",
+						path: "animals.policy",
+						control: "select",
+						label: "Animal access",
+						options: {
+							options: [
+								{ value: "assistance-only", label: "Assistance animals only" },
+								{ value: "approval", label: "With prior approval" },
+								{ value: "not-allowed", label: "Not allowed" },
+							],
+						},
+					},
+					{
+						kind: "field",
+						path: "animals.notes",
+						control: "textarea",
+						label: "Animal access notes",
+						visible: ({ "animals.policy": policy }) => policy === "approval",
+						valuePolicy: "unset",
+						options: { rows: 3 },
+					},
+				],
+			},
+			{ kind: "render", id: "policy-balance", component: PolicyBalance },
+		],
+	})
+
+export function StudioPoliciesExample() {
+	const [queryClient] = useState(
+		() => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+	)
+
+	return (
+		<QueryClientProvider client={queryClient}>
+			<StudioPoliciesForm />
+		</QueryClientProvider>
+	)
+}
+
+function StudioPoliciesForm() {
+	const policies = useQuery({
+		queryKey: ["studio-policy-baseline"],
+		queryFn: () => fakeRequest(baseline, 360),
+	})
+	const equipment = useQuery({
+		queryKey: ["studio-equipment-catalog"],
+		queryFn: () => fakeRequest(equipmentCatalog, 510),
+	})
+	const saveRules = useMutation({
+		mutationFn: (value: StudioPolicyOutput) =>
+			fakeRequest({ revision: value.equipmentReplacementTotal + 17 }, 430),
+	})
+	const publishSummary = useMutation({
+		mutationFn: (value: StudioPolicyOutput) =>
+			fakeRequest({ equipmentCount: value.equipment.length }, 330),
+	})
+	const [notice, setNotice] = useState("No changes published yet.")
+
+	if (policies.isPending || equipment.isPending) {
+		return (
+			<section className="fokit-complex" aria-live="polite">
+				Loading policy baseline and equipment catalog…
+			</section>
+		)
+	}
+	if (policies.isError || equipment.isError) {
+		return (
+			<section className="fokit-complex">
+				Could not load the policy editor.
+			</section>
+		)
+	}
+
+	return (
+		<section
+			aria-label="Creative studio policies example"
+			className="fokit-complex"
+		>
+			<p className="fokit-complex__kicker">Composite policy editor</p>
+			<p className="fokit-complex__summary">
+				Two baselines feed one definition; conditional policy groups and a
+				reorderable equipment matrix are published to two endpoints.
+			</p>
+			<kit.AutoForm
+				beforeUpdate={preservePolicyInvariants}
+				className="fokit-complex__form"
+				context={{ equipment: equipment.data }}
+				defaultValues={policies.data}
+				definition={policyDefinition}
+				onSubmit={async ({ value, form }) => {
+					try {
+						form.clearErrors()
+						const saved = await saveRules.mutateAsync(value)
+						const published = await publishSummary.mutateAsync(value)
+						setNotice(
+							`Revision ${saved.revision} published with ${published.equipmentCount} equipment rule(s).`,
+						)
+					} catch {
+						form.setErrors([
+							{
+								source: "server",
+								message: "Publishing failed; the draft is still editable.",
+							},
+						])
+					}
+				}}
+			>
+				<div className="fokit-complex__actions">
+					<kit.Submit className="fokit-complex__primary">
+						Publish policies
+					</kit.Submit>
+					<span aria-live="polite">
+						{saveRules.isPending || publishSummary.isPending
+							? "Publishing two resources…"
+							: notice}
+					</span>
+				</div>
+			</kit.AutoForm>
+		</section>
+	)
+}
+
+function preservePolicyInvariants(
+	event: BeforeUpdateEvent<StudioPolicyInput, unknown>,
+): readonly ValueChange[] | undefined {
+	const changes: ValueChange[] = [...event.changes]
+	if (
+		event.currentValues.access.earlyEnabled &&
+		!event.nextValues.access.earlyEnabled
+	) {
+		changes.push(
+			{ type: "unset", path: "access.earlyFrom" },
+			{ type: "unset", path: "access.earlyFee" },
+		)
+	}
+	if (
+		event.currentValues.access.lateEnabled &&
+		!event.nextValues.access.lateEnabled
+	) {
+		changes.push(
+			{ type: "unset", path: "access.lateUntil" },
+			{ type: "unset", path: "access.lateFee" },
+		)
+	}
+	if (
+		event.currentValues.safeguard.depositRequired &&
+		!event.nextValues.safeguard.depositRequired
+	) {
+		changes.push({ type: "unset", path: "safeguard.amount" })
+	}
+	if (
+		event.currentValues.refreshments.allowed &&
+		!event.nextValues.refreshments.allowed
+	) {
+		changes.push({ type: "unset", path: "refreshments.cateringNoticeHours" })
+	}
+	if (
+		event.currentValues.connectivity.mode !==
+			event.nextValues.connectivity.mode &&
+		event.nextValues.connectivity.mode !== "included"
+	) {
+		changes.push({ type: "unset", path: "connectivity.minimumMbps" })
+	}
+
+	return changes.length === event.changes.length ? undefined : changes
+}
+
+function fakeRequest<Value>(value: Value, delay: number): Promise<Value> {
+	return new Promise((resolve) =>
+		window.setTimeout(() => resolve(value), delay),
+	)
+}

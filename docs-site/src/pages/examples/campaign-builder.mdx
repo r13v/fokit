@@ -1,0 +1,42 @@
+---
+title: Campaign builder
+description: A create-or-edit campaign form with seven conditional templates, shared audience and scheduling, payment variants, transactional cleanup, and fake mutations.
+showAskAi: false
+---
+
+import { CampaignBuilderDemo } from "../../components/campaign-builder-demo"
+
+# Campaign builder
+
+Seven campaign templates share one audience, channel, delivery, and scheduling
+model, then diverge into genuinely different payloads. Templates that can
+collect payment reuse a conditional payment section with fixed, flexible, and
+recurring variants.
+
+## Try the complete flow
+
+Switch between the loaded edit draft and a new campaign. Change templates to
+see inactive payload fields leave the transaction. Exercise all seven branches:
+newsletter, product launch, event invitation, fundraiser, course release,
+community update, and feedback pulse. Paid templates reveal amount and recurring
+interval rules.
+
+<CampaignBuilderDemo />
+
+## What this form stresses
+
+- Seven conditionally validated payload branches in one schema.
+- Shared visibility helpers for audience, schedule, and payment behavior.
+- Transactional cleanup across every inactive variant.
+- Query-backed audience segments and a loaded edit baseline.
+- Channel-group validation and conditional date ranges.
+- Separate create and update mutations selected outside editable state.
+- A live preview derived from the same Fokit snapshot submitted to the API.
+
+## Copy the source
+
+```tsx
+// [!include ~/snippets/complex-campaign-builder.tsx]
+```
+
+Compare the other workflows in [Complex form examples](/examples).

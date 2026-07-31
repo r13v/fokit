@@ -113,6 +113,59 @@ const canonicalPages = [
 			"Focused Fokit patterns for manual composition, loaded edit forms, server safety, accessibility, and public-boundary tests.",
 	},
 	{
+		path: "src/pages/examples/index.mdx",
+		route: "/examples",
+		title: "Complex examples",
+		description:
+			"Explore six production-shaped forms that stress branching, arrays, workflows, custom UI, and fake TanStack Query requests without hiding state from Fokit.",
+	},
+	{
+		path: "src/pages/examples/research-grant.mdx",
+		route: "/examples/research-grant",
+		title: "Research grant application",
+		navText: "Research grant",
+		description:
+			"A branching grant form with remote registry search, dependent cleanup, live preview, cross-field validation, and two fake submission requests.",
+	},
+	{
+		path: "src/pages/examples/studio-policies.mdx",
+		route: "/examples/studio-policies",
+		title: "Creative studio policies",
+		navText: "Studio policies",
+		description:
+			"A composite policy editor with two loaded resources, nested rules, movable equipment rows, cross-state validation, and multi-endpoint publishing.",
+	},
+	{
+		path: "src/pages/examples/makerspace-launch.mdx",
+		route: "/examples/makerspace-launch",
+		title: "Makerspace launch wizard",
+		navText: "Makerspace launch",
+		description:
+			"A four-stage wizard with form-owned navigation, remote address resolution, coordinates, media, capacity pricing, promotions, and sequential publishing.",
+	},
+	{
+		path: "src/pages/examples/learning-cohort.mdx",
+		route: "/examples/learning-cohort",
+		title: "Learning cohort editor",
+		navText: "Learning cohort",
+		description:
+			"A cohort editor with remote title suggestions, configuration and price arrays, media, four offer sections, and recoverable save conflicts.",
+	},
+	{
+		path: "src/pages/examples/membership-ladder.mdx",
+		route: "/examples/membership-ladder",
+		title: "Membership ladder",
+		description:
+			"A four-tier membership editor with nested benefit arrays, transactional discount cascades, remote workspace connection, and pause-calendar shortcuts.",
+	},
+	{
+		path: "src/pages/examples/campaign-builder.mdx",
+		route: "/examples/campaign-builder",
+		title: "Campaign builder",
+		description:
+			"A create-or-edit campaign form with seven conditional templates, shared audience and scheduling, payment variants, transactional cleanup, and fake mutations.",
+	},
+	{
 		path: "src/pages/api.mdx",
 		route: "/api",
 		title: "API",
@@ -172,6 +225,135 @@ const canonicalSnippets = [
 		target: "src/snippets/async-multiselect.tsx",
 		include: "~/snippets/async-multiselect.tsx",
 		terms: ["defineControl", "useQuery", "useFloating", "QueryClientProvider"],
+	},
+	{
+		target: "src/snippets/complex-research-grant.tsx",
+		include: "~/snippets/complex-research-grant.tsx",
+		terms: [
+			"ResearchGrantExample",
+			"beforeUpdate",
+			"useMutation",
+			"OrganizationFinder",
+		],
+	},
+	{
+		target: "src/snippets/complex-studio-policies.tsx",
+		include: "~/snippets/complex-studio-policies.tsx",
+		terms: [
+			"StudioPoliciesExample",
+			"withContext",
+			"equipment",
+			"publishSummary",
+		],
+	},
+	{
+		target: "src/snippets/complex-makerspace-launch.tsx",
+		include: "~/snippets/complex-makerspace-launch.tsx",
+		terms: [
+			"MakerspaceLaunchExample",
+			"WizardNavigation",
+			"AddressLookup",
+			"promotionSection",
+		],
+	},
+	{
+		target: "src/snippets/complex-learning-cohort.tsx",
+		include: "~/snippets/complex-learning-cohort.tsx",
+		terms: [
+			"LearningCohortExample",
+			"TitleSuggestions",
+			"priceBands",
+			"CohortConflictError",
+		],
+	},
+	{
+		target: "src/snippets/complex-membership-ladder.tsx",
+		include: "~/snippets/complex-membership-ladder.tsx",
+		terms: [
+			"MembershipLadderExample",
+			"preserveTierOrder",
+			"PauseCalendar",
+			"useArrayField",
+		],
+	},
+	{
+		target: "src/snippets/complex-campaign-builder.tsx",
+		include: "~/snippets/complex-campaign-builder.tsx",
+		terms: [
+			"CampaignBuilderExample",
+			"templateNames",
+			"clearInactiveTemplate",
+			"createCampaign",
+		],
+	},
+]
+
+const complexExampleCases = [
+	{
+		slug: "research-grant",
+		component: "ResearchGrantDemo",
+		exportName: "ResearchGrantExample",
+		terms: [
+			"preserveGrantInvariants",
+			"OrganizationFinder",
+			"preview.mutateAsync",
+			"send.mutateAsync",
+		],
+	},
+	{
+		slug: "studio-policies",
+		component: "StudioPoliciesDemo",
+		exportName: "StudioPoliciesExample",
+		terms: [
+			"preservePolicyInvariants",
+			"equipmentCatalog",
+			"saveRules.mutateAsync",
+			"publishSummary.mutateAsync",
+		],
+	},
+	{
+		slug: "makerspace-launch",
+		component: "MakerspaceLaunchDemo",
+		exportName: "MakerspaceLaunchExample",
+		terms: [
+			"WizardNavigation",
+			"AddressLookup",
+			"capacityBands",
+			"saveMedia.mutateAsync",
+		],
+	},
+	{
+		slug: "learning-cohort",
+		component: "LearningCohortDemo",
+		exportName: "LearningCohortExample",
+		terms: [
+			"TitleSuggestions",
+			"priceBands",
+			"CohortConflictError",
+			"syncOffers.mutateAsync",
+		],
+	},
+	{
+		slug: "membership-ladder",
+		component: "MembershipLadderDemo",
+		exportName: "MembershipLadderExample",
+		terms: [
+			"preserveTierOrder",
+			"PauseCalendar",
+			"WorkspaceConnection",
+			"tiers.founder",
+		],
+	},
+	{
+		slug: "campaign-builder",
+		component: "CampaignBuilderDemo",
+		exportName: "CampaignBuilderExample",
+		terms: [
+			"templateNames",
+			"clearInactiveTemplate",
+			"createCampaign.mutateAsync",
+			"updateCampaign.mutateAsync",
+		],
 	},
 ]
 
@@ -757,6 +939,70 @@ test("async multiselect guide runs the same typed Floating UI and TanStack Query
 	assert.match(guide, /~\/snippets\/async-multiselect\.tsx/)
 })
 
+test("six complex examples stay public, documented, networked, and independent", async () => {
+	const forbiddenOriginTerms =
+		/extranet-frontend|\/Users\/user\/Projects\/extranet-frontend|\b(?:hotel|booking|apartment|room category|contract|loyalty|travel)\b/i
+
+	assert.equal(complexExampleCases.length, 6)
+
+	for (const example of complexExampleCases) {
+		const page = await readText(`src/pages/examples/${example.slug}.mdx`)
+		const snippet = await readText(`src/snippets/complex-${example.slug}.tsx`)
+		const client = await readText(
+			`src/components/${example.slug}-demo.client.tsx`,
+		)
+		const wrapper = await readText(`src/components/${example.slug}-demo.tsx`)
+		const combined = `${page}\n${snippet}\n${client}\n${wrapper}`
+
+		assert.match(page, /^## Try the complete flow$/m)
+		assert.match(page, /^## What this form stresses$/m)
+		assert.match(page, new RegExp(`<${example.component} \\/>`))
+		assert.match(
+			page,
+			new RegExp(`~\\/snippets\\/complex-${example.slug}\\.tsx`),
+		)
+		assert.match(client, /^"use client"/)
+		assert.match(
+			client,
+			new RegExp(`from "\\.\\.\\/snippets\\/complex-${example.slug}"`),
+		)
+		assert.match(wrapper, /toMarkdown/)
+		assert.match(wrapper, /docs-site\/src\/snippets\/\$\{file\}/)
+		assert.match(wrapper, new RegExp(`"complex-${example.slug}\\.tsx"`))
+		assert.match(snippet, new RegExp(`export function ${example.exportName}`))
+		assert.match(snippet, /from "fokit"/)
+		assert.match(snippet, /from "@tanstack\/react-query"/)
+		assert.match(snippet, /kit\.defineForm|\.defineForm\(/)
+		assert.match(snippet, /kit\.AutoForm/)
+		assert.match(snippet, /useQuery\(/)
+		assert.match(snippet, /useMutation\(/)
+
+		for (const term of example.terms) {
+			assert.match(snippet, new RegExp(escapeRegExp(term)))
+		}
+
+		assert.doesNotMatch(combined, forbiddenOriginTerms)
+		assert.doesNotMatch(snippet, /from "(?:\.\.\/)+src\//)
+		assert.doesNotMatch(combined, /[А-Яа-яЁё]/)
+	}
+
+	const index = await readText("src/pages/examples/index.mdx")
+	for (const example of complexExampleCases) {
+		assert.match(index, new RegExp(`\\/examples\\/${example.slug}`))
+	}
+
+	const ideas = await readRepositoryText("docs/IDEAS.md")
+	for (const heading of [
+		"Native controls",
+		"Definitions and composition",
+		"Transactions",
+		"Async workflows",
+		"Multi-stage forms",
+	]) {
+		assert.match(ideas, new RegExp(`^## ${heading}$`, "m"))
+	}
+})
+
 test("canonical TypeScript snippets are physical files covered by docs typecheck", async () => {
 	const tsconfig = await readJson("tsconfig.docs.json")
 	const includeSet = new Set(tsconfig.include)
@@ -889,6 +1135,7 @@ test("sidebar follows the learning path before reference material", async () => 
 	const validation = source.indexOf('link: "/guides/validation"')
 	const controls = source.indexOf('link: "/guides/controls"')
 	const asyncMultiselect = source.indexOf('link: "/guides/async-multiselect"')
+	const complexExamples = source.indexOf('link: "/examples"')
 	const api = source.indexOf('link: "/api"')
 	const types = source.indexOf('link: "/types"')
 
@@ -899,6 +1146,7 @@ test("sidebar follows the learning path before reference material", async () => 
 		validation,
 		controls,
 		asyncMultiselect,
+		complexExamples,
 		api,
 		types,
 	]) {
@@ -910,7 +1158,8 @@ test("sidebar follows the learning path before reference material", async () => 
 	assert.ok(uiDefinitions < validation)
 	assert.ok(validation < controls)
 	assert.ok(controls < asyncMultiselect)
-	assert.ok(asyncMultiselect < api)
+	assert.ok(asyncMultiselect < complexExamples)
+	assert.ok(complexExamples < api)
 	assert.ok(api < types)
 })
 

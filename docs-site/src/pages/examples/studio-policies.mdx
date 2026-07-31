@@ -1,0 +1,43 @@
+---
+title: Creative studio policies
+description: A composite policy editor with two loaded resources, nested rules, movable equipment rows, cross-state validation, and multi-endpoint publishing.
+showAskAi: false
+---
+
+import { StudioPoliciesDemo } from "../../components/studio-policies-demo"
+
+# Creative studio policies
+
+This editor treats access windows, safeguards, age rules, equipment, food,
+connectivity, and animal access as one policy system. The sections are separate
+for comprehension, but they submit as one validated value and share invariants.
+
+## Try the complete flow
+
+Disable early access and its time and fee disappear together. Add, move, or
+remove equipment rules loaded from a separate catalog. Enable all-ages access
+without the guardian rule, or publish included connectivity below 25 Mbps, to
+see cross-section schema issues.
+
+<StudioPoliciesDemo />
+
+## What this form stresses
+
+- Two independent baseline queries before the form becomes editable.
+- Runtime context supplying select options without entering form values.
+- Nested conditional policy groups with optional dependent values.
+- A stable array of equipment rules with row-level booleans and amounts.
+- Form-wide validation that connects decisions from different sections.
+- Transaction replacements that clear disabled policy branches immediately.
+- Sequential writes to a policy resource and its public summary.
+
+Request state never becomes an editable field. Fokit owns the policy value;
+TanStack Query owns loading and publishing.
+
+## Copy the source
+
+```tsx
+// [!include ~/snippets/complex-studio-policies.tsx]
+```
+
+Compare the other workflows in [Complex form examples](/examples).

@@ -64,8 +64,9 @@ const definition = kit.defineForm(schema)({
 })
 ```
 
-Default array slots render accessible add, remove, move-up, and move-down
-buttons. Customize their text once with
+Default array slots keep add as a text action and group compact `↑`, `↓`, and
+`❌` row actions together. Their localized labels remain available to screen
+readers and as tooltips. Customize those labels once with
 `createDefaultSlots({ i18n: ... })`.
 
 ## Choose complete defaults

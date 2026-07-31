@@ -260,7 +260,7 @@ a {
 	min-width: 0;
 }
 
-.fokit-lab__array-actions {
+.fokit-lab [data-fokit-array-item-actions] {
 	align-items: center;
 	background: color-mix(in srgb, var(--fokit-brand-surface) 58%, transparent);
 	border: 1px solid color-mix(in srgb, var(--fokit-lab-border) 55%, transparent);
@@ -273,7 +273,7 @@ a {
 	padding: 0.35rem;
 }
 
-.fokit-lab__array-actions-label {
+.fokit-lab [data-fokit-array-item-position] {
 	color: var(--fokit-lab-muted);
 	font-size: 0.78rem;
 	font-weight: 700;
@@ -281,7 +281,8 @@ a {
 	padding-inline: 0.35rem;
 }
 
-.fokit-lab .fokit-lab__array-action {
+.fokit-lab
+	button[data-fokit-array-action]:not([data-fokit-array-action="add"]) {
 	background: transparent;
 	block-size: 2rem;
 	border-color: transparent;
@@ -291,15 +292,17 @@ a {
 	padding: 0;
 }
 
-.fokit-lab .fokit-lab__array-action:not(:disabled):hover {
+.fokit-lab
+	button[data-fokit-array-action]:not([data-fokit-array-action="add"]):not(
+		:disabled
+	):hover {
 	background: var(--fokit-brand-surface);
 	border-color: color-mix(in srgb, var(--fokit-lab-border) 70%, transparent);
 	color: var(--fokit-brand-ink);
 }
 
-.fokit-lab__array-action svg {
-	block-size: 1rem;
-	inline-size: 1rem;
+.fokit-lab button[data-fokit-array-action] > [aria-hidden="true"] {
+	line-height: 1;
 }
 
 .fokit-lab__primary {
@@ -973,6 +976,51 @@ a {
 	gap: 0.75rem;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	padding-block-start: 0.9rem;
+}
+
+.fokit-complex [data-fokit-array-item-actions] {
+	align-items: center;
+	background: color-mix(in srgb, var(--fokit-brand-surface) 58%, transparent);
+	border: 1px solid color-mix(in srgb, var(--complex-border) 75%, transparent);
+	border-radius: 7px;
+	display: flex;
+	gap: 0.35rem;
+	grid-column: 1 / -1;
+	margin: 0;
+	min-inline-size: 0;
+	padding: 0.35rem;
+}
+
+.fokit-complex [data-fokit-array-item-position] {
+	color: var(--fokit-brand-muted);
+	font-size: 0.78rem;
+	font-weight: 750;
+	margin-inline-end: auto;
+	padding-inline: 0.35rem;
+}
+
+.fokit-complex
+	button[data-fokit-array-action]:not([data-fokit-array-action="add"]) {
+	background: transparent;
+	block-size: 2rem;
+	border-color: transparent;
+	color: var(--fokit-brand-muted);
+	inline-size: 2rem;
+	min-height: 2rem;
+	padding: 0;
+}
+
+.fokit-complex
+	button[data-fokit-array-action]:not([data-fokit-array-action="add"]):not(
+		:disabled
+	):hover {
+	background: var(--fokit-brand-surface);
+	border-color: color-mix(in srgb, var(--complex-border) 85%, transparent);
+	color: var(--fokit-brand-ink);
+}
+
+.fokit-complex button[data-fokit-array-action] > [aria-hidden="true"] {
+	line-height: 1;
 }
 
 .fokit-complex__actions,

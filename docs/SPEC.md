@@ -771,6 +771,11 @@ or visual theme. They render semantic unstyled HTML, preserve every supplied
 slot prop, and do not import `fokit/layout.css`. Consumers that want the
 optional responsive structure still import the CSS subpath explicitly.
 
+Default array-item actions keep their localized strings as accessible names
+and titles while showing compact `↑`, `↓`, and `❌` glyphs. The actions are
+grouped into one row-level container so product styles can place them together
+instead of treating them as sibling form fields.
+
 Controls render only the interactive value editor. Structural slots have
 separate responsibilities:
 
@@ -2647,9 +2652,9 @@ Before the API is considered stable, the implementation must prove:
 - label, description, and error ARIA relationships;
 - `noValidate` on generated forms and `meta.invalid` parity with rendered
   errors;
-- default slots preserve all structural props, render accessible English array
-  action labels, accept string/function i18n overrides, and allow partial slot
-  overrides without changing omitted slots;
+- default slots preserve all structural props, render compact array action
+  glyphs with accessible English labels and titles, accept string/function i18n
+  overrides, and allow partial slot overrides without changing omitted slots;
 - `createFormKit({ controls: nativeControls })` renders a working generated
   form while leaving controls explicit;
 - native control types, options, read-only behavior, and hidden/disabled

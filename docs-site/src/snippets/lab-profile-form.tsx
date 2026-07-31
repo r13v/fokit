@@ -76,6 +76,9 @@ export const kit = createFormKit({
 	slots: createDefaultSlots({
 		i18n: {
 			arrayAdd: "Add contact",
+			arrayMoveDown: ({ position }) => `Move contact ${position} down`,
+			arrayMoveUp: ({ position }) => `Move contact ${position} up`,
+			arrayRemove: ({ position }) => `Remove contact ${position}`,
 		},
 	}),
 })

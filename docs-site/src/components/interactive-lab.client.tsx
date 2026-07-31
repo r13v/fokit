@@ -1,86 +1,13 @@
 "use client"
 
-import {
-	ChevronDownIcon,
-	ChevronUpIcon,
-	TrashIcon,
-} from "@heroicons/react/24/outline"
-import { type ArrayItemSlotProps, useFormContext, useFormState } from "fokit"
+import { useFormContext, useFormState } from "fokit"
 import { type ReactNode, useEffect, useMemo, useState } from "react"
 import {
 	defaultValues,
+	kit,
 	type ProfileOutput,
 	profileDefinition,
-	kit as profileKit,
 } from "../snippets/lab-profile-form"
-
-function ContactArrayItemSlot({
-	rootProps,
-	index,
-	disabled,
-	readOnly,
-	canMoveUp,
-	canMoveDown,
-	remove,
-	move,
-	children,
-}: ArrayItemSlotProps) {
-	const position = index + 1
-	const moveUpLabel = `Move contact ${position} up`
-	const moveDownLabel = `Move contact ${position} down`
-	const removeLabel = `Remove contact ${position}`
-	const actionsDisabled = disabled || readOnly
-
-	return (
-		<div {...rootProps}>
-			{children}
-			<fieldset
-				aria-label={`Contact ${position} actions`}
-				className="fokit-lab__array-actions"
-			>
-				<span aria-hidden="true" className="fokit-lab__array-actions-label">
-					Contact {position}
-				</span>
-				<button
-					aria-label={moveUpLabel}
-					className="fokit-lab__array-action"
-					disabled={actionsDisabled || !canMoveUp}
-					title={moveUpLabel}
-					type="button"
-					onClick={() => move(index - 1)}
-				>
-					<ChevronUpIcon aria-hidden="true" />
-				</button>
-				<button
-					aria-label={moveDownLabel}
-					className="fokit-lab__array-action"
-					disabled={actionsDisabled || !canMoveDown}
-					title={moveDownLabel}
-					type="button"
-					onClick={() => move(index + 1)}
-				>
-					<ChevronDownIcon aria-hidden="true" />
-				</button>
-				<button
-					aria-label={removeLabel}
-					className="fokit-lab__array-action"
-					disabled={actionsDisabled}
-					title={removeLabel}
-					type="button"
-					onClick={remove}
-				>
-					<TrashIcon aria-hidden="true" />
-				</button>
-			</fieldset>
-		</div>
-	)
-}
-
-const kit = profileKit.extend({
-	slots: {
-		ArrayItem: ContactArrayItemSlot,
-	},
-})
 
 export function InteractiveLabClient() {
 	const [lastSubmit, setLastSubmit] = useState(

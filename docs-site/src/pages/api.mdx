@@ -546,9 +546,10 @@ contracts.
 createDefaultSlots({ i18n? }) => FormKitSlots
 ```
 
-The returned slots render accessible unstyled structure. I18n values for array
-actions can be strings or functions receiving the row position and label
-context.
+The returned slots render accessible unstyled structure. Array rows show
+compact `↑`, `↓`, and `❌` actions while keeping their localized labels for
+screen readers and tooltips. I18n values can be strings or functions receiving
+the row position and label context.
 
 ## parseFormData
 

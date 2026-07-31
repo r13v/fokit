@@ -178,13 +178,19 @@ test.describe("Fokit documentation", () => {
 		await page.goto("./get-started#interactive-fokit-lab")
 
 		const lab = page.getByRole("region", { name: "Interactive Fokit Lab" })
+		await expect(lab.getByTestId("lab-form-data")).toContainText(
+			"__fokit.array=contacts",
+			{ timeout: 15_000 },
+		)
 		const name = lab.getByLabel("Name")
 		const accountType = lab.getByLabel("Account type")
 		const addContact = lab.getByRole("button", { name: "Add contact" })
 		const moveUp = lab.getByRole("button", { name: "Move contact 1 up" })
 		const remove = lab.getByRole("button", { name: "Remove contact 1" })
-		await expect(moveUp).toHaveText("")
-		await expect(remove).toHaveText("")
+		await expect(moveUp).toHaveText("↑")
+		await expect(moveUp).toHaveAttribute("title", "Move contact 1 up")
+		await expect(remove).toHaveText("❌")
+		await expect(remove).toHaveAttribute("title", "Remove contact 1")
 
 		const controlHeights = await Promise.all(
 			[name, accountType, addContact].map((locator) =>
@@ -203,13 +209,10 @@ test.describe("Fokit documentation", () => {
 		expect(actionHeights[0]).toBe(actionHeights[1])
 		expect(actionHeights[0]).toBeLessThan(controlHeights[0] ?? 0)
 
-		const actionGroup = lab.getByRole("group", {
-			name: "Contact 1 actions",
-		})
+		const actionGroup = lab.locator("[data-fokit-array-item-actions]").first()
 		await expect(actionGroup).toBeVisible()
-		await expect(
-			actionGroup.getByText("Contact 1", { exact: true }),
-		).toBeVisible()
+		await expect(actionGroup).toHaveAttribute("aria-label", "#1")
+		await expect(actionGroup.getByText("#1", { exact: true })).toBeVisible()
 		const actionGroupStyles = await actionGroup.evaluate((element) => {
 			const styles = getComputedStyle(element)
 			return {
@@ -646,6 +649,18 @@ test.describe("Fokit documentation", () => {
 		const membership = page.getByRole("region", {
 			name: "Membership ladder example",
 		})
+		await expect(membership).toBeVisible({ timeout: 15_000 })
+		const arrayActions = membership
+			.locator("[data-fokit-array-item-actions]")
+			.first()
+		await expect(arrayActions).toBeVisible()
+		await expect(arrayActions).toHaveCSS("display", "flex")
+		await expect(
+			membership.getByRole("button", { name: "Move item 1 up" }).first(),
+		).toHaveText("↑")
+		await expect(
+			membership.getByRole("button", { name: "Remove item 1" }).first(),
+		).toHaveText("❌")
 		await membership.getByLabel("Reduction percent").first().fill("30")
 		await expect(membership.getByText(/Seed 30% → Sprout 30%/)).toBeVisible()
 		await expect(membership.getByText(/Canopy 30% → Founder 30%/)).toBeVisible()

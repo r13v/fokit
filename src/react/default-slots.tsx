@@ -70,7 +70,12 @@ export function createDefaultSlots(options?: {
 				)}
 				{errors}
 				{children}
-				<button disabled={!canAdd} type="button" onClick={add}>
+				<button
+					data-fokit-array-action="add"
+					disabled={!canAdd}
+					type="button"
+					onClick={add}
+				>
 					{resolveMessage(
 						i18n.arrayAdd,
 						Object.freeze({
@@ -97,27 +102,51 @@ export function createDefaultSlots(options?: {
 			index,
 			position: index + 1,
 		})
+		const moveUpLabel = resolveMessage(i18n.arrayMoveUp, actionData)
+		const moveDownLabel = resolveMessage(i18n.arrayMoveDown, actionData)
+		const removeLabel = resolveMessage(i18n.arrayRemove, actionData)
 
 		return (
 			<div {...rootProps}>
 				{children}
-				<button
-					disabled={disabled || readOnly || !canMoveUp}
-					type="button"
-					onClick={() => move(index - 1)}
+				<fieldset
+					aria-label={`#${actionData.position}`}
+					data-fokit-array-item-actions=""
 				>
-					{resolveMessage(i18n.arrayMoveUp, actionData)}
-				</button>
-				<button
-					disabled={disabled || readOnly || !canMoveDown}
-					type="button"
-					onClick={() => move(index + 1)}
-				>
-					{resolveMessage(i18n.arrayMoveDown, actionData)}
-				</button>
-				<button disabled={disabled || readOnly} type="button" onClick={remove}>
-					{resolveMessage(i18n.arrayRemove, actionData)}
-				</button>
+					<span aria-hidden="true" data-fokit-array-item-position="">
+						#{actionData.position}
+					</span>
+					<button
+						aria-label={moveUpLabel}
+						data-fokit-array-action="move-up"
+						disabled={disabled || readOnly || !canMoveUp}
+						title={moveUpLabel}
+						type="button"
+						onClick={() => move(index - 1)}
+					>
+						<span aria-hidden="true">↑</span>
+					</button>
+					<button
+						aria-label={moveDownLabel}
+						data-fokit-array-action="move-down"
+						disabled={disabled || readOnly || !canMoveDown}
+						title={moveDownLabel}
+						type="button"
+						onClick={() => move(index + 1)}
+					>
+						<span aria-hidden="true">↓</span>
+					</button>
+					<button
+						aria-label={removeLabel}
+						data-fokit-array-action="remove"
+						disabled={disabled || readOnly}
+						title={removeLabel}
+						type="button"
+						onClick={remove}
+					>
+						<span aria-hidden="true">❌</span>
+					</button>
+				</fieldset>
 			</div>
 		)
 	}

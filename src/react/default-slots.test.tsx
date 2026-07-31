@@ -307,6 +307,9 @@ describe("createDefaultSlots components", () => {
 		expect(screen.getByText("People to notify").id).toBe("contacts-description")
 		expect(screen.getByRole("alert").id).toBe("contacts-error-0")
 		expect(screen.getByTestId("array-child").textContent).toBe("Ada")
+		expect(button("Add item").getAttribute("data-fokit-array-action")).toBe(
+			"add",
+		)
 
 		fireEvent.click(button("Add item"))
 		expect(add).toHaveBeenCalledTimes(1)
@@ -353,6 +356,17 @@ describe("createDefaultSlots components", () => {
 		expect(root.getAttribute("data-fokit-node")).toBe("array-item")
 		expect(root.id).toBe("contacts.1")
 		expect(screen.getByTestId("item-child").textContent).toBe("Grace")
+		const actions = screen.getByRole("group", { name: "#2" })
+		expect(actions.getAttribute("data-fokit-array-item-actions")).toBe("")
+		expect(within(actions).getByText("#2").getAttribute("aria-hidden")).toBe(
+			"true",
+		)
+		expect(button("Move item 2 up").textContent).toBe("↑")
+		expect(button("Move item 2 up").title).toBe("Move item 2 up")
+		expect(button("Move item 2 down").textContent).toBe("↓")
+		expect(button("Move item 2 down").title).toBe("Move item 2 down")
+		expect(button("Remove item 2").textContent).toBe("❌")
+		expect(button("Remove item 2").title).toBe("Remove item 2")
 
 		fireEvent.click(button("Move item 2 up"))
 		fireEvent.click(button("Move item 2 down"))

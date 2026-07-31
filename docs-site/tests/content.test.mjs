@@ -863,13 +863,12 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 	)
 	assert.match(client, /^"use client"/)
 	assert.match(client, /from "\.\.\/snippets\/lab-profile-form"/)
-	assert.match(client, /profileKit\.extend/)
 	assert.match(client, /profileDefinition/)
 	assert.doesNotMatch(client, /kit\.defineForm/)
-	assert.match(client, /ArrayItem:\s*ContactArrayItemSlot/)
-	assert.match(client, /Move contact \$\{position\} up/)
-	assert.match(client, /Move contact \$\{position\} down/)
-	assert.match(client, /Remove contact \$\{position\}/)
+	assert.doesNotMatch(
+		client,
+		/ArrayItemSlotProps|ContactArrayItemSlot|heroicons/,
+	)
 	assert.doesNotMatch(
 		client,
 		/defineControl|fokit\/layout\.css|locale|localStorage/,
@@ -880,6 +879,9 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 	assert.match(snippet, /createFormKit/)
 	assert.match(snippet, /controls:\s*nativeControls/)
 	assert.match(snippet, /arrayAdd:\s*"Add contact"/)
+	assert.match(snippet, /Move contact \$\{position\} up/)
+	assert.match(snippet, /Move contact \$\{position\} down/)
+	assert.match(snippet, /Remove contact \$\{position\}/)
 	assert.match(
 		snippet,
 		/visible:\s*\(\{ accountType \}\) => accountType === "company"/,

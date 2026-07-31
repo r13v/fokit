@@ -68,3 +68,18 @@ Applying the empty-select compatibility fix → a context-only patch matched the
 similar date input handler and produced invalid syntax before the focused test
 ran. Anchor patches to the surrounding function name when handlers share the
 same expression shape.
+
+## 2026-07-31 17:18 — GPT-5
+
+Starting the documented Playwright docs preview → `vocs preview` ignored the
+forwarded `--port 4175` argument, chose its own port, and made Playwright time
+out before running tests. Set `PORT` explicitly in the preview environment, or
+update `playwright.docs.config.ts` to pass the port through that variable.
+
+## 2026-07-31 17:21 — GPT-5
+
+Running focused docs E2E after `npm run site:build` → the build used production
+origin and root routes while Playwright probes a local `/fokit/`, so readiness
+and client hydration failed in separate attempts. Build with matching
+`BASE_URL` and `BASE_PATH` before invoking the docs E2E config directly, or add
+a focused script that wires all three preview environment variables.

@@ -20,6 +20,22 @@ export const InteractiveLab = Object.assign(
 					],
 				},
 				{
+					type: "paragraph",
+					children: [
+						{ type: "text", value: "Source: " },
+						{
+							type: "link",
+							url: "https://github.com/r13v/fokit/blob/main/docs-site/src/components/interactive-lab.client.tsx",
+							children: [
+								{
+									type: "text",
+									value: "docs-site/src/components/interactive-lab.client.tsx",
+								},
+							],
+						},
+					],
+				},
+				{
 					type: "code",
 					lang: "ts",
 					value:

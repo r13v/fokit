@@ -653,6 +653,11 @@ test("Interactive Lab uses Vocs components and public Fokit defaults", async () 
 	assert.match(wrapper, /toMarkdown/)
 	assert.match(wrapper, /Interactive Fokit Lab runs only in a browser/)
 	assert.match(wrapper, /createFormKit\(\{ controls: nativeControls \}\)/)
+	assert.match(wrapper, /type:\s*"link"/)
+	assert.match(
+		wrapper,
+		/https:\/\/github\.com\/r13v\/fokit\/blob\/main\/docs-site\/src\/components\/interactive-lab\.client\.tsx/,
+	)
 	assert.match(client, /^"use client"/)
 	assert.match(client, /createDefaultSlots/)
 	assert.match(client, /nativeControls/)
@@ -683,6 +688,11 @@ test("overview proves the public Fokit loop with a live typed form", async () =>
 	assert.match(wrapper, /from "\.\/overview-demo\.client"/)
 	assert.match(wrapper, /toMarkdown/)
 	assert.match(wrapper, /live overview form runs only in a browser/i)
+	assert.match(wrapper, /type:\s*"link"/)
+	assert.match(
+		wrapper,
+		/https:\/\/github\.com\/r13v\/fokit\/blob\/main\/docs-site\/src\/components\/overview-demo\.client\.tsx/,
+	)
 	assert.match(client, /^"use client"/)
 	assert.match(client, /createFormKit/)
 	assert.match(client, /controls:\s*nativeControls/)
@@ -704,6 +714,11 @@ test("async multiselect guide runs the same typed Floating UI and TanStack Query
 
 	assert.match(wrapper, /from "\.\/async-multiselect-demo\.client"/)
 	assert.match(wrapper, /toMarkdown/)
+	assert.match(wrapper, /type:\s*"link"/)
+	assert.match(
+		wrapper,
+		/https:\/\/github\.com\/r13v\/fokit\/blob\/main\/docs-site\/src\/snippets\/async-multiselect\.tsx/,
+	)
 	assert.match(client, /^"use client"/)
 	assert.match(client, /from "\.\.\/snippets\/async-multiselect"/)
 	assert.match(snippet, /from "@floating-ui\/react"/)

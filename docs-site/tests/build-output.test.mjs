@@ -171,6 +171,40 @@ test("overview demo has a meaningful generated Markdown fallback", async () => {
 	}
 })
 
+test("generated Markdown links live demos to their canonical source files", async () => {
+	const sourceLinks = [
+		{
+			file: "assets/md/index.md",
+			path: "docs-site/src/components/overview-demo.client.tsx",
+		},
+		{
+			file: "assets/md/get-started.md",
+			path: "docs-site/src/components/interactive-lab.client.tsx",
+		},
+		{
+			file: "assets/md/guides/async-multiselect.md",
+			path: "docs-site/src/snippets/async-multiselect.tsx",
+		},
+	]
+	const llms = await readFile(new URL("llms-full.txt", publicRoot), "utf8")
+
+	for (const { file, path } of sourceLinks) {
+		const source = await readFile(new URL(file, publicRoot), "utf8")
+		const link = `Source: [${path}](https://github.com/r13v/fokit/blob/main/${path})`
+
+		assert.match(
+			source,
+			new RegExp(escapeRegExp(link)),
+			`${file} needs ${path}`,
+		)
+		assert.match(
+			llms,
+			new RegExp(escapeRegExp(link)),
+			`llms-full.txt needs ${path}`,
+		)
+	}
+})
+
 test("Vocs public output does not include route or function artifacts", async () => {
 	const files = await listFiles()
 	const forbiddenRouteFiles = files.filter((file) =>

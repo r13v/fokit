@@ -78,6 +78,7 @@ a {
 
 .fokit-lab {
 	--fokit-lab-border: var(--fokit-brand-border);
+	--fokit-lab-control-height: 2.75rem;
 	--fokit-lab-muted: var(--fokit-brand-muted);
 	--fokit-lab-panel: var(--fokit-brand-panel);
 	border: 1px solid var(--fokit-lab-border);
@@ -90,7 +91,7 @@ a {
 }
 
 .fokit-lab__kicker {
-	color: var(--fokit-brand-rust);
+	color: var(--fokit-brand-green);
 	font-size: 0.78rem;
 	font-weight: 700;
 	letter-spacing: 0;
@@ -167,8 +168,11 @@ a {
 	background: var(--fokit-brand-surface);
 	border: 1px solid var(--fokit-lab-border);
 	border-radius: 6px;
+	box-sizing: border-box;
 	color: var(--fokit-brand-ink);
 	font: inherit;
+	line-height: 1.25;
+	min-block-size: var(--fokit-lab-control-height);
 	min-width: 0;
 	padding: 0.62rem 0.7rem;
 	width: 100%;
@@ -177,6 +181,11 @@ a {
 .fokit-lab input[type="checkbox"] {
 	block-size: 1rem;
 	inline-size: 1rem;
+}
+
+.fokit-lab input:not([type="checkbox"]),
+.fokit-lab select {
+	block-size: var(--fokit-lab-control-height);
 }
 
 .fokit-lab input:focus,
@@ -191,6 +200,12 @@ a {
 .fokit-lab [data-invalid] select,
 .fokit-lab [data-invalid] textarea {
 	border-color: var(--fokit-brand-rust);
+}
+
+.fokit-lab [data-invalid] input:focus,
+.fokit-lab [data-invalid] select:focus,
+.fokit-lab [data-invalid] textarea:focus {
+	outline-color: var(--fokit-brand-rust);
 }
 
 .fokit-lab [data-fokit-node="error-message"] {
@@ -214,8 +229,9 @@ a {
 	font-weight: 700;
 	gap: 0.35rem;
 	justify-content: center;
-	min-height: 2.35rem;
-	padding: 0.52rem 0.75rem;
+	line-height: 1.25;
+	min-height: var(--fokit-lab-control-height);
+	padding: 0.62rem 0.75rem;
 }
 
 .fokit-lab button:disabled {
@@ -232,15 +248,58 @@ a {
 }
 
 .fokit-lab [data-fokit-node="array-item"] {
+	align-items: start;
 	border-block-start: 1px solid var(--fokit-lab-border);
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
 	gap: 0.8rem;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	padding-block-start: 1rem;
 }
 
 .fokit-lab [data-fokit-node="array-item"] > [data-fokit-node="field"] {
-	flex: 1 1 13rem;
+	min-width: 0;
+}
+
+.fokit-lab__array-actions {
+	align-items: center;
+	background: color-mix(in srgb, var(--fokit-brand-surface) 58%, transparent);
+	border: 1px solid color-mix(in srgb, var(--fokit-lab-border) 55%, transparent);
+	border-radius: 6px;
+	display: flex;
+	gap: 0.35rem;
+	grid-column: 1 / -1;
+	margin: 0;
+	min-inline-size: 0;
+	padding: 0.35rem;
+}
+
+.fokit-lab__array-actions-label {
+	color: var(--fokit-lab-muted);
+	font-size: 0.78rem;
+	font-weight: 700;
+	margin-inline-end: auto;
+	padding-inline: 0.35rem;
+}
+
+.fokit-lab .fokit-lab__array-action {
+	background: transparent;
+	block-size: 2rem;
+	border-color: transparent;
+	color: var(--fokit-lab-muted);
+	inline-size: 2rem;
+	min-height: 2rem;
+	padding: 0;
+}
+
+.fokit-lab .fokit-lab__array-action:not(:disabled):hover {
+	background: var(--fokit-brand-surface);
+	border-color: color-mix(in srgb, var(--fokit-lab-border) 70%, transparent);
+	color: var(--fokit-brand-ink);
+}
+
+.fokit-lab__array-action svg {
+	block-size: 1rem;
+	inline-size: 1rem;
 }
 
 .fokit-lab__primary {
@@ -358,6 +417,7 @@ a {
 
 @media (max-width: 760px) {
 	.fokit-lab [data-fokit-layout="grid"][data-fokit-columns="2"],
+	.fokit-lab [data-fokit-node="array-item"],
 	.fokit-lab__inspector-grid {
 		grid-template-columns: 1fr;
 	}
@@ -381,7 +441,7 @@ a {
 }
 
 .fokit-async-demo__kicker {
-	color: var(--fokit-brand-rust);
+	color: var(--fokit-brand-green);
 	font-size: 0.78rem;
 	font-weight: 700;
 	margin: 0;

@@ -1,6 +1,12 @@
 "use client"
 
 import {
+	ChevronDownIcon,
+	ChevronUpIcon,
+	TrashIcon,
+} from "@heroicons/react/24/outline"
+import {
+	type ArrayItemSlotProps,
 	createDefaultSlots,
 	createFormKit,
 	type FormInput,
@@ -73,15 +79,77 @@ const countryOptions = [
 
 const kit = createFormKit({
 	controls: nativeControls,
-	slots: createDefaultSlots({
-		i18n: {
-			arrayAdd: "Add contact",
-			arrayRemove: ({ position }) => `Remove contact ${position}`,
-			arrayMoveUp: ({ position }) => `Move contact ${position} up`,
-			arrayMoveDown: ({ position }) => `Move contact ${position} down`,
-		},
-	}),
+	slots: {
+		...createDefaultSlots({
+			i18n: {
+				arrayAdd: "Add contact",
+			},
+		}),
+		ArrayItem: ContactArrayItemSlot,
+	},
 })
+
+function ContactArrayItemSlot({
+	rootProps,
+	index,
+	disabled,
+	readOnly,
+	canMoveUp,
+	canMoveDown,
+	remove,
+	move,
+	children,
+}: ArrayItemSlotProps) {
+	const position = index + 1
+	const moveUpLabel = `Move contact ${position} up`
+	const moveDownLabel = `Move contact ${position} down`
+	const removeLabel = `Remove contact ${position}`
+	const actionsDisabled = disabled || readOnly
+
+	return (
+		<div {...rootProps}>
+			{children}
+			<fieldset
+				aria-label={`Contact ${position} actions`}
+				className="fokit-lab__array-actions"
+			>
+				<span aria-hidden="true" className="fokit-lab__array-actions-label">
+					Contact {position}
+				</span>
+				<button
+					aria-label={moveUpLabel}
+					className="fokit-lab__array-action"
+					disabled={actionsDisabled || !canMoveUp}
+					title={moveUpLabel}
+					type="button"
+					onClick={() => move(index - 1)}
+				>
+					<ChevronUpIcon aria-hidden="true" />
+				</button>
+				<button
+					aria-label={moveDownLabel}
+					className="fokit-lab__array-action"
+					disabled={actionsDisabled || !canMoveDown}
+					title={moveDownLabel}
+					type="button"
+					onClick={() => move(index + 1)}
+				>
+					<ChevronDownIcon aria-hidden="true" />
+				</button>
+				<button
+					aria-label={removeLabel}
+					className="fokit-lab__array-action"
+					disabled={actionsDisabled}
+					title={removeLabel}
+					type="button"
+					onClick={remove}
+				>
+					<TrashIcon aria-hidden="true" />
+				</button>
+			</fieldset>
+		</div>
+	)
+}
 
 const profileDefinition = kit.defineForm(profileSchema)({
 	ui: [
@@ -97,7 +165,6 @@ const profileDefinition = kit.defineForm(profileSchema)({
 					path: "name",
 					control: "text",
 					label: "Name",
-					description: "Enter a name before you submit the form.",
 					required: true,
 					options: {
 						placeholder: "Enter your name",

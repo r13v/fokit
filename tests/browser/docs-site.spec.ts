@@ -165,6 +165,100 @@ test.describe("Fokit documentation", () => {
 		expect(headingContrast).toBeGreaterThanOrEqual(4.5)
 	})
 
+	test("keeps demo controls visually consistent and reserves rust for errors", async ({
+		page,
+	}) => {
+		await page.setViewportSize({ width: 1280, height: 920 })
+		await page.goto("./get-started#interactive-fokit-lab")
+
+		const lab = page.getByRole("region", { name: "Interactive Fokit Lab" })
+		const name = lab.getByLabel("Name")
+		const accountType = lab.getByLabel("Account type")
+		const addContact = lab.getByRole("button", { name: "Add contact" })
+		const moveUp = lab.getByRole("button", { name: "Move contact 1 up" })
+		const remove = lab.getByRole("button", { name: "Remove contact 1" })
+		await expect(moveUp).toHaveText("")
+		await expect(remove).toHaveText("")
+
+		const controlHeights = await Promise.all(
+			[name, accountType, addContact].map((locator) =>
+				locator.evaluate((element) => element.getBoundingClientRect().height),
+			),
+		)
+		for (const height of controlHeights.slice(1)) {
+			expect(Math.abs(height - (controlHeights[0] ?? 0))).toBeLessThanOrEqual(1)
+		}
+
+		const actionHeights = await Promise.all(
+			[moveUp, remove].map((locator) =>
+				locator.evaluate((element) => element.getBoundingClientRect().height),
+			),
+		)
+		expect(actionHeights[0]).toBe(actionHeights[1])
+		expect(actionHeights[0]).toBeLessThan(controlHeights[0] ?? 0)
+
+		const actionGroup = lab.getByRole("group", {
+			name: "Contact 1 actions",
+		})
+		await expect(actionGroup).toBeVisible()
+		await expect(
+			actionGroup.getByText("Contact 1", { exact: true }),
+		).toBeVisible()
+		const actionGroupStyles = await actionGroup.evaluate((element) => {
+			const styles = getComputedStyle(element)
+			return {
+				background: styles.backgroundColor,
+				borderWidth: styles.borderTopWidth,
+			}
+		})
+		expect(actionGroupStyles.background).not.toBe("rgba(0, 0, 0, 0)")
+		expect(actionGroupStyles.borderWidth).not.toBe("0px")
+		const actionStyles = await remove.evaluate((element) => {
+			const styles = getComputedStyle(element)
+			return {
+				background: styles.backgroundColor,
+				border: styles.borderTopColor,
+			}
+		})
+		expect(actionStyles.background).toBe("rgba(0, 0, 0, 0)")
+		expect(actionStyles.border).toBe("rgba(0, 0, 0, 0)")
+
+		const accentColors = await Promise.all([
+			lab
+				.locator(".fokit-lab__kicker")
+				.evaluate((element) => getComputedStyle(element).color),
+			lab
+				.getByRole("button", { name: "Save profile" })
+				.evaluate((element) => getComputedStyle(element).backgroundColor),
+		])
+		expect(accentColors[0]).toBe(accentColors[1])
+
+		await name.fill("")
+		await lab.getByRole("button", { name: "Save profile" }).click()
+		await expect(name).toBeFocused()
+		const invalidColors = await name.evaluate((element) => {
+			const styles = getComputedStyle(element)
+			return {
+				border: styles.borderTopColor,
+				outline: styles.outlineColor,
+			}
+		})
+		expect(invalidColors.outline).toBe(invalidColors.border)
+
+		await name.fill("Ada Lovelace")
+		const email = lab.getByLabel("Email")
+		await email.fill("invalid")
+		await lab.getByRole("button", { name: "Save profile" }).click()
+		const fieldTops = await lab
+			.locator("[data-fokit-node='array-item'] [data-fokit-node='field']")
+			.evaluateAll((elements) =>
+				elements.map((element) => element.getBoundingClientRect().top),
+			)
+		expect(
+			Math.abs((fieldTops[0] ?? 0) - (fieldTops[1] ?? 0)),
+		).toBeLessThanOrEqual(1)
+	})
+
 	test("keeps skip links under the GitHub Pages base path after hydration", async ({
 		page,
 	}) => {

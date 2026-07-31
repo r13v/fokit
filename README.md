@@ -135,7 +135,6 @@ npx skills add r13v/fokit --skill fokit
 - [Styling boundary](docs/adr/0001-styling-and-layout-boundary.md)
 - [Russian tutorial](docs/tutorial.ru.md)
 - [Architecture decisions](docs/adr/)
-- [Release process](docs/releasing.md)
 
 Canonical, typechecked examples live in
 [`form-kit.tsx`](docs-site/src/snippets/form-kit.tsx),

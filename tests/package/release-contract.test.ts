@@ -45,7 +45,6 @@ type ReleaseGuardModule = {
 const releaseGuard = (await import(
 	new URL("../../scripts/verify-release.mjs", import.meta.url).href
 )) as ReleaseGuardModule
-const releaseDocs = await readOptionalFile("../../docs/releasing.md")
 
 const basePackageJson = {
 	name: "fokit",
@@ -282,21 +281,6 @@ describe("release guard", () => {
 				"registry_lookup_failed",
 			)
 		}
-	})
-})
-
-describe("release documentation", () => {
-	it("keeps version choice and GitHub Release creation as maintainer actions", () => {
-		expect(releaseDocs).toContain("newer than 0.0.1")
-		expect(releaseDocs).toContain("package.json")
-		expect(releaseDocs).toContain("package-lock.json")
-		expect(releaseDocs).toContain("npm run verify")
-		expect(releaseDocs).toContain("npm run site:verify")
-		expect(releaseDocs).toContain("v<version>")
-		expect(releaseDocs).toContain("GitHub Release")
-		expect(releaseDocs).not.toMatch(/\bnpm version\b/)
-		expect(releaseDocs).toMatch(/\bNPM_TOKEN\b/)
-		expect(releaseDocs).toMatch(/\bNODE_AUTH_TOKEN\b/)
 	})
 })
 

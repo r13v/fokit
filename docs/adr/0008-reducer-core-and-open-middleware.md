@@ -152,3 +152,28 @@ context and state hooks remain public.
   while reducers remain free of schemas, timers, storage, focus, and callbacks.
 - Adopting this boundary requires a substantial internal migration and updates
   to the specification and architecture map before release.
+
+## Implemented protocol and modules
+
+The implemented feature protocol uses version `1` and the shared capability
+key `Symbol.for("form-please.feature-capability")`. The capability is defined
+in `src/core/feature-protocol.ts` and is not a public package export.
+Structural validation allows optional entries loaded through ESM and CommonJS
+to use the same form capability without `instanceof` coupling.
+
+The reducer boundary is implemented by `src/core/form-model.ts`,
+`src/core/form-reducer.ts`, and `src/core/runtime-reducer.ts`. Commands,
+transactions, events, middleware coordination, finalized commit delivery, and
+snapshot publication live in their corresponding `src/core` modules.
+
+Package entries own optional behavior as follows:
+
+- `form-please/history` owns checkpoints, groups, journals, cursors, import,
+  export, navigation, and pure replay.
+- `form-please/persistence` owns canonical envelopes, codecs, migration,
+  hydration, save scheduling, adapters, and optional history persistence.
+- `form-please/devtools` owns the constrained Redux DevTools connection and its
+  bounded revision-token table.
+
+The existing `form-please`, `form-please/core`, `form-please/react19`, and
+`form-please/server` entry graphs do not reach these optional modules.

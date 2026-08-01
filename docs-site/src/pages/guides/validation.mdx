@@ -33,6 +33,7 @@ Use blur-first validation when early feedback helps:
 ```tsx twoslash
 // @jsx: react-jsx
 import { createFormKit, nativeControls } from "form-please"
+import { useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({
@@ -52,19 +53,23 @@ const definition = kit.defineForm(schema)({
 })
 
 // ---cut---
-const form = (
-	<kit.AutoForm
-		definition={definition}
-		defaultValues={{ email: "" }}
-		validation={{
-			mode: "blur",
-			revalidateMode: "change",
-			asyncDebounceMs: 250,
-		}}
-	>
-		<kit.Submit>Continue</kit.Submit>
-	</kit.AutoForm>
-)
+function EmailForm() {
+	const [form] = useState(() =>
+		kit.createForm(definition, { defaultValues: { email: "" } }),
+	)
+	return (
+		<kit.AutoForm
+			form={form}
+			validation={{
+				mode: "blur",
+				revalidateMode: "change",
+				asyncDebounceMs: 250,
+			}}
+		>
+			<kit.Submit>Continue</kit.Submit>
+		</kit.AutoForm>
+	)
+}
 ```
 
 `asyncDebounceMs` applies only to async validation scheduled by a change.

@@ -105,8 +105,8 @@ import {
 	createFormKit,
 	nativeControls,
 	useArrayField,
-	useForm,
 } from "form-please"
+import { useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({
@@ -132,9 +132,9 @@ const definition = kit.defineForm(schema)({
 })
 
 function ContactsEditor() {
-	const form = useForm(definition, {
-		defaultValues: { contacts: [] },
-	})
+	const [form] = useState(() =>
+		kit.createForm(definition, { defaultValues: { contacts: [] } }),
+	)
 	const contacts = useArrayField(form, "contacts")
 
 	return (

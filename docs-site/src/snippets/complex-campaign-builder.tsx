@@ -760,6 +760,18 @@ export function CampaignBuilderExample() {
 
 function CampaignBuilderForm() {
 	const [mode, setMode] = useState<"create" | "edit">("edit")
+	const [createForm] = useState(() =>
+		kit.createForm(campaignDefinition, {
+			defaultValues: newCampaign,
+			context: { segments: [] },
+		}),
+	)
+	const [editForm] = useState(() =>
+		kit.createForm(campaignDefinition, {
+			defaultValues: savedCampaign,
+			context: { segments: [] },
+		}),
+	)
 	const draft = useQuery({
 		queryKey: ["campaign-draft", "campaign-204"],
 		queryFn: () => fakeRequest(savedCampaign, 390),
@@ -798,10 +810,10 @@ function CampaignBuilderForm() {
 				Could not load campaign resources.
 			</section>
 		)
-	let initialValues: CampaignInput = newCampaign
+	let form = createForm
 	let submitLabel = "Create campaign"
 	if (mode === "edit") {
-		initialValues = draft.data
+		form = editForm
 		submitLabel = "Update campaign"
 	}
 	let status = notice
@@ -843,8 +855,7 @@ function CampaignBuilderForm() {
 				beforeUpdate={clearInactiveTemplate}
 				className="form-please-complex__form"
 				context={{ segments: segments.data }}
-				defaultValues={initialValues}
-				definition={campaignDefinition}
+				form={form}
 				key={mode}
 				onSubmit={async ({ value, form }) => {
 					try {

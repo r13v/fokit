@@ -1082,70 +1082,70 @@ capability without reading internal architecture documents or source code.
 - Modify: docs-site/tests/content.test.mjs
 - Modify: docs-site/tests/build-output.test.mjs
 
-- [ ] Before editing docs-site, read docs-site/AGENTS.md and load the STE skill.
+- [x] Before editing docs-site, read docs-site/AGENTS.md and load the STE skill.
   Use STE clarity mode for every new or changed site paragraph, heading, callout,
   and procedure. Keep API names, imports, code, paths, and other technical
   literals unchanged.
-- [ ] Update docs/ARCHITECTURE.md to map the final core reducer/runtime/effect
+- [x] Update docs/ARCHITECTURE.md to map the final core reducer/runtime/effect
   modules and each optional entry graph. Retain React/core/server isolation.
-- [ ] Update ADR 0008 with the implemented feature-protocol identifier,
+- [x] Update ADR 0008 with the implemented feature-protocol identifier,
   package-entry ownership, and any final module names while preserving its
   accepted decision.
-- [ ] Change docs/proposal.md status from implementation pending to implemented
+- [x] Change docs/proposal.md status from implementation pending to implemented
   only after Tasks 1 through 11 and their validation commands pass.
-- [ ] Update README.md with the minimal kit.createForm middleware example and
+- [x] Update README.md with the minimal kit.createForm middleware example and
   links to the three optional feature guides. Use form-backed AutoForm in the
   primary example. State plainly that this release is a breaking redesign and
   does not ship compatibility aliases.
-- [ ] Make the website the complete user-facing source for the new
+- [x] Make the website the complete user-facing source for the new
   capabilities. Users must not need README.md, docs/proposal.md, ADRs, or source
   code to learn required imports, prerequisites, defaults, constraints,
   results, errors, recovery actions, limitations, and feature interactions.
-- [ ] Document exact public signatures and examples for commands, transactions,
+- [x] Document exact public signatures and examples for commands, transactions,
   events, middleware, CreateFormOptions, FormRuntimeOptions, kit.createForm,
   kit.useForm, feature.handle(form), history operations, persistence state and
   operations, adapters, codecs, migration, hydration, and DevTools connection
   and disconnect in docs-site/src/pages/api.mdx.
-- [ ] Document one React ownership model throughout the site: create through
+- [x] Document one React ownership model throughout the site: create through
   kit.createForm, bind an existing form through kit.useForm, and pass form to
   kit.Form, kit.AutoForm, or ActionForm. Show lazy React state for a
   component-local instance. Explain exact base/extended/sibling kit ownership.
-- [ ] Document ActionForm without kit, definition, or defaultValues props. Show
+- [x] Document ActionForm without kit, definition, or defaultValues props. Show
   that it gets controls and slots from form. Remove examples and API references
   for global createForm, global useForm, KitForm, root Submit, UseFormOptions,
   and main-entry createFormStore.
-- [ ] Document createFormStore only as an advanced React-free API from
+- [x] Document createFormStore only as an advanced React-free API from
   form-please/core. Keep FormProvider, useFormContext, and granular hooks in the
   headless composition documentation.
-- [ ] Document middleware order, cancellation/replacement authority, synchronous
+- [x] Document middleware order, cancellation/replacement authority, synchronous
   constraints, guaranteed finalized-event delivery, nested dispatch, repeated
   blur semantics, restore limitations, and the application-owned immutability
   rule for File and other opaque leaves in docs-site/src/pages/advanced.mdx.
-- [ ] Add focused guides for undo, redo, seek, replay, journal import and export,
+- [x] Add focused guides for undo, redo, seek, replay, journal import and export,
   local persistence, migration, hydration, and constrained Redux DevTools time
   travel. Each guide must explain when to use the feature, how to configure it,
   what state it owns, what it does not restore, and how failures appear.
-- [ ] Give each guide a small first-use example and one detailed end-to-end
+- [x] Give each guide a small first-use example and one detailed end-to-end
   example. The detailed example must include setup, normal use, important edge
   behavior, error handling, cleanup when applicable, and the expected result.
   Reuse snippets between pages instead of maintaining duplicate programs.
-- [ ] Provide complete, copyable physical snippets for localStorage, nuqs
+- [x] Provide complete, copyable physical snippets for localStorage, nuqs
   query-string transport, TanStack Query server transport, history, and
   DevTools. Each snippet must use public form-please package imports and must
   type-check against the built public declarations. nuqs and TanStack Query
   remain application-owned example dependencies.
-- [ ] Review all new and changed website text with the STE skill after the
+- [x] Review all new and changed website text with the STE skill after the
   technical content is complete. Use one term for each concept, explicit
   actors and conditions, active voice, and one independent action per
   procedural step. Report the result as STE-style text, not verified strict
   ASD-STE100 text.
-- [ ] Extend the existing canonical page, snippet, and build-output assertions
+- [x] Extend the existing canonical page, snippet, and build-output assertions
   for the new guides. Assert the required feature sections, public imports,
   snippet type-checks, generated Markdown, search content, and llms-full.txt
   output. Do not add a second documentation manifest or test framework.
-- [ ] Run npm run site:test.
-- [ ] Run npm run test:docs.
-- [ ] Run npm run site:verify.
+- [x] Run npm run site:test.
+- [x] Run npm run test:docs.
+- [x] Run npm run site:verify.
 
 ### Task 13: Verify Acceptance Criteria and Close the Plan
 

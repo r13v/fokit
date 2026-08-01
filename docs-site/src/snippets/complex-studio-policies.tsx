@@ -468,6 +468,15 @@ export function StudioPoliciesExample() {
 }
 
 function StudioPoliciesForm() {
+	const [form] = useState(() =>
+		kit.createForm(policyDefinition, {
+			defaultValues: baseline,
+			context: {
+				equipment: { status: "pending", fetchStatus: "idle" },
+				savedEquipmentOptions,
+			},
+		}),
+	)
 	const policies = useQuery({
 		queryKey: ["studio-policy-baseline"],
 		queryFn: () => fakeRequest(baseline, 360),
@@ -521,8 +530,7 @@ function StudioPoliciesForm() {
 				beforeUpdate={preservePolicyInvariants}
 				className="form-please-complex__form"
 				context={{ equipment: equipmentResource, savedEquipmentOptions }}
-				defaultValues={policies.data}
-				definition={policyDefinition}
+				form={form}
 				onSubmit={async ({ value, form }) => {
 					try {
 						form.clearErrors()

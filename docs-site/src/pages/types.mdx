@@ -75,16 +75,16 @@ React render components accept `RenderNodeProps`, containing effective
 ## Form instances and context
 
 `FormInstance<Schema, Context>` carries schema and runtime context through
-commands, selectors, and derived UI. `UseFormOptions<Schema, Context>`
-describes creation options. `FormRuntimeOptions<Schema, Context>` omits the
-fixed `defaultValues` and is accepted when an existing instance is bound to
-React.
+commands, selectors, and derived UI. `CreateFormOptions<Schema, Context>`
+describes `kit.createForm` options. `FormRuntimeOptions<Schema, Context>` omits
+the fixed `defaultValues` and `middleware` values and is accepted when an
+existing instance is bound to React.
 
 ```ts twoslash
 import type {
 	FormInstance,
 	FormRuntimeOptions,
-	UseFormOptions,
+	CreateFormOptions,
 } from "form-please"
 import { z } from "zod"
 
@@ -94,7 +94,7 @@ type Context = {
 }
 
 type ProfileForm = FormInstance<typeof schema, Context>
-type ProfileOptions = UseFormOptions<typeof schema, Context>
+type ProfileOptions = CreateFormOptions<typeof schema, Context>
 type ProfileRuntimeOptions = FormRuntimeOptions<typeof schema, Context>
 ```
 

@@ -102,12 +102,14 @@ const defaultValues = {
 // [!region form]
 export function ScheduleEditor() {
 	const [lastUpdate, setLastUpdate] = useState("No update committed.")
+	const [form] = useState(() =>
+		kit.createForm(scheduleDefinition, { defaultValues }),
+	)
 
 	return (
 		<kit.AutoForm
 			beforeUpdate={preserveDateRange}
-			defaultValues={defaultValues}
-			definition={scheduleDefinition}
+			form={form}
 			afterUpdate={(event) => setLastUpdate(describeUpdate(event))}
 		>
 			<output aria-live="polite">{lastUpdate}</output>

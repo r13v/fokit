@@ -61,6 +61,9 @@ const profileDefinition = kit.defineForm(profileSchema)({
 
 export function OverviewDemoClient() {
 	const [saved, setSaved] = useState<FormOutput<typeof profileSchema>>()
+	const [form] = useState(() =>
+		kit.createForm(profileDefinition, { defaultValues }),
+	)
 	let output = "Submit the form to see typed output."
 	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
 
@@ -76,8 +79,7 @@ export function OverviewDemoClient() {
 			</p>
 			<kit.AutoForm
 				className="form-please-overview-demo__form"
-				defaultValues={defaultValues}
-				definition={profileDefinition}
+				form={form}
 				onSubmit={({ value }) => setSaved(value)}
 			>
 				<kit.Submit className="form-please-lab__primary">

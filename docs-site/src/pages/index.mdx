@@ -54,6 +54,7 @@ definition for structure, and a kit for rendering.
 ```tsx twoslash
 // @jsx: react-jsx
 import { createFormKit, nativeControls, type FormInput } from "form-please"
+import { useState } from "react"
 import { z } from "zod"
 
 const profileSchema = z.object({
@@ -90,10 +91,13 @@ const defaultValues = {
 } satisfies FormInput<typeof profileSchema>
 
 export function ProfileForm() {
+	const [form] = useState(() =>
+		kit.createForm(profileDefinition, { defaultValues }),
+	)
+
 	return (
 		<kit.AutoForm
-			definition={profileDefinition}
-			defaultValues={defaultValues}
+			form={form}
 			onSubmit={({ value }) => console.log(value)}
 		>
 			<kit.Submit>Save profile</kit.Submit>
@@ -131,6 +135,10 @@ the same.
 Use the same definition with `kit.AutoForm`. You can also compose it manually
 with `kit.Form`, `kit.Fields`, and granular hooks.
 
+Create each form through its exact kit. Bind an existing form with
+`kit.useForm`. A base kit, an extended kit, and two sibling kits have distinct
+owners, even when their controls have the same structure.
+
 ## When to reach for Form, Please
 
 Use Form, Please when a form needs schema validation, typed transformations,
@@ -153,6 +161,9 @@ you add production features.
   library.
 - [Styling](/guides/styling) to add structural CSS or replace the markup.
 - [React 19 Actions](/guides/react-19-actions) to connect a server Action.
+- [History and journals](/guides/history) to add undo, redo, and replay.
+- [Persistence](/guides/persistence) to hydrate and save a document or journal.
+- [Redux DevTools](/guides/devtools) to inspect committed events and time travel.
 
 ## Kudos
 

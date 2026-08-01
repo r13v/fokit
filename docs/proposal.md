@@ -1,13 +1,13 @@
 # Reducer Form Core with an Optional Event Journal
 
-- Status: Accepted architecture; implementation pending
+- Status: Implemented
 - Last updated: 2026-08-01
 - Scope: React form ownership, core state, middleware, history, deterministic
   replay, persistence, and Redux DevTools
 
 ## Outcome
 
-Form Please will use:
+Form Please uses:
 
 - a reducer-owned form document containing values and array row identity;
 - ephemeral runtime state for validation, submission, metadata, context, focus,

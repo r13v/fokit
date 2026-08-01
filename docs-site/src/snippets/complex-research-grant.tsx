@@ -501,6 +501,9 @@ export function ResearchGrantExample() {
 
 function ResearchGrantForm() {
 	const [receipt, setReceipt] = useState("No application sent yet.")
+	const [form] = useState(() =>
+		kit.createForm(grantDefinition, { defaultValues }),
+	)
 	const preview = useMutation({
 		mutationFn: (value: GrantOutput) =>
 			fakeRequest({ revision: value.reviewKey, accepted: true }, 420),
@@ -526,8 +529,7 @@ function ResearchGrantForm() {
 			<kit.AutoForm
 				beforeUpdate={preserveGrantInvariants}
 				className="form-please-complex__form"
-				defaultValues={defaultValues}
-				definition={grantDefinition}
+				form={form}
 				onSubmit={async ({ value, form }) => {
 					try {
 						form.clearErrors()

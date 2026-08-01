@@ -195,6 +195,12 @@ const stageLabels = {
 	capacity: "Step 3",
 	publishing: "Step 4",
 } satisfies Record<(typeof stages)[number], string>
+const stageNames = {
+	identity: "Identity",
+	location: "Location",
+	capacity: "Capacity & media",
+	publishing: "Publishing",
+} satisfies Record<(typeof stages)[number], string>
 const stageValidationPaths = {
 	identity: ["identity"],
 	location: ["location"],
@@ -232,7 +238,7 @@ function WizardNavigation() {
 				onClick={() => void advance(nextStage)}
 				type="button"
 			>
-				Continue to {stageLabels[nextStage]}
+				Continue to {stageNames[nextStage]}
 			</button>
 		)
 	}
@@ -583,6 +589,12 @@ export function MakerspaceLaunchExample() {
 }
 
 function MakerspaceLaunchForm() {
+	const [form] = useState(() =>
+		kit.createForm(launchDefinition, {
+			defaultValues,
+			context: { campuses: [], regions: [] },
+		}),
+	)
 	const campuses = useQuery({
 		queryKey: ["maker-campuses"],
 		queryFn: () =>
@@ -653,8 +665,7 @@ function MakerspaceLaunchForm() {
 				beforeUpdate={clearDisabledPromotions}
 				className="form-please-complex__form"
 				context={{ campuses: campuses.data, regions: regions.data }}
-				defaultValues={defaultValues}
-				definition={launchDefinition}
+				form={form}
 				onSubmit={async ({ value, form }) => {
 					try {
 						form.clearErrors()

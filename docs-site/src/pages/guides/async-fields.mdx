@@ -196,7 +196,7 @@ const disabled = matchResource(permission, {
   error: () => true,
 })
 
-return <kit.AutoForm definition={definition} disabled={disabled} {...props} />
+return <kit.AutoForm form={form} disabled={disabled} {...props} />
 ```
 
 `matchResource` can also choose between a page skeleton, an error state, and

@@ -49,6 +49,9 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/guides/validation.md",
 		"assets/md/guides/transaction-hooks.md",
 		"assets/md/guides/async-fields.md",
+		"assets/md/guides/history.md",
+		"assets/md/guides/persistence.md",
+		"assets/md/guides/devtools.md",
 		"assets/md/examples.md",
 		"assets/md/examples/research-grant.md",
 		"assets/md/examples/studio-policies.md",
@@ -163,6 +166,17 @@ test("Interactive Lab has meaningful generated Markdown fallbacks", async () => 
 	)
 	assert.match(llms, /Describe fields, sections, arrays, layout/)
 	assert.match(llms, /Control when Form, Please validates/)
+	assert.match(llms, /Add undo, redo, seek, deterministic replay/)
+	assert.match(llms, /Hydrate and save a form document or history journal/)
+	assert.match(llms, /Inspect committed form events and use constrained local/)
+
+	const full = await readFile(new URL("llms-full.txt", publicRoot), "utf8")
+	assert.match(full, /createHistoryMiddleware/)
+	assert.match(full, /createPersistenceMiddleware/)
+	assert.match(full, /createDevToolsMiddleware/)
+	assert.match(full, /form-please\/history/)
+	assert.match(full, /form-please\/persistence/)
+	assert.match(full, /form-please\/devtools/)
 })
 
 test("overview demo has a meaningful generated Markdown fallback", async () => {

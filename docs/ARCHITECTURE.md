@@ -2,7 +2,7 @@
 
 - Status: Descriptive
 - Audience: Maintainers and contributors
-- Last updated: 2026-07-31
+- Last updated: 2026-08-01
 
 This document is a map of the current implementation. It explains where
 responsibilities live, how data moves through the library, and which
@@ -15,7 +15,7 @@ of behavior.
 
 ## Architectural shape
 
-Form, Please is one package with four JavaScript entry points and one optional CSS
+Form, Please is one package with seven JavaScript entry points and one optional CSS
 entry point:
 
 ```mermaid
@@ -26,6 +26,9 @@ flowchart TD
     Core["form-please/core<br/>React-free form engine"]
     React19["form-please/react19<br/>React 19 Actions adapter"]
     Server["form-please/server<br/>FormData parsing and validation"]
+    History["form-please/history<br/>History and journals"]
+    Persistence["form-please/persistence<br/>Encoding and storage"]
+    DevTools["form-please/devtools<br/>Redux DevTools transport"]
     CSS["form-please/layout.css<br/>Optional structural layout"]
 
     ReactLayer["src/react"]
@@ -35,6 +38,9 @@ flowchart TD
     App --> Core
     App --> React19
     App --> Server
+    App --> History
+    App --> Persistence
+    App --> DevTools
     App -. explicit import .-> CSS
 
     Main --> ReactLayer
@@ -43,6 +49,10 @@ flowchart TD
     React19 --> ReactLayer
     React19 --> CoreLayer
     Server --> CoreLayer
+    History --> CoreLayer
+    Persistence --> CoreLayer
+    Persistence --> History
+    DevTools --> CoreLayer
 ```
 
 Dependencies point inward:
@@ -54,6 +64,10 @@ Dependencies point inward:
   React modules. Nothing in the main entry point depends on it.
 - `src/server` reuses path, result, and Standard Schema logic from core but
   never imports React.
+- `src/history`, `src/persistence`, and `src/devtools` own optional features.
+  Existing main, core, React 19, and server graphs do not import them.
+- `src/persistence` can import the history protocol for history-mode storage.
+  History and DevTools do not import persistence.
 - `src/layout.css` is independent. No JavaScript entry point imports it.
 
 The core can carry a render component or rich presentation value as an opaque
@@ -80,10 +94,13 @@ remain suitable for server-side use.
 
 | Area | Primary files | Responsibility |
 | --- | --- | --- |
-| Public exports | `src/index.ts`, `src/core/index.ts`, `src/react19/index.ts`, `src/server/index.ts` | Define the supported package surface |
+| Public exports | `src/index.ts`, `src/core/index.ts`, `src/react19/index.ts`, `src/server/index.ts`, and each optional `index.ts` | Define the supported package surface |
 | Definitions | `src/core/definition.ts`, `src/core/definition-fragment.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts` | Type, scope, validate, normalize, and index reusable UI definitions |
 | Paths and values | `src/core/path.ts`, `src/core/path-types.ts`, `src/core/value.ts` | Canonical deep paths and immutable value operations |
-| Runtime store | `src/core/form-store.ts`, `src/core/form-state.ts`, `src/core/transaction.ts` | Transactions, snapshots, subscriptions, reset, focus, and runtime options |
+| Form model | `src/core/form-model.ts`, `src/core/form-reducer.ts`, `src/core/runtime-reducer.ts` | Own the atomic historical document and pure document/runtime transitions |
+| Commands and events | `src/core/form-commands.ts`, `src/core/form-transactions.ts`, `src/core/form-events.ts`, `src/core/transaction.ts` | Type commands, normalized transactions, immutable events, and value-change normalization |
+| Runtime store | `src/core/form-store.ts`, `src/core/form-state.ts`, `src/core/publication.ts` | Coordinate reducers, effects, snapshots, subscriptions, reset, focus, and runtime options |
+| Middleware and features | `src/core/middleware.ts`, `src/core/commit-timeline.ts`, `src/core/feature-protocol.ts` | Run the synchronous chain and expose the package-private optional-feature capability |
 | Derived state | `src/core/resolve-ui.ts`, `src/core/resource.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, synchronous application-resource projection, dirty/touched state, issue exposure, and stable array rows |
 | Validation | `src/core/validation.ts`, `src/core/standard-schema.ts` | Standard Schema execution and normalized results |
 | Form kits | `src/react/create-form-kit.tsx`, `src/react/default-slots.tsx`, `src/react/native-controls.tsx` | Bind control and slot registries into a rendering integration |
@@ -92,6 +109,9 @@ remain suitable for server-side use.
 | Native forms | `src/react/form.tsx`, `src/react/hidden-inputs.tsx`, `src/react/submission.ts` | Accessibility, `FormData`, reset, and classic submission |
 | React 19 Actions | `src/react19/action-form.tsx`, `src/react19/result-sync.ts`, `src/react19/action-submit.tsx` | Action submission state and server-result reconciliation |
 | Server parsing | `src/server/normalize-form-data.ts`, `src/server/parse-form-data.ts`, `src/server/protocol.ts` | Bounded untrusted input normalization and validation |
+| History | `src/history/history.ts`, `src/history/journal.ts` | Retain checkpoints and committed document events, navigate groups, import, export, and replay |
+| Persistence | `src/persistence/persistence.ts`, `src/persistence/encoding.ts`, `src/persistence/codecs.ts`, `src/persistence/local-storage.ts` | Hydrate, encode, migrate, validate, schedule, and store documents or journals |
+| Redux DevTools | `src/devtools/devtools.ts` | Project committed events and bounded document tokens to the browser extension |
 
 ## Definition lifecycle
 
@@ -128,12 +148,16 @@ opaquely and the React renderer mounts it.
 
 ## Runtime state and ownership
 
-`createForm` creates a `FormInstance`, which owns one core `FormStore`.
-`useForm` either creates that instance once or temporarily binds runtime
-options to an existing instance. It does not create a second React state
-model.
+`kit.createForm` creates every public React `FormInstance`. The instance owns
+one core `FormStore` and one immutable reference to the exact kit snapshot.
+`kit.useForm` only binds runtime options to an existing instance from that
+same kit. `kit.Form` and `kit.AutoForm` enforce the same ownership rule.
 
-The store is the single source of runtime truth. Each immutable
+The store owns one `FormModel`. Its `document` contains values and current
+array-row identity. Its `runtime` contains the clean baseline, touched paths,
+issues, validation, submission, context, runtime options, and resolved UI.
+Focus targets, subscriptions, timers, abort controllers, and callbacks remain
+effects outside both reducer states. Each immutable
 `FormSnapshot` contains:
 
 - input `values` and `isDirty`, derived from the store's private baseline;
@@ -147,10 +171,9 @@ The store holds `FormInput<Schema>`. Successful validation and submission
 produce `FormOutput<Schema>`. Schema transforms never overwrite the input
 state.
 
-The baseline is fixed at instance creation until an explicit reset replaces
-it. Loaded forms therefore mount after data is available, remount by product
-identity, or call `reset(loadedValues)` deliberately; a new `defaultValues`
-object identity is never an implicit reset signal.
+The baseline is fixed at instance creation until an explicit reset or
+successful persistence hydration replaces it. Restore navigation does not
+replace the baseline or touched state.
 
 Runtime context is read-only input to resolvers and controls. It is not copied
 into values, validated, marked dirty, or serialized.
@@ -169,12 +192,14 @@ For a normal update the store:
    proposal converges;
 4. calls the single `beforeUpdate` hook, which may accept, cancel, or replace
    the complete change set;
-5. atomically commits values, array metadata, issue cleanup, and validation
-   state;
-6. derives a new snapshot and notifies only subscriptions whose selected value
+5. creates a frozen `DocumentTransaction` and sends it through the synchronous
+   middleware chain;
+6. reduces one `DocumentCommittedEvent` into the atomic `FormDocument` and
+   reduces related runtime events into ephemeral state;
+7. derives one snapshot and notifies only subscriptions whose selected value
    changed;
-7. calls `afterUpdate` and schedules validation when the configured lifecycle
-   requires it.
+8. delivers the finalized event, calls `afterUpdate`, and schedules validation
+   when the configured lifecycle requires it.
 
 Array commands additionally preserve stable row keys and reindex touched paths
 and issues before the atomic commit. A batch accumulates changes and commits
@@ -192,6 +217,20 @@ preserving an incoming proposal while appending dependent changes.
 
 Public values and snapshots are cloned or frozen at the store boundary.
 Consumers must use commands instead of mutating returned objects.
+
+Middleware uses the Redux shape `api => next => transaction`. Declaration
+order is outer-to-inner. A handler must call `next` synchronously, at most once,
+and return its result unchanged. It can cancel by not calling `next` or replace
+the frozen transaction before forwarding it. Nested `api.dispatch` commands
+run FIFO after the current transaction finishes. The coordinator captures the
+effective committed event independently of wrapper return values, so optional
+features observe each commit exactly once even when later middleware throws.
+
+A restore transaction contains a complete immutable `FormDocument`. Restore
+bypasses value policies, lifecycle hooks, item defaults, schema transforms,
+automatic validation, and application mutation callbacks. It still passes
+through application middleware. A committed restore invalidates captured
+validation and server work, reconciles runtime paths, and publishes once.
 
 ## UI resolution and subscriptions
 
@@ -231,7 +270,7 @@ field.
 `kit.AutoForm` is convenience composition:
 
 ```text
-useForm
+kit.useForm binding
   -> kit.Form
      -> ErrorSummary
      -> FieldsRenderer
@@ -351,14 +390,33 @@ values that the Action client can reconcile.
 This makes a base definition usable by a compatible extended kit without
 allowing an extension to silently reinterpret an existing field.
 
-New behavior should normally fit one of the existing boundaries: a control, a
-slot, a derived UI property, or an application-level concern. Form, Please does not
-provide a middleware chain, schema inference, remote UI language, visual form
-builder, theme, wizard engine, or application persistence layer.
+Application middleware is configured only in `kit.createForm`. Kits,
+extensions, and definitions do not retain middleware. The open chain can
+observe, cancel, or replace transactions, but it cannot dispatch raw events.
+
+Optional first-party features use protocol version `1` through
+`Symbol.for("form-please.feature-capability")`. The capability is
+package-private and validated structurally, which lets ESM and CommonJS copies
+share feature identity. Each feature exposes a stable `feature.handle(form)`.
+One form can have at most one history, one persistence owner, and one DevTools
+connection. Persistence in history mode requires the exact configured history
+feature in the same chain.
+
+History retains immutable checkpoints and committed document events only when
+configured. Pure replay uses `reduceFormDocument`; live undo, redo, seek,
+import, and replay each submit one restore transaction. Persistence stores a
+versioned canonical document or journal envelope through an application-owned
+adapter. Redux DevTools sends finalized events and restores only documents
+that resolve through its bounded local revision-token table.
+
+New behavior should normally fit one existing boundary: a control, a slot, a
+derived UI property, application middleware, or an isolated optional entry.
+Form, Please does not provide schema inference, a remote UI language, a visual
+form builder, a theme, a wizard engine, or storage infrastructure.
 
 ## Build and verification
 
-`tsdown.config.ts` builds the four explicit entries as ESM and CommonJS with
+`tsdown.config.ts` builds the seven explicit entries as ESM and CommonJS with
 declarations and source maps. Dependencies are never bundled, entry signatures
 are preserved, and `layout.css` is copied separately. `package.json` exposes
 only the supported subpaths, so internal deep imports are closed.

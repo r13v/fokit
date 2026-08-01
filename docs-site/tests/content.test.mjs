@@ -17,6 +17,7 @@ const requiredDependencies = {
 	"@types/react": "19.2.17",
 	"@types/react-dom": "19.2.3",
 	"form-please": "file:..",
+	nuqs: "2.9.2",
 	react: "19.2.8",
 	"react-dom": "19.2.8",
 	typescript: "6.0.3",
@@ -123,11 +124,33 @@ const canonicalPages = [
 			"Connect a Form, Please definition to a React 19 Action with safe FormData parsing, pending state, and serializable server errors.",
 	},
 	{
+		path: "src/pages/guides/history.mdx",
+		route: "/guides/history",
+		title: "History and journals",
+		description:
+			"Add undo, redo, seek, deterministic replay, and validated journal import and export to one form.",
+		navText: "History & journals",
+	},
+	{
+		path: "src/pages/guides/persistence.mdx",
+		route: "/guides/persistence",
+		title: "Persistence",
+		description:
+			"Hydrate and save a form document or history journal with versioned encoding, migration, codecs, and application-owned storage.",
+	},
+	{
+		path: "src/pages/guides/devtools.mdx",
+		route: "/guides/devtools",
+		title: "Redux DevTools",
+		description:
+			"Inspect committed form events and use constrained local document time travel without adding Redux to the application.",
+	},
+	{
 		path: "src/pages/advanced.mdx",
 		route: "/advanced",
 		title: "Production recipes",
 		description:
-			"Focused Form, Please patterns for manual composition, loaded edit forms, server safety, accessibility, and public-boundary tests.",
+			"Compose headless UI, load baselines, control middleware, protect FormData, preserve accessibility, and test the public form boundary.",
 	},
 	{
 		path: "src/pages/examples/index.mdx",
@@ -187,7 +210,7 @@ const canonicalPages = [
 		route: "/api",
 		title: "API",
 		description:
-			"Signatures, defaults, and entry-point boundaries for the public React, core, server, and React 19 APIs in Form, Please.",
+			"Signatures, defaults, results, and entry-point boundaries for React forms, core transactions, history, persistence, Redux DevTools, and server parsing.",
 	},
 	{
 		path: "src/pages/types.mdx",
@@ -215,6 +238,9 @@ const publicApiTerms = [
 	"FormInstance",
 	"parseFormData",
 	"ActionForm",
+	"createHistoryMiddleware",
+	"createPersistenceMiddleware",
+	"createDevToolsMiddleware",
 ]
 
 const canonicalSnippets = [
@@ -326,6 +352,31 @@ const canonicalSnippets = [
 			"clearInactiveTemplate",
 			"createCampaign",
 		],
+	},
+	{
+		target: "src/snippets/history.tsx",
+		include: "~/snippets/history.tsx",
+		terms: ["createHistoryMiddleware", "replayJournal", "history.import"],
+	},
+	{
+		target: "src/snippets/persistence-local-storage.tsx",
+		include: "~/snippets/persistence-local-storage.tsx",
+		terms: ["createLocalStorageAdapter", "persistence.restore", "flush"],
+	},
+	{
+		target: "src/snippets/persistence-nuqs.ts",
+		include: "~/snippets/persistence-nuqs.ts",
+		terms: ["useQueryState", "FormPersistenceAdapter", "parseAsJson"],
+	},
+	{
+		target: "src/snippets/persistence-tanstack-query.ts",
+		include: "~/snippets/persistence-tanstack-query.ts",
+		terms: ["QueryClient", "FormPersistenceAdapter", "fetchQuery"],
+	},
+	{
+		target: "src/snippets/devtools.tsx",
+		include: "~/snippets/devtools.tsx",
+		terms: ["createDevToolsMiddleware", "disconnect", "maxAge"],
 	},
 ]
 
@@ -452,10 +503,18 @@ const requiredCorePageContent = {
 			"Entry points",
 			"createFormKit",
 			"kit.defineForm",
-			"AutoForm",
-			"useForm",
+			"kit.createForm",
+			"kit.useForm",
+			"Form and AutoForm",
 			"Hooks",
 			"FormInstance",
+			"Commands",
+			"Transactions",
+			"Events",
+			"Middleware",
+			"History",
+			"Persistence",
+			"Redux DevTools",
 			"defineControl",
 			"createDefaultSlots",
 			"parseFormData",
@@ -466,6 +525,15 @@ const requiredCorePageContent = {
 			"form-please/core",
 			"form-please/server",
 			"form-please/react19",
+			"form-please/history",
+			"form-please/persistence",
+			"form-please/devtools",
+			"CreateFormOptions",
+			"FormRuntimeOptions",
+			"FormCommand",
+			"FormTransaction",
+			"FormEvent",
+			"feature.handle(form)",
 			"kit.defineForm",
 			"kit.AutoForm",
 			"kit.Fields",
@@ -517,6 +585,9 @@ const requiredCorePageContent = {
 			"Choose a focused guide",
 			"Compose generated and bespoke UI",
 			"Load an edit-form baseline",
+			"Middleware protocol",
+			"Restore boundary",
+			"Preserve application-owned immutable values",
 			"Treat FormData as untrusted",
 			"Preserve the accessibility contract",
 			"Test the public experience",
@@ -528,6 +599,9 @@ const requiredCorePageContent = {
 			"form.reset(profile)",
 			"parseFormData",
 			"FormResult",
+			"field/blurred",
+			"api.dispatch",
+			"File",
 		],
 	},
 	"src/pages/faqs.mdx": {
@@ -560,6 +634,67 @@ const requiredCorePageContent = {
 }
 
 const requiredGuidePageContent = {
+	"src/pages/guides/history.mdx": {
+		headings: [
+			"First use",
+			"State ownership",
+			"Groups and retention",
+			"Undo, redo, and seek",
+			"Replay, export, and import",
+			"Complete example",
+			"Interactions and limits",
+		],
+		terms: [
+			"createHistoryMiddleware",
+			"historyFeature.handle(form)",
+			"replayJournal",
+			'"cancelled"',
+			'"transformed"',
+			"~/snippets/history.tsx",
+		],
+	},
+	"src/pages/guides/persistence.mdx": {
+		headings: [
+			"First use with localStorage",
+			"Hydration lifecycle",
+			"Save state and operations",
+			"Document mode and history mode",
+			"Encoding, codecs, and migration",
+			"Complete localStorage example",
+			"nuqs query-string transport",
+			"TanStack Query server transport",
+			"What persistence does not restore",
+		],
+		terms: [
+			"createPersistenceMiddleware",
+			"createLocalStorageAdapter",
+			"saveDelay",
+			"migrate",
+			"createDateCodec",
+			"createFileCodec",
+			"~/snippets/persistence-local-storage.tsx",
+			"~/snippets/persistence-nuqs.ts",
+			"~/snippets/persistence-tanstack-query.ts",
+		],
+	},
+	"src/pages/guides/devtools.mdx": {
+		headings: [
+			"First use",
+			"Visible state and events",
+			"Constrained time travel",
+			"Restore behavior",
+			"Complete example",
+			"Cleanup and failures",
+		],
+		terms: [
+			"createDevToolsMiddleware",
+			"JUMP_TO_STATE",
+			"ROLLBACK",
+			"maxAge",
+			"disconnect()",
+			"~/snippets/devtools.tsx",
+		],
+	},
 	"src/pages/guides/ui-definitions.mdx": {
 		headings: [
 			"Read the tree at a glance",
@@ -1338,6 +1473,9 @@ test("sidebar follows the learning path before reference material", async () => 
 	const controls = source.indexOf('link: "/guides/controls"')
 	const asyncMultiselect = source.indexOf('link: "/guides/async-multiselect"')
 	const asyncFields = source.indexOf('link: "/guides/async-fields"')
+	const history = source.indexOf('link: "/guides/history"')
+	const persistence = source.indexOf('link: "/guides/persistence"')
+	const devtools = source.indexOf('link: "/guides/devtools"')
 	const complexExamples = source.indexOf('link: "/examples"')
 	const api = source.indexOf('link: "/api"')
 	const types = source.indexOf('link: "/types"')
@@ -1353,6 +1491,9 @@ test("sidebar follows the learning path before reference material", async () => 
 		controls,
 		asyncMultiselect,
 		asyncFields,
+		history,
+		persistence,
+		devtools,
 		complexExamples,
 		api,
 		types,
@@ -1369,7 +1510,10 @@ test("sidebar follows the learning path before reference material", async () => 
 	assert.ok(arrays < controls)
 	assert.ok(controls < asyncMultiselect)
 	assert.ok(asyncMultiselect < asyncFields)
-	assert.ok(asyncFields < complexExamples)
+	assert.ok(asyncFields < history)
+	assert.ok(history < persistence)
+	assert.ok(persistence < devtools)
+	assert.ok(devtools < complexExamples)
 	assert.ok(complexExamples < api)
 	assert.ok(api < types)
 })
@@ -1585,7 +1729,7 @@ test("bespoke SPA files and temporary migration content are removed", async () =
 		const source = await readText(file)
 		assert.doesNotMatch(
 			source,
-			/content\.js|LOCALES|#\/|locale-switch|form-please\.docs\.locale|localStorage/,
+			/content\.js|LOCALES|#\/|locale-switch|form-please\.docs\.locale/,
 		)
 		assert.doesNotMatch(source, /@phosphor-icons\/react|syntaxPattern/)
 	}
@@ -1614,12 +1758,12 @@ test("superseded public guides and example copies are deleted", async () => {
 		/Kudos to \[Evgeniy Ivaha\]\(https:\/\/github\.com\/ivahaev\) for the idea and the\s+example implementation\./,
 	)
 	assert.match(
-		tutorial,
+		readme,
 		/https:\/\/r13v\.github\.io\/form-please\/guides\/tutorial/,
 	)
-	assert.match(tutorial, /docs-site\/src\/snippets\/form-kit\.tsx/)
-	assert.match(tutorial, /docs-site\/src\/snippets\/basic-form\.tsx/)
-	assert.match(tutorial, /docs-site\/src\/snippets\/server-action\.ts/)
+	assert.match(readme, /docs-site\/src\/snippets\/form-kit\.tsx/)
+	assert.match(readme, /docs-site\/src\/snippets\/basic-form\.tsx/)
+	assert.match(readme, /docs-site\/src\/snippets\/server-action\.ts/)
 })
 
 test("docs-site instructions describe the English-only Vocs boundary", async () => {

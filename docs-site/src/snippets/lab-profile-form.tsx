@@ -193,16 +193,15 @@ export const profileDefinition = kit.defineForm(profileSchema)({
 
 export function ProfileForm() {
 	const [saved, setSaved] = useState<ProfileOutput>()
+	const [form] = useState(() =>
+		kit.createForm(profileDefinition, { defaultValues }),
+	)
 	let output = "Submit the form to see typed output."
 	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
 
 	return (
 		<>
-			<kit.AutoForm
-				definition={profileDefinition}
-				defaultValues={defaultValues}
-				onSubmit={({ value }) => setSaved(value)}
-			>
+			<kit.AutoForm form={form} onSubmit={({ value }) => setSaved(value)}>
 				<kit.Submit>Save profile</kit.Submit>
 			</kit.AutoForm>
 			<pre aria-live="polite">{output}</pre>

@@ -12,6 +12,9 @@ Start with native controls or bring your own design system.
 
 Form, Please supports React 18 and React 19.
 
+Version 1 is a breaking reducer-based redesign. It does not provide
+compatibility aliases for the removed global creation and binding APIs.
+
 ## Install
 
 Install `form-please` in an existing React application:
@@ -26,7 +29,12 @@ Schema implementation. This example uses Zod.
 ## Create a form
 
 ```tsx
-import { createFormKit, nativeControls } from "form-please"
+import {
+	createFormKit,
+	type FormMiddleware,
+	nativeControls,
+} from "form-please"
+import { useState } from "react"
 import { z } from "zod"
 
 const contactSchema = z.object({
@@ -49,11 +57,23 @@ const contactForm = kit.defineForm(contactSchema)({
 	],
 })
 
+const logTransactions: FormMiddleware<{ email: string }, unknown> =
+	() => (next) => (transaction) => {
+	console.log(transaction.type)
+	return next(transaction)
+}
+
 export function ContactForm() {
+	const [form] = useState(() =>
+		kit.createForm(contactForm, {
+			defaultValues: { email: "" },
+			middleware: [logTransactions],
+		}),
+	)
+
 	return (
 		<kit.AutoForm
-			definition={contactForm}
-			defaultValues={{ email: "" }}
+			form={form}
 			onSubmit={({ value }) => console.log(value.email)}
 		>
 			<kit.Submit>Send</kit.Submit>
@@ -93,6 +113,9 @@ registered controls by name. It does not embed a design system.
 | `form-please/core` | React-free stores, definitions, paths, UI resolution, and value helpers |
 | `form-please/server` | Bounded `FormData` parsing and Standard Schema validation |
 | `form-please/react19` | `ActionForm` and `ActionSubmit` for React 19 |
+| `form-please/history` | Optional history, event journals, and deterministic replay |
+| `form-please/persistence` | Optional persistence, codecs, and local storage adapter |
+| `form-please/devtools` | Optional constrained Redux DevTools integration |
 | `form-please/layout.css` | Optional structural grid and spacing CSS |
 
 The main JavaScript entry does not import CSS. Import the structural stylesheet
@@ -131,6 +154,9 @@ npx skills add r13v/form-please --skill form-please
 - [Validation and errors](https://r13v.github.io/form-please/guides/validation)
 - [Async fields](https://r13v.github.io/form-please/guides/async-fields)
 - [React 19 Actions](https://r13v.github.io/form-please/guides/react-19-actions)
+- [History and journals](https://r13v.github.io/form-please/guides/history)
+- [Persistence](https://r13v.github.io/form-please/guides/persistence)
+- [Redux DevTools](https://r13v.github.io/form-please/guides/devtools)
 - [API reference](https://r13v.github.io/form-please/api)
 - [Architecture map](docs/ARCHITECTURE.md)
 - [Styling boundary](docs/adr/0001-styling-and-layout-boundary.md)

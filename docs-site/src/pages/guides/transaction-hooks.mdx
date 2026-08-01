@@ -148,9 +148,9 @@ The complete example uses `beforeUpdate` for the date invariant. It uses
 // [!include ~/snippets/transaction-hooks.tsx]
 ```
 
-Configure one `beforeUpdate` hook and one `afterUpdate` hook on `AutoForm`,
-`useForm`, or `createForm`. Both hooks are synchronous. Form, Please does not provide
-a hook middleware chain.
+Configure one `beforeUpdate` hook and one `afterUpdate` hook in
+`kit.createForm`, `kit.useForm`, or `kit.AutoForm`. Both hooks are synchronous.
+Use the form middleware chain when multiple independent policies must compose.
 
 Next, read [Validation and errors](/guides/validation) for schema and issue
 behavior. Read [Conditional fields](/guides/conditional-fields) for resolver

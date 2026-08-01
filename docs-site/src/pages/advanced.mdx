@@ -1,178 +1,214 @@
 ---
 title: Production recipes
-description: Focused Form, Please patterns for manual composition, loaded edit forms, server safety, accessibility, and public-boundary tests.
+description: Compose headless UI, load baselines, control middleware, protect FormData, preserve accessibility, and test the public form boundary.
 showAskAi: false
 ---
 
 # Production recipes
 
-Reach for these patterns after the generated form path is working. They keep
-the same schema, definition, and form instance while letting product-specific
-UI own more of the experience.
+Use these recipes after the first form works. Each recipe keeps one owner for
+the form and one explicit boundary for side effects.
 
 ## Choose a focused guide
 
-| Goal | Guide |
-| --- | --- |
-| Understand the complete typed UI tree | [UI definitions](/guides/ui-definitions) |
-| Tune validation timing or install server feedback | [Validation and errors](/guides/validation) |
-| Show, disable, or remove fields from tracked values | [Conditional fields](/guides/conditional-fields) |
-| Preserve atomic cross-field updates | [Transaction hooks](/guides/transaction-hooks) |
-| Add repeatable rows with stable identity | [Arrays](/guides/arrays) |
-| Connect a component library | [Controls and design systems](/guides/controls) |
-| Load suggestions or bespoke async field UI | [Async fields](/guides/async-fields) |
-| Add responsive structure and product styling | [Styling](/guides/styling) |
-| Submit through a server-first Action | [React 19 Actions](/guides/react-19-actions) |
+- [History and journals](/guides/history) covers undo, redo, seek, replay,
+  import, and export.
+- [Persistence](/guides/persistence) covers hydration, migration, codecs, and
+  storage adapters.
+- [Redux DevTools](/guides/devtools) covers inspection and constrained time
+  travel.
+- [React 19 Actions](/guides/react-19-actions) covers server-owned submission.
 
 ## Compose generated and bespoke UI
 
-Use `kit.Fields` for the ordinary generated part, then render previews,
-summaries, or commands against the same `FormInstance`.
+Create the form once. Use `FormProvider`, `useFormContext`, and granular hooks
+when a component must be independent of the generated tree.
 
-```tsx twoslash
-// @jsx: react-jsx
+```text
 import {
+	FormProvider,
 	createFormKit,
 	nativeControls,
-	useForm,
+	useFormContext,
 	useFormState,
 } from "form-please"
-import { z } from "zod"
+import { useState } from "react"
 
-const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-		},
-	],
-})
 
-function ProfileEditor() {
-	const form = useForm(definition, {
-		defaultValues: { name: "" },
-	})
+function DirtyStatus() {
+	const form = useFormContext()
 	const dirty = useFormState(form, (snapshot) => snapshot.isDirty)
-	let status = "Saved"
-	if (dirty) status = "Unsaved changes"
+	return <output>{dirty ? "Unsaved changes" : "Saved"}</output>
+}
+
+function Editor() {
+	const [form] = useState(() =>
+		kit.createForm(definition, { defaultValues }),
+	)
 
 	return (
 		<kit.Form form={form}>
 			<kit.Fields />
-			<output>{status}</output>
-			<kit.Submit>Save profile</kit.Submit>
+			<DirtyStatus />
+			<kit.Submit>Save</kit.Submit>
 		</kit.Form>
 	)
 }
 ```
 
-`useValue`, `useField`, `useArrayField`, and `useFormState` subscribe only to
-the selected slice. Keep generated and manual controls inside the same
-`kit.Form` so they share submission, reset, and accessible error behavior.
+Controls receive `labelProps`, descriptions, issues, and refs through their
+control contract. Do not rebuild those accessibility relationships in the
+parent form.
 
 ## Load an edit-form baseline
 
-`defaultValues` is read when the form instance is created. Changing the prop
-does not overwrite edits. When loaded server data should become the new clean
-baseline, reset deliberately:
+Wait for loaded data before you mount the component that creates the form.
+This makes the loaded values the initial clean baseline.
 
-```tsx twoslash
-// @jsx: react-jsx
-import { createFormKit, nativeControls, useForm } from "form-please"
-import { useEffect } from "react"
-import { z } from "zod"
+```text
+function ProfileScreen({ profile }) {
+	if (profile === undefined) return <p>Loading…</p>
+	return <ProfileEditor key={profile.id} profile={profile} />
+}
 
-const schema = z.object({ name: z.string() })
-const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-		},
-	],
-})
-
-function ProfileEditor({
-	profile,
-}: {
-	readonly profile: { readonly name: string }
-}) {
-	const form = useForm(definition, {
-		defaultValues: profile,
-	})
-
-	useEffect(() => {
-		form.reset(profile)
-	}, [form, profile])
-
-	return (
-		<kit.Form form={form}>
-			<kit.Fields />
-		</kit.Form>
+function ProfileEditor({ profile }) {
+	const [form] = useState(() =>
+		kit.createForm(definition, { defaultValues: profile }),
 	)
+	return <kit.AutoForm form={form} />
 }
 ```
 
-In a real edit screen, avoid replacing `profile` with a new object on every
-render. A successful `reset(profile)` clears touched state, issues, submission
-metadata, and dirty state.
+After a successful save, call `form.reset(profile)` to install the saved
+document as the new baseline. A prop identity change does not reset a form.
 
-When switching between distinct create/edit records should discard the current
-instance completely, key the component at that product boundary instead:
+## Middleware protocol
+
+Configure middleware only in `kit.createForm`:
 
 ```text
-<ProfileEditor key={profile.id} profile={profile} />
+import type { FormMiddleware } from "form-please"
+
+const audit: FormMiddleware<Input, Context> =
+	(api) => (next) => (transaction) => {
+		const before = api.getSnapshot()
+		const result = next(transaction)
+		const after = api.getSnapshot()
+		record({ transaction, result, before, after })
+		return result
+	}
 ```
 
-Use a stable mount after loading for one baseline, `reset(profile)` for an
-explicit in-place baseline replacement, and `key` when identity itself changes.
-`AutoForm` never resets merely because a new `defaultValues` object was created.
+The declaration order is outer-to-inner. For `[audit, policy]`, `audit` sees
+the transaction first and unwinds last.
+
+### Forward synchronously
+
+Call `next(transaction)` during the current handler call. Call it at most
+once. Return its result unchanged. An async handler, a promise result, a second
+`next` call, or a changed result throws a protocol error.
+
+### Cancel or replace deliberately
+
+Do not call `next` to cancel a transaction. The caller receives
+`{ status: "cancelled" }`. To replace a transaction, create a new value and
+pass it to `next`. Transactions are frozen, so do not mutate them.
+
+Application middleware has this authority for document, runtime, validation,
+submission, blur, and restore transactions. A replacement must still satisfy
+core invariants.
+
+### Dispatch nested commands
+
+`api.dispatch(command)` adds a nested command to a FIFO queue. The coordinator
+runs that command only after the current transaction and its publication
+finish. This rule prevents a nested command from changing state while the
+current middleware stack is unwinding.
+
+### Understand errors and finalized delivery
+
+An error before the core commit aborts the transaction. An error after a core
+commit propagates to the caller, but it does not roll back the committed state.
+The coordinator still publishes one coherent snapshot and delivers the
+effective finalized event exactly once. History, persistence, DevTools, and
+React 19 Action tracking use that guaranteed delivery point.
+
+`api.getSnapshot()` reads the effective pending committed snapshot after
+`next` commits, even before outer middleware returns.
+
+### Treat repeated blur as an event
+
+A forwarded `field/blurred` transaction commits every time, even when the
+field is already touched and no issue exposure changes. History uses the event
+to close an active control-edit group. Cancellation prevents the blur event
+and its automatic validation.
+
+## Restore boundary
+
+Undo, redo, seek, journal import, persistence hydration, replay, and DevTools
+navigation submit one `document/restored` transaction through middleware.
+
+A restore bypasses:
+
+- `beforeUpdate` and `afterUpdate`;
+- `valuePolicy` and `itemDefault`;
+- schema transforms and automatic validation;
+- application mutation callbacks.
+
+A committed restore installs values and row identity atomically. It does not
+restore the dirty baseline, touched state, issues, validation, submission,
+context, runtime options, focus targets, or subscriptions. It invalidates
+captured validation and server results and publishes once.
+
+Application middleware can cancel or replace a restore. History, persistence,
+and DevTools report `"cancelled"` or `"transformed"` when exact restoration
+does not occur.
+
+## Preserve application-owned immutable values
+
+Form, Please clones and freezes plain structures. It also detaches `Date` and
+`RegExp` values at public boundaries. `File` and other opaque leaves remain
+application-owned identities.
+
+Treat each opaque leaf as immutable after dispatch. If application code
+changes an object in place, snapshots, journals, and middleware cannot detect
+or isolate that mutation. Replace the leaf through a form command instead.
 
 ## Treat FormData as untrusted
 
-`parseFormData` rejects prototype keys, structural collisions, sparse arrays,
-unknown reserved metadata, excessive depth, and oversized indexes before
-schema validation.
+Parse server input through the server entry:
 
-Request size, multipart parsing, file count, and file size limits still belong
-in the framework before parsing. Server schemas should coerce browser protocol
-values such as number and date strings into domain values.
+```text
+import { parseFormData } from "form-please/server"
 
-See the complete server round trip in
-[React 19 Actions](/guides/react-19-actions).
+const result = await parseFormData(schema, formData)
+```
+
+Do not use `Object.fromEntries` for nested forms. Apply request, multipart,
+file-count, and file-size limits before `parseFormData`. The parser protects
+the value structure, not the transport body.
+
+Return a serializable `FormResult` from a React 19 Action. Use field paths for
+field issues and omit the path for a form issue.
 
 ## Preserve the accessibility contract
 
-Form, Please supplies stable IDs, native names, described-by relationships, issue
-focus targets, required state, and form semantics. Controls and slots decide
-the final markup, so they must forward the props they receive.
-
-- Controls attach `input.id`, `input.name`, `input.ref`, and
-  `input["aria-describedby"]` to the successful native control.
-- Field slots connect `labelProps` and `descriptionProps`.
-- Error slots render `rootProps` so submit-time focus reaches the correct
-  issue.
-- Disabled, read-only, and required states remain semantic, not only visual.
+Custom controls must attach the supplied name, ID, ref, `labelProps`, and ARIA
+relationships to the interactive element. Custom slots must keep semantic
+grouping and issue output. Use `form.focusFirstError()` in staged workflows
+instead of searching the DOM yourself.
 
 ## Test the public experience
 
-Test forms through the DOM your user receives:
+Test through package imports and visible behavior:
 
-- find controls by label and submit through the native form;
-- assert visible issues and focus recovery after invalid submit;
-- move array rows and verify their values stay with the logical row;
-- test custom controls and slots through the markup they own;
-- test server flows with serializable `FormResult` values.
+1. Create the form through `kit.createForm`.
+2. Render `kit.AutoForm`, `kit.Form`, or `ActionForm` with that form.
+3. Interact through labels and roles.
+4. Assert visible issues, focus, values, and submission results.
+5. For optional features, assert handle state and the committed document.
 
-Use `form-please/core` for focused store invariants. Application tests should not
-depend on private store fields or generated DOM order.
-
-Return to the [production form tutorial](/guides/tutorial), or use the
-[API reference](/api) for exact signatures.
+Do not test private reducer objects through deep imports. Use the public
+`form-please/core` entry only when the product intentionally uses the
+React-free `createFormStore` API.

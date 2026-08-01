@@ -49,6 +49,7 @@ Scope product styling through the native form class:
 ```tsx twoslash
 // @jsx: react-jsx
 import { createFormKit, nativeControls } from "form-please"
+import { useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
@@ -65,15 +66,16 @@ const definition = kit.defineForm(schema)({
 })
 
 // ---cut---
-const profileForm = (
-	<kit.AutoForm
-		className="profile-form"
-		definition={definition}
-		defaultValues={{ name: "" }}
-	>
-		<kit.Submit>Save profile</kit.Submit>
-	</kit.AutoForm>
-)
+function ProfileForm() {
+	const [form] = useState(() =>
+		kit.createForm(definition, { defaultValues: { name: "" } }),
+	)
+	return (
+		<kit.AutoForm className="profile-form" form={form}>
+			<kit.Submit>Save profile</kit.Submit>
+		</kit.AutoForm>
+	)
+}
 ```
 
 ## Copy a visual baseline

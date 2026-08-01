@@ -13,6 +13,9 @@ export function InteractiveLabClient() {
 	const [lastSubmit, setLastSubmit] = useState(
 		"Submit the form to see the result.",
 	)
+	const [form] = useState(() =>
+		kit.createForm(profileDefinition, { defaultValues }),
+	)
 
 	return (
 		<section
@@ -27,8 +30,7 @@ export function InteractiveLabClient() {
 			</p>
 			<kit.AutoForm
 				className="form-please-lab__form"
-				defaultValues={defaultValues}
-				definition={profileDefinition}
+				form={form}
 				id="interactive-form-please-lab-form"
 				onSubmit={({ value }) => {
 					setLastSubmit(formatSavedMessage(value))

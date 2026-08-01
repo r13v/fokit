@@ -580,6 +580,9 @@ export function LearningCohortExample() {
 }
 
 function LearningCohortForm() {
+	const [form] = useState(() =>
+		kit.createForm(cohortDefinition, { defaultValues: draft }),
+	)
 	const loadedDraft = useQuery({
 		queryKey: ["learning-cohort-draft", "cohort-41"],
 		queryFn: () => fakeRequest(draft, 410),
@@ -636,8 +639,7 @@ function LearningCohortForm() {
 			</p>
 			<kit.AutoForm
 				className="form-please-complex__form"
-				defaultValues={loadedDraft.data}
-				definition={cohortDefinition}
+				form={form}
 				onSubmit={async ({ value, form }) => {
 					try {
 						form.clearErrors()

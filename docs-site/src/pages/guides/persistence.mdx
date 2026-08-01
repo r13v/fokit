@@ -1,0 +1,175 @@
+---
+title: Persistence
+description: Hydrate and save a form document or history journal with versioned encoding, migration, codecs, and application-owned storage.
+showAskAi: false
+---
+
+# Persistence
+
+Use persistence when a form draft must survive a remount, navigation, or
+server round trip. Form, Please owns encoding, hydration, scheduling, and
+restore validation. Your application owns the storage transport.
+
+## First use with localStorage
+
+```text
+import {
+	createLocalStorageAdapter,
+	createPersistenceMiddleware,
+} from "form-please/persistence"
+
+const persistenceFeature = createPersistenceMiddleware({
+	adapter: createLocalStorageAdapter(() => window.localStorage),
+	key: "profile-draft",
+	version: 1,
+})
+
+const form = kit.createForm(definition, {
+	defaultValues,
+	middleware: [persistenceFeature],
+})
+const persistence = persistenceFeature.handle(form)
+await persistence.restore()
+```
+
+The storage getter runs only during an operation. Importing the adapter does
+not read `window`, so the module remains safe during SSR.
+
+## Hydration lifecycle
+
+Construction starts in the `"idle"` phase. Call `restore()` before local
+editing. A successful or empty restore changes the phase to `"active"` and
+starts save scheduling.
+
+If the application skips restore, call `start()`. If restore throws because
+stored data is invalid or storage failed, report the error and call `start()`
+only when local values should become authoritative.
+
+A local document edit during asynchronous restore produces `"conflict"`.
+Persistence keeps the local edit and does not install or overwrite the loaded
+document. Resolve the product conflict, then create a new form or choose an
+explicit recovery flow.
+
+Restore results are `"applied"`, `"empty"`, `"cancelled"`, `"transformed"`,
+`"unavailable"`, or `"conflict"`. Cancellation and transformation come from
+application middleware.
+
+## Save state and operations
+
+`getSnapshot()` exposes a phase and save state. Save state is `"idle"`,
+`"scheduled"`, `"saving"`, or `"failed"`. The default `saveDelay` is `500`
+milliseconds and restarts after each document commit.
+
+- `flush()` saves pending data immediately and requires active persistence.
+- `clear()` cancels the timer and removes the stored value.
+- `subscribe(listener)` reports phase and save-state changes.
+- `onError(error)` reports codec, adapter, and background save failures.
+
+A storage failure does not roll back the form commit. Catch explicit operation
+errors. Use the failed save state to offer Retry, Save now, or Download draft.
+
+## Document mode and history mode
+
+Document mode stores the current `FormDocument`. It restores values and row
+identity and installs the committed document as the clean baseline.
+
+History mode stores the complete `FormJournal`. Configure the exact history
+feature as a dependency and include both features in the form:
+
+```text
+const historyFeature = createHistoryMiddleware()
+const persistenceFeature = createPersistenceMiddleware({
+	adapter,
+	key: "draft",
+	version: 1,
+	history: historyFeature,
+})
+
+const form = kit.createForm(definition, {
+	defaultValues,
+	middleware: [historyFeature, persistenceFeature],
+})
+```
+
+Declaration order does not change first-party behavior. Missing or duplicate
+features make form creation fail atomically.
+
+## Encoding, codecs, and migration
+
+The canonical envelope stores a protocol identifier, protocol version,
+application version, mode, and structural payload. It preserves `undefined`,
+arrays, objects, and finite JSON scalars. Unsupported values fail with their
+canonical form path.
+
+Use `createDateCodec()` for `Date`. Use `createFileCodec()` only when storing
+file bytes is appropriate. The file codec defaults to a 10 MiB limit and
+requires the browser `File` API. Codec tags must be non-empty and unique.
+
+Run an application migration when the stored application version differs:
+
+```text
+const persistenceFeature = createPersistenceMiddleware({
+	adapter,
+	key: "profile",
+	version: 2,
+	migrate: async (payload, fromVersion, toVersion) => {
+		if (fromVersion === 1 && toVersion === 2) return migrateProfile(payload)
+		throw new Error("Unsupported profile draft version")
+	},
+})
+```
+
+Migration receives untrusted JSON after envelope validation. The returned JSON
+is decoded, normalized, and validated against the current schema before live
+restore. A failed migration leaves the live document unchanged.
+
+## Complete localStorage example
+
+This example restores before editing, starts local persistence after a restore
+failure, shows phase and save state, flushes on demand, clears storage, and
+reports errors.
+
+```tsx
+// [!include ~/snippets/persistence-local-storage.tsx]
+```
+
+Expected result: a successful edit is saved after the delay. Reloading the
+component restores the values and makes them the clean baseline.
+
+## nuqs query-string transport
+
+This application-owned hook adapts a nuqs JSON query parameter to the
+`FormPersistenceAdapter` contract. Install `nuqs`, mount its framework adapter,
+and create the persistence feature inside the component that owns this adapter.
+
+```ts
+// [!include ~/snippets/persistence-nuqs.ts]
+```
+
+Query strings have practical size and privacy limits. Use this transport only
+for small, non-sensitive drafts. The snippet uses replace history and shallow
+updates, so form saves do not add browser history entries.
+
+## TanStack Query server transport
+
+This adapter delegates storage to application API functions and uses TanStack
+Query for request coordination and cache updates:
+
+```ts
+// [!include ~/snippets/persistence-tanstack-query.ts]
+```
+
+Create the feature with the returned adapter. The application API remains
+responsible for authentication, authorization, conflict policy, retries, and
+server retention. Form, Please does not add a TanStack Query dependency.
+
+## What persistence does not restore
+
+Persistence does not restore touched paths, issues, validation or submission
+state, runtime context, focus targets, subscriptions, callbacks, or runtime
+options. Hydration bypasses value policies, lifecycle hooks, item defaults,
+automatic validation, and mutation callbacks. It still passes through the
+open middleware chain.
+
+Read [History and journals](/guides/history) when stored drafts also need undo,
+redo, and replay.

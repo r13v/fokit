@@ -132,3 +132,16 @@ tree-shaken entry wrapper gets its own source map and that absent optional
 dependency maps are objects. Check a map next to each emitted mapping reference
 (tsdown can map a shared chunk instead of its re-export wrapper), and normalize
 absent dependency maps to an empty object.
+
+## 2026-08-01 22:15 — GPT-5
+
+Running the documentation preview under `/form-please` → Vocs repeatedly
+requested `/brand/form-please-logo.png` outside the configured base path and
+logged `pathname must start with basePath`, although the affected browser checks
+continued. Align the logo URL with the preview base-path rewriting.
+
+## 2026-08-01 22:17 — GPT-5
+
+Checking the new persistence examples with Knip → `nuqs` resolved only through
+Vocs and was reported as an unlisted docs dependency. Declare example libraries
+directly in the docs-site package instead of relying on transitive installs.

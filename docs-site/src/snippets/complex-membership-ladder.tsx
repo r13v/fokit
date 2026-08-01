@@ -441,6 +441,12 @@ export function MembershipLadderExample() {
 }
 
 function MembershipLadderForm() {
+	const [form] = useState(() =>
+		kit.createForm(membershipDefinition, {
+			defaultValues: membershipDraft,
+			context: { workspaces: [] },
+		}),
+	)
 	const loadedDraft = useQuery({
 		queryKey: ["membership-draft"],
 		queryFn: () => fakeRequest(membershipDraft, 380),
@@ -492,8 +498,7 @@ function MembershipLadderForm() {
 				beforeUpdate={preserveTierOrder}
 				className="form-please-complex__form"
 				context={{ workspaces: workspaces.data }}
-				defaultValues={loadedDraft.data}
-				definition={membershipDefinition}
+				form={form}
 				onSubmit={async ({ value, form }) => {
 					try {
 						form.clearErrors()

@@ -895,8 +895,20 @@ test("docs TypeScript and verification gates are wired", async () => {
 		"npm run build && npm run typecheck --prefix docs-site",
 	)
 	assert.equal(
+		rootPackageJson.scripts["site:verify:preview"],
+		"npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/form-please npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
+	)
+	assert.equal(
+		rootPackageJson.scripts["site:verify:production"],
+		"BASE_PATH=/form-please npm run site:build && EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
+	)
+	assert.equal(
 		rootPackageJson.scripts["site:verify"],
-		"npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/form-please npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e && BASE_PATH=/form-please npm run site:build && EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
+		"npm run site:verify:preview && npm run site:verify:production",
+	)
+	assert.equal(
+		rootPackageJson.scripts.verify,
+		"npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:smoke && npm run package:check && npm run knip",
 	)
 	assert.equal(rootPackageJson.scripts.verify.includes("test:docs"), false)
 	assert.deepEqual(knipConfig.workspaces["docs-site"].entry, [

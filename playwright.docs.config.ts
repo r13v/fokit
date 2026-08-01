@@ -14,6 +14,7 @@ export default defineConfig({
 	use: {
 		baseURL,
 		...devices["Desktop Chrome"],
+		channel: process.env.GITHUB_ACTIONS ? "chrome" : undefined,
 	},
 	webServer: {
 		command: `npm run preview --prefix docs-site -- --host ${host} --port ${port}`,

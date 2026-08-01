@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     name: Verify (Node ${{ matrix.node-version }})
@@ -33,9 +37,6 @@ jobs:
 
       - name: Install docs dependencies
         run: npm ci --prefix docs-site
-
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
 
       - name: Verify package
         run: npm run verify
@@ -69,11 +70,8 @@ jobs:
       - name: Install docs dependencies
         run: npm ci --prefix docs-site
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Verify docs site
-        run: npm run site:verify
+      - name: Verify docs preview
+        run: npm run site:verify:preview
 
       - name: Upload docs Playwright artifacts
         if: always()

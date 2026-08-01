@@ -42,11 +42,8 @@ jobs:
       - name: Install docs dependencies
         run: npm ci --prefix docs-site
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Verify docs site
-        run: BASE_PATH=/form-please npm run site:verify
+      - name: Verify production docs site
+        run: npm run site:verify:production
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4

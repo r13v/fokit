@@ -8,8 +8,14 @@ const ciWorkflow = (
 		encoding: "utf8",
 	})
 ).replaceAll("\r\n", "\n")
+const playwrightConfig = await readFile(
+	new URL("../../playwright.config.ts", import.meta.url),
+	"utf8",
+)
 const ci = parse(ciWorkflow) as Record<string, unknown>
 const matrixNodeVersionExpression = "$" + "{{ matrix.node-version }}"
+const concurrencyGroupExpression =
+	"$" + "{{ github.workflow }}-" + "$" + "{{ github.ref }}"
 
 describe("release-equivalent CI workflow", () => {
 	it("installs every workspace checked by the release-equivalent gates", () => {
@@ -21,13 +27,16 @@ describe("release-equivalent CI workflow", () => {
 		expect(record(ci.on).pull_request).toBeNull()
 		expect(record(record(ci.on).push).branches).toEqual(["main"])
 		expect(record(ci.permissions).contents).toBe("read")
+		expect(record(ci.concurrency)).toEqual({
+			group: concurrencyGroupExpression,
+			"cancel-in-progress": true,
+		})
 		expect(record(record(verify.strategy).matrix)["node-version"]).toEqual([24])
 		expect(steps.map((step) => step.name)).toEqual([
 			"Checkout",
 			"Setup Node",
 			"Install dependencies",
 			"Install docs dependencies",
-			"Install Chromium",
 			"Verify package",
 			"Dry-run package",
 		])
@@ -40,7 +49,6 @@ describe("release-equivalent CI workflow", () => {
 		expect(runs).toEqual([
 			"npm ci",
 			"npm ci --prefix docs-site",
-			"npx playwright install --with-deps chromium",
 			"npm run verify",
 			"npm pack --dry-run",
 		])
@@ -49,7 +57,7 @@ describe("release-equivalent CI workflow", () => {
 		)
 	})
 
-	it("runs docs-site verification after installing docs dependencies", () => {
+	it("runs preview verification after installing docs dependencies", () => {
 		const docsSite = job(ci, "docs-site")
 		const steps = workflowSteps(docsSite)
 		const runs = steps.map((step) => step.run).filter(Boolean)
@@ -61,8 +69,7 @@ describe("release-equivalent CI workflow", () => {
 			"Install dependencies",
 			"Build package",
 			"Install docs dependencies",
-			"Install Chromium",
-			"Verify docs site",
+			"Verify docs preview",
 			"Upload docs Playwright artifacts",
 		])
 		expect(record(steps[1]?.with)["node-version"]).toBe(24)
@@ -73,11 +80,10 @@ describe("release-equivalent CI workflow", () => {
 			"npm ci",
 			"npm run build",
 			"npm ci --prefix docs-site",
-			"npx playwright install --with-deps chromium",
-			"npm run site:verify",
+			"npm run site:verify:preview",
 		])
 		expect(runs.indexOf("npm ci --prefix docs-site")).toBeLessThan(
-			runs.indexOf("npm run site:verify"),
+			runs.indexOf("npm run site:verify:preview"),
 		)
 	})
 
@@ -94,6 +100,13 @@ describe("release-equivalent CI workflow", () => {
 		expect(ciWorkflow).not.toContain("pages: write")
 		expect(ciWorkflow).not.toContain("deploy-pages")
 		expect(ciWorkflow).not.toContain("upload-pages-artifact")
+		expect(ciWorkflow).not.toContain("playwright install")
+	})
+
+	it("uses the Chrome already installed on GitHub runners", () => {
+		expect(playwrightConfig).toContain(
+			'channel: process.env.GITHUB_ACTIONS ? "chrome" : undefined',
+		)
 	})
 })
 

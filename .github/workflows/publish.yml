@@ -82,9 +82,6 @@ jobs:
       - name: Install docs dependencies
         run: npm ci --prefix docs-site
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
-
       - name: Verify package
         run: npm run verify
 

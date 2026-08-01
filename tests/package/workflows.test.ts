@@ -34,10 +34,10 @@ describe("GitHub Pages workflow", () => {
 			(step) => step.run === "npm ci --prefix docs-site",
 		)
 		const docsVerifyIndex = buildSteps.findIndex(
-			(step) => step.run === "BASE_PATH=/form-please npm run site:verify",
+			(step) => step.run === "npm run site:verify:production",
 		)
 		const docsVerifyRunIndex = buildRuns.indexOf(
-			"BASE_PATH=/form-please npm run site:verify",
+			"npm run site:verify:production",
 		)
 		const artifactIndex = buildSteps.findIndex(
 			(step) => step.uses === "actions/upload-pages-artifact@v4",
@@ -62,8 +62,7 @@ describe("GitHub Pages workflow", () => {
 			"Configure Pages",
 			"Install dependencies",
 			"Install docs dependencies",
-			"Install Chromium",
-			"Verify docs site",
+			"Verify production docs site",
 			"Upload Pages artifact",
 		])
 		expect(buildSteps[0]?.uses).toBe("actions/checkout@v6")
@@ -77,8 +76,7 @@ describe("GitHub Pages workflow", () => {
 		expect(buildRuns).toEqual([
 			"npm ci",
 			"npm ci --prefix docs-site",
-			"npx playwright install --with-deps chromium",
-			"BASE_PATH=/form-please npm run site:verify",
+			"npm run site:verify:production",
 		])
 		expect(docsInstallIndex).toBeLessThan(docsVerifyIndex)
 		expect(docsVerifyRunIndex).toBeGreaterThan(-1)
@@ -98,6 +96,9 @@ describe("GitHub Pages workflow", () => {
 
 	it("previews the Vocs build without overriding its base path", () => {
 		expect(docsPlaywrightConfig).toContain("/form-please/")
+		expect(docsPlaywrightConfig).toContain(
+			'channel: process.env.GITHUB_ACTIONS ? "chrome" : undefined',
+		)
 		expect(docsPlaywrightConfig).not.toMatch(/\s--base(?:\s|=)/)
 	})
 
@@ -190,7 +191,6 @@ describe("trusted npm publishing workflow", () => {
 			"node scripts/verify-release.mjs",
 			"npm ci",
 			"npm ci --prefix docs-site",
-			"npx playwright install --with-deps chromium",
 			"npm run verify",
 			"npm run site:verify",
 			"npm pack --dry-run",
@@ -211,6 +211,7 @@ describe("trusted npm publishing workflow", () => {
 		expect(publishWorkflow).not.toContain("NODE_AUTH_TOKEN")
 		expect(publishWorkflow).not.toContain("secrets.")
 		expect(publishWorkflow).not.toContain("--provenance")
+		expect(publishWorkflow).not.toContain("playwright install")
 		expect(publishWorkflow).not.toMatch(/\bnpm version\b/)
 	})
 })

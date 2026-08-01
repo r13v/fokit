@@ -7,4 +7,7 @@ export default defineConfig({
 	forbidOnly: Boolean(process.env.CI),
 	retries: process.env.CI ? 2 : 0,
 	reporter: "list",
+	use: {
+		channel: process.env.GITHUB_ACTIONS ? "chrome" : undefined,
+	},
 })

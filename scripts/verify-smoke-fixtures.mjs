@@ -39,8 +39,12 @@ const tempRoot = await mkdtemp(join(tmpdir(), "form-please-smoke-"))
 
 try {
 	const tarballPath = await packTarball(tempRoot)
-	for (const fixture of fixtures) {
-		await runFixture(fixture, tarballPath, tempRoot)
+	const results = await Promise.allSettled(
+		fixtures.map((fixture) => runFixture(fixture, tarballPath, tempRoot)),
+	)
+	const failure = results.find((result) => result.status === "rejected")
+	if (failure?.status === "rejected") {
+		throw failure.reason
 	}
 } finally {
 	await rm(tempRoot, { force: true, recursive: true })

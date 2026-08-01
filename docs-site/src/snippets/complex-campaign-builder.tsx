@@ -798,6 +798,16 @@ function CampaignBuilderForm() {
 				Could not load campaign resources.
 			</section>
 		)
+	let initialValues: CampaignInput = newCampaign
+	let submitLabel = "Create campaign"
+	if (mode === "edit") {
+		initialValues = draft.data
+		submitLabel = "Update campaign"
+	}
+	let status = notice
+	if (createCampaign.isPending || updateCampaign.isPending) {
+		status = "Saving campaign…"
+	}
 
 	return (
 		<section
@@ -833,18 +843,23 @@ function CampaignBuilderForm() {
 				beforeUpdate={clearInactiveTemplate}
 				className="form-please-complex__form"
 				context={{ segments: segments.data }}
-				defaultValues={mode === "edit" ? draft.data : newCampaign}
+				defaultValues={initialValues}
 				definition={campaignDefinition}
 				key={mode}
 				onSubmit={async ({ value, form }) => {
 					try {
 						form.clearErrors()
-						const result =
-							mode === "edit"
-								? await updateCampaign.mutateAsync(value)
-								: await createCampaign.mutateAsync(value)
+						if (mode === "edit") {
+							const result = await updateCampaign.mutateAsync(value)
+							setNotice(
+								`Updated ${result.id} with ${value.selectedChannels.length} channel(s).`,
+							)
+							return
+						}
+
+						const result = await createCampaign.mutateAsync(value)
 						setNotice(
-							`${mode === "edit" ? "Updated" : "Created"} ${result.id} with ${value.selectedChannels.length} channel(s).`,
+							`Created ${result.id} with ${value.selectedChannels.length} channel(s).`,
 						)
 					} catch {
 						form.setErrors([
@@ -859,13 +874,9 @@ function CampaignBuilderForm() {
 			>
 				<div className="form-please-complex__actions">
 					<kit.Submit className="form-please-complex__primary">
-						{mode === "edit" ? "Update campaign" : "Create campaign"}
+						{submitLabel}
 					</kit.Submit>
-					<span aria-live="polite">
-						{createCampaign.isPending || updateCampaign.isPending
-							? "Saving campaign…"
-							: notice}
-					</span>
+					<span aria-live="polite">{status}</span>
 				</div>
 			</kit.AutoForm>
 		</section>

@@ -61,6 +61,8 @@ const profileDefinition = kit.defineForm(profileSchema)({
 
 export function OverviewDemoClient() {
 	const [saved, setSaved] = useState<FormOutput<typeof profileSchema>>()
+	let output = "Submit the form to see typed output."
+	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
 
 	return (
 		<section
@@ -89,11 +91,7 @@ export function OverviewDemoClient() {
 			>
 				<span>Validated output</span>
 				<pre data-testid="overview-output">
-					<code>
-						{saved === undefined
-							? "Submit the form to see typed output."
-							: JSON.stringify(saved, null, 2)}
-					</code>
+					<code>{output}</code>
 				</pre>
 			</div>
 		</section>

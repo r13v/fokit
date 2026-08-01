@@ -203,14 +203,20 @@ function WorkspaceConnection() {
 		mutationFn: (nextConnected: boolean) =>
 			fakeRequest({ workspaceId, connected: nextConnected }, 360),
 	})
+	let connectionStatus = "Workspace disconnected"
+	let actionLabel = "Connect"
+	if (connected) {
+		connectionStatus = "Workspace connected"
+		actionLabel = "Disconnect"
+	}
+	if (mutation.isPending) actionLabel = "Updating connection…"
+
 	return (
 		<section
 			className="form-please-complex__embedded"
 			aria-label="Workspace connection"
 		>
-			<strong>
-				{connected ? "Workspace connected" : "Workspace disconnected"}
-			</strong>
+			<strong>{connectionStatus}</strong>
 			<button
 				disabled={mutation.isPending}
 				onClick={async () => {
@@ -219,11 +225,7 @@ function WorkspaceConnection() {
 				}}
 				type="button"
 			>
-				{mutation.isPending
-					? "Updating connection…"
-					: connected
-						? "Disconnect"
-						: "Connect"}
+				{actionLabel}
 			</button>
 		</section>
 	)
@@ -473,6 +475,8 @@ function MembershipLadderForm() {
 				Could not load the membership editor.
 			</section>
 		)
+	let status = notice
+	if (save.isPending) status = "Saving ladder…"
 
 	return (
 		<section
@@ -510,9 +514,7 @@ function MembershipLadderForm() {
 					<kit.Submit className="form-please-complex__primary">
 						Save membership ladder
 					</kit.Submit>
-					<span aria-live="polite">
-						{save.isPending ? "Saving ladder…" : notice}
-					</span>
+					<span aria-live="polite">{status}</span>
 				</div>
 			</kit.AutoForm>
 		</section>

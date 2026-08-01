@@ -469,9 +469,8 @@ export const text = defineControl<string | undefined, TextOptions>({
   formData: {
     mode: 'native',
     serialize(value, { name }) {
-      return value === undefined
-        ? []
-        : [{ name, value }];
+      if (value === undefined) return [];
+      return [{ name, value }];
     },
   },
 });

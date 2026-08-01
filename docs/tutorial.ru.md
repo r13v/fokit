@@ -118,8 +118,10 @@ export const textControl = defineControl<string | undefined, TextOptions>({
 	},
 	formData: {
 		mode: "native",
-		serialize: (value, { name }) =>
-			value === undefined ? [] : [{ name, value }],
+		serialize(value, { name }) {
+			if (value === undefined) return []
+			return [{ name, value }]
+		},
 	},
 })
 ```
@@ -176,12 +178,12 @@ function FieldSlot({
 }: FieldSlotProps) {
 	return (
 		<div {...rootProps}>
-			{label === undefined ? null : (
+			{label !== undefined && (
 				<label {...labelProps} htmlFor={labelProps.htmlFor}>
 					{label}
 				</label>
 			)}
-			{description === undefined ? null : (
+			{description !== undefined && (
 				<p {...descriptionProps}>{description}</p>
 			)}
 			{control}
@@ -392,7 +394,8 @@ beforeUpdate(event) {
 		return { ...change, value }
 	})
 
-	return changed ? replacement : undefined
+	if (!changed) return undefined
+	return replacement
 }
 ```
 

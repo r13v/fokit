@@ -219,28 +219,50 @@ function WizardNavigation() {
 
 		form.setValue("stage", nextStage)
 	}
+	const nextStage = stages[index + 1] ?? stage
+	let primaryAction = (
+		<kit.Submit className="form-please-complex__primary">
+			Publish makerspace
+		</kit.Submit>
+	)
+	if (index < stages.length - 1) {
+		primaryAction = (
+			<button
+				className="form-please-complex__primary"
+				onClick={() => void advance(nextStage)}
+				type="button"
+			>
+				Continue to {stageLabels[nextStage]}
+			</button>
+		)
+	}
 
 	return (
 		<nav className="form-please-complex__wizard" aria-label="Launch stages">
 			<ol>
-				{stages.map((item, itemIndex) => (
-					<li aria-current={item === stage ? "step" : undefined} key={item}>
-						<button
-							disabled={itemIndex > index + 1}
-							onClick={() => {
-								if (itemIndex === index + 1) {
-									void advance(item)
-									return
-								}
+				{stages.map((item, itemIndex) => {
+					let ariaCurrent: "step" | undefined
+					if (item === stage) ariaCurrent = "step"
 
-								form.setValue("stage", item)
-							}}
-							type="button"
-						>
-							{itemIndex + 1}. {stageLabels[item]}
-						</button>
-					</li>
-				))}
+					return (
+						<li aria-current={ariaCurrent} key={item}>
+							<button
+								disabled={itemIndex > index + 1}
+								onClick={() => {
+									if (itemIndex === index + 1) {
+										void advance(item)
+										return
+									}
+
+									form.setValue("stage", item)
+								}}
+								type="button"
+							>
+								{itemIndex + 1}. {stageLabels[item]}
+							</button>
+						</li>
+					)
+				})}
 			</ol>
 			<div className="form-please-complex__actions">
 				<button
@@ -250,19 +272,7 @@ function WizardNavigation() {
 				>
 					Back
 				</button>
-				{index < stages.length - 1 ? (
-					<button
-						className="form-please-complex__primary"
-						onClick={() => void advance(stages[index + 1] ?? stage)}
-						type="button"
-					>
-						Continue to {stageLabels[stages[index + 1] ?? stage]}
-					</button>
-				) : (
-					<kit.Submit className="form-please-complex__primary">
-						Publish makerspace
-					</kit.Submit>
-				)}
+				{primaryAction}
 			</div>
 		</nav>
 	)
@@ -273,27 +283,28 @@ function AddressLookup() {
 	const postalCode = useValue(form, "location.postalCode")
 	const lookup = useQuery({
 		queryKey: ["address-lookup", postalCode],
-		queryFn: () =>
-			fakeRequest(
+		queryFn: () => {
+			let address = "12 Workshop Crescent"
+			if (postalCode.toUpperCase().startsWith("N")) {
+				address = "48 Foundry Lane"
+			}
+			return fakeRequest(
 				{
-					address: postalCode.toUpperCase().startsWith("N")
-						? "48 Foundry Lane"
-						: "12 Workshop Crescent",
+					address,
 					latitude: 51.542,
 					longitude: -0.102,
 				},
 				320,
-			),
+			)
+		},
 		enabled: postalCode.trim().length >= 3,
 	})
+	let status = "Address suggestion ready"
+	if (lookup.isFetching) status = "Resolving postal code…"
 
 	return (
 		<div className="form-please-complex__embedded">
-			<span>
-				{lookup.isFetching
-					? "Resolving postal code…"
-					: "Address suggestion ready"}
-			</span>
+			<span>{status}</span>
 			<button
 				disabled={lookup.data === undefined}
 				onClick={() => {
@@ -622,6 +633,10 @@ function MakerspaceLaunchForm() {
 			</section>
 		)
 	}
+	let status = notice
+	if (savePlace.isPending || saveMedia.isPending || publish.isPending) {
+		status = "Saving location, media, and release…"
+	}
 
 	return (
 		<section
@@ -660,9 +675,7 @@ function MakerspaceLaunchForm() {
 				}}
 			/>
 			<output className="form-please-complex__network" aria-live="polite">
-				{savePlace.isPending || saveMedia.isPending || publish.isPending
-					? "Saving location, media, and release…"
-					: notice}
+				{status}
 			</output>
 		</section>
 	)

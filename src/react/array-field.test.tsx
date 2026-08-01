@@ -549,11 +549,9 @@ function rowForValue(container: HTMLElement, value: string): HTMLElement {
 }
 
 function childrenCount(children: ArraySlotProps["children"]): number {
-	return Array.isArray(children)
-		? children.length
-		: children === undefined
-			? 0
-			: 1
+	if (Array.isArray(children)) return children.length
+	if (children === undefined) return 0
+	return 1
 }
 
 function pathFrom(rootProps: FieldSlotProps["rootProps"]): string {

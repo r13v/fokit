@@ -606,13 +606,11 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			kind: "nonSubmit",
 			exposeAll: canonicalPath === undefined,
 			exposePaths: canonicalPath === undefined ? [] : [canonicalPath],
-		}).then((result) =>
-			canonicalPath === undefined
-				? result
-				: result.success
-					? []
-					: filterPathSubsetIssues(result.issues, [canonicalPath]),
-		)
+		}).then((result) => {
+			if (canonicalPath === undefined) return result
+			if (result.success) return []
+			return filterPathSubsetIssues(result.issues, [canonicalPath])
+		})
 	}
 
 	validatePaths<Path extends FieldPath<FormInput<Schema>>>(

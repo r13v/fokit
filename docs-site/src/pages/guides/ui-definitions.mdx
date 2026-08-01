@@ -111,9 +111,35 @@ context.
 ## Compose structural copy
 
 In React kits, field labels and descriptions, section titles and descriptions,
-and array labels and descriptions accept `string | ReactElement`. Use this for
-inline links, emphasis, badges, or a tooltip trigger that remains part of the
-node's accessible structure:
+and array labels and descriptions accept `string | ReactElement`. Use React
+elements for inline links, emphasis, or badges:
+
+```tsx twoslash
+// @jsx: react-jsx
+import { createFormKit, nativeControls } from "form-please"
+import { z } from "zod"
+
+const schema = z.object({ name: z.string() })
+const kit = createFormKit({ controls: nativeControls })
+
+kit.defineForm(schema)({
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: <strong>Display name</strong>,
+			description: <a href="/naming-policy">Read the naming policy</a>,
+		},
+	],
+})
+```
+
+## Add options to a field slot
+
+Use `slotOptions` to pass presentation data from a UI definition to a structural
+slot. Declare the option type on `FieldSlotProps`. Then register the field slot
+with `createFormKit`:
 
 ```tsx twoslash
 // @jsx: react-jsx
@@ -124,11 +150,11 @@ import {
 } from "form-please"
 import { z } from "zod"
 
-type ProductFieldOptions = {
+type OverviewFieldOptions = {
 	readonly labelTooltip?: string
 }
 
-function ProductTooltip({
+function FieldTooltip({
 	id,
 	content,
 }: {
@@ -136,7 +162,7 @@ function ProductTooltip({
 	readonly content: string
 }) {
 	return (
-		<span className="product-tooltip">
+		<span className="field-tooltip">
 			<button aria-describedby={id} type="button">
 				<span aria-hidden="true">?</span>
 				<span className="sr-only">About this field</span>
@@ -148,7 +174,7 @@ function ProductTooltip({
 	)
 }
 
-function ProductField({
+function OverviewField({
 	rootProps,
 	label,
 	labelProps,
@@ -157,19 +183,18 @@ function ProductField({
 	slotOptions,
 	control,
 	errors,
-}: FieldSlotProps<ProductFieldOptions>) {
+}: FieldSlotProps<OverviewFieldOptions>) {
 	const tooltipId = `${labelProps.htmlFor}-tooltip`
 
 	return (
 		<div {...rootProps}>
-			<label {...labelProps}>{label}</label>
-			{slotOptions?.labelTooltip === undefined ? null : (
-				<ProductTooltip
-					content={slotOptions.labelTooltip}
-					id={tooltipId}
-				/>
+			{label !== undefined && <label {...labelProps}>{label}</label>}
+			{slotOptions?.labelTooltip !== undefined && (
+				<FieldTooltip content={slotOptions.labelTooltip} id={tooltipId} />
 			)}
-			<div {...descriptionProps}>{description}</div>
+			{description !== undefined && (
+				<p {...descriptionProps}>{description}</p>
+			)}
 			{control}
 			{errors}
 		</div>
@@ -179,40 +204,40 @@ function ProductField({
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({
 	controls: nativeControls,
-	slots: { Field: ProductField },
+	slots: { Field: OverviewField },
 })
 
-// ---cut---
 kit.defineForm(schema)({
 	ui: [
 		{
 			kind: "field",
 			path: "name",
 			control: "text",
-			label: <strong>Display name</strong>,
-			description: <a href="/naming-policy">Read the naming policy</a>,
-			slotOptions: {
-				labelTooltip: "This is visible to other members",
-			},
+			label: "Name",
+			slotOptions: ({ name }) => ({
+				labelTooltip: `Editing ${name}`,
+			}),
 		},
 	],
 })
 ```
 
-`slotOptions` belongs to structural presentation; field `options` still belongs
-to the selected value control. `Field`, `Section`, and `Array` each infer an
-independent options type from the slot registered in `createFormKit`. The
-property is also resolvable, so tooltip copy or other presentation data can
-depend on tracked values and runtime context.
+`createFormKit` infers `OverviewFieldOptions` from the registered `Field` slot.
+The resolver reads `name` and returns the field slot options. `OverviewField`
+receives the resolved object through its `slotOptions` prop.
+
+`Field`, `Section`, and `Array` each have an independent slot option type. Field
+`slotOptions` belongs to structural presentation. Field `options` belongs to
+the selected value control.
 
 The React-free `form-please/core` default remains string-only. React elements and
 slot-option objects are opaque to core normalization: their internals are not
 cloned or frozen. Treat them as immutable after defining the form; mutating an
 opaque object does not notify the form store or trigger a render.
 
-The tooltip example keeps its interactive trigger outside the field label and
-connects it to `role="tooltip"` content. Product CSS or a design-system tooltip
-can reveal that content on hover and keyboard focus.
+The tooltip trigger stays outside the field label. It connects to the tooltip
+content through `aria-describedby`. Product CSS or a design-system tooltip can
+show the content on hover and keyboard focus.
 
 ## Place form-local React content
 

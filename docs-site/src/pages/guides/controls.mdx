@@ -80,7 +80,8 @@ const productText = defineControl<string | undefined, TextOptions>({
 	formData: {
 		mode: "native",
 		serialize(value, { name }) {
-			return value === undefined ? [] : [{ name, value }]
+			if (value === undefined) return []
+			return [{ name, value }]
 		},
 	},
 })
@@ -232,8 +233,8 @@ function ProductField({
 }: FieldSlotProps) {
 	return (
 		<div {...rootProps} className="product-field">
-			{label === undefined ? null : <label {...labelProps}>{label}</label>}
-			{description === undefined ? null : (
+			{label !== undefined && <label {...labelProps}>{label}</label>}
+			{description !== undefined && (
 				<p {...descriptionProps}>{description}</p>
 			)}
 			{control}

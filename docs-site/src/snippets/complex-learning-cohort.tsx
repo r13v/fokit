@@ -237,24 +237,24 @@ function TitleSuggestions() {
 			<strong>Remote title suggestions</strong>
 			<div className="form-please-complex__choice-list">
 				{matchResource(suggestionsResource, {
-					pending: ({ fetchStatus }) => (
-						<span>
-							{fetchStatus === "idle"
-								? "Enter at least five characters."
-								: "Generating suggestions…"}
-						</span>
-					),
+					pending: ({ fetchStatus }) => {
+						let message = "Generating suggestions…"
+						if (fetchStatus === "idle") {
+							message = "Enter at least five characters."
+						}
+						return <span>{message}</span>
+					},
 					success: ({ value, refresh }) => (
 						<>
-							{refresh.status === "pending" ? (
+							{refresh.status === "pending" && (
 								<span>Refreshing suggestions…</span>
-							) : null}
-							{refresh.status === "paused" ? (
+							)}
+							{refresh.status === "paused" && (
 								<span>Refresh paused; showing saved suggestions.</span>
-							) : null}
-							{refresh.status === "error" ? (
+							)}
+							{refresh.status === "error" && (
 								<span>Refresh failed; showing saved suggestions.</span>
-							) : null}
+							)}
 							{value.map((suggestion) => (
 								<button
 									key={suggestion}
@@ -618,6 +618,10 @@ function LearningCohortForm() {
 				Could not load the cohort draft.
 			</section>
 		)
+	let status = notice
+	if (saveCore.isPending || saveMedia.isPending || syncOffers.isPending) {
+		status = "Synchronizing three resources…"
+	}
 
 	return (
 		<section
@@ -644,25 +648,25 @@ function LearningCohortForm() {
 							`Revision ${core.revision} saved with ${media.resources} resource(s) and ${offers.active} active offer(s).`,
 						)
 					} catch (error) {
-						form.setErrors(
-							error instanceof CohortConflictError
-								? [
-										{
-											source: "server",
-											path: "identity.title",
-											code: "title_conflict",
-											message:
-												"That title is already reserved. Choose a suggestion or edit it.",
-										},
-									]
-								: [
-										{
-											source: "server",
-											message:
-												"The cohort could not be saved. Your draft is intact.",
-										},
-									],
-						)
+						if (error instanceof CohortConflictError) {
+							form.setErrors([
+								{
+									source: "server",
+									path: "identity.title",
+									code: "title_conflict",
+									message:
+										"That title is already reserved. Choose a suggestion or edit it.",
+								},
+							])
+							return
+						}
+
+						form.setErrors([
+							{
+								source: "server",
+								message: "The cohort could not be saved. Your draft is intact.",
+							},
+						])
 					}
 				}}
 			>
@@ -670,11 +674,7 @@ function LearningCohortForm() {
 					<kit.Submit className="form-please-complex__primary">
 						Save cohort
 					</kit.Submit>
-					<span aria-live="polite">
-						{saveCore.isPending || saveMedia.isPending || syncOffers.isPending
-							? "Synchronizing three resources…"
-							: notice}
-					</span>
+					<span aria-live="polite">{status}</span>
 				</div>
 			</kit.AutoForm>
 		</section>

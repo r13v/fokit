@@ -164,17 +164,25 @@ const kit = createFormKit({ controls: nativeControls })
 
 function PolicyBalance() {
 	const form = useFormContext<typeof studioPolicySchema, PolicyContext>()
-	const balance = useFormState(form, (snapshot) => ({
-		accessOptions:
-			Number(snapshot.values.access.earlyEnabled) +
-			Number(snapshot.values.access.lateEnabled),
-		restrictedEquipment: snapshot.values.equipment.filter(
-			(item) => item.mandatoryBriefing,
-		).length,
-		deposit: snapshot.values.safeguard.depositRequired
-			? snapshot.values.safeguard.amount
-			: 0,
-	}))
+	const balance = useFormState(form, (snapshot) => {
+		let deposit = 0
+		if (
+			snapshot.values.safeguard.depositRequired &&
+			snapshot.values.safeguard.amount !== undefined
+		) {
+			deposit = snapshot.values.safeguard.amount
+		}
+
+		return {
+			accessOptions:
+				Number(snapshot.values.access.earlyEnabled) +
+				Number(snapshot.values.access.lateEnabled),
+			restrictedEquipment: snapshot.values.equipment.filter(
+				(item) => item.mandatoryBriefing,
+			).length,
+			deposit,
+		}
+	})
 
 	return (
 		<aside className="form-please-complex__preview" aria-label="Policy balance">
@@ -493,6 +501,10 @@ function StudioPoliciesForm() {
 			</section>
 		)
 	}
+	let status = notice
+	if (saveRules.isPending || publishSummary.isPending) {
+		status = "Publishing two resources…"
+	}
 
 	return (
 		<section
@@ -533,11 +545,7 @@ function StudioPoliciesForm() {
 					<kit.Submit className="form-please-complex__primary">
 						Publish policies
 					</kit.Submit>
-					<span aria-live="polite">
-						{saveRules.isPending || publishSummary.isPending
-							? "Publishing two resources…"
-							: notice}
-					</span>
+					<span aria-live="polite">{status}</span>
 				</div>
 			</kit.AutoForm>
 		</section>

@@ -191,7 +191,7 @@ const kit = createFormKit({ controls: nativeControls })
 function NamePreview({ disabled, readOnly }: RenderNodeProps) {
 	const form = useFormContext<typeof schema>()
 	const name = useFormState(form, (snapshot) => snapshot.values.name)
-	return <output aria-disabled={disabled || undefined}>{readOnly ? "Locked: " : ""}{name}</output>
+	return <output aria-disabled={disabled || undefined}>{readOnly && "Locked: "}{name}</output>
 }
 
 // ---cut---

@@ -18,6 +18,7 @@
 		"rules": {
 			"preset": "recommended",
 			"style": {
+				"noNestedTernary": "error",
 				"useFilenamingConvention": {
 					"level": "error",
 					"options": {
@@ -27,6 +28,24 @@
 			}
 		}
 	},
+	"overrides": [
+		{
+			"includes": [
+				"docs-site/src/components/**/*.ts",
+				"docs-site/src/components/**/*.tsx",
+				"docs-site/src/snippets/**/*.ts",
+				"docs-site/src/snippets/**/*.tsx"
+			],
+			"linter": {
+				"rules": {
+					"style": {
+						"noNestedTernary": "off",
+						"noTernary": "error"
+					}
+				}
+			}
+		}
+	],
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double",

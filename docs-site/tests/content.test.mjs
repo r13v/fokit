@@ -3,6 +3,8 @@ import { constants } from "node:fs"
 import { access, readdir, readFile } from "node:fs/promises"
 import { test } from "node:test"
 
+import ts from "typescript"
+
 const siteRoot = new URL("../", import.meta.url)
 const repositoryRoot = new URL("../", siteRoot)
 
@@ -11,12 +13,13 @@ const requiredDependencies = {
 	"@fontsource-variable/newsreader": "5.3.0",
 	"@heroicons/react": "2.2.0",
 	"@tanstack/react-query": "5.101.4",
+	"@types/node": "26.1.2",
 	"@types/react": "19.2.17",
 	"@types/react-dom": "19.2.3",
 	"form-please": "file:..",
 	react: "19.2.8",
 	"react-dom": "19.2.8",
-	typescript: "5.9.3",
+	typescript: "6.0.3",
 	vite: "8.1.5",
 	vocs: "2.7.2",
 	waku: "1.0.0-beta.6",
@@ -775,6 +778,35 @@ function collectCodeFences(source) {
 	)
 }
 
+function collectConditionalExpressionLocations(source, fileName) {
+	let scriptKind = ts.ScriptKind.TS
+	if (fileName.endsWith(".tsx")) scriptKind = ts.ScriptKind.TSX
+	if (fileName.endsWith(".js")) scriptKind = ts.ScriptKind.JS
+	if (fileName.endsWith(".jsx")) scriptKind = ts.ScriptKind.JSX
+
+	const sourceFile = ts.createSourceFile(
+		fileName,
+		source,
+		ts.ScriptTarget.Latest,
+		true,
+		scriptKind,
+	)
+	const locations = []
+
+	function visit(node) {
+		if (ts.isConditionalExpression(node)) {
+			const { line, character } = sourceFile.getLineAndCharacterOfPosition(
+				node.getStart(sourceFile),
+			)
+			locations.push(`${fileName}:${line + 1}:${character + 1}`)
+		}
+		ts.forEachChild(node, visit)
+	}
+
+	visit(sourceFile)
+	return locations
+}
+
 function collectIncludes(source) {
 	return [
 		...source.matchAll(
@@ -820,16 +852,16 @@ async function repositoryPathExists(path) {
 	return await pathExistsFrom(repositoryRoot, path)
 }
 
-async function listFiles(path) {
-	const root = new URL(path, siteRoot)
-	const entries = await readdir(root, { withFileTypes: true })
+async function listFilesFrom(root, path) {
+	const directory = new URL(path, root)
+	const entries = await readdir(directory, { withFileTypes: true })
 	const files = []
 
 	for (const entry of entries) {
 		const childPath = `${path}${entry.name}`
 
 		if (entry.isDirectory()) {
-			files.push(...(await listFiles(`${childPath}/`)))
+			files.push(...(await listFilesFrom(root, `${childPath}/`)))
 			continue
 		}
 
@@ -839,6 +871,14 @@ async function listFiles(path) {
 	}
 
 	return files
+}
+
+async function listFiles(path) {
+	return await listFilesFrom(siteRoot, path)
+}
+
+async function listRepositoryFiles(path) {
+	return await listFilesFrom(repositoryRoot, path)
 }
 
 test("docs package uses the Vocs shell scripts and dependencies", async () => {
@@ -883,6 +923,9 @@ test("docs TypeScript and verification gates are wired", async () => {
 
 	assert.deepEqual(tsconfig, {
 		extends: "../tsconfig.json",
+		compilerOptions: {
+			types: ["node"],
+		},
 		include: [
 			"vocs.config.ts",
 			"src/components/**/*.tsx",
@@ -1182,6 +1225,57 @@ test("TypeScript documentation fences are checked or backed by physical snippets
 	}
 
 	assert.deepEqual(seenIncludes, expectedIncludes)
+})
+
+test("published code examples use explicit branches instead of ternaries", async () => {
+	const violations = []
+	const sourceFiles = [
+		...(await listFiles("src/snippets/")),
+		"src/components/interactive-lab.client.tsx",
+		"src/components/overview-demo.client.tsx",
+	].filter((file) => /\.[jt]sx?$/.test(file))
+
+	for (const file of sourceFiles) {
+		violations.push(
+			...collectConditionalExpressionLocations(
+				await readText(file),
+				`docs-site/${file}`,
+			),
+		)
+	}
+
+	const markdownSources = []
+	for (const file of await listFiles("src/pages/")) {
+		if (!file.endsWith(".mdx")) continue
+		markdownSources.push({
+			file: `docs-site/${file}`,
+			source: await readText(file),
+		})
+	}
+	for (const file of ["README.md", ...(await listRepositoryFiles("docs/"))]) {
+		if (!file.endsWith(".md") && !file.endsWith(".mdx")) continue
+		markdownSources.push({ file, source: await readRepositoryText(file) })
+	}
+
+	for (const { file, source } of markdownSources) {
+		let fenceIndex = 0
+		for (const fence of collectCodeFences(source)) {
+			fenceIndex += 1
+			if (!["ts", "tsx", "js", "jsx"].includes(fence.language)) continue
+			violations.push(
+				...collectConditionalExpressionLocations(
+					fence.code,
+					`${file}:fence-${fenceIndex}.${fence.language}`,
+				),
+			)
+		}
+	}
+
+	assert.deepEqual(
+		violations,
+		[],
+		"Published examples should use explicit branches so readers can follow each outcome",
+	)
 })
 
 test("Vocs config defines the static English documentation shell", async () => {

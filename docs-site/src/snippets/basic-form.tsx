@@ -11,6 +11,10 @@ import {
 
 export function ProfileEditor() {
 	const [saved, setSaved] = useState<ProfileOutput>()
+	let status = "Submit the form to see validated output."
+	if (saved !== undefined) {
+		status = `Saved ${saved.name} with ${saved.contactCount} contacts.`
+	}
 
 	return (
 		<>
@@ -27,11 +31,7 @@ export function ProfileEditor() {
 				<kit.Submit>Save profile</kit.Submit>
 			</kit.AutoForm>
 
-			<output aria-live="polite">
-				{saved === undefined
-					? "Submit the form to see validated output."
-					: `Saved ${saved.name} with ${saved.contactCount} contacts.`}
-			</output>
+			<output aria-live="polite">{status}</output>
 		</>
 	)
 }

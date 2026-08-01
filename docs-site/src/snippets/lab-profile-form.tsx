@@ -48,10 +48,7 @@ const profileSchema = z
 	})
 	.transform((value) => ({
 		...value,
-		companyName:
-			value.companyName === undefined || value.companyName.trim() === ""
-				? undefined
-				: value.companyName.trim(),
+		companyName: value.companyName?.trim() || undefined,
 		contactCount: value.contacts.length,
 	}))
 
@@ -196,6 +193,8 @@ export const profileDefinition = kit.defineForm(profileSchema)({
 
 export function ProfileForm() {
 	const [saved, setSaved] = useState<ProfileOutput>()
+	let output = "Submit the form to see typed output."
+	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
 
 	return (
 		<>
@@ -206,11 +205,7 @@ export function ProfileForm() {
 			>
 				<kit.Submit>Save profile</kit.Submit>
 			</kit.AutoForm>
-			<pre aria-live="polite">
-				{saved === undefined
-					? "Submit the form to see typed output."
-					: JSON.stringify(saved, null, 2)}
-			</pre>
+			<pre aria-live="polite">{output}</pre>
 		</>
 	)
 }

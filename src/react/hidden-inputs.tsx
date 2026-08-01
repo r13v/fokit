@@ -165,12 +165,9 @@ function appendFieldEntries(
 	}
 
 	const formData = control.formData
-	const serialize =
-		formData.mode === "hidden"
-			? formData.serialize
-			: formData.mode === "native" && (!node.visible || node.disabled)
-				? formData.serialize
-				: undefined
+	if (formData.mode === "none") return
+	if (formData.mode === "native" && node.visible && !node.disabled) return
+	const serialize = formData.serialize
 
 	if (serialize === undefined) {
 		return

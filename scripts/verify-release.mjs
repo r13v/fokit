@@ -182,12 +182,12 @@ export function classifyNpmViewResult({
 }
 
 export function normalizeRepositoryUrl(repository) {
-	const raw =
-		typeof repository === "string"
-			? repository
-			: typeof repository?.url === "string"
-				? repository.url
-				: undefined
+	let raw
+	if (typeof repository === "string") {
+		raw = repository
+	} else if (typeof repository?.url === "string") {
+		raw = repository.url
+	}
 	if (raw === undefined) {
 		return undefined
 	}

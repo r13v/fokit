@@ -58,11 +58,13 @@ function ProfileEditor() {
 		defaultValues: { name: "" },
 	})
 	const dirty = useFormState(form, (snapshot) => snapshot.isDirty)
+	let status = "Saved"
+	if (dirty) status = "Unsaved changes"
 
 	return (
 		<kit.Form form={form}>
 			<kit.Fields />
-			<output>{dirty ? "Unsaved changes" : "Saved"}</output>
+			<output>{status}</output>
 			<kit.Submit>Save profile</kit.Submit>
 		</kit.Form>
 	)

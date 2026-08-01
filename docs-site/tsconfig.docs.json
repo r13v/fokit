@@ -1,5 +1,8 @@
 {
 	"extends": "../tsconfig.json",
+	"compilerOptions": {
+		"types": ["node"]
+	},
 	"include": [
 		"vocs.config.ts",
 		"src/components/**/*.tsx",

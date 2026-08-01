@@ -311,10 +311,10 @@ function TypeHarness() {
 		},
 	})
 
+	// @ts-expect-error defaultValues must include required nested properties
 	useForm(definition, {
 		defaultValues: {
 			kind: "person",
-			// @ts-expect-error defaultValues must include required nested properties
 			profile: {
 				first: "Grace",
 			},

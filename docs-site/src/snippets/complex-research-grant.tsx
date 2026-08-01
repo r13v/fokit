@@ -206,7 +206,7 @@ function OrganizationFinder() {
 				/>
 			</label>
 			<div className="form-please-complex__choice-list">
-				{records.isPending ? <span>Checking records…</span> : null}
+				{records.isPending && <span>Checking records…</span>}
 				{records.data?.map((record) => (
 					<button
 						aria-pressed={selectedId === record.id}
@@ -234,6 +234,8 @@ function GrantPreview() {
 		months: snapshot.values.project.durationMonths,
 		applicantKind: snapshot.values.applicantKind,
 	}))
+	let applicantLabel = "Individual"
+	if (summary.applicantKind === "collective") applicantLabel = "Collective"
 
 	return (
 		<aside
@@ -242,7 +244,7 @@ function GrantPreview() {
 		>
 			<strong>{summary.title || "Untitled application"}</strong>
 			<span>
-				{summary.applicantKind === "collective" ? "Collective" : "Individual"}
+				{applicantLabel}
 				{" · "}${summary.funds.toLocaleString()} · {summary.months} months
 			</span>
 		</aside>
@@ -338,8 +340,10 @@ const grantDefinition = kit.defineForm(grantSchema)({
 					kind: "field",
 					path: "organization.name",
 					control: "text",
-					label: ({ "organization.path": path }) =>
-						path === "registered" ? "Registered name" : "Working name",
+					label: ({ "organization.path": path }) => {
+						if (path === "registered") return "Registered name"
+						return "Working name"
+					},
 					visible: ({ "organization.path": path }) => path !== undefined,
 					readOnly: ({ "organization.path": path }) => path === "registered",
 					valuePolicy: "unset",
@@ -505,6 +509,9 @@ function ResearchGrantForm() {
 		mutationFn: (value: GrantOutput) =>
 			fakeRequest({ id: `grant-${value.project.durationMonths}-2048` }, 520),
 	})
+	let status = receipt
+	if (send.isPending) status = "Sending application…"
+	if (preview.isPending) status = "Building preview…"
 
 	return (
 		<section
@@ -543,13 +550,7 @@ function ResearchGrantForm() {
 					<kit.Submit className="form-please-complex__primary">
 						Preview and send
 					</kit.Submit>
-					<span aria-live="polite">
-						{preview.isPending
-							? "Building preview…"
-							: send.isPending
-								? "Sending application…"
-								: receipt}
-					</span>
+					<span aria-live="polite">{status}</span>
 				</div>
 			</kit.AutoForm>
 		</section>
@@ -581,11 +582,11 @@ function preserveGrantInvariants(
 	}
 
 	if (event.currentValues.payout.method !== event.nextValues.payout.method) {
-		additions.push(
-			event.nextValues.payout.method === "bank"
-				? { type: "unset", path: "payout.walletHandle" }
-				: { type: "unset", path: "payout.bankAccount" },
-		)
+		if (event.nextValues.payout.method === "bank") {
+			additions.push({ type: "unset", path: "payout.walletHandle" })
+		} else {
+			additions.push({ type: "unset", path: "payout.bankAccount" })
+		}
 	}
 
 	return extendValueChanges(event, additions)

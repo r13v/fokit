@@ -67,17 +67,20 @@ function LabInspector({ lastSubmit }: { readonly lastSubmit: string }) {
 		snapshot.metadata.arraysByPath.contacts?.items
 			.map((item) => item.key)
 			.join(", ") ?? ""
+	let issueOutput = issueLines.join("\n")
+	if (issueLines.length === 0) issueOutput = "No visible issues"
 
 	useEffect(() => {
 		const element = document.getElementById("interactive-form-please-lab-form")
-		const nextLines =
-			element instanceof HTMLFormElement
-				? formatFormData(new FormData(element))
-				: []
+		let nextLines: readonly string[] = []
+		if (element instanceof HTMLFormElement) {
+			nextLines = formatFormData(new FormData(element))
+		}
 
-		setFormDataLines((currentLines) =>
-			linesEqual(currentLines, nextLines) ? currentLines : nextLines,
-		)
+		setFormDataLines((currentLines) => {
+			if (linesEqual(currentLines, nextLines)) return currentLines
+			return nextLines
+		})
 	})
 
 	return (
@@ -118,11 +121,7 @@ function LabInspector({ lastSubmit }: { readonly lastSubmit: string }) {
 				</InspectorPanel>
 				<InspectorPanel title="Visible issues">
 					<pre data-testid="lab-issues">
-						<code>
-							{issueLines.length === 0
-								? "No visible issues"
-								: issueLines.join("\n")}
-						</code>
+						<code>{issueOutput}</code>
 					</pre>
 				</InspectorPanel>
 				<InspectorPanel title="Current FormData">
@@ -151,9 +150,9 @@ function InspectorPanel({
 }
 
 function formatSavedMessage(value: ProfileOutput): string {
-	return `Saved ${value.name} with ${value.contactCount} ${
-		value.contactCount === 1 ? "contact" : "contacts"
-	}.`
+	let contactNoun = "contacts"
+	if (value.contactCount === 1) contactNoun = "contact"
+	return `Saved ${value.name} with ${value.contactCount} ${contactNoun}.`
 }
 
 function linesEqual(
@@ -196,7 +195,10 @@ function formatFormData(formData: FormData): string[] {
 	for (const [name, value] of formData.entries()) {
 		lines.push(`${name}=${formatEntryValue(value)}`)
 	}
-	return lines.sort((left, right) => (left < right ? -1 : Number(left > right)))
+	return lines.sort((left, right) => {
+		if (left < right) return -1
+		return Number(left > right)
+	})
 }
 
 function formatEntryValue(value: FormDataEntryValue): string {

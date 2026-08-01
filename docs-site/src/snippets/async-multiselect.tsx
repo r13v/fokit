@@ -140,14 +140,21 @@ function AsyncMultiSelectControl({
 		onNavigate: setActiveIndex,
 		loop: true,
 		focusItemOnOpen: false,
-		disabledIndices: availableOptions.flatMap((option, index) =>
-			option.disabled ? [index] : [],
-		),
+		disabledIndices: availableOptions.flatMap((option, index) => {
+			if (option.disabled) return [index]
+			return []
+		}),
 	})
 	const { getFloatingProps, getItemProps, getReferenceProps } = useInteractions(
 		[click, dismiss, role, listNavigation],
 	)
 	const referenceRef = useMergeRefs([refs.setReference, input.ref])
+	let hiddenSelectionNoun = "selections"
+	if (hiddenTagCount === 1) hiddenSelectionNoun = "selection"
+	let controlledListboxId: string | undefined
+	if (open) controlledListboxId = listboxId
+	let toggleLabel = "Open options"
+	if (open) toggleLabel = "Close options"
 
 	useEffect(() => {
 		setActiveIndex(null)
@@ -166,11 +173,12 @@ function AsyncMultiSelectControl({
 	function toggleOption(option: AsyncMultiSelectOption) {
 		if (readOnly || option.disabled) return
 
-		setValue(
-			value.includes(option.value)
-				? value.filter((selectedValue) => selectedValue !== option.value)
-				: [...value, option.value],
-		)
+		if (value.includes(option.value)) {
+			setValue(value.filter((selectedValue) => selectedValue !== option.value))
+			return
+		}
+
+		setValue([...value, option.value])
 	}
 
 	return (
@@ -207,11 +215,11 @@ function AsyncMultiSelectControl({
 							</button>
 						</span>
 					))}
-					{hiddenTagCount > 0 ? (
+					{hiddenTagCount > 0 && (
 						<span className="async-multiselect__tag async-multiselect__tag--count">
 							<span>+{hiddenTagCount}</span>
 							<button
-								aria-label={`Remove ${hiddenTagCount} hidden selection${hiddenTagCount === 1 ? "" : "s"}`}
+								aria-label={`Remove ${hiddenTagCount} hidden ${hiddenSelectionNoun}`}
 								disabled={disabled || readOnly}
 								onClick={() => setValue(value.slice(0, maxVisibleTags))}
 								type="button"
@@ -222,12 +230,12 @@ function AsyncMultiSelectControl({
 								/>
 							</button>
 						</span>
-					) : null}
-					{selectedOptions.length === 0 ? (
+					)}
+					{selectedOptions.length === 0 && (
 						<span className="async-multiselect__placeholder">
 							{options.placeholder ?? "Choose options"}
 						</span>
-					) : null}
+					)}
 				</div>
 
 				<button
@@ -244,12 +252,12 @@ function AsyncMultiSelectControl({
 				</button>
 				<span aria-hidden="true" className="async-multiselect__separator" />
 				<button
-					aria-controls={open ? listboxId : undefined}
+					aria-controls={controlledListboxId}
 					aria-describedby={input["aria-describedby"]}
 					aria-expanded={open}
 					aria-haspopup="listbox"
 					aria-invalid={meta.invalid || undefined}
-					aria-label={open ? "Close options" : "Open options"}
+					aria-label={toggleLabel}
 					className="async-multiselect__icon-button"
 					disabled={disabled}
 					id={input.id}
@@ -264,7 +272,7 @@ function AsyncMultiSelectControl({
 				</button>
 			</div>
 
-			{open ? (
+			{open && (
 				<FloatingFocusManager
 					context={context}
 					initialFocus={searchRef}
@@ -303,11 +311,11 @@ function AsyncMultiSelectControl({
 								type="search"
 								value={search}
 							/>
-							{optionsQuery.isFetching ? (
+							{optionsQuery.isFetching && (
 								<span aria-live="polite" className="async-multiselect__status">
 									Loading…
 								</span>
-							) : null}
+							)}
 						</div>
 
 						<div
@@ -317,23 +325,25 @@ function AsyncMultiSelectControl({
 							id={listboxId}
 							role="listbox"
 						>
-							{optionsQuery.isError ? (
+							{optionsQuery.isError && (
 								<div className="async-multiselect__message" role="alert">
 									<span>Could not load options.</span>
 									<button onClick={() => optionsQuery.refetch()} type="button">
 										Try again
 									</button>
 								</div>
-							) : null}
+							)}
 							{!optionsQuery.isError &&
-							!optionsQuery.isPending &&
-							availableOptions.length === 0 ? (
-								<p className="async-multiselect__message" role="status">
-									{options.emptyMessage ?? "No options found."}
-								</p>
-							) : null}
+								!optionsQuery.isPending &&
+								availableOptions.length === 0 && (
+									<p className="async-multiselect__message" role="status">
+										{options.emptyMessage ?? "No options found."}
+									</p>
+								)}
 							{availableOptions.map((option, index) => {
 								const selected = value.includes(option.value)
+								let tabIndex = -1
+								if (activeIndex === index) tabIndex = 0
 
 								return (
 									<div
@@ -347,7 +357,7 @@ function AsyncMultiSelectControl({
 											listRef.current[index] = element
 										}}
 										role="option"
-										tabIndex={activeIndex === index ? 0 : -1}
+										tabIndex={tabIndex}
 										{...getItemProps({
 											onClick: () => toggleOption(option),
 											onKeyDown: (event) => {
@@ -363,9 +373,9 @@ function AsyncMultiSelectControl({
 											className="async-multiselect__check"
 											data-selected={selected || undefined}
 										>
-											{selected ? (
+											{selected && (
 												<CheckIcon className="async-multiselect__check-icon" />
-											) : null}
+											)}
 										</span>
 										<span>{option.label}</span>
 									</div>
@@ -387,7 +397,7 @@ function AsyncMultiSelectControl({
 						</div>
 					</div>
 				</FloatingFocusManager>
-			) : null}
+			)}
 		</fieldset>
 	)
 }
@@ -496,6 +506,10 @@ const queryClient = new QueryClient({
 
 export function AsyncMultiSelectExample() {
 	const [savedCityIds, setSavedCityIds] = useState<readonly string[]>()
+	let output = "Submit to see the validated city IDs."
+	if (savedCityIds !== undefined) {
+		output = `Saved: ${savedCityIds.join(", ")}`
+	}
 
 	return (
 		<QueryClientProvider client={queryClient}>
@@ -517,9 +531,7 @@ export function AsyncMultiSelectExample() {
 					<kit.Submit>Save selection</kit.Submit>
 				</kit.AutoForm>
 				<output aria-live="polite" data-testid="async-multiselect-output">
-					{savedCityIds === undefined
-						? "Submit to see the validated city IDs."
-						: `Saved: ${savedCityIds.join(", ")}`}
+					{output}
 				</output>
 			</section>
 		</QueryClientProvider>

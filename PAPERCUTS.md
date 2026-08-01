@@ -145,3 +145,9 @@ continued. Align the logo URL with the preview base-path rewriting.
 Checking the new persistence examples with Knip → `nuqs` resolved only through
 Vocs and was reported as an unlisted docs dependency. Declare example libraries
 directly in the docs-site package instead of relying on transitive installs.
+
+## 2026-08-01 22:23 — GPT-5
+
+Closing the reducer-core plan as instructed → the target `docs/plans/completed`
+directory did not exist. Create the completion directory before attempting the
+final plan move, or keep an empty placeholder when the workflow depends on it.

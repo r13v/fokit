@@ -1159,45 +1159,65 @@ serialization, and documentation; completion requires all layers to agree.
   docs/plans/20260801-reducer-core-event-journal.md to
   docs/plans/completed/20260801-reducer-core-event-journal.md
 
-- [ ] Verify the new public command, event, middleware, React, and optional-entry
+- [x] Verify the new public command, event, middleware, React, and optional-entry
   type suites are internally coherent. Verify removed legacy array-state,
   global createForm/useForm functions, KitForm/root Submit values,
   UseFormOptions, main-entry createFormStore, and ActionForm creation APIs are
   absent from generated declarations.
-- [ ] Verify kit.Form and kit.AutoForm reject a form from another exact kit
+- [x] Verify kit.Form and kit.AutoForm reject a form from another exact kit
   snapshot. Verify ActionForm uses the supplied form's controls and slots
   without accepting a kit prop.
-- [ ] Verify values and nested row identity stay atomic across live commits,
+- [x] Verify values and nested row identity stay atomic across live commits,
   reset, undo, redo, seek, import, hydration, and DevTools navigation.
-- [ ] Verify baselines, touch, issues, validation/submission state, context,
+- [x] Verify baselines, touch, issues, validation/submission state, context,
   focus, and subscriptions are not historical.
-- [ ] Verify replay and restore execute none of the prohibited effects while
+- [x] Verify replay and restore execute none of the prohibited effects while
   the live restore still traverses application middleware.
-- [ ] Verify stale validation and persistence work cannot update a newer
+- [x] Verify stale validation and persistence work cannot update a newer
   revision.
-- [ ] Verify middleware and feature handle state is isolated per form and all
+- [x] Verify middleware and feature handle state is isolated per form and all
   cardinality/dependency failures are atomic.
-- [ ] Verify forms without optional middleware retain no journal/checkpoint
+- [x] Verify forms without optional middleware retain no journal/checkpoint
   state and existing entry graphs cannot reach optional code.
-- [ ] Verify the website covers every new public capability, and each optional
+- [x] Verify the website covers every new public capability, and each optional
   feature has a minimal example, a detailed example, API details, limitations,
   error handling, and cleanup guidance where applicable.
-- [ ] Verify all website examples use public package imports, type-check against
+- [x] Verify all website examples use public package imports, type-check against
   built declarations, and remain understandable without internal repository
   documents. Complete the STE clarity review before the site verification gate.
-- [ ] Run npm run check.
-- [ ] Run npm run test.
-- [ ] Run npm run test:types.
-- [ ] Run npm run test:browser.
-- [ ] Run npm run test:package.
-- [ ] Run npm run test:smoke.
-- [ ] Run npm run package:check.
-- [ ] Run npm run site:verify.
-- [ ] Run npm run knip.
-- [ ] Run npm run verify as the final aggregate repository gate.
-- [ ] Record all commands and results in this plan.
-- [ ] Move this plan to docs/plans/completed only after every acceptance
+- [x] Run npm run check.
+- [x] Run npm run test.
+- [x] Run npm run test:types.
+- [x] Run npm run test:browser.
+- [x] Run npm run test:package.
+- [x] Run npm run test:smoke.
+- [x] Run npm run package:check.
+- [x] Run npm run site:verify.
+- [x] Run npm run knip.
+- [x] Run npm run verify as the final aggregate repository gate.
+- [x] Record all commands and results in this plan.
+- [x] Move this plan to docs/plans/completed only after every acceptance
   criterion and required command passes.
+
+Verification record, 2026-08-01:
+
+- `npm run check` passed: Biome checked 219 files with no fixes.
+- `npm run test` passed: 40 test files and 341 tests.
+- `npm run test:types` passed: all seven package entries built and TypeScript
+  accepted the source and public type-contract suites.
+- `npm run test:browser` passed: 5 Playwright layout tests.
+- `npm run test:package` passed: 6 package test files and 37 tests against the
+  generated ESM, CommonJS, and declaration artifacts.
+- `npm run test:smoke` passed: Node ESM, Node CommonJS, React 18, React 19, and
+  Next.js consumer fixtures installed and exercised the packed package.
+- `npm run package:check` passed: Publint reported no errors and ATTW accepted
+  the main, core, DevTools, history, persistence, React 19, and server entries
+  under the configured Node 16 profile.
+- `npm run site:verify` passed: 27 content tests, documentation type-checking,
+  preview and production builds, Markdown and output audits, and 15 Playwright
+  documentation flows.
+- `npm run knip` passed with no unused files, dependencies, or exports.
+- `npm run verify` passed as the final aggregate repository gate.
 
 ## Technical Details
 

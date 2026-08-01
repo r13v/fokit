@@ -17,6 +17,7 @@ import {
 	type StandardSchema,
 } from "../core/index.js"
 import type { ArrayItemValue } from "../core/ui-types.js"
+import { setFormControlValue } from "./form-instance.js"
 import {
 	type ExternalSelectorOptions,
 	useExternalSelector,
@@ -131,7 +132,7 @@ export function useField<
 	)
 	const setValue = useCallback(
 		(value: PathValue<FormInput<Schema>, Path>) => {
-			form.setValue(path, value)
+			setFormControlValue(form, path, value)
 		},
 		[form, path],
 	)

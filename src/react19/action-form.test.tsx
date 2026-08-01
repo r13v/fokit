@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { getFormFeatureCapability } from "../core/feature-protocol.js"
 import type { FormResult } from "../core/form-result.js"
+import { createHistoryMiddleware } from "../history/index.js"
 import { defineControl } from "../react/control.js"
 import { createFormKit } from "../react/create-form-kit.js"
 import { useFormContext } from "../react/form-context.js"
@@ -404,6 +405,57 @@ describe("React 19 ActionForm", () => {
 		await waitFor(() => {
 			expect(button.disabled).toBe(false)
 		})
+	})
+
+	it("uses effective restored paths when a history restore happens during a pending Action", async () => {
+		const pending = createDeferred<void>()
+		const historyFeature = createHistoryMiddleware()
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			middleware: [historyFeature],
+		})
+		form.setValue("name", "Grace")
+		const history = historyFeature.handle(form)
+
+		function View({ result }: { readonly result?: FormResult }) {
+			return (
+				<ActionForm
+					action={vi.fn(() => pending.promise)}
+					form={form}
+					result={result}
+				>
+					<ActionSubmit>Save</ActionSubmit>
+				</ActionForm>
+			)
+		}
+
+		const { rerender } = render(<View />)
+		await userEvent.click(screen.getByRole("button", { name: "Save" }))
+		await waitFor(() => {
+			expect(form.getSnapshot().isSubmitting).toBe(true)
+		})
+		expect(history.undo()).toBe("applied")
+		expect(form.getSnapshot().values.name).toBe("Ada")
+
+		rerender(
+			<View
+				result={{
+					status: "error",
+					issues: [
+						{
+							source: "server",
+							message: "Stale name error",
+							path: "name",
+						},
+					],
+				}}
+			/>,
+		)
+		await waitFor(() => {
+			expect(form.getSnapshot().isSubmitting).toBe(false)
+		})
+		expect(screen.queryByText("Stale name error")).toBeNull()
+		pending.resolve()
 	})
 
 	it("renders controls and slots from each supplied base, extended, and sibling form", () => {

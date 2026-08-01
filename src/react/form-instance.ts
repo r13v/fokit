@@ -1,12 +1,16 @@
 "use client"
 
-import { attachFormFeatureCapability } from "../core/feature-protocol.js"
+import {
+	assertFirstPartyFeatureConfiguration,
+	attachFormFeatureCapability,
+} from "../core/feature-protocol.js"
 import {
 	createFormStoreWithMiddleware,
 	errorSummaryFocusTargetRegistration,
 	getFormStoreFeatureCapability,
 	registerErrorSummaryFocusTarget,
 	replaceFormStoreRuntime,
+	setFormStoreControlValue,
 } from "../core/form-store.js"
 import type {
 	AnyUiPresentation,
@@ -32,7 +36,11 @@ import type {
 	UiPresentation,
 	ValidationResult,
 } from "../core/index.js"
-import type { AnyFormMiddleware, FormMiddleware } from "../core/middleware.js"
+import type {
+	AnyFormMiddleware,
+	FormAgnosticMiddleware,
+	FormMiddleware,
+} from "../core/middleware.js"
 import type { FormDeepPartial, OptionalFieldPath } from "../core/transaction.js"
 import type { RuntimeFormKitSlots } from "./create-form-kit.js"
 import type { ReactUiPresentation } from "./slots.js"
@@ -46,7 +54,10 @@ export type CreateFormOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
 > = Omit<FormStoreOptions<Schema, Context>, "definition"> & {
-	readonly middleware?: readonly FormMiddleware<FormInput<Schema>, Context>[]
+	readonly middleware?: readonly (
+		| FormMiddleware<FormInput<Schema>, Context>
+		| FormAgnosticMiddleware
+	)[]
 	readonly onSubmit?: SubmitHandler<Schema, Context>
 }
 
@@ -411,6 +422,7 @@ export function createFormInstance<
 	const middleware: readonly AnyFormMiddleware[] = Object.freeze([
 		...((options.middleware ?? []) as readonly AnyFormMiddleware[]),
 	])
+	assertFirstPartyFeatureConfiguration(middleware)
 	const instance = new FormInstanceImpl<
 		Schema,
 		Context,
@@ -441,6 +453,21 @@ export function createFormInstance<
 		Presentation,
 		Owner
 	>
+}
+
+export function setFormControlValue<
+	Schema extends StandardSchema,
+	Context,
+	RequiredControls extends ControlRegistry | undefined,
+	Presentation extends UiPresentation,
+	Owner,
+	Path extends FieldPath<FormInput<Schema>>,
+>(
+	form: FormInstance<Schema, Context, RequiredControls, Presentation, Owner>,
+	path: Path,
+	value: PathValue<FormInput<Schema>, Path>,
+): void {
+	setFormStoreControlValue(getFormStore(form), path, value)
 }
 
 export function getFormStore<

@@ -16,6 +16,11 @@ export type UpdateSource =
 
 export type BaselineDisposition = "preserved" | "replaced"
 
+export type DocumentCommitGrouping =
+	| { readonly type: "single" }
+	| { readonly type: "batch" }
+	| { readonly type: "control"; readonly path: string }
+
 export type RowIdentityChange =
 	| {
 			readonly type: "array/initialized"
@@ -70,6 +75,7 @@ export type DocumentCommittedEvent<Input> = {
 	readonly type: "document/committed"
 	readonly sequence: number
 	readonly source: UpdateSource
+	readonly grouping: DocumentCommitGrouping
 	readonly changes: readonly ValueChange<Input>[]
 	readonly rowIdentityChanges: readonly RowIdentityChange[]
 	readonly baseline: BaselineDisposition

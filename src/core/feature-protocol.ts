@@ -1,5 +1,6 @@
 import type { FormEvent, RestoreOrigin } from "./form-events.js"
 import type { FormDocument } from "./form-model.js"
+import type { FormDispatchResult } from "./form-transactions.js"
 import type {
 	FormInput,
 	FormOutput,
@@ -11,6 +12,15 @@ export const FORM_FEATURE_PROTOCOL_VERSION = 1
 export const formFeatureCapabilityKey = Symbol.for(
 	"form-please.feature-capability",
 )
+const formFeatureMetadataKey = Symbol.for("form-please.feature-metadata")
+
+type FirstPartyFeatureKind = "devtools" | "history" | "persistence"
+
+export type FormFeatureMetadata = Readonly<{
+	kind: FirstPartyFeatureKind
+	feature: object
+	dependencies?: readonly object[]
+}>
 
 export type FinalizedFormEventListener<Input, Context> = (
 	notification: Readonly<{
@@ -29,7 +39,8 @@ export type FormFeatureCapability<
 	restoreDocument(
 		document: FormDocument<FormInput<Schema>>,
 		origin: RestoreOrigin,
-	): void
+		history?: "skip" | "record",
+	): FormDispatchResult<FormInput<Schema>, Context>
 	installCleanBaseline(document: FormDocument<FormInput<Schema>>): void
 	validateRestoredInput(
 		input: FormInput<Schema>,
@@ -42,6 +53,65 @@ export type FormFeatureCapability<
 
 type FeatureCapabilityHost = {
 	readonly [formFeatureCapabilityKey]?: unknown
+}
+
+type FeatureMetadataHost = {
+	readonly [formFeatureMetadataKey]?: unknown
+}
+
+export function attachFormFeatureMetadata(
+	target: object,
+	metadata: FormFeatureMetadata,
+): void {
+	Object.defineProperty(target, formFeatureMetadataKey, {
+		configurable: false,
+		enumerable: false,
+		writable: false,
+		value: Object.freeze({
+			...metadata,
+			dependencies: Object.freeze([...(metadata.dependencies ?? [])]),
+		}),
+	})
+}
+
+export function assertFirstPartyFeatureConfiguration(
+	middleware: readonly object[],
+): void {
+	const configured = new Map<FirstPartyFeatureKind, FormFeatureMetadata>()
+	const references = new Set(middleware)
+	for (const entry of middleware) {
+		const metadata = (entry as FeatureMetadataHost)[formFeatureMetadataKey]
+		if (metadata === undefined) continue
+		if (!isFormFeatureMetadata(metadata) || metadata.feature !== entry) {
+			throw new TypeError("Invalid Form Please first-party feature metadata")
+		}
+		if (configured.has(metadata.kind)) {
+			throw new TypeError(
+				`A form may configure at most one Form Please ${metadata.kind} feature`,
+			)
+		}
+		for (const dependency of metadata.dependencies ?? []) {
+			if (!references.has(dependency)) {
+				throw new TypeError(
+					`Form Please ${metadata.kind} requires its configured feature dependency in the same middleware chain`,
+				)
+			}
+		}
+		configured.set(metadata.kind, metadata)
+	}
+}
+
+function isFormFeatureMetadata(value: unknown): value is FormFeatureMetadata {
+	if (typeof value !== "object" || value === null) return false
+	const candidate = value as Partial<FormFeatureMetadata>
+	return (
+		(candidate.kind === "history" ||
+			candidate.kind === "persistence" ||
+			candidate.kind === "devtools") &&
+		typeof candidate.feature === "function" &&
+		(candidate.dependencies === undefined ||
+			Array.isArray(candidate.dependencies))
+	)
 }
 
 export function attachFormFeatureCapability(

@@ -17,6 +17,19 @@ export type FormMiddleware<Input, Context> = (
 	next: FormTransactionDispatch<Input, Context>,
 ) => FormTransactionDispatch<Input, Context>
 
+declare const formAgnosticMiddlewareBrand: unique symbol
+
+// biome-ignore lint/suspicious/noExplicitAny: A branded first-party feature intentionally erases application Input and Context requirements.
+type FormAgnosticValue = any
+
+export type FormAgnosticMiddleware = ((
+	api: FormAgnosticValue,
+) => (
+	next: (transaction: FormAgnosticValue) => FormAgnosticValue,
+) => (transaction: FormAgnosticValue) => FormAgnosticValue) & {
+	readonly [formAgnosticMiddlewareBrand]: true
+}
+
 type ErasedCommittedDispatch = {
 	readonly result: { readonly status: "committed"; readonly event: unknown }
 	readonly transaction: unknown

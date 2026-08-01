@@ -741,70 +741,70 @@ by persistence.
 - Modify: src/core/feature-protocol.ts
 - Modify: src/react19/action-form.test.tsx
 
-- [ ] Define createHistoryMiddleware, HistoryFeature, HistoryHandle,
+- [x] Define createHistoryMiddleware, HistoryFeature, HistoryHandle,
   HistorySnapshot, HistoryOperationResult, FormJournal, JournalCursor, and
   replayJournal exports under src/history/index.ts.
-- [ ] Make each configured history feature a FormMiddleware with
+- [x] Make each configured history feature a FormMiddleware with
   feature.handle(form). Handle lookup uses exact feature reference, returns
   the same handle for repeated lookup, and throws for an unconfigured form.
-- [ ] Register first-party feature metadata so kit.createForm permits at most
+- [x] Register first-party feature metadata so kit.createForm permits at most
   one history feature per form.
-- [ ] Record an initial versioned checkpoint and only committed document
+- [x] Record an initial versioned checkpoint and only committed document
   events from the guaranteed finalized-event timeline. Observe runtime events
   only when they affect grouping, such as FieldBlurredEvent; do not store them
   in the document journal. Ignore cancelled transactions.
-- [ ] Implement groups: consecutive control updates to the same path group
+- [x] Implement groups: consecutive control updates to the same path group
   until blur, path change, source change, structural action, batch boundary, or
   groupWindow expiration; groupWindow defaults to 750 milliseconds and zero
   disables time grouping.
-- [ ] Make one batch one group and one recorded DevTools restore one group.
-- [ ] Implement unlimited retention by default and finite group-count
+- [x] Make one batch one group and one recorded DevTools restore one group.
+- [x] Implement unlimited retention by default and finite group-count
   compaction. Fold the oldest closed groups into a new checkpoint without
   compacting an active group; the limit counts groups, not bytes.
-- [ ] Implement undo, redo, and seek against the latest checkpoint segment,
+- [x] Implement undo, redo, and seek against the latest checkpoint segment,
   including redo truncation after a new document edit.
-- [ ] Implement history.clear as complete journal replacement with the current
+- [x] Implement history.clear as complete journal replacement with the current
   document as checkpoint, without changing the dirty baseline.
-- [ ] Append checkpoints for successful reset(nextValues) and persistence
+- [x] Append checkpoints for successful reset(nextValues) and persistence
   hydration while retaining older exported segments; keep reset() to the
   existing baseline as an undoable group.
-- [ ] Implement pure replayJournal against reduceFormDocument. Replay must use
+- [x] Implement pure replayJournal against reduceFormDocument. Replay must use
   recorded keys and never call itemDefault, middleware, hooks, schemas, clocks,
   timers, or application code.
-- [ ] Submit one live restore for undo, redo, seek, replay, and import.
+- [x] Submit one live restore for undo, redo, seek, replay, and import.
   Reconcile cancellation as cancelled, unchanged target as applied,
   transformed document as transformed plus a normal new group, and unavailable
   or runtime-only results as unavailable without moving the cursor.
-- [ ] Implement synchronous in-memory export and asynchronous untrusted import.
+- [x] Implement synchronous in-memory export and asynchronous untrusted import.
   Validate journal version, event shapes, canonical paths, row identity,
   replayability, strictly increasing unique sequence numbers across checkpoint
   segments, and final schema input before replacing live journal state. After a
   successful unchanged restore, advance the core event-sequence floor above the
   imported maximum before replacing live journal state.
-- [ ] Keep history snapshot updates synchronous in guaranteed commit
+- [x] Keep history snapshot updates synchronous in guaranteed commit
   finalization before form publication so form subscribers observe coherent
   form/history snapshots even when an application middleware committed and then
   threw. Do not depend on ordinary reverse post-next unwinding.
-- [ ] Keep retained journal values isolated from public mutation. Clone Date
+- [x] Keep retained journal values isolated from public mutation. Clone Date
   and RegExp leaves when recording and again when exporting; document that File
   and other opaque leaves are application-owned immutable identities.
-- [ ] Add fake-clock tests for grouping and compaction; add nested-array replay,
+- [x] Add fake-clock tests for grouping and compaction; add nested-array replay,
   multi-checkpoint export, import rejection, transformed restore, cancelled
   restore, context-preserving undo, subscriber coherence, mutable-native export
   isolation, and high-sequence import followed by a live edit.
-- [ ] Prove a forwarded repeated blur closes the active group while a cancelled
+- [x] Prove a forwarded repeated blur closes the active group while a cancelled
   blur does not.
-- [ ] Put history before and after middleware that commits and then throws;
+- [x] Put history before and after middleware that commits and then throws;
   assert the public command throws while history records one group and undo
   remains coherent in both orders.
-- [ ] Render the new form-backed ActionForm with a history-enabled form, restore
+- [x] Render the new form-backed ActionForm with a history-enabled form, restore
   while an Action is pending, and prove returned server results use the
   effective restored paths.
-- [ ] Add type tests for handle ownership, operation results, opaque cursors,
+- [x] Add type tests for handle ownership, operation results, opaque cursors,
   generic input preservation, and absence from the main/core exports.
-- [ ] Extend the Vitest node project to include src/history tests.
-- [ ] Run npx vitest run src/history src/react19/action-form.test.tsx.
-- [ ] Run npm run typecheck.
+- [x] Extend the Vitest node project to include src/history tests.
+- [x] Run npx vitest run src/history src/react19/action-form.test.tsx.
+- [x] Run npm run typecheck.
 
 ### Task 9: Implement Persistence, Canonical Encoding, Codecs, and localStorage
 

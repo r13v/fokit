@@ -4,6 +4,7 @@ import {
 	validateRowIdentity,
 } from "./array-state.js"
 import type {
+	DocumentCommitGrouping,
 	DocumentCommittedEvent,
 	DocumentRestoredEvent,
 	FormDocumentEvent,
@@ -35,6 +36,7 @@ export function createFormDocument<Input>(
 export function createDocumentCommittedEvent<Input>(options: {
 	readonly sequence: number
 	readonly source: DocumentCommittedEvent<Input>["source"]
+	readonly grouping?: DocumentCommitGrouping
 	readonly changes: readonly ValueChange<Input>[]
 	readonly rowIdentityChanges?: readonly RowIdentityChange[]
 	readonly baseline?: DocumentCommittedEvent<Input>["baseline"]
@@ -44,12 +46,24 @@ export function createDocumentCommittedEvent<Input>(options: {
 		type: "document/committed",
 		sequence: options.sequence,
 		source: options.source,
+		grouping: freezeDocumentCommitGrouping(
+			options.grouping ?? { type: "single" },
+		),
 		changes: freezeValueChanges(options.changes),
 		rowIdentityChanges: freezeRowIdentityChanges(
 			options.rowIdentityChanges ?? [],
 		),
 		baseline: options.baseline ?? "preserved",
 	})
+}
+
+function freezeDocumentCommitGrouping(
+	grouping: DocumentCommitGrouping,
+): DocumentCommitGrouping {
+	if (grouping.type === "control") {
+		return Object.freeze({ type: "control", path: grouping.path })
+	}
+	return Object.freeze({ type: grouping.type })
 }
 
 export function createDocumentRestoredEvent<Input>(options: {

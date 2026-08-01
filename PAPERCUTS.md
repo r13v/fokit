@@ -96,3 +96,19 @@ Running the required repository check after Task 7 implementation → Biome reje
 ## 2026-08-01 20:54 — GPT-5
 
 Running Knip after adding the private feature protocol → duplicated type re-exports and a test-only exported helper were reported as unused. Keep private protocol types at one ownership boundary and avoid exporting internal test helpers.
+
+## 2026-08-01 21:03 — GPT-5
+
+Compiling the callable history feature → TypeScript rejected a direct assertion from the generic middleware function to its function-plus-handle public type. Assert through unknown after constructing and validating the complete callable object.
+
+## 2026-08-01 21:05 — GPT-5
+
+Running the initial history suite → two assertions assumed a later retention boundary and a specific downstream row-length error, while the implementation correctly compacted on group closure and rejected the invalid key counter earlier. Arrange the active-group case explicitly and assert the invariant family rather than one later message.
+
+## 2026-08-01 21:06 — GPT-5
+
+Type-checking the green history runtime suite → applying the Readonly mapped type to a callable feature erased its assignable middleware signature, and nested event values drove overly narrow generic inference in tests. Keep callable feature APIs as explicit interfaces and specify the full event input where inference is ambiguous.
+
+## 2026-08-01 21:15 — GPT-5
+
+Locating the Knip configuration → an unmatched zsh glob aborted the first read command. Use rg --files with include patterns instead of passing optional globs directly to zsh.

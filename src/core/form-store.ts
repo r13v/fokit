@@ -22,6 +22,7 @@ import {
 import { type FocusTarget, FormFocus } from "./focus.js"
 import type { FormCommand } from "./form-commands.js"
 import type {
+	DocumentCommittedEvent,
 	FormDocumentEvent,
 	FormEvent,
 	FormRuntimeEvent,
@@ -293,6 +294,7 @@ type ValueCommitResult<Input> =
 	  }
 
 type ValueCommitOptions<Context> = {
+	readonly grouping?: DocumentCommittedEvent<unknown>["grouping"]
 	readonly rowIdentity?: FormDocument<unknown>["rowIdentity"]
 	readonly resetAfterCommit?: boolean
 	readonly transitionFromUi?: ResolvedUiState<Context>
@@ -380,8 +382,21 @@ export function restoreFormStoreDocument<
 	store: FormStore<Schema, Context>,
 	document: FormDocument<FormInput<Schema>>,
 	origin: RestoreOrigin,
+	history: "skip" | "record" = "skip",
+): FormDispatchResult<FormInput<Schema>, Context> {
+	return asCoreFormStore(store).restoreDocument(document, origin, history)
+}
+
+export function setFormStoreControlValue<
+	Schema extends StandardSchema,
+	Context = unknown,
+	Path extends FieldPath<FormInput<Schema>> = FieldPath<FormInput<Schema>>,
+>(
+	store: FormStore<Schema, Context>,
+	path: Path,
+	value: PathValue<FormInput<Schema>, Path>,
 ): void {
-	asCoreFormStore(store).restoreDocument(document, origin)
+	asCoreFormStore(store).setControlValue(path, value)
 }
 
 export function getFormStoreFeatureCapability<
@@ -540,8 +555,8 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#featureCapability = Object.freeze({
 			version: FORM_FEATURE_PROTOCOL_VERSION,
 			getDocument: () => this.getDocument(),
-			restoreDocument: (nextDocument, origin) =>
-				this.restoreDocument(nextDocument, origin),
+			restoreDocument: (nextDocument, origin, history) =>
+				this.restoreDocument(nextDocument, origin, history),
 			installCleanBaseline: (nextDocument) =>
 				this.installCleanBaseline(nextDocument),
 			validateRestoredInput: (input) => this.validateRestoredInput(input),
@@ -656,6 +671,16 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		value: PathValue<FormInput<Schema>, Path>,
 	): void {
 		this.#runValueCommand(() => [createSetChange(path, value)])
+	}
+
+	setControlValue<Path extends FieldPath<FormInput<Schema>>>(
+		path: Path,
+		value: PathValue<FormInput<Schema>, Path>,
+	): void {
+		this.#runValueCommand(() => [createSetChange(path, value)], "control", {
+			type: "control",
+			path: formatPath(path),
+		})
 	}
 
 	setValues(values: FormDeepPartial<FormInput<Schema>>): void {
@@ -898,6 +923,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		this.#commitValueChanges(batch.changes, "imperative", {
+			grouping: { type: "batch" },
 			rowIdentity: batch.rowIdentity,
 		})
 	}
@@ -1127,6 +1153,9 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	#runValueCommand(
 		createChanges: () => readonly NormalizedValueChange[],
 		source: UpdateSource = "imperative",
+		grouping: DocumentCommittedEvent<FormInput<Schema>>["grouping"] = {
+			type: "single",
+		},
 	): void {
 		this.#assertValueCommandAllowed()
 
@@ -1137,7 +1166,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				return
 			}
 
-			this.#commitValueChanges(changes, source)
+			this.#commitValueChanges(changes, source, { grouping })
 		} catch (error) {
 			if (this.#activeBatch !== undefined) {
 				this.#activeBatch.abortedError ??= error
@@ -1226,6 +1255,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					createDocumentCommittedEvent({
 						sequence: 0,
 						source,
+						grouping: options.grouping,
 						changes: [],
 						rowIdentityChanges,
 					}),
@@ -1289,6 +1319,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			createDocumentCommittedEvent({
 				sequence: 0,
 				source,
+				grouping: options.grouping,
 				changes: effectiveChanges,
 				rowIdentityChanges: createRowIdentityChanges(
 					previousDocument.rowIdentity,
@@ -1771,17 +1802,18 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	restoreDocument(
 		document: FormDocument<FormInput<Schema>>,
 		origin: RestoreOrigin,
-	): void {
+		history: "skip" | "record" = "skip",
+	): FormDispatchResult<FormInput<Schema>, Context> {
 		this.#assertValueCommandAllowed()
 		if (this.#activeBatch !== undefined) {
 			throw new TypeError("restoreDocument cannot be called inside a batch")
 		}
-		this.#dispatchEventCandidate(
+		return this.#dispatchEventCandidate(
 			createDocumentRestoredEvent({
 				sequence: 0,
 				document,
 				origin,
-				history: "skip",
+				history,
 			}),
 		)
 	}

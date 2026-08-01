@@ -14,6 +14,13 @@ export default {
 	ignoreFiles: [],
 	workspaces: {
 		".": {
+			entry: [
+				"src/index.ts",
+				"src/core/index.ts",
+				"src/history/index.ts",
+				"src/react19/index.ts",
+				"src/server/index.ts",
+			],
 			project: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 		},
 		"docs-site": {

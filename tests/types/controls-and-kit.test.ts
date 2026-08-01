@@ -525,16 +525,11 @@ basePresentationKit.Form({
 	form: extendedPresentationForm,
 })
 ActionForm({
-	kit: extendedPresentationKit,
-	definition: basePresentationDefinition,
-	defaultValues: presentationDefaultValues,
+	form: extendedBasePresentationForm,
 	action: (_formData: FormData) => undefined,
 })
 ActionForm({
-	kit: basePresentationKit,
-	// @ts-expect-error ActionForm keeps structural slot capabilities
-	definition: extendedPresentationDefinition,
-	defaultValues: presentationDefaultValues,
+	form: basePresentationForm,
 	action: (_formData: FormData) => undefined,
 })
 
@@ -716,34 +711,6 @@ const extendedBaseForm = extendedKit.createForm(exampleDefinition, {
 	defaultValues: exampleDefaultValues,
 	context: { locale: "en", locked: false },
 })
-extendedKit.AutoForm({
-	form: extendedBaseForm,
-	context: { locale: "en", locked: false },
-})
-
-ActionForm({
-	kit: extendedKit,
-	definition: extendedDefinition,
-	defaultValues: exampleDefaultValues,
-	context: {
-		locale: "en",
-		locked: false,
-	},
-	action: (_formData: FormData) => undefined,
-})
-
-ActionForm({
-	kit,
-	// @ts-expect-error ActionForm keeps the selected kit's registry ownership
-	definition: extendedDefinition,
-	defaultValues: exampleDefaultValues,
-	context: {
-		locale: "en",
-		locked: false,
-	},
-	action: (_formData: FormData) => undefined,
-})
-
 const baseForm = kit.createForm(exampleDefinition, {
 	defaultValues: exampleDefaultValues,
 	context: {
@@ -751,6 +718,57 @@ const baseForm = kit.createForm(exampleDefinition, {
 		locked: false,
 	},
 })
+extendedKit.AutoForm({
+	form: extendedBaseForm,
+	context: { locale: "en", locked: false },
+})
+
+ActionForm({
+	form: extendedBaseForm,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+	action: (_formData: FormData) => undefined,
+})
+
+ActionForm({
+	form: baseForm,
+	context: {
+		locale: "en",
+		locked: false,
+	},
+	action: (_formData: FormData) => undefined,
+})
+
+ActionForm({
+	form: baseForm,
+	action: (_formData: FormData) => undefined,
+	// @ts-expect-error ActionForm reads its kit from form
+	kit,
+})
+
+ActionForm({
+	form: baseForm,
+	action: (_formData: FormData) => undefined,
+	// @ts-expect-error ActionForm reads its definition from form
+	definition: exampleDefinition,
+})
+
+ActionForm({
+	form: baseForm,
+	action: (_formData: FormData) => undefined,
+	// @ts-expect-error ActionForm reads its defaults from form
+	defaultValues: exampleDefaultValues,
+})
+
+ActionForm({
+	form: baseForm,
+	action: (_formData: FormData) => undefined,
+	// @ts-expect-error context is inferred from form
+	context: { locked: false },
+})
+
 const extendedForm = extendedKit.createForm(extendedDefinition, {
 	defaultValues: exampleDefaultValues,
 	context: {

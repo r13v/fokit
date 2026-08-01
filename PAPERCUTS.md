@@ -89,3 +89,10 @@ Set both mode and revalidateMode when a test requires the same trigger twice.
 Polling a piped TypeScript check → the command had already completed without a
 session ID, so a follow-up poll failed before reporting useful status. Inspect
 the returned session ID and exit code before polling a yielded command.
+## 2026-08-01 20:52 — GPT-5
+
+Running the required repository check after Task 7 implementation → Biome rejected newly edited files for import ordering and formatting instead of applying its safe fixes. Run Biome with `--write` on touched files before the validation-only check.
+
+## 2026-08-01 20:54 — GPT-5
+
+Running Knip after adding the private feature protocol → duplicated type re-exports and a test-only exported helper were reported as unused. Keep private protocol types at one ownership boundary and avoid exporting internal test helpers.

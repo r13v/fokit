@@ -9,10 +9,16 @@ import {
 	reindexRowIdentity,
 	replaceRowIdentity,
 } from "./array-state.js"
+import { CommitTimeline } from "./commit-timeline.js"
 import type {
 	NormalizedArrayNode,
 	NormalizedFormDefinition,
 } from "./definition.js"
+import {
+	type FinalizedFormEventListener,
+	FORM_FEATURE_PROTOCOL_VERSION,
+	type FormFeatureCapability,
+} from "./feature-protocol.js"
 import { type FocusTarget, FormFocus } from "./focus.js"
 import type { FormCommand } from "./form-commands.js"
 import type {
@@ -88,6 +94,8 @@ import {
 import type { ArrayItemValue } from "./ui-types.js"
 import {
 	normalizeValidationOptions,
+	normalizeValidationResult,
+	runStandardSchemaValidation,
 	type ValidationOptions,
 	type ValidationResult,
 } from "./validation.js"
@@ -308,7 +316,6 @@ export type ActionSubmissionAttempt<
 > = {
 	readonly input: FormInput<Schema>
 	readonly changedPaths: ReadonlySet<string>
-	recordChanges(paths: readonly PathInput[]): void
 	finish(): void
 }
 
@@ -377,6 +384,13 @@ export function restoreFormStoreDocument<
 	asCoreFormStore(store).restoreDocument(document, origin)
 }
 
+export function getFormStoreFeatureCapability<
+	Schema extends StandardSchema,
+	Context = unknown,
+>(store: FormStore<Schema, Context>): FormFeatureCapability<Schema, Context> {
+	return asCoreFormStore(store).getFeatureCapability()
+}
+
 export function startFormSubmission<
 	Schema extends StandardSchema,
 	Context = unknown,
@@ -404,22 +418,29 @@ export function startActionSubmission<
 >(store: FormStore<Schema, Context>): ActionSubmissionAttempt<Schema> {
 	const submission = startFormSubmission(store)
 	const changedPaths = new Set<string>()
+	const unsubscribe = asCoreFormStore(store).subscribeFinalized(
+		({ event, changedPaths: committedPaths }) => {
+			if (
+				event.type !== "document/committed" &&
+				event.type !== "document/restored"
+			) {
+				return
+			}
+			for (const path of committedPaths) changedPaths.add(path)
+		},
+	)
 	let finished = false
 
 	return Object.freeze({
 		input: store.getSnapshot().values,
 		changedPaths,
-		recordChanges(paths) {
-			for (const path of paths) {
-				changedPaths.add(formatPath(path))
-			}
-		},
 		finish() {
 			if (finished) {
 				return
 			}
 
 			finished = true
+			unsubscribe()
 			submission.finish()
 		},
 	})
@@ -447,11 +468,14 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	readonly #publication: FormPublication<
 		FormSnapshot<FormInput<Schema>, Context>
 	>
+	readonly #timeline = new CommitTimeline<FormInput<Schema>, Context>()
+	readonly #featureCapability: FormFeatureCapability<Schema, Context>
 	readonly #middleware: MiddlewareCoordinator
 	readonly #preparedTransactions = new WeakSet<object>()
 	readonly #preparedResolvedUi = new WeakMap<object, ResolvedUiState<Context>>()
 	#pendingSnapshot: FormSnapshot<FormInput<Schema>, Context> | undefined
 	#pendingPreviousValues: FormInput<Schema> | undefined
+	#pendingPreviousDocument: FormDocument<FormInput<Schema>> | undefined
 	#suppressNextPublication = false
 	#suppressedPublicationModel: FormModel<FormInput<Schema>, Context> | undefined
 	readonly #onCommitFinalized: (
@@ -513,8 +537,21 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#beforeUpdate = options.beforeUpdate
 		this.#afterUpdate = options.afterUpdate
 		this.#onCommitFinalized = onCommitFinalized
+		this.#featureCapability = Object.freeze({
+			version: FORM_FEATURE_PROTOCOL_VERSION,
+			getDocument: () => this.getDocument(),
+			restoreDocument: (nextDocument, origin) =>
+				this.restoreDocument(nextDocument, origin),
+			installCleanBaseline: (nextDocument) =>
+				this.installCleanBaseline(nextDocument),
+			validateRestoredInput: (input) => this.validateRestoredInput(input),
+			advanceEventSequenceFloor: (sequence) =>
+				this.advanceEventSequenceFloor(sequence),
+			subscribeFinalized: (listener) => this.subscribeFinalized(listener),
+		})
 		this.#middleware = new MiddlewareCoordinator({
 			middleware,
+			featureCapability: this.#featureCapability,
 			getSnapshot: () => this.#pendingSnapshot ?? this.getSnapshot(),
 			dispatchCommand: (command) =>
 				this.#executeMiddlewareCommand(
@@ -529,7 +566,9 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					transaction as FormTransaction<FormInput<Schema>, Context>,
 				) as FormDispatchResult<unknown, unknown>,
 			finalize: (event) =>
-				this.#onCommitFinalized(event as FormEvent<FormInput<Schema>, Context>),
+				this.#finalizeCommittedEvent(
+					event as FormEvent<FormInput<Schema>, Context>,
+				),
 			publish: () => this.#publishPendingSnapshot(),
 			afterPublication: (event, transaction) =>
 				this.#runPostPublicationEffects(
@@ -558,6 +597,58 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	getDocument(): FormDocument<FormInput<Schema>> {
 		return this.#model.document
+	}
+
+	getFeatureCapability(): FormFeatureCapability<Schema, Context> {
+		return this.#featureCapability
+	}
+
+	subscribeFinalized(
+		listener: FinalizedFormEventListener<FormInput<Schema>, Context>,
+	): () => void {
+		return this.#timeline.subscribe(listener)
+	}
+
+	advanceEventSequenceFloor(sequence: number): void {
+		if (!Number.isSafeInteger(sequence) || sequence < 0) {
+			throw new TypeError(
+				"Form event-sequence floor must be a safe non-negative integer",
+			)
+		}
+		this.#nextEventSequence = Math.max(this.#nextEventSequence, sequence)
+	}
+
+	async validateRestoredInput(
+		input: FormInput<Schema>,
+	): Promise<ValidationResult<FormOutput<Schema>>> {
+		const result = await runStandardSchemaValidation(
+			this.schema,
+			clonePublicValue(input),
+			new AbortController().signal,
+		)
+		return normalizeValidationResult(result)
+	}
+
+	installCleanBaseline(document: FormDocument<FormInput<Schema>>): void {
+		if (!this.#middleware.isRunning) {
+			throw new TypeError(
+				"A clean baseline can only be installed while a form event is being finalized",
+			)
+		}
+		if (document !== this.#model.document) {
+			throw new TypeError(
+				"A clean baseline must use the current committed form document",
+			)
+		}
+		this.#validationLifecycle.invalidate(true)
+		this.#reduceRuntimeEvent(
+			createRuntimeResetEvent({
+				sequence: this.#nextEventSequence,
+				baseline: "replaced",
+				baselineDocument: document,
+			}),
+		)
+		this.#pendingSnapshot = this.#createSnapshot()
 	}
 
 	setValue<Path extends FieldPath<FormInput<Schema>>>(
@@ -1715,6 +1806,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		const preparedResolvedUi = this.#preparedResolvedUi.get(transaction)
 		const event = this.#createCommittedEvent(transaction)
 		const previousModel = this.#model
+		this.#pendingPreviousDocument = previousModel.document
 		if (event.type === "document/committed") {
 			this.#pendingPreviousValues = clonePublicValue(
 				this.#model.document.values,
@@ -1750,6 +1842,14 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		transaction: FormTransaction<FormInput<Schema>, Context>,
 	): FormEvent<FormInput<Schema>, Context> {
 		return this.#createEvent(transaction, this.#nextSequence())
+	}
+
+	#finalizeCommittedEvent(event: FormEvent<FormInput<Schema>, Context>): void {
+		const previousDocument =
+			this.#pendingPreviousDocument ?? this.#model.document
+		this.#pendingPreviousDocument = undefined
+		this.#timeline.finalize(event, previousDocument, this.#model.document)
+		this.#onCommitFinalized(event)
 	}
 
 	#freezeTransactionCandidate(

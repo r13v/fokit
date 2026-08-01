@@ -2,7 +2,11 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it, vi } from "vitest"
-import { startActionSubmission } from "../core/form-store.js"
+import {
+	getFormStoreDocument,
+	restoreFormStoreDocument,
+	startActionSubmission,
+} from "../core/form-store.js"
 import {
 	createFormStore,
 	type FormStore,
@@ -76,7 +80,6 @@ describe("React 19 Action result synchronization", () => {
 		const attempt = startActionSubmission(form)
 
 		form.setValue("email", "fixed@example.test")
-		attempt.recordChanges(["email"])
 
 		syncActionResult(
 			form,
@@ -116,14 +119,8 @@ describe("React 19 Action result synchronization", () => {
 	})
 
 	it("uses effective committed paths when requested Action edits are replaced", () => {
-		let attempt: ReturnType<typeof startActionSubmission<Schema>> | undefined
-		const afterUpdate = vi.fn<
-			NonNullable<FormStoreOptions<Schema>["afterUpdate"]>
-		>((event) => {
-			// Restore will intentionally suppress this hook. The future commit timeline
-			// must preserve the effective-path behavior characterized here.
-			attempt?.recordChanges(event.changes.map((change) => change.path))
-		})
+		const afterUpdate =
+			vi.fn<NonNullable<FormStoreOptions<Schema>["afterUpdate"]>>()
 		const form = createStore({
 			beforeUpdate: (event) =>
 				event.source === "imperative"
@@ -137,7 +134,7 @@ describe("React 19 Action result synchronization", () => {
 					: undefined,
 			afterUpdate,
 		})
-		attempt = startActionSubmission(form)
+		const attempt = startActionSubmission(form)
 
 		form.setValue("name", "Grace")
 
@@ -175,12 +172,26 @@ describe("React 19 Action result synchronization", () => {
 		expect(snapshot.errors.fields.has("email")).toBe(false)
 	})
 
+	it("tracks restore paths while ignoring runtime-only events", () => {
+		const planner = createStore()
+		planner.setValue("email", "restored@example.test")
+		const target = getFormStoreDocument(planner)
+		const afterUpdate = vi.fn()
+		const form = createStore({ afterUpdate })
+		const attempt = startActionSubmission(form)
+
+		form.touch("name")
+		restoreFormStoreDocument(form, target, "undo")
+
+		expect([...attempt.changedPaths]).toEqual(["email"])
+		expect(afterUpdate).not.toHaveBeenCalled()
+	})
+
 	it("keeps pending edits while making the submitted snapshot the reset baseline", () => {
 		const form = createStore()
 		const attempt = startActionSubmission(form)
 
 		form.setValue("name", "Grace")
-		attempt.recordChanges(["name"])
 
 		syncActionResult(
 			form,

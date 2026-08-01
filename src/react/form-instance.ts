@@ -1,8 +1,10 @@
 "use client"
 
+import { attachFormFeatureCapability } from "../core/feature-protocol.js"
 import {
 	createFormStoreWithMiddleware,
 	errorSummaryFocusTargetRegistration,
+	getFormStoreFeatureCapability,
 	registerErrorSummaryFocusTarget,
 	replaceFormStoreRuntime,
 } from "../core/form-store.js"
@@ -161,6 +163,10 @@ export class FormInstanceImpl<
 				},
 			},
 			(options.middleware as readonly AnyFormMiddleware[] | undefined) ?? [],
+		)
+		attachFormFeatureCapability(
+			this,
+			getFormStoreFeatureCapability(this.#store),
 		)
 		this.definition = definition
 		this.schema = this.#store.schema
@@ -442,10 +448,15 @@ export function getFormStore<
 	Context = unknown,
 	RequiredControls extends ControlRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
+	Owner = FormKitOwner<RequiredControls, Presentation>,
 >(
-	form: FormInstance<Schema, Context, RequiredControls, Presentation>,
+	form: FormInstance<Schema, Context, RequiredControls, Presentation, Owner>,
 ): FormStore<Schema, Context> {
 	return getFormInstanceImpl(form).getStore()
+}
+
+export function getFormKitDescriptor(form: object): FormKitDescriptor {
+	return getFormInstanceImpl(form as never).getKitDescriptor()
 }
 
 export function getFormInstanceImpl<

@@ -1,3 +1,7 @@
+import {
+	attachFormFeatureCapability,
+	type FormFeatureCapability,
+} from "./feature-protocol.js"
 import type { FormCommand } from "./form-commands.js"
 import type { FormSnapshot } from "./form-state.js"
 import type { FormTransactionDispatch } from "./form-transactions.js"
@@ -27,6 +31,7 @@ type ErasedCoordinatorOptions = {
 	readonly finalize: (event: unknown, transaction: unknown) => void
 	readonly publish: () => void
 	readonly afterPublication: (event: unknown, transaction: unknown) => void
+	readonly featureCapability: FormFeatureCapability
 }
 
 const cancelledResult = Object.freeze({ status: "cancelled" as const })
@@ -47,7 +52,7 @@ export class MiddlewareCoordinator {
 	constructor(options: ErasedCoordinatorOptions) {
 		this.#options = options
 		const middleware = freezeMiddleware(options.middleware)
-		const api = Object.freeze({
+		const api = {
 			getSnapshot: options.getSnapshot,
 			dispatch: (command: unknown) => {
 				const dispatch = () => options.dispatchCommand(command)
@@ -57,7 +62,9 @@ export class MiddlewareCoordinator {
 				}
 				dispatch()
 			},
-		})
+		}
+		attachFormFeatureCapability(api, options.featureCapability)
+		Object.freeze(api)
 
 		let dispatch: ErasedDispatch = (transaction) => {
 			const result = options.terminal(transaction)

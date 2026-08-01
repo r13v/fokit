@@ -540,7 +540,6 @@ describe("Standard Schema validation", () => {
 		const attempt = startActionSubmission(form)
 
 		form.setValue("email", "grace@example.test")
-		attempt.recordChanges(["email"])
 		attempt.finish()
 		applyActionResult(
 			form,

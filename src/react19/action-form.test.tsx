@@ -4,7 +4,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-
+import { getFormFeatureCapability } from "../core/feature-protocol.js"
 import type { FormResult } from "../core/form-result.js"
 import { defineControl } from "../react/control.js"
 import { createFormKit } from "../react/create-form-kit.js"
@@ -147,14 +147,12 @@ describe("React 19 ActionForm", () => {
 				},
 			],
 		})
+		const form = kit.createForm(renderDefinition, {
+			defaultValues: defaultValues(),
+		})
 
 		render(
-			<ActionForm
-				action={action}
-				defaultValues={defaultValues()}
-				definition={renderDefinition}
-				kit={kit}
-			>
+			<ActionForm action={action} form={form}>
 				<ActionSubmit>Save</ActionSubmit>
 			</ActionForm>,
 		)
@@ -170,22 +168,24 @@ describe("React 19 ActionForm", () => {
 		const validate = vi.fn(validateValues)
 		const action = vi.fn((_formData: FormData) => undefined)
 		const submittedEvents: boolean[] = []
+		const form = kit.createForm(
+			kit.defineForm(createSchema(validate))({
+				ui: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+					},
+				],
+			}),
+			{ defaultValues: defaultValues() },
+		)
 
 		render(
 			<ActionForm
 				aria-label="Profile"
 				action={action}
-				defaultValues={defaultValues()}
-				definition={kit.defineForm(createSchema(validate))({
-					ui: [
-						{
-							kind: "field",
-							path: "name",
-							control: "text",
-						},
-					],
-				})}
-				kit={kit}
+				form={form}
 				onSubmitCapture={(event) => {
 					submittedEvents.push(event.defaultPrevented)
 				}}
@@ -213,15 +213,16 @@ describe("React 19 ActionForm", () => {
 
 	it("blocks only disabled or already-pending submissions", async () => {
 		const action = vi.fn()
+		const disabledFormInstance = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
 		render(
 			<ActionForm
 				aria-label="Disabled profile"
 				action={action}
-				defaultValues={defaultValues()}
-				definition={definition}
 				disabled
-				kit={kit}
+				form={disabledFormInstance}
 			>
 				<StateProbe />
 				<button type="submit">Save</button>
@@ -240,13 +241,14 @@ describe("React 19 ActionForm", () => {
 		expect(disabledEvent.defaultPrevented).toBe(true)
 		expect(screen.getByTestId("submit-count").textContent).toBe("0")
 
+		const pendingFormInstance = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 		render(
 			<ActionForm
 				aria-label="Pending profile"
 				action={action}
-				defaultValues={defaultValues()}
-				definition={definition}
-				kit={kit}
+				form={pendingFormInstance}
 			>
 				<StateProbe />
 				<button type="submit">Save</button>
@@ -277,28 +279,28 @@ describe("React 19 ActionForm", () => {
 
 	it("applies hydrated error results once, exposes errors, and focuses the fallback target", async () => {
 		const action = vi.fn()
+		const hiddenDefinition = kit.defineForm(
+			createSchema(() => ({ value: defaultValues() })),
+		)({
+			ui: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					visible: false,
+				},
+			],
+		})
+		const formInstance = kit.createForm(hiddenDefinition, {
+			defaultValues: defaultValues(),
+		})
 
 		function View({ result }: { readonly result: FormResult | null }) {
 			return (
 				<ActionForm
 					aria-label="Profile"
 					action={action}
-					defaultValues={defaultValues()}
-					definition={kit.defineForm(
-						createSchema(() => ({
-							value: defaultValues(),
-						})),
-					)({
-						ui: [
-							{
-								kind: "field",
-								path: "name",
-								control: "text",
-								visible: false,
-							},
-						],
-					})}
-					kit={kit}
+					form={formInstance}
 					result={result}
 				>
 					<StateProbe />
@@ -341,13 +343,12 @@ describe("React 19 ActionForm", () => {
 	})
 
 	it("applies a pre-hydration error result without changing typed defaults", async () => {
+		const form = kit.createForm(definition, { defaultValues: defaultValues() })
 		render(
 			<ActionForm
 				aria-label="Profile"
 				action={noopAction}
-				defaultValues={defaultValues()}
-				definition={definition}
-				kit={kit}
+				form={form}
 				result={{
 					status: "error",
 					issues: [
@@ -374,14 +375,13 @@ describe("React 19 ActionForm", () => {
 
 	it("renders ActionSubmit as an unstyled native submit button using Form Please and Action pending state", async () => {
 		const pending = createDeferred<void>()
+		const form = kit.createForm(definition, { defaultValues: defaultValues() })
 
 		render(
 			<ActionForm
 				aria-label="Profile"
 				action={vi.fn((_formData: FormData) => pending.promise)}
-				defaultValues={defaultValues()}
-				definition={definition}
-				kit={kit}
+				form={form}
 			>
 				<ActionSubmit className="primary" disabled={false}>
 					Save
@@ -406,30 +406,88 @@ describe("React 19 ActionForm", () => {
 		})
 	})
 
+	it("renders controls and slots from each supplied base, extended, and sibling form", () => {
+		const baseControl = defineControl<string>({
+			component: () => <output data-testid="base-owned-control" />,
+			formData: { mode: "native" },
+		})
+		const extendedControl = defineControl<string>({
+			component: () => <output data-testid="extended-owned-control" />,
+			formData: { mode: "native" },
+		})
+		const siblingControl = defineControl<string>({
+			component: () => <output data-testid="sibling-owned-control" />,
+			formData: { mode: "native" },
+		})
+		const baseKit = createFormKit({
+			controls: { baseText: baseControl },
+			slots: { Field: BaseOwnedField },
+		})
+		const extendedKit = baseKit.extend({
+			controls: { extendedText: extendedControl },
+			slots: { Field: ExtendedOwnedField },
+		})
+		const siblingKit = baseKit.extend({
+			controls: { siblingText: siblingControl },
+			slots: { Field: SiblingOwnedField },
+		})
+		const ownedSchema = createSchema(validateValues)
+		const baseDefinition = baseKit.defineForm(ownedSchema)({
+			ui: [{ kind: "field", path: "name", control: "baseText" }],
+		})
+		const extendedDefinition = extendedKit.defineForm(ownedSchema)({
+			ui: [{ kind: "field", path: "name", control: "extendedText" }],
+		})
+		const siblingDefinition = siblingKit.defineForm(ownedSchema)({
+			ui: [{ kind: "field", path: "name", control: "siblingText" }],
+		})
+		const baseForm = baseKit.createForm(baseDefinition, {
+			defaultValues: defaultValues(),
+		})
+		const extendedForm = extendedKit.createForm(extendedDefinition, {
+			defaultValues: defaultValues(),
+		})
+		const siblingForm = siblingKit.createForm(siblingDefinition, {
+			defaultValues: defaultValues(),
+		})
+		expect(getFormFeatureCapability(baseForm).getDocument().values).toEqual(
+			defaultValues(),
+		)
+
+		render(
+			<>
+				<ActionForm action={noopAction} form={baseForm} />
+				<ActionForm action={noopAction} form={extendedForm} />
+				<ActionForm action={noopAction} form={siblingForm} />
+			</>,
+		)
+
+		expect(screen.getByTestId("base-owned-field")).not.toBeNull()
+		expect(screen.getByTestId("extended-owned-field")).not.toBeNull()
+		expect(screen.getByTestId("sibling-owned-field")).not.toBeNull()
+		expect(screen.getByTestId("base-owned-control")).not.toBeNull()
+		expect(screen.getByTestId("extended-owned-control")).not.toBeNull()
+		expect(screen.getByTestId("sibling-owned-control")).not.toBeNull()
+	})
+
 	it("throws before dispatch when active controls cannot be represented in Action FormData", () => {
 		let snapshot: ReturnType<FormInstance<Schema>["getSnapshot"]> | undefined
+		const unavailableDefinition = kit.defineForm(createSchema(validateValues))({
+			ui: [
+				{
+					kind: "field",
+					path: "archivedNote",
+					control: "unavailable",
+				},
+			],
+		})
+		const form = kit.createForm(unavailableDefinition, {
+			defaultValues: defaultValues({ archivedNote: "keep me" }),
+		})
 
 		function UnavailableView() {
 			return (
-				<ActionForm
-					aria-label="Profile"
-					action={noopAction}
-					defaultValues={{
-						name: "Ada",
-						email: "ada@example.test",
-						archivedNote: "keep me",
-					}}
-					definition={kit.defineForm(createSchema(validateValues))({
-						ui: [
-							{
-								kind: "field",
-								path: "archivedNote",
-								control: "unavailable",
-							},
-						],
-					})}
-					kit={kit}
-				>
+				<ActionForm aria-label="Profile" action={noopAction} form={form}>
 					<SnapshotProbe
 						onSnapshot={(nextSnapshot) => {
 							snapshot = nextSnapshot
@@ -447,26 +505,24 @@ describe("React 19 ActionForm", () => {
 	})
 
 	it("rejects preserved disabled native controls without serializers", () => {
+		const incompatibleDefinition = kit.defineForm(createSchema(validateValues))(
+			{
+				ui: [
+					{
+						kind: "field",
+						path: "archivedNote",
+						control: "nativeWithoutSerializer",
+						disabled: true,
+					},
+				],
+			},
+		)
+		const form = kit.createForm(incompatibleDefinition, {
+			defaultValues: defaultValues({ archivedNote: "hidden" }),
+		})
 		expect(() => {
 			render(
-				<ActionForm
-					aria-label="Profile"
-					action={noopAction}
-					defaultValues={defaultValues({
-						archivedNote: "hidden",
-					})}
-					definition={kit.defineForm(createSchema(validateValues))({
-						ui: [
-							{
-								kind: "field",
-								path: "archivedNote",
-								control: "nativeWithoutSerializer",
-								disabled: true,
-							},
-						],
-					})}
-					kit={kit}
-				/>,
+				<ActionForm aria-label="Profile" action={noopAction} form={form} />,
 			)
 		}).toThrow(/ActionForm cannot preserve field "archivedNote".*serializer/i)
 	})
@@ -478,32 +534,28 @@ describe("React 19 ActionForm", () => {
 		const nestedSchema = createSchema<NestedValues>((value) => ({
 			value: value as NestedValues,
 		}))
-
-		render(
-			<ActionForm
-				aria-label="Profile"
-				action={noopAction}
-				defaultValues={{
-					items: [{ archivedNote: "keep me" }],
-				}}
-				definition={kit.defineForm(nestedSchema)({
-					ui: [
+		const nestedDefinition = kit.defineForm(nestedSchema)({
+			ui: [
+				{
+					kind: "array",
+					path: "items",
+					itemDefault: {},
+					children: [
 						{
-							kind: "array",
-							path: "items",
-							itemDefault: {},
-							children: [
-								{
-									kind: "field",
-									path: "archivedNote",
-									control: "unavailable",
-								},
-							],
+							kind: "field",
+							path: "archivedNote",
+							control: "unavailable",
 						},
 					],
-				})}
-				kit={kit}
-			>
+				},
+			],
+		})
+		const form = kit.createForm(nestedDefinition, {
+			defaultValues: { items: [{ archivedNote: "keep me" }] },
+		})
+
+		render(
+			<ActionForm aria-label="Profile" action={noopAction} form={form}>
 				<NestedSnapshotProbe
 					onSnapshot={(nextSnapshot) => {
 						snapshot = nextSnapshot
@@ -524,16 +576,11 @@ describe("React 19 ActionForm", () => {
 		const forbiddenSubmitProps = {
 			type: "button",
 		}
+		const form = kit.createForm(definition, { defaultValues: defaultValues() })
 
 		expect(() =>
 			render(
-				<ActionForm
-					action={noopAction}
-					defaultValues={defaultValues()}
-					definition={definition}
-					kit={kit}
-					{...forbiddenFormProps}
-				/>,
+				<ActionForm action={noopAction} form={form} {...forbiddenFormProps} />,
 			),
 		).toThrow(/Form Please owns the onSubmit form prop/)
 
@@ -651,6 +698,30 @@ function FieldSlot({
 			)}
 			{control}
 			{errors}
+		</div>
+	)
+}
+
+function BaseOwnedField(props: FieldSlotProps) {
+	return (
+		<div data-testid="base-owned-field">
+			<FieldSlot {...props} />
+		</div>
+	)
+}
+
+function ExtendedOwnedField(props: FieldSlotProps) {
+	return (
+		<div data-testid="extended-owned-field">
+			<FieldSlot {...props} />
+		</div>
+	)
+}
+
+function SiblingOwnedField(props: FieldSlotProps) {
+	return (
+		<div data-testid="sibling-owned-field">
+			<FieldSlot {...props} />
 		</div>
 	)
 }

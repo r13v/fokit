@@ -678,49 +678,49 @@ every form.
 - Modify: src/react19/result-sync.test.ts
 - Modify: tests/types/controls-and-kit.test.ts
 
-- [ ] Define one package-private feature capability under a stable
+- [x] Define one package-private feature capability under a stable
   Symbol.for key and an explicit integer protocol version in
   src/core/feature-protocol.ts.
-- [ ] Expose package-private operations for reading the immutable current
+- [x] Expose package-private operations for reading the immutable current
   document, submitting a live restore, installing a clean baseline after a
   successful hydration/reset boundary, validating restored input through the
   form schema, advancing the per-form event-sequence floor, and subscribing to
   finalized FormEvent notifications.
-- [ ] Validate capability shape and protocol version without instanceof so
+- [x] Validate capability shape and protocol version without instanceof so
   ESM/CommonJS entry duplication cannot break identity. Throw an actionable
   incompatibility error before a feature initializes.
-- [ ] Implement a lazy commit timeline that attaches to Task 5's guaranteed
+- [x] Implement a lazy commit timeline that attaches to Task 5's guaranteed
   coordinator finalization step and allocates listener state only when a
   consumer subscribes. Deliver every finalized FormEvent exactly once after
   middleware unwinding and before publication, even when an inner post-next
   middleware throws. It may report effective changed paths, but it must not
   retain checkpoints or an exportable journal.
-- [ ] Report effective changed schema paths for ordinary and restore commits,
+- [x] Report effective changed schema paths for ordinary and restore commits,
   including array structural changes, after reducer normalization.
-- [ ] Change startActionSubmission to subscribe to effective document commits
+- [x] Change startActionSubmission to subscribe to effective document commits
   until finish, and remove the afterUpdate wrapper used for changed-path
   tracking in src/react19/action-form.tsx.
-- [ ] Make ActionForm require form and remove its kit, definition, and
+- [x] Make ActionForm require form and remove its kit, definition, and
   defaultValues props. Read controls and slots from the form's package-private
   immutable kit descriptor, and bind runtime options through useFormBinding.
   Do not add an overload, ActionForm middleware prop, or React 19 kit factory.
-- [ ] Prove Action tracking sees restore commits even though restore suppresses
+- [x] Prove Action tracking sees restore commits even though restore suppresses
   afterUpdate and still ignores runtime-only events. Render forms from base,
   extended, and sibling kits with their own controls and slots, and prove
   ActionForm always uses the descriptor owned by the supplied form.
-- [ ] Add type tests that infer ActionForm schema, context, controls, and slot
+- [x] Add type tests that infer ActionForm schema, context, controls, and slot
   options from form. Reject the removed kit, definition, and defaultValues
   props.
-- [ ] Prove forms with no timeline subscriber retain no event collection after
+- [x] Prove forms with no timeline subscriber retain no event collection after
   commits.
-- [ ] Prove finalized-event listeners run exactly once with the feature before
+- [x] Prove finalized-event listeners run exactly once with the feature before
   and after middleware that commits and then throws, and prove advancing the
   event-sequence floor makes the next live event strictly greater without
   changing the current document.
-- [ ] Run npx vitest run src/core/feature-protocol.test.ts
+- [x] Run npx vitest run src/core/feature-protocol.test.ts
   src/core/commit-timeline.test.ts src/react19/action-form.test.tsx
   src/react19/result-sync.test.ts.
-- [ ] Run npm run test:types.
+- [x] Run npm run test:types.
 
 ### Task 8: Implement History, Event Journals, and Deterministic Replay
 

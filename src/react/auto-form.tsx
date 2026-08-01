@@ -10,7 +10,11 @@ import type {
 import { ErrorSummary } from "./error-summary.js"
 import { FieldsRenderer } from "./fields.js"
 import { KitForm } from "./form.js"
-import { useForm } from "./use-form.js"
+import {
+	assertFormKitOwnership,
+	type FormKitDescriptor,
+} from "./form-instance.js"
+import { useFormBinding } from "./use-form.js"
 
 export function createAutoFormComponent<
 	Controls extends ControlDefinitionRegistry,
@@ -20,6 +24,7 @@ export function createAutoFormComponent<
 >(
 	controls: Controls,
 	slots: RuntimeFormKitSlots,
+	descriptor: FormKitDescriptor,
 ): AutoFormComponent<
 	Controls,
 	FieldSlotOptions,
@@ -27,8 +32,7 @@ export function createAutoFormComponent<
 	ArraySlotOptions
 > {
 	function AutoForm<Schema extends StandardSchema, Context = unknown>({
-		definition,
-		defaultValues,
+		form,
 		context,
 		disabled,
 		readOnly,
@@ -46,8 +50,8 @@ export function createAutoFormComponent<
 		SectionSlotOptions,
 		ArraySlotOptions
 	>) {
-		const form = useForm(definition, {
-			defaultValues,
+		assertFormKitOwnership(form as never, descriptor, "kit.AutoForm")
+		useFormBinding(form, {
 			context,
 			disabled,
 			readOnly,

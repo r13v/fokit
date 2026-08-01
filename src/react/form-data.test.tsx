@@ -19,7 +19,6 @@ import type {
 	FieldSlotProps,
 	SectionSlotProps,
 } from "./slots.js"
-import { useForm } from "./use-form.js"
 
 type Contact = {
 	readonly email: string
@@ -779,13 +778,12 @@ describe("native FormData serialization", () => {
 	})
 
 	it("renders hidden serializer entries in SSR and client output", () => {
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			context: { prefix: "ctx" },
+		})
 		const element = (
-			<kit.AutoForm
-				context={{ prefix: "ctx" }}
-				defaultValues={defaultValues()}
-				definition={definition}
-				id="profile"
-			/>
+			<kit.AutoForm context={{ prefix: "ctx" }} form={form} id="profile" />
 		)
 
 		const html = renderToString(element)
@@ -825,11 +823,14 @@ describe("native FormData serialization", () => {
 	})
 
 	it("normalizes to the same schema output as the controlled snapshot", async () => {
+		const formInstance = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			context: { prefix: "ctx" },
+		})
 		render(
 			<kit.AutoForm
 				context={{ prefix: "ctx" }}
-				defaultValues={defaultValues()}
-				definition={definition}
+				form={formInstance}
 				id="profile"
 			/>,
 		)
@@ -852,14 +853,14 @@ describe("native FormData serialization", () => {
 	})
 
 	it("keeps empty arrays as arrays with only the reserved marker", async () => {
+		const formInstance = kit.createForm(definition, {
+			defaultValues: { ...defaultValues(), contacts: [] },
+			context: { prefix: "ctx" },
+		})
 		render(
 			<kit.AutoForm
 				context={{ prefix: "ctx" }}
-				defaultValues={{
-					...defaultValues(),
-					contacts: [],
-				}}
-				definition={definition}
+				form={formInstance}
 				id="profile"
 			/>,
 		)
@@ -884,17 +885,13 @@ describe("native FormData serialization", () => {
 	})
 
 	it("renders hidden serializer entries for manually composed kit.Form", async () => {
+		const formInstance = kit.createForm(definition, {
+			defaultValues: { ...defaultValues(), contacts: [] },
+			context: { prefix: "ctx" },
+		})
 		function ManualForm() {
-			const form = useForm(definition, {
-				defaultValues: {
-					...defaultValues(),
-					contacts: [],
-				},
-				context: { prefix: "ctx" },
-			})
-
 			return (
-				<kit.Form form={form} id="manual-profile">
+				<kit.Form form={formInstance} id="manual-profile">
 					<kit.Fields />
 				</kit.Form>
 			)
@@ -938,11 +935,14 @@ describe("native FormData serialization", () => {
 				},
 			],
 		} satisfies NestedValues
+		const formInstance = kit.createForm(nestedDefinition, {
+			defaultValues,
+			context: { prefix: "ctx" },
+		})
 		render(
 			<kit.AutoForm
 				context={{ prefix: "ctx" }}
-				defaultValues={defaultValues}
-				definition={nestedDefinition}
+				form={formInstance}
 				id="nested"
 			/>,
 		)
@@ -968,13 +968,10 @@ describe("native FormData serialization", () => {
 	it("preserves browser File objects for native file controls", async () => {
 		const user = userEvent.setup()
 		const avatar = new File(["avatar"], "avatar.txt", { type: "text/plain" })
-		render(
-			<uploadKit.AutoForm
-				defaultValues={{}}
-				definition={uploadDefinition}
-				id="upload"
-			/>,
-		)
+		const formInstance = uploadKit.createForm(uploadDefinition, {
+			defaultValues: {},
+		})
+		render(<uploadKit.AutoForm form={formInstance} id="upload" />)
 
 		const fileInput = screen.getByLabelText("avatar") as HTMLInputElement
 
@@ -1005,12 +1002,14 @@ describe("native FormData serialization", () => {
 			birthday: "2026-07-28",
 			openingTime: "08:30",
 		} satisfies NativeTextLikeValues
+		const formInstance = nativeTextLikeKit.createForm(
+			nativeTextLikeDefinition,
+			{
+				defaultValues,
+			},
+		)
 		render(
-			<nativeTextLikeKit.AutoForm
-				defaultValues={defaultValues}
-				definition={nativeTextLikeDefinition}
-				id="native-text-like"
-			/>,
+			<nativeTextLikeKit.AutoForm form={formInstance} id="native-text-like" />,
 		)
 		const form = document.querySelector("form")
 		if (form === null) {
@@ -1034,17 +1033,22 @@ describe("native FormData serialization", () => {
 	it("uses native FormData protocols for select, checkbox, and file controls", async () => {
 		const user = userEvent.setup()
 		const avatar = new File(["avatar"], "avatar.png", { type: "image/png" })
-		render(
-			<nativeTextLikeKit.AutoForm
-				defaultValues={{
+		const formInstance = nativeTextLikeKit.createForm(
+			nativeChoiceFileDefinition,
+			{
+				defaultValues: {
 					status: "draft",
 					subscribed: true,
 					disabledStatus: "published",
 					hiddenStatus: "draft",
 					disabledSubscribed: true,
 					hiddenSubscribed: false,
-				}}
-				definition={nativeChoiceFileDefinition}
+				},
+			},
+		)
+		render(
+			<nativeTextLikeKit.AutoForm
+				form={formInstance}
 				id="native-choice-file"
 			/>,
 		)
@@ -1087,10 +1091,13 @@ describe("native FormData serialization", () => {
 			disabledSubscribed: true,
 			hiddenSubscribed: false,
 		} satisfies NativeChoiceFileValues
+		const formInstance = nativeTextLikeKit.createForm(
+			nativeChoicePreservationDefinition,
+			{ defaultValues },
+		)
 		render(
 			<nativeTextLikeKit.AutoForm
-				defaultValues={defaultValues}
-				definition={nativeChoicePreservationDefinition}
+				form={formInstance}
 				id="native-choice-preserved"
 			/>,
 		)
@@ -1110,11 +1117,14 @@ describe("native FormData serialization", () => {
 	})
 
 	it("updates hidden serializer entries when values change", () => {
+		const formInstance = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			context: { prefix: "ctx" },
+		})
 		render(
 			<kit.AutoForm
 				context={{ prefix: "ctx" }}
-				defaultValues={defaultValues()}
-				definition={definition}
+				form={formInstance}
 				id="profile"
 			/>,
 		)
@@ -1127,12 +1137,15 @@ describe("native FormData serialization", () => {
 	})
 
 	it("rejects preserved disabled native controls without serializers", () => {
+		const form = kit.createForm(incompatibleDefinition, {
+			defaultValues: defaultValues(),
+			context: { prefix: "ctx" },
+		})
 		expect(() => {
 			render(
 				<kit.AutoForm
 					context={{ prefix: "ctx" }}
-					defaultValues={defaultValues()}
-					definition={incompatibleDefinition}
+					form={form}
 					id="incompatible"
 				/>,
 			)
@@ -1174,12 +1187,14 @@ describe("native FormData serialization", () => {
 				hiddenSubscribed: false,
 				...defaultValues,
 			} satisfies NativeChoiceFileValues
+			const form = nativeTextLikeKit.createForm(definition, {
+				defaultValues: fullDefaultValues,
+			})
 
 			expect(() => {
 				render(
 					<nativeTextLikeKit.AutoForm
-						defaultValues={fullDefaultValues}
-						definition={definition}
+						form={form}
 						id="native-file-incompatible"
 					/>,
 				)
@@ -1229,14 +1244,13 @@ describe("native FormData serialization", () => {
 				hiddenSubscribed: false,
 				...defaultValues,
 			} satisfies NativeChoiceFileValues
+			const form = nativeTextLikeKit.createForm(definition, {
+				defaultValues: fullDefaultValues,
+			})
 
 			expect(() => {
 				render(
-					<nativeTextLikeKit.AutoForm
-						defaultValues={fullDefaultValues}
-						definition={definition}
-						id="native-file-undefined"
-					/>,
+					<nativeTextLikeKit.AutoForm form={form} id="native-file-undefined" />,
 				)
 			}).not.toThrow()
 			expect(hiddenInputs(path)).toHaveLength(0)

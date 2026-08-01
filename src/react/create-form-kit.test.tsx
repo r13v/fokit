@@ -2,10 +2,16 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
+import { StrictMode, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
-import type { FormInput, ImperativeFormIssue } from "../core/index.js"
+import type {
+	FormInput,
+	FormMiddleware,
+	ImperativeFormIssue,
+} from "../core/index.js"
 import { FieldControl } from "./control.js"
 import { createFormKit, type FormKitSlots } from "./create-form-kit.js"
+import { formBindingFinalizer } from "./form-instance.js"
 import { useFormState } from "./hooks.js"
 import type { RenderNodeProps } from "./render-node.js"
 import type {
@@ -14,7 +20,6 @@ import type {
 	SectionSlotProps,
 } from "./slots.js"
 import { type TestValues, testKit, textControl } from "./test-kit.js"
-import { createForm, useForm } from "./use-form.js"
 
 type TestSchema = StandardSchemaV1<TestValues>
 type CollisionValues = {
@@ -106,13 +111,11 @@ describe("createFormKit", () => {
 		expect(localKit.slots.Section).toBe(baseKit.slots.Section)
 		expect(chainedKit.controls).toHaveProperty("localText", textControl)
 		expect(chainedKit.controls).toHaveProperty("secondaryText", textControl)
+		const form = localKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
-		render(
-			<localKit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-			/>,
-		)
+		render(<localKit.AutoForm form={form} />)
 		expect(screen.getByText("Name").getAttribute("data-local-field")).toBe("")
 	})
 
@@ -137,13 +140,11 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = localKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
-		render(
-			<localKit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-			/>,
-		)
+		render(<localKit.AutoForm form={form} />)
 
 		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
 			"Ada",
@@ -225,7 +226,7 @@ describe("createFormKit", () => {
 			},
 		])
 		const definition = define({ ui: account })
-		const form = createForm(definition, {
+		const form = testKit.createForm(definition, {
 			defaultValues: {
 				account: { name: "Ada", contacts: [] },
 				unrelated: "same",
@@ -306,13 +307,11 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = testKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
-		render(
-			<testKit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-			/>,
-		)
+		render(<testKit.AutoForm form={form} />)
 
 		const status = screen.getByRole("button", { name: "Account status" })
 		expect((status as HTMLButtonElement).disabled).toBe(true)
@@ -374,14 +373,11 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
-		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-				id="partial"
-			/>,
-		)
+		render(<kit.AutoForm form={form} id="partial" />)
 
 		expect(screen.getByText("Name").getAttribute("data-custom-field")).toBe("")
 		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
@@ -522,16 +518,14 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = kit.createForm(definition, {
+			defaultValues: {
+				name: "Ada",
+				contacts: [],
+			},
+		})
 
-		render(
-			<kit.AutoForm
-				defaultValues={{
-					name: "Ada",
-					contacts: [],
-				}}
-				definition={definition}
-			/>,
-		)
+		render(<kit.AutoForm form={form} />)
 
 		expect(screen.getByText("optional details")).toBeTruthy()
 		expect(
@@ -576,11 +570,11 @@ describe("createFormKit", () => {
 
 	it("passes resolved control props with deterministic names, IDs, ARIA, and meta", () => {
 		const definition = createDefinition()
+		const form = testKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
 		function ControlHarness() {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
-			})
 			const displayErrors = useFormState(
 				form,
 				(snapshot) => snapshot.displayErrors.fields.get("name") ?? [],
@@ -647,19 +641,14 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = testKit.createForm(definition, {
+			defaultValues: {
+				"user-name": "Ada",
+				user: { name: "Grace" },
+			},
+		})
 
-		render(
-			<testKit.AutoForm
-				defaultValues={{
-					"user-name": "Ada",
-					user: {
-						name: "Grace",
-					},
-				}}
-				definition={definition}
-				id="profile"
-			/>,
-		)
+		render(<testKit.AutoForm form={form} id="profile" />)
 
 		const dashed = document.querySelector<HTMLInputElement>(
 			'input[name="user-name"]',
@@ -671,6 +660,101 @@ describe("createFormKit", () => {
 		expect(dashed?.id).toBe("profile-user-name")
 		expect(nested?.id).toBe("profile-user%2Ename")
 		expect(dashed?.id).not.toBe(nested?.id)
+	})
+
+	it("rejects forms from base, extended, and sibling kit snapshots", () => {
+		const base = createFormKit({ controls: { text: textControl } })
+		const extended = base.extend({ controls: { extra: textControl } })
+		const sibling = createFormKit({ controls: { text: textControl } })
+		const definition = base.defineForm(schema)({ ui: [] })
+		const form = base.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
+
+		expect(() => render(<extended.Form form={form as never} />)).toThrow(
+			/exact form kit/i,
+		)
+		expect(() => render(<sibling.AutoForm form={form as never} />)).toThrow(
+			/exact form kit/i,
+		)
+
+		function BindingMismatch() {
+			sibling.useForm(form as never, {})
+			return null
+		}
+		expect(() => render(<BindingMismatch />)).toThrow(/exact form kit/i)
+	})
+
+	it("initializes one isolated middleware closure per form and rejects duplicates", () => {
+		const commits: number[][] = []
+		const middleware: FormMiddleware<TestValues, unknown> = () => (next) => {
+			const local: number[] = []
+			commits.push(local)
+			return (transaction) => {
+				local.push(local.length + 1)
+				return next(transaction)
+			}
+		}
+		const definition = createDefinition()
+		const first = testKit.createForm<TestSchema, unknown>(definition, {
+			defaultValues: defaultValues(),
+			middleware: [middleware],
+		})
+		const second = testKit.createForm<TestSchema, unknown>(definition, {
+			defaultValues: defaultValues(),
+			middleware: [middleware],
+		})
+
+		first.setValue("name", "Grace")
+		second.setValue("name", "Katherine")
+		expect(commits).toEqual([[1], [1]])
+		expect(() =>
+			testKit.createForm<TestSchema, unknown>(definition, {
+				defaultValues: defaultValues(),
+				middleware: [middleware, middleware],
+			}),
+		).toThrow(/duplicates an earlier middleware reference/i)
+	})
+
+	it("publishes no binding activation for failed or discarded forms", () => {
+		const activated = vi.fn()
+		const pass = Object.assign<FormMiddleware<TestValues, unknown>, object>(
+			() => (next) => (transaction) => next(transaction),
+			{ [formBindingFinalizer]: activated },
+		)
+		const fail: FormMiddleware<TestValues, unknown> = () => {
+			throw new Error("initialization failed")
+		}
+		const definition = createDefinition()
+
+		expect(() =>
+			testKit.createForm<TestSchema, unknown>(definition, {
+				defaultValues: defaultValues(),
+				middleware: [pass, fail],
+			}),
+		).toThrow("initialization failed")
+		testKit.createForm<TestSchema, unknown>(definition, {
+			defaultValues: defaultValues(),
+			middleware: [pass],
+		})
+		expect(activated).not.toHaveBeenCalled()
+
+		function BoundForm() {
+			const [form] = useState(() =>
+				testKit.createForm<TestSchema, unknown>(definition, {
+					defaultValues: defaultValues(),
+					middleware: [pass],
+				}),
+			)
+			return <testKit.AutoForm form={form} />
+		}
+
+		render(
+			<StrictMode>
+				<BoundForm />
+			</StrictMode>,
+		)
+		expect(activated).toHaveBeenCalledTimes(1)
 	})
 })
 

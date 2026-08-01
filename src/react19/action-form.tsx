@@ -7,6 +7,7 @@ import {
 	useCallback,
 	useEffect,
 	useRef,
+	useState,
 } from "react"
 import type { FormResult } from "../core/form-result.js"
 import {
@@ -37,7 +38,7 @@ import { rejectOwnedProps } from "../react/owned-props.js"
 import type { RenderNodeComponent } from "../react/render-node.js"
 import type { FormPleaseStyle, ReactUiPresentation } from "../react/slots.js"
 import { booleanData } from "../react/structural-props.js"
-import { type UseFormOptions, useForm } from "../react/use-form.js"
+import type { FormRuntimeOptions } from "../react/use-form.js"
 import {
 	assertReact19ActionSupport,
 	useReact19FormStatus,
@@ -52,10 +53,10 @@ export type ActionFormProps<
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
 > = NativeFormProps &
-	Omit<UseFormOptions<Schema, Context>, "defaultValues" | "onSubmit"> & {
+	Omit<FormRuntimeOptions<Schema, Context>, "onSubmit"> & {
 		readonly kit: Pick<
 			FormKit<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
-			"controls" | "slots"
+			"controls" | "slots" | "createForm" | "useForm"
 		>
 		readonly definition: NormalizedFormDefinition<
 			Schema,
@@ -112,8 +113,18 @@ export function ActionForm<
 	const observedPendingRef = useRef(false)
 	const lastResultRef = useRef<FormResult | null | undefined>(undefined)
 	const generatedId = useGeneratedFormId(id)
-	const form = useForm(definition, {
-		defaultValues,
+	const [createdForm] = useState(() =>
+		kit.createForm(definition, {
+			defaultValues,
+			context,
+			disabled,
+			readOnly,
+			validation,
+			beforeUpdate,
+			afterUpdate,
+		}),
+	)
+	const form = kit.useForm(createdForm, {
 		context,
 		disabled,
 		readOnly,

@@ -6,7 +6,6 @@ import {
 	type ArraySlotProps,
 	type ControlDefinitionRegistry,
 	type ControlProps,
-	createForm,
 	createFormKit,
 	defineControl,
 	type ErrorMessageSlotProps,
@@ -352,7 +351,7 @@ const extendedPresentationKit = basePresentationKit.extend({
 		Array: ExtendedArray,
 	},
 })
-const siblingPresentationKit = basePresentationKit.extend({
+const _siblingPresentationKit = basePresentationKit.extend({
 	slots: {
 		Field: SiblingField,
 	},
@@ -417,7 +416,7 @@ const extendedPresentationDefinition = extendedPresentationKit.defineForm(
 		},
 	],
 })
-const extendedSectionPresentationDefinition =
+const _extendedSectionPresentationDefinition =
 	extendedPresentationKit.defineForm(schema)({
 		ui: [
 			{
@@ -463,7 +462,7 @@ const baseArrayPresentationDefinition = basePresentationKit.defineForm(
 		},
 	],
 })
-const extendedArrayPresentationDefinition = extendedPresentationKit.defineForm(
+const _extendedArrayPresentationDefinition = extendedPresentationKit.defineForm(
 	listSchema,
 )({
 	ui: [
@@ -490,49 +489,39 @@ const extendedArrayPresentationDefinition = extendedPresentationKit.defineForm(
 declare const presentationDefaultValues: ExampleInput
 declare const listPresentationDefaultValues: ListInput
 
-extendedPresentationKit.AutoForm({
-	definition: basePresentationDefinition,
-	defaultValues: presentationDefaultValues,
-})
-broadPresentationKit.AutoForm({
-	definition: basePresentationDefinition,
-	defaultValues: presentationDefaultValues,
-})
-basePresentationKit.AutoForm({
-	// @ts-expect-error a base kit cannot render options introduced by an extension
-	definition: extendedPresentationDefinition,
-	defaultValues: presentationDefaultValues,
-})
-siblingPresentationKit.AutoForm({
-	// @ts-expect-error sibling slot capabilities are not interchangeable
-	definition: extendedPresentationDefinition,
-	defaultValues: presentationDefaultValues,
-})
-basePresentationKit.AutoForm({
-	// @ts-expect-error a base kit cannot render section capabilities from an extension
-	definition: extendedSectionPresentationDefinition,
-	defaultValues: presentationDefaultValues,
-})
-extendedPresentationKit.AutoForm({
-	definition: baseArrayPresentationDefinition,
-	defaultValues: listPresentationDefaultValues,
-})
-basePresentationKit.AutoForm({
-	// @ts-expect-error a base kit cannot render array capabilities from an extension
-	definition: extendedArrayPresentationDefinition,
-	defaultValues: listPresentationDefaultValues,
-})
+const basePresentationForm = basePresentationKit.createForm(
+	basePresentationDefinition,
+	{
+		defaultValues: presentationDefaultValues,
+	},
+)
+const extendedPresentationForm = extendedPresentationKit.createForm(
+	extendedPresentationDefinition,
+	{ defaultValues: presentationDefaultValues },
+)
+const extendedBasePresentationForm = extendedPresentationKit.createForm(
+	basePresentationDefinition,
+	{ defaultValues: presentationDefaultValues },
+)
+const broadPresentationForm = broadPresentationKit.createForm(
+	basePresentationDefinition,
+	{ defaultValues: presentationDefaultValues },
+)
+const extendedArrayPresentationForm = extendedPresentationKit.createForm(
+	baseArrayPresentationDefinition,
+	{ defaultValues: listPresentationDefaultValues },
+)
 
-const basePresentationForm = createForm(basePresentationDefinition, {
-	defaultValues: presentationDefaultValues,
-})
-const extendedPresentationForm = createForm(extendedPresentationDefinition, {
-	defaultValues: presentationDefaultValues,
-})
+extendedPresentationKit.AutoForm({ form: extendedBasePresentationForm })
+broadPresentationKit.AutoForm({ form: broadPresentationForm })
+extendedPresentationKit.AutoForm({ form: extendedArrayPresentationForm })
 
-extendedPresentationKit.Form({ form: basePresentationForm })
+extendedPresentationKit.Form({
+	// Structurally compatible kit types still receive an exact runtime identity check.
+	form: basePresentationForm,
+})
 basePresentationKit.Form({
-	// @ts-expect-error manual composition keeps structural slot capabilities
+	// @ts-expect-error a base kit cannot render an extension-owned form
 	form: extendedPresentationForm,
 })
 ActionForm({
@@ -614,12 +603,12 @@ const chainedKit = extendedKit.extend({
 		secondaryText: text,
 	},
 })
-const siblingKit = kit.extend({
+const _siblingKit = kit.extend({
 	controls: {
 		siblingText: text,
 	},
 })
-const compatibleSiblingKit = kit.extend({
+const _compatibleSiblingKit = kit.extend({
 	controls: {
 		extraText: text,
 	},
@@ -723,48 +712,18 @@ extendedKit.defineForm(schema)({
 	],
 })
 
+const extendedBaseForm = extendedKit.createForm(exampleDefinition, {
+	defaultValues: exampleDefaultValues,
+	context: { locale: "en", locked: false },
+})
 extendedKit.AutoForm({
-	definition: exampleDefinition,
-	defaultValues: exampleDefaultValues,
-	context: {
-		locale: "en",
-		locked: false,
-	},
-})
-
-kit.AutoForm({
-	// @ts-expect-error a base kit cannot render a definition owned by its extension
-	definition: extendedDefinition,
-	defaultValues: exampleDefaultValues,
-	context: {
-		locale: "en",
-		locked: false,
-	},
-})
-
-siblingKit.AutoForm({
-	// @ts-expect-error sibling extensions do not inherit each other's controls
-	definition: extendedDefinition,
-	defaultValues: exampleDefaultValues,
-	context: {
-		locale: "en",
-		locked: false,
-	},
-})
-
-// Sibling kits with the same complete registry contract are structurally compatible.
-compatibleSiblingKit.AutoForm({
-	definition: extendedDefinition,
-	defaultValues: exampleDefaultValues,
-	context: {
-		locale: "en",
-		locked: false,
-	},
+	form: extendedBaseForm,
+	context: { locale: "en", locked: false },
 })
 
 ActionForm({
 	kit: extendedKit,
-	definition: exampleDefinition,
+	definition: extendedDefinition,
 	defaultValues: exampleDefaultValues,
 	context: {
 		locale: "en",
@@ -785,14 +744,14 @@ ActionForm({
 	action: (_formData: FormData) => undefined,
 })
 
-const baseForm = createForm(exampleDefinition, {
+const baseForm = kit.createForm(exampleDefinition, {
 	defaultValues: exampleDefaultValues,
 	context: {
 		locale: "en",
 		locked: false,
 	},
 })
-const extendedForm = createForm(extendedDefinition, {
+const extendedForm = extendedKit.createForm(extendedDefinition, {
 	defaultValues: exampleDefaultValues,
 	context: {
 		locale: "en",
@@ -800,7 +759,10 @@ const extendedForm = createForm(extendedDefinition, {
 	},
 })
 
-extendedKit.Form({ form: baseForm })
+extendedKit.Form({
+	// @ts-expect-error exact base and extended kit ownership differs
+	form: baseForm,
+})
 kit.Form({
 	// @ts-expect-error manual composition preserves the definition's kit ownership
 	form: extendedForm,
@@ -826,8 +788,7 @@ extendedKit.defineForm(listSchema)({
 	],
 })
 
-kit.AutoForm({
-	definition: exampleDefinition,
+const completeBaseForm = kit.createForm(exampleDefinition, {
 	defaultValues: {
 		name: "Ada",
 		status: "draft",
@@ -837,24 +798,21 @@ kit.AutoForm({
 			country: "GB",
 		},
 	},
-	context: {
-		locale: "en",
-		locked: false,
-	},
+	context: { locale: "en", locked: false },
+})
+kit.AutoForm({
+	form: completeBaseForm,
+	context: { locale: "en", locked: false },
 })
 
-kit.AutoForm({
-	definition: exampleDefinition,
-	// @ts-expect-error kit.AutoForm defaultValues must include required schema properties
+kit.createForm(exampleDefinition, {
+	// @ts-expect-error kit.createForm defaultValues must include required schema properties
 	defaultValues: {
 		name: "Ada",
 		status: "draft",
 		age: 37,
 	},
-	context: {
-		locale: "en",
-		locked: false,
-	},
+	context: { locale: "en", locked: false },
 })
 
 kit.defineForm(schema).withContext<ExampleContext>({

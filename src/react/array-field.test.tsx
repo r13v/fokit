@@ -196,12 +196,9 @@ const nestedDefinition = kit.defineForm(schema)({
 
 describe("generated arrays", () => {
 	it("renders array and array-item slots with direct array errors only", () => {
+		const form = kit.createForm(definition, { defaultValues: defaultValues() })
 		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-				id="profile"
-			>
+			<kit.AutoForm form={form} id="profile">
 				<ShowErrors />
 			</kit.AutoForm>,
 		)
@@ -230,13 +227,8 @@ describe("generated arrays", () => {
 
 	it("uses item defaults, relative paths, guarded actions, and stable row keys", () => {
 		nextMountId = 0
-		const { container } = render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-				id="profile"
-			/>,
-		)
+		const form = kit.createForm(definition, { defaultValues: defaultValues() })
+		const { container } = render(<kit.AutoForm form={form} id="profile" />)
 		const adaRow = rowForValue(container, "Ada")
 		const adaMountId = adaRow.dataset.mountId
 		const adaRenderCount = adaRow.dataset.renders
@@ -276,16 +268,11 @@ describe("generated arrays", () => {
 	})
 
 	it("guards disabled and read-only arrays and lets slots render empty fallback", () => {
+		const disabledForm = kit.createForm(disabledDefinition, {
+			defaultValues: { contacts: [], groups: [], lockedContacts: [] },
+		})
 		const { unmount } = render(
-			<kit.AutoForm
-				defaultValues={{
-					contacts: [],
-					groups: [],
-					lockedContacts: [],
-				}}
-				definition={disabledDefinition}
-				id="profile"
-			/>,
+			<kit.AutoForm form={disabledForm} id="profile" />,
 		)
 
 		expect(screen.getByText("No rows")).toBeTruthy()
@@ -297,22 +284,14 @@ describe("generated arrays", () => {
 		expect(screen.queryByTestId("item-contacts.0")).toBeNull()
 
 		unmount()
-		render(
-			<kit.AutoForm
-				defaultValues={{
-					contacts: [],
-					groups: [],
-					lockedContacts: [
-						{
-							name: "Ada",
-							email: "ada@example.test",
-						},
-					],
-				}}
-				definition={readOnlyDefinition}
-				id="profile"
-			/>,
-		)
+		const readOnlyForm = kit.createForm(readOnlyDefinition, {
+			defaultValues: {
+				contacts: [],
+				groups: [],
+				lockedContacts: [{ name: "Ada", email: "ada@example.test" }],
+			},
+		})
+		render(<kit.AutoForm form={readOnlyForm} id="profile" />)
 
 		const lockedRow = screen.getByTestId("item-lockedContacts.0")
 		expect(
@@ -325,13 +304,10 @@ describe("generated arrays", () => {
 	})
 
 	it("renders nested arrays with concrete paths and row-scoped derived labels", () => {
-		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={nestedDefinition}
-				id="profile"
-			/>,
-		)
+		const form = kit.createForm(nestedDefinition, {
+			defaultValues: defaultValues(),
+		})
+		render(<kit.AutoForm form={form} id="profile" />)
 
 		expect(screen.getByText("Core members")).toBeTruthy()
 		expect(screen.getByText("Docs members")).toBeTruthy()

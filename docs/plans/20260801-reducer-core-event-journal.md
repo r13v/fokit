@@ -603,61 +603,61 @@ middleware types and rendering resources use the exact immutable kit snapshot.
 - Modify: tests/types/react-hooks.test.ts
 - Modify: src/index.ts
 
-- [ ] Add typed kit.createForm(definition, options: CreateFormOptions) and
+- [x] Add typed kit.createForm(definition, options: CreateFormOptions) and
   kit.useForm(form, runtimeOptions: FormRuntimeOptions). These are the only
   public React creation and binding methods.
-- [ ] Replace UseFormOptions with CreateFormOptions. Include defaultValues,
+- [x] Replace UseFormOptions with CreateFormOptions. Include defaultValues,
   initial runtime options, and one immutable ordered middleware array. Keep
   FormRuntimeOptions limited to replaceable React binding options.
-- [ ] Give each assembled base or extended kit a private immutable descriptor
+- [x] Give each assembled base or extended kit a private immutable descriptor
   with its exact identity token, controls, and slots. Attach that descriptor to
   every FormInstance created by kit.createForm without exposing a public
   descriptor accessor.
-- [ ] Extract the existing React binding lifecycle into package-private
+- [x] Extract the existing React binding lifecycle into package-private
   useFormBinding(form, runtimeOptions) in src/react/use-form.ts. Make
   kit.useForm verify exact kit ownership before it delegates to that hook.
-- [ ] Reject base/extended and sibling-kit mismatches in kit.useForm, kit.Form,
+- [x] Reject base/extended and sibling-kit mismatches in kit.useForm, kit.Form,
   and kit.AutoForm even when their controls and slots are structurally equal.
-- [ ] Make kit.AutoForm require form instead of definition/defaultValues. Bind
+- [x] Make kit.AutoForm require form instead of definition/defaultValues. Bind
   its runtime options through the package-private binding hook, then render the
   existing form shell, error summary, fields, and children.
-- [ ] Keep kit.Form form-backed and kit-owned. Do not add global Form or
+- [x] Keep kit.Form form-backed and kit-owned. Do not add global Form or
   AutoForm components, and do not add kit.useCreateForm or another hidden
   definition-based creation path.
-- [ ] Initialize middleware outer functions once per form and isolate their
+- [x] Initialize middleware outer functions once per form and isolate their
   closure state when the same configured middleware reference is reused across
   forms.
-- [ ] Validate duplicate middleware references and initialize the complete
+- [x] Validate duplicate middleware references and initialize the complete
   chain atomically. If validation or initialization throws, return no form and
   publish no feature handle state.
-- [ ] Stage first-party external activation until every middleware outer
+- [x] Stage first-party external activation until every middleware outer
   function has initialized successfully and the selected form completes its
   first React binding. This is a private binding-finalization step used by
   DevTools, not a public cleanup or lifecycle API. A Strict Mode initializer
   that creates and discards a form must not create an external listener.
-- [ ] Remove global createForm, useForm, KitForm, and Submit value exports from
+- [x] Remove global createForm, useForm, KitForm, and Submit value exports from
   form-please. Remove the main-entry createFormStore re-export, but keep
   createFormStore public from form-please/core. Remove UseFormOptions without
   aliases, deprecated overloads, or compatibility shims.
-- [ ] Keep FormProvider, useFormContext, useFormState, useField, useValue, and
+- [x] Keep FormProvider, useFormContext, useFormState, useField, useValue, and
   useArrayField public for headless composition.
-- [ ] Prove createFormKit, kit.extend, normalized definitions, and
+- [x] Prove createFormKit, kit.extend, normalized definitions, and
   createFormStore do not accept or retain middleware.
-- [ ] Add runtime tests for exact kit ownership, base/extended mismatch,
+- [x] Add runtime tests for exact kit ownership, base/extended mismatch,
   repeated configured middleware across forms, failed atomic creation, and
   stable Strict Mode binding. Prove AutoForm uses the supplied instance and
   never creates another form. Prove a discarded lazy initializer and a failed
   creation publish no staged feature state; Task 10 adds the real
   fake-extension listener checks.
-- [ ] Add type tests that infer schema input and context at kit.createForm,
+- [x] Add type tests that infer schema input and context at kit.createForm,
   reject incompatible middleware, and accept only an exact-kit FormInstance at
   kit.useForm, kit.Form, and kit.AutoForm. Assert removed root values and
   UseFormOptions are absent while core createFormStore remains available.
-- [ ] Run npx vitest run src/react/create-form-kit.test.tsx
+- [x] Run npx vitest run src/react/create-form-kit.test.tsx
   src/react/auto-form.test.tsx src/react/form-data.test.tsx
   src/react/form.test.tsx src/react/hooks.test.tsx src/react/reset.test.tsx
   src/react/submission.test.tsx.
-- [ ] Run npm run test:types.
+- [x] Run npm run test:types.
 
 ### Task 7: Add the Versioned Feature Protocol and Effective Commit Timeline
 

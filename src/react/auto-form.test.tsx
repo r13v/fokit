@@ -3,8 +3,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-
-import type { ImperativeFormIssue } from "../core/index.js"
+import type { FormMiddleware, ImperativeFormIssue } from "../core/index.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import { useFormContext } from "./form-context.js"
@@ -161,6 +160,39 @@ function defaultValues(): ProfileValues {
 }
 
 describe("kit.AutoForm and kit.Fields", () => {
+	it("binds and renders the supplied instance without creating another form", () => {
+		const initialize = vi.fn()
+		const middleware: FormMiddleware<ProfileValues, ProfileContext> = (api) => {
+			initialize(api)
+			return (next) => (transaction) => next(transaction)
+		}
+		const form = profileKit.createForm<ProfileSchema, ProfileContext>(
+			createDefinition(),
+			{
+				defaultValues: defaultValues(),
+				context: { locked: false, showHidden: false },
+				middleware: [middleware],
+			},
+		)
+		let suppliedForm: object | undefined
+		function Probe() {
+			suppliedForm = useFormContext()
+			return null
+		}
+
+		render(
+			<profileKit.AutoForm
+				context={{ locked: false, showHidden: false }}
+				form={form}
+			>
+				<Probe />
+			</profileKit.AutoForm>,
+		)
+
+		expect(suppliedForm).toBe(form)
+		expect(initialize).toHaveBeenCalledTimes(1)
+	})
+
 	it("renders render nodes in definition order with form hooks available", () => {
 		function NamePreview() {
 			const form = useFormContext<ProfileSchema, ProfileContext>()
@@ -184,6 +216,10 @@ describe("kit.AutoForm and kit.Fields", () => {
 					},
 				],
 			})
+		const form = profileKit.createForm(definition, {
+			defaultValues: defaultValues(),
+			context: { locked: false, showHidden: false },
+		})
 
 		render(
 			<profileKit.AutoForm
@@ -191,8 +227,7 @@ describe("kit.AutoForm and kit.Fields", () => {
 					locked: false,
 					showHidden: false,
 				}}
-				defaultValues={defaultValues()}
-				definition={definition}
+				form={form}
 			/>,
 		)
 
@@ -208,14 +243,17 @@ describe("kit.AutoForm and kit.Fields", () => {
 	})
 
 	it("renders section, field, and error slots with workflow children after generated nodes", async () => {
+		const createdForm = profileKit.createForm(createDefinition(), {
+			defaultValues: defaultValues(),
+			context: { locked: false, showHidden: false },
+		})
 		render(
 			<profileKit.AutoForm
 				context={{
 					locked: false,
 					showHidden: false,
 				}}
-				defaultValues={defaultValues()}
-				definition={createDefinition()}
+				form={createdForm}
 				id="profile"
 			>
 				<ErrorButtons />
@@ -271,16 +309,19 @@ describe("kit.AutoForm and kit.Fields", () => {
 			}),
 		)
 		const definition = createDefinition(optionsResolver)
+		const unlockedContext = { locked: false, showHidden: false }
+		const form = profileKit.createForm(definition, {
+			defaultValues: defaultValues(),
+			context: unlockedContext,
+		})
 
 		function View({ locked }: { readonly locked: boolean }) {
 			return (
 				<profileKit.AutoForm
-					context={{
-						locked,
-						showHidden: false,
-					}}
-					defaultValues={defaultValues()}
-					definition={definition}
+					context={
+						locked ? { locked: true, showHidden: false } : unlockedContext
+					}
+					form={form}
 					id="profile"
 				>
 					<KindButtons />

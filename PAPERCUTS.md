@@ -83,3 +83,9 @@ middleware. Register the exercised field in fixtures that test field commands.
 Checking repeated blur validation through middleware → only the first blur ran
 the schema because the fixture inherited the default change revalidation mode.
 Set both mode and revalidateMode when a test requires the same trigger twice.
+
+## 2026-08-01 20:39 — gpt-5.6-sol
+
+Polling a piped TypeScript check → the command had already completed without a
+session ID, so a follow-up poll failed before reporting useful status. Inspect
+the returned session ID and exit code before polling a yielded command.

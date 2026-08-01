@@ -1,36 +1,38 @@
 "use client"
 
 import {
+	createFormStoreWithMiddleware,
 	errorSummaryFocusTargetRegistration,
 	registerErrorSummaryFocusTarget,
 	replaceFormStoreRuntime,
 } from "../core/form-store.js"
-import {
-	type AnyUiPresentation,
-	type ArrayFieldPath,
-	type ArrayItemValue,
-	type ControlRegistry,
-	createFormStore,
-	type FieldPath,
-	type FocusTarget,
-	type FormInput,
-	type FormIssue,
-	type FormOutput,
-	type FormSnapshot,
-	type FormStore,
-	type FormStoreListener,
-	type FormStoreOptions,
-	type FormStoreSelector,
-	type FormStoreSubscriptionOptions,
-	type ImperativeFormIssue,
-	type NormalizedFormDefinition,
-	type PathInput,
-	type PathValue,
-	type StandardSchema,
-	type UiPresentation,
-	type ValidationResult,
+import type {
+	AnyUiPresentation,
+	ArrayFieldPath,
+	ArrayItemValue,
+	ControlRegistry,
+	FieldPath,
+	FocusTarget,
+	FormInput,
+	FormIssue,
+	FormOutput,
+	FormSnapshot,
+	FormStore,
+	FormStoreListener,
+	FormStoreOptions,
+	FormStoreSelector,
+	FormStoreSubscriptionOptions,
+	ImperativeFormIssue,
+	NormalizedFormDefinition,
+	PathInput,
+	PathValue,
+	StandardSchema,
+	UiPresentation,
+	ValidationResult,
 } from "../core/index.js"
+import type { AnyFormMiddleware, FormMiddleware } from "../core/middleware.js"
 import type { FormDeepPartial, OptionalFieldPath } from "../core/transaction.js"
+import type { RuntimeFormKitSlots } from "./create-form-kit.js"
 import type { ReactUiPresentation } from "./slots.js"
 import {
 	attachClassicSubmission,
@@ -38,17 +40,39 @@ import {
 	type SubmitHandler,
 } from "./submission.js"
 
-export type UseFormOptions<
+export type CreateFormOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
 > = Omit<FormStoreOptions<Schema, Context>, "definition"> & {
+	readonly middleware?: readonly FormMiddleware<FormInput<Schema>, Context>[]
 	readonly onSubmit?: SubmitHandler<Schema, Context>
 }
 
 export type FormRuntimeOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
-> = Omit<UseFormOptions<Schema, Context>, "defaultValues">
+> = Omit<CreateFormOptions<Schema, Context>, "defaultValues" | "middleware">
+
+export type FormKitDescriptor = Readonly<{
+	identity: object
+	controls: ControlRegistry
+	slots: RuntimeFormKitSlots
+}>
+
+export const formBindingFinalizer = Symbol("form-please.formBindingFinalizer")
+
+type BindingFinalizingMiddleware = AnyFormMiddleware & {
+	readonly [formBindingFinalizer]?: (form: object) => void
+}
+
+declare const formKitOwnerBrand: unique symbol
+
+export type FormKitOwner<Controls, Presentation> = {
+	readonly [formKitOwnerBrand]: {
+		readonly controls: (controls: Controls) => Controls
+		readonly presentation: (presentation: Presentation) => Presentation
+	}
+}
 
 type ReplaceFormOptions<Schema extends StandardSchema, Context> = Omit<
 	FormRuntimeOptions<Schema, Context>,
@@ -60,6 +84,7 @@ export type FormInstance<
 	Context = unknown,
 	RequiredControls extends ControlRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
+	Owner = FormKitOwner<RequiredControls, Presentation>,
 > = Omit<FormStore<Schema, Context>, "definition" | "replaceOptions"> & {
 	readonly definition: NormalizedFormDefinition<
 		Schema,
@@ -67,6 +92,7 @@ export type FormInstance<
 		unknown,
 		Presentation
 	>
+	readonly [formKitOwnerBrand]: Owner
 	replaceOptions(options: ReplaceFormOptions<Schema, Context>): void
 	submit(): Promise<void>
 }
@@ -74,7 +100,7 @@ export type FormInstance<
 export type AnyFormInstance<
 	Schema extends StandardSchema,
 	Context = unknown,
-> = FormInstance<Schema, Context, undefined, AnyUiPresentation>
+> = FormInstance<Schema, Context, ControlRegistry, AnyUiPresentation, unknown>
 
 type FormBinding<Schema extends StandardSchema, Context> = {
 	readonly owner: object
@@ -97,11 +123,14 @@ export class FormInstanceImpl<
 	readonly schema: Schema
 
 	readonly #store: FormStore<Schema, Context>
+	readonly #kitDescriptor: FormKitDescriptor
 	#baseContext: Context
 	#baseOptions: ReplaceFormOptions<Schema, Context>
 	#activeContext: Context
 	#activeOptions: ReplaceFormOptions<Schema, Context>
 	#binding: FormBinding<Schema, Context> | undefined
+	#bindingFinalized = false
+	#bindingFinalizers: readonly (() => void)[] = []
 
 	constructor(
 		definition: NormalizedFormDefinition<
@@ -110,24 +139,29 @@ export class FormInstanceImpl<
 			unknown,
 			Presentation
 		>,
-		options: UseFormOptions<Schema, Context>,
+		options: CreateFormOptions<Schema, Context>,
+		kitDescriptor: FormKitDescriptor,
 	) {
+		this.#kitDescriptor = kitDescriptor
 		this.#baseContext = options.context as Context
 		this.#baseOptions = copyReplaceOptions(options)
 		this.#activeContext = this.#baseContext
 		this.#activeOptions = this.#baseOptions
-		this.#store = createFormStore({
-			definition,
-			defaultValues: options.defaultValues,
-			context: this.#activeContext,
-			disabled: this.#activeOptions.disabled,
-			readOnly: this.#activeOptions.readOnly,
-			validation: this.#activeOptions.validation,
-			beforeUpdate: (event) => this.#activeOptions.beforeUpdate?.(event),
-			afterUpdate: (event) => {
-				this.#activeOptions.afterUpdate?.(event)
+		this.#store = createFormStoreWithMiddleware(
+			{
+				definition,
+				defaultValues: options.defaultValues,
+				context: this.#activeContext,
+				disabled: this.#activeOptions.disabled,
+				readOnly: this.#activeOptions.readOnly,
+				validation: this.#activeOptions.validation,
+				beforeUpdate: (event) => this.#activeOptions.beforeUpdate?.(event),
+				afterUpdate: (event) => {
+					this.#activeOptions.afterUpdate?.(event)
+				},
 			},
-		})
+			(options.middleware as readonly AnyFormMiddleware[] | undefined) ?? [],
+		)
 		this.definition = definition
 		this.schema = this.#store.schema
 		attachClassicSubmission(
@@ -135,6 +169,20 @@ export class FormInstanceImpl<
 			this.#store,
 			() => this.#activeOptions.onSubmit,
 		)
+	}
+
+	stageBindingFinalizers(finalizers: readonly (() => void)[]): void {
+		this.#bindingFinalizers = Object.freeze([...finalizers])
+	}
+
+	getKitDescriptor(): FormKitDescriptor {
+		return this.#kitDescriptor
+	}
+
+	finalizeBinding(): void {
+		if (this.#bindingFinalized) return
+		this.#bindingFinalized = true
+		for (const finalize of this.#bindingFinalizers) finalize()
 	}
 
 	bind(owner: object, options: FormRuntimeOptions<Schema, Context>): void {
@@ -338,11 +386,12 @@ export class FormInstanceImpl<
 	}
 }
 
-export function createForm<
+export function createFormInstance<
 	Schema extends StandardSchema,
 	Context = unknown,
 	RequiredControls extends ControlRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
+	Owner = FormKitOwner<RequiredControls, Presentation>,
 >(
 	definition: NormalizedFormDefinition<
 		Schema,
@@ -350,9 +399,42 @@ export function createForm<
 		unknown,
 		Presentation
 	>,
-	options: UseFormOptions<Schema, Context>,
-): FormInstance<Schema, Context, RequiredControls, Presentation> {
-	return new FormInstanceImpl(definition, options)
+	options: CreateFormOptions<Schema, Context>,
+	kitDescriptor: FormKitDescriptor,
+): FormInstance<Schema, Context, RequiredControls, Presentation, Owner> {
+	const middleware: readonly AnyFormMiddleware[] = Object.freeze([
+		...((options.middleware ?? []) as readonly AnyFormMiddleware[]),
+	])
+	const instance = new FormInstanceImpl<
+		Schema,
+		Context,
+		RequiredControls,
+		Presentation
+	>(
+		definition,
+		{
+			...options,
+			middleware: middleware as unknown as CreateFormOptions<
+				Schema,
+				Context
+			>["middleware"],
+		},
+		kitDescriptor,
+	)
+	const finalizers = middleware.flatMap((entry: AnyFormMiddleware) => {
+		const finalize = (entry as BindingFinalizingMiddleware)[
+			formBindingFinalizer
+		]
+		return finalize === undefined ? [] : [() => finalize(instance as object)]
+	})
+	instance.stageBindingFinalizers(finalizers)
+	return instance as unknown as FormInstance<
+		Schema,
+		Context,
+		RequiredControls,
+		Presentation,
+		Owner
+	>
 }
 
 export function getFormStore<
@@ -371,14 +453,30 @@ export function getFormInstanceImpl<
 	Context,
 	RequiredControls extends ControlRegistry | undefined,
 	Presentation extends UiPresentation,
+	Owner,
 >(
-	form: FormInstance<Schema, Context, RequiredControls, Presentation>,
+	form: FormInstance<Schema, Context, RequiredControls, Presentation, Owner>,
 ): FormInstanceImpl<Schema, Context, RequiredControls, Presentation> {
 	if (form instanceof FormInstanceImpl) {
 		return form
 	}
 
 	throw new TypeError("useForm requires a form created by Form Please")
+}
+
+export function assertFormKitOwnership(
+	form: object,
+	descriptor: FormKitDescriptor,
+	owner: "kit.useForm" | "kit.Form" | "kit.AutoForm",
+): void {
+	if (
+		getFormInstanceImpl(form as never).getKitDescriptor().identity !==
+		descriptor.identity
+	) {
+		throw new TypeError(
+			`${owner} requires a form created by this exact form kit`,
+		)
+	}
 }
 
 function createBinding<Schema extends StandardSchema, Context>(

@@ -4,12 +4,12 @@ import type { ComponentType, ElementType, ReactElement, ReactNode } from "react"
 import { scopeDefinitionFragment } from "../core/definition-fragment.js"
 import {
 	type FieldPath,
-	type FormInput,
 	type NormalizedFormDefinition,
 	normalizeDefinition,
 	type PathValue,
 	type StandardSchema,
 	type UiNode,
+	type UiPresentation,
 } from "../core/index.js"
 import { createAutoFormComponent } from "./auto-form.js"
 import type { ControlDefinitionRegistry } from "./control.js"
@@ -21,6 +21,15 @@ import {
 	type KitFormComponent,
 	type KitFormProps,
 } from "./form.js"
+import {
+	assertFormKitOwnership,
+	type CreateFormOptions,
+	createFormInstance,
+	type FormInstance,
+	type FormKitDescriptor,
+	type FormKitOwner,
+	type FormRuntimeOptions,
+} from "./form-instance.js"
 import type { RenderNodeComponent } from "./render-node.js"
 import type {
 	ArrayItemSlotProps,
@@ -31,7 +40,7 @@ import type {
 	SectionSlotProps,
 } from "./slots.js"
 import { Submit, type SubmitProps } from "./submit.js"
-import type { UseFormOptions } from "./use-form.js"
+import { useFormBinding } from "./use-form.js"
 
 export type FormKitSlots<
 	FieldSlotOptions = never,
@@ -271,20 +280,88 @@ export type AutoFormProps<
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
 > = NativeFormProps &
-	Omit<UseFormOptions<Schema, Context>, "defaultValues"> & {
-		readonly definition: NormalizedFormDefinition<
+	FormRuntimeOptions<Schema, Context> & {
+		readonly form: FormInstance<
 			Schema,
+			Context,
 			Controls,
-			RenderNodeComponent,
 			ReactUiPresentation<
 				FieldSlotOptions,
 				SectionSlotOptions,
 				ArraySlotOptions
+			>,
+			FormKitOwner<
+				Controls,
+				ReactUiPresentation<
+					FieldSlotOptions,
+					SectionSlotOptions,
+					ArraySlotOptions
+				>
 			>
 		>
-		readonly defaultValues: FormInput<Schema>
 		readonly children?: ReactNode
 	}
+
+type KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions> =
+	ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+
+type KitOwner<
+	Controls,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+> = FormKitOwner<
+	Controls,
+	KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+>
+
+type CreateKitForm<
+	Controls extends ControlDefinitionRegistry,
+	FieldSlotOptions = never,
+	SectionSlotOptions = never,
+	ArraySlotOptions = never,
+> = <
+	Schema extends StandardSchema,
+	Context = unknown,
+	RequiredControls extends ControlDefinitionRegistry | undefined =
+		| ControlDefinitionRegistry
+		| undefined,
+	DefinitionPresentation extends UiPresentation = ReactUiPresentation<
+		unknown,
+		unknown,
+		unknown
+	>,
+>(
+	definition: NormalizedFormDefinition<
+		Schema,
+		RequiredControls,
+		RenderNodeComponent,
+		DefinitionPresentation
+	>,
+	options: CreateFormOptions<Schema, Context>,
+) => FormInstance<
+	Schema,
+	Context,
+	Controls,
+	KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+	KitOwner<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+>
+
+type UseKitForm<
+	Controls extends ControlDefinitionRegistry,
+	FieldSlotOptions = never,
+	SectionSlotOptions = never,
+	ArraySlotOptions = never,
+> = <Schema extends StandardSchema, Context = unknown>(
+	form: FormInstance<
+		Schema,
+		Context,
+		Controls,
+		KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+		KitOwner<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+	>,
+	options: FormRuntimeOptions<Schema, Context>,
+) => typeof form
 
 export type FieldsComponent = (props: FieldsProps) => ReactElement
 
@@ -486,9 +563,22 @@ export interface FormKit<
 		SectionSlotOptions,
 		ArraySlotOptions
 	>
+	readonly createForm: CreateKitForm<
+		Controls,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions
+	>
+	readonly useForm: UseKitForm<
+		Controls,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions
+	>
 	readonly Form: KitFormComponent<
 		Controls,
-		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+		KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+		KitOwner<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
 	>
 	readonly Submit: typeof Submit
 	readonly Fields: FieldsComponent
@@ -510,6 +600,18 @@ type RuntimeFormKit = {
 	readonly slots: RuntimeFormKitSlots
 	readonly extend: (options: RuntimeExtendOptions) => RuntimeFormKit
 	readonly defineForm: DefineForm<
+		ControlDefinitionRegistry,
+		unknown,
+		unknown,
+		unknown
+	>
+	readonly createForm: CreateKitForm<
+		ControlDefinitionRegistry,
+		unknown,
+		unknown,
+		unknown
+	>
+	readonly useForm: UseKitForm<
 		ControlDefinitionRegistry,
 		unknown,
 		unknown,
@@ -544,8 +646,9 @@ export function createFormKit<
 		...options.slots,
 	}) as unknown as Partial<RuntimeFormKitSlots>
 	assertSlots(slots, "createFormKit")
+	const controls = Object.freeze({ ...options.controls }) as Controls
 
-	return assembleFormKit(options.controls, slots) as unknown as FormKit<
+	return assembleFormKit(controls, slots) as unknown as FormKit<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
@@ -557,6 +660,11 @@ function assembleFormKit(
 	controls: ControlDefinitionRegistry,
 	slots: RuntimeFormKitSlots,
 ): RuntimeFormKit {
+	const descriptor = Object.freeze({
+		identity: Object.freeze({}),
+		controls,
+		slots,
+	}) satisfies FormKitDescriptor
 	const extend = (options: RuntimeExtendOptions) => {
 		if (options.controls === undefined && options.slots === undefined) {
 			throw new TypeError("kit.extend requires controls or slots")
@@ -597,16 +705,34 @@ function assembleFormKit(
 			fragment,
 		})
 	}) as DefineForm<ControlDefinitionRegistry, unknown, unknown, unknown>
+	const createForm = ((
+		definition: NormalizedFormDefinition<StandardSchema>,
+		options: CreateFormOptions<StandardSchema, unknown>,
+	) =>
+		createFormInstance(
+			definition,
+			options,
+			descriptor,
+		)) as RuntimeFormKit["createForm"]
+	const useForm = ((
+		form: FormInstance<StandardSchema>,
+		options: FormRuntimeOptions<StandardSchema, unknown>,
+	) => {
+		assertFormKitOwnership(form, descriptor, "kit.useForm")
+		return useFormBinding(form as never, options) as unknown
+	}) as unknown as RuntimeFormKit["useForm"]
 
 	return Object.freeze({
 		controls,
 		slots,
 		extend,
 		defineForm,
-		Form: createFormComponent(controls),
+		createForm,
+		useForm,
+		Form: createFormComponent(controls, descriptor),
 		Submit,
 		Fields: createFieldsComponent(controls, slots),
-		AutoForm: createAutoFormComponent(controls, slots),
+		AutoForm: createAutoFormComponent(controls, slots, descriptor),
 	})
 }
 

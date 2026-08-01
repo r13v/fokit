@@ -121,7 +121,6 @@ export type {
 } from "./core/index.js"
 export {
 	cloneValue,
-	createFormStore,
 	extendValueChanges,
 	formatPath,
 	fromResource,
@@ -172,7 +171,6 @@ export type {
 } from "./react/default-slots.js"
 export { createDefaultSlots } from "./react/default-slots.js"
 export type { NativeFormProps } from "./react/form.js"
-export { KitForm } from "./react/form.js"
 export type { FormProviderProps } from "./react/form-context.js"
 export { FormProvider, useFormContext } from "./react/form-context.js"
 export type {
@@ -222,10 +220,8 @@ export type {
 	SubmitContext,
 	SubmitHandler,
 } from "./react/submission.js"
-export { Submit } from "./react/submit.js"
 export type {
+	CreateFormOptions,
 	FormInstance,
 	FormRuntimeOptions,
-	UseFormOptions,
 } from "./react/use-form.js"
-export { createForm, useForm } from "./react/use-form.js"

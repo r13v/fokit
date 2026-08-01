@@ -388,12 +388,11 @@ describe("nativeControls text-like controls", () => {
 
 	it("renders native attributes, metadata, refs, blur, and supported options", async () => {
 		const user = userEvent.setup()
+		const form = kit.createForm(editableDefinition, {
+			defaultValues: defaultValues(),
+		})
 		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={editableDefinition}
-				id="native"
-			>
+			<kit.AutoForm form={form} id="native">
 				<FormProbe />
 			</kit.AutoForm>,
 		)
@@ -448,12 +447,11 @@ describe("nativeControls text-like controls", () => {
 
 	it("updates string, number, date, and time values through native events", async () => {
 		const user = userEvent.setup()
+		const form = kit.createForm(editableDefinition, {
+			defaultValues: defaultValues(),
+		})
 		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={editableDefinition}
-				id="native"
-			>
+			<kit.AutoForm form={form} id="native">
 				<ValueProbe />
 			</kit.AutoForm>,
 		)
@@ -521,13 +519,10 @@ describe("nativeControls text-like controls", () => {
 	})
 
 	it("preserves hidden and disabled values with hidden serializers", () => {
-		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={preservationDefinition}
-				id="preserved"
-			/>,
-		)
+		const formInstance = kit.createForm(preservationDefinition, {
+			defaultValues: defaultValues(),
+		})
+		render(<kit.AutoForm form={formInstance} id="preserved" />)
 
 		const form = requireForm()
 		const formData = new FormData(form)
@@ -556,13 +551,10 @@ describe("nativeControls text-like controls", () => {
 
 	it("keeps read-only text-like controls focusable and successful", async () => {
 		const user = userEvent.setup()
-		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={readOnlyDefinition}
-				id="readonly"
-			/>,
-		)
+		const formInstance = kit.createForm(readOnlyDefinition, {
+			defaultValues: defaultValues(),
+		})
+		render(<kit.AutoForm form={formInstance} id="readonly" />)
 
 		const email = screen.getByLabelText("Readonly email") as HTMLInputElement
 		const bio = screen.getByLabelText("Readonly bio") as HTMLTextAreaElement
@@ -599,52 +591,42 @@ describe("nativeControls text-like controls", () => {
 
 describe("nativeControls choice and file controls", () => {
 	it("fails clearly when a select field omits its option list", () => {
+		const form = kit.createForm(missingSelectOptionsDefinition, {
+			defaultValues: defaultValues(),
+		})
 		expect(() =>
-			render(
-				<kit.AutoForm
-					defaultValues={defaultValues()}
-					definition={missingSelectOptionsDefinition}
-					id="missing-select-options"
-				/>,
-			),
+			render(<kit.AutoForm form={form} id="missing-select-options" />),
 		).toThrow("nativeControls.select requires options.options")
 	})
 
 	it("fails clearly when undefined has no empty option", () => {
+		const form = kit.createForm(missingSelectEmptyOptionDefinition, {
+			defaultValues: defaultValues(),
+		})
 		expect(() =>
-			render(
-				<kit.AutoForm
-					defaultValues={defaultValues()}
-					definition={missingSelectEmptyOptionDefinition}
-					id="missing-select-empty-option"
-				/>,
-			),
+			render(<kit.AutoForm form={form} id="missing-select-empty-option" />),
 		).toThrow(
 			"nativeControls.select requires options.emptyOption to represent undefined",
 		)
 	})
 
 	it("rejects an ambiguous empty option value", () => {
+		const form = kit.createForm(conflictingSelectEmptyOptionDefinition, {
+			defaultValues: defaultValues(),
+		})
 		expect(() =>
-			render(
-				<kit.AutoForm
-					defaultValues={defaultValues()}
-					definition={conflictingSelectEmptyOptionDefinition}
-					id="conflicting-select-empty-option"
-				/>,
-			),
+			render(<kit.AutoForm form={form} id="conflicting-select-empty-option" />),
 		).toThrow(
 			'nativeControls.select cannot combine options.emptyOption with an option whose value is ""',
 		)
 	})
 
 	it("preserves an empty string option when emptyOption is absent", () => {
+		const form = kit.createForm(emptyStringSelectDefinition, {
+			defaultValues: defaultValues(),
+		})
 		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={emptyStringSelectDefinition}
-				id="empty-string-select"
-			>
+			<kit.AutoForm form={form} id="empty-string-select">
 				<ValueProbe />
 			</kit.AutoForm>,
 		)
@@ -661,12 +643,11 @@ describe("nativeControls choice and file controls", () => {
 
 	it("renders native attributes, metadata, refs, blur, and supported options", async () => {
 		const user = userEvent.setup()
+		const form = kit.createForm(choiceDefinition, {
+			defaultValues: defaultValues(),
+		})
 		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={choiceDefinition}
-				id="choice"
-			>
+			<kit.AutoForm form={form} id="choice">
 				<ChoiceProbe />
 				<ValueProbe />
 			</kit.AutoForm>,
@@ -748,12 +729,11 @@ describe("nativeControls choice and file controls", () => {
 
 	it("updates select, checkbox, and single-file values through native events", async () => {
 		const user = userEvent.setup()
+		const form = kit.createForm(choiceDefinition, {
+			defaultValues: defaultValues(),
+		})
 		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={choiceDefinition}
-				id="choice"
-			>
+			<kit.AutoForm form={form} id="choice">
 				<ValueProbe />
 				<SetAvatarButton />
 				<ClearAvatarButton />
@@ -829,17 +809,15 @@ describe("nativeControls choice and file controls", () => {
 		const replacement = new File(["replacement"], "replacement.png", {
 			type: "image/png",
 		})
+		const form = kit.createForm(choiceDefinition, {
+			defaultValues: defaultValues(),
+		})
 
 		function LockingForm() {
 			const [readOnly, setReadOnly] = useState(false)
 
 			return (
-				<kit.AutoForm
-					defaultValues={defaultValues()}
-					definition={choiceDefinition}
-					id="readonly-choice"
-					readOnly={readOnly}
-				>
+				<kit.AutoForm form={form} id="readonly-choice" readOnly={readOnly}>
 					<ValueProbe />
 					<button type="button" onClick={() => setReadOnly(true)}>
 						Lock form

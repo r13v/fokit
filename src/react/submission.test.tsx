@@ -17,7 +17,6 @@ import type {
 	SectionSlotProps,
 } from "./slots.js"
 import type { FormInstance } from "./use-form.js"
-import { createForm, useForm } from "./use-form.js"
 
 type ProfileInput = {
 	readonly name: string
@@ -100,7 +99,7 @@ function defaultValues(values: Partial<ProfileInput> = {}): ProfileInput {
 describe("classic React submission", () => {
 	it("submits an instance created outside React", async () => {
 		const onSubmit = vi.fn()
-		const form = createForm(definition, {
+		const form = kit.createForm(definition, {
 			defaultValues: defaultValues(),
 			onSubmit,
 		})
@@ -125,13 +124,13 @@ describe("classic React submission", () => {
 	it("restores an external submit callback after React unmounts", async () => {
 		const externalOnSubmit = vi.fn()
 		const reactOnSubmit = vi.fn()
-		const form = createForm(definition, {
+		const form = kit.createForm(definition, {
 			defaultValues: defaultValues(),
 			onSubmit: externalOnSubmit,
 		})
 
 		function BoundForm() {
-			const boundForm = useForm(form, {
+			const boundForm = kit.useForm(form, {
 				onSubmit: reactOnSubmit,
 			})
 			return (
@@ -162,17 +161,15 @@ describe("classic React submission", () => {
 		const validation = createDeferred<StandardSchemaV1.Result<ProfileOutput>>()
 		const schema = createSchema(() => validation.promise)
 		const onSubmit = vi.fn()
+		const localDefinition = kit.defineForm(schema)({ ui: profileUi })
+		const form = kit.createForm(localDefinition, {
+			defaultValues: defaultValues(),
+			onSubmit,
+		})
 
 		function View() {
 			return (
-				<kit.AutoForm
-					aria-label="Profile"
-					definition={kit.defineForm(schema)({
-						ui: profileUi,
-					})}
-					defaultValues={defaultValues()}
-					onSubmit={onSubmit}
-				>
+				<kit.AutoForm aria-label="Profile" form={form} onSubmit={onSubmit}>
 					<StateProbe />
 					<kit.Submit name="intent" value="save">
 						Save
@@ -217,15 +214,20 @@ describe("classic React submission", () => {
 	it("skips disabled forms without validation or submit callbacks", async () => {
 		const validate = vi.fn(validateProfile)
 		const onSubmit = vi.fn()
+		const localDefinition = kit.defineForm(createSchema(validate))({
+			ui: profileUi,
+		})
+		const form = kit.createForm(localDefinition, {
+			defaultValues: defaultValues(),
+			disabled: true,
+			onSubmit,
+		})
 
 		render(
 			<kit.AutoForm
 				aria-label="Profile"
-				definition={kit.defineForm(createSchema(validate))({
-					ui: profileUi,
-				})}
-				defaultValues={defaultValues()}
 				disabled
+				form={form}
 				onSubmit={onSubmit}
 			>
 				<StateProbe />
@@ -244,16 +246,12 @@ describe("classic React submission", () => {
 
 	it("focuses the first editable invalid field, then falls back to summary issues", async () => {
 		const fieldFocus = vi.spyOn(HTMLElement.prototype, "focus")
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues({ name: "", email: "invalid" }),
+		})
 
 		render(
-			<kit.AutoForm
-				aria-label="Profile"
-				definition={definition}
-				defaultValues={defaultValues({
-					name: "",
-					email: "invalid",
-				})}
-			>
+			<kit.AutoForm aria-label="Profile" form={form}>
 				<button type="submit">Save</button>
 			</kit.AutoForm>,
 		)
@@ -266,20 +264,16 @@ describe("classic React submission", () => {
 		expect(screen.getByText("Name is required")).not.toBeNull()
 		fieldFocus.mockRestore()
 
+		const summaryDefinition = kit.defineForm(
+			createSchema(() => ({
+				issues: [{ message: "The profile cannot be saved" }],
+			})),
+		)({ ui: profileUi })
+		const summaryForm = kit.createForm(summaryDefinition, {
+			defaultValues: defaultValues(),
+		})
 		render(
-			<kit.AutoForm
-				aria-label="Form-level profile"
-				definition={kit.defineForm(
-					createSchema(() => ({
-						issues: [
-							{
-								message: "The profile cannot be saved",
-							},
-						],
-					})),
-				)({ ui: profileUi })}
-				defaultValues={defaultValues()}
-			>
+			<kit.AutoForm aria-label="Form-level profile" form={summaryForm}>
 				<button type="submit">Save</button>
 			</kit.AutoForm>,
 		)
@@ -298,19 +292,19 @@ describe("classic React submission", () => {
 	it("keeps duplicate summary issues independently keyed and focusable", async () => {
 		const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
 		try {
+			const duplicateDefinition = kit.defineForm(
+				createSchema(() => ({
+					issues: [
+						{ message: "The profile cannot be saved" },
+						{ message: "The profile cannot be saved" },
+					],
+				})),
+			)({ ui: profileUi })
+			const form = kit.createForm(duplicateDefinition, {
+				defaultValues: defaultValues(),
+			})
 			render(
-				<kit.AutoForm
-					aria-label="Duplicate summary"
-					definition={kit.defineForm(
-						createSchema(() => ({
-							issues: [
-								{ message: "The profile cannot be saved" },
-								{ message: "The profile cannot be saved" },
-							],
-						})),
-					)({ ui: profileUi })}
-					defaultValues={defaultValues()}
-				>
+				<kit.AutoForm aria-label="Duplicate summary" form={form}>
 					<button type="submit">Save duplicates</button>
 				</kit.AutoForm>,
 			)
@@ -338,21 +332,15 @@ describe("classic React submission", () => {
 		const validation = createDeferred<StandardSchemaV1.Result<ProfileOutput>>()
 		const validate = vi.fn(() => validation.promise)
 		const onSubmit = vi.fn()
-		let form: FormInstance<TestSchema> | undefined
+		const localDefinition = kit.defineForm(createSchema(validate))({
+			ui: profileUi,
+		})
+		const form = kit.createForm(localDefinition, {
+			defaultValues: defaultValues({ email: "bad" }),
+			onSubmit,
+		})
 
 		function View() {
-			form = useForm(
-				kit.defineForm(createSchema(validate))({
-					ui: profileUi,
-				}),
-				{
-					defaultValues: defaultValues({
-						email: "bad",
-					}),
-					onSubmit,
-				},
-			)
-
 			return (
 				<kit.Form aria-label="Profile" form={form}>
 					<kit.Fields />
@@ -388,19 +376,15 @@ describe("classic React submission", () => {
 		const validation = createDeferred<StandardSchemaV1.Result<ProfileOutput>>()
 		const validate = vi.fn(() => validation.promise)
 		const onSubmit = vi.fn(() => Promise.resolve())
-		let form: FormInstance<TestSchema> | undefined
+		const localDefinition = kit.defineForm(createSchema(validate))({
+			ui: profileUi,
+		})
+		const form = kit.createForm(localDefinition, {
+			defaultValues: defaultValues(),
+			onSubmit,
+		})
 
 		function View() {
-			form = useForm(
-				kit.defineForm(createSchema(validate))({
-					ui: profileUi,
-				}),
-				{
-					defaultValues: defaultValues(),
-					onSubmit,
-				},
-			)
-
 			return (
 				<kit.Form aria-label="Profile" form={form}>
 					<kit.Fields />
@@ -431,14 +415,12 @@ describe("classic React submission", () => {
 	it("propagates submit callback failures after restoring pending state", async () => {
 		const failure = new Error("save failed")
 		const onSubmit = vi.fn(() => Promise.reject(failure))
-		let form: FormInstance<TestSchema> | undefined
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			onSubmit,
+		})
 
 		function View() {
-			form = useForm(definition, {
-				defaultValues: defaultValues(),
-				onSubmit,
-			})
-
 			return (
 				<kit.Form aria-label="Profile" form={form}>
 					<kit.Fields />
@@ -455,13 +437,11 @@ describe("classic React submission", () => {
 	})
 
 	it("rejects imperative submit when compatibility validation prevents submission", async () => {
-		let form: FormInstance<TestSchema> | undefined
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
 		function View() {
-			form = useForm(definition, {
-				defaultValues: defaultValues(),
-			})
-
 			return (
 				<kit.Form aria-label="Profile" form={form}>
 					<kit.Fields />
@@ -470,10 +450,6 @@ describe("classic React submission", () => {
 		}
 
 		render(<View />)
-
-		if (form === undefined) {
-			throw new Error("Expected form to mount")
-		}
 
 		const snapshot = form.getSnapshot()
 		const nameField = snapshot.resolvedUi.fieldsByPath.name
@@ -511,13 +487,11 @@ describe("classic React submission", () => {
 	})
 
 	it("rejects imperative submit when no native form is mounted", async () => {
-		let form: FormInstance<TestSchema> | undefined
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
 		function View() {
-			form = useForm(definition, {
-				defaultValues: defaultValues(),
-			})
-
 			return null
 		}
 

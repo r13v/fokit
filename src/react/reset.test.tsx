@@ -18,7 +18,6 @@ import type {
 	SectionSlotProps,
 } from "./slots.js"
 import type { FormInstance } from "./use-form.js"
-import { useForm } from "./use-form.js"
 
 type UploadInput = {
 	readonly name: string
@@ -101,14 +100,13 @@ function defaultValues(values: Partial<UploadInput> = {}): UploadInput {
 describe("classic React reset", () => {
 	it("intercepts native reset buttons and clears same-value metadata without update hooks", async () => {
 		const afterUpdate = vi.fn()
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			afterUpdate,
+		})
 
 		render(
-			<kit.AutoForm
-				aria-label="Profile"
-				definition={definition}
-				defaultValues={defaultValues()}
-				afterUpdate={afterUpdate}
-			>
+			<kit.AutoForm aria-label="Profile" afterUpdate={afterUpdate} form={form}>
 				<ResetState />
 				<ManualErrorButton />
 				<button type="reset">Reset profile</button>
@@ -129,12 +127,11 @@ describe("classic React reset", () => {
 	})
 
 	it("clears submit metadata on a same-value native reset", async () => {
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 		render(
-			<kit.AutoForm
-				aria-label="Profile"
-				definition={definition}
-				defaultValues={defaultValues()}
-			>
+			<kit.AutoForm aria-label="Profile" form={form}>
 				<ResetState />
 				<button type="submit">Save</button>
 				<button type="reset">Reset profile</button>
@@ -150,22 +147,21 @@ describe("classic React reset", () => {
 	})
 
 	it("replaces the reset baseline with provided or hook-replaced values", async () => {
-		let form: FormInstance<TestSchema> | undefined
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			beforeUpdate: (event) =>
+				event.source === "reset"
+					? [
+							{
+								type: "set" as const,
+								path: "name" as const,
+								value: "Katherine",
+							},
+						]
+					: undefined,
+		})
 
 		function View() {
-			form = useForm(definition, {
-				defaultValues: defaultValues(),
-				beforeUpdate: (event) =>
-					event.source === "reset"
-						? [
-								{
-									type: "set",
-									path: "name",
-									value: "Katherine",
-								},
-							]
-						: undefined,
-			})
 			const name = useField(form, "name")
 			const dirty = useFormState(form, (snapshot) => snapshot.isDirty)
 
@@ -207,12 +203,11 @@ describe("classic React reset", () => {
 	})
 
 	it("applies no native reset metadata when beforeUpdate cancels reset", async () => {
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			beforeUpdate: (event) => (event.source === "reset" ? false : undefined),
+		})
 		function View() {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
-				beforeUpdate: (event) => (event.source === "reset" ? false : undefined),
-			})
-
 			return (
 				<kit.Form aria-label="Profile" form={form}>
 					<kit.Fields />
@@ -237,13 +232,11 @@ describe("classic React reset", () => {
 	})
 
 	it("clears file inputs when hydrated reset prevents the browser reset", async () => {
-		let form: FormInstance<TestSchema> | undefined
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
 		function View() {
-			form = useForm(definition, {
-				defaultValues: defaultValues(),
-			})
-
 			return (
 				<kit.Form aria-label="Profile" form={form}>
 					<kit.Fields />

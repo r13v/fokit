@@ -1,25 +1,17 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
-
-import type {
-	ControlMetadata,
-	CoreUiPresentation,
-	FormInput,
-	UiNode,
-} from "../../src/core/index.js"
-import { normalizeDefinition } from "../../src/core/index.js"
+import type { FormMiddleware } from "../../src/core/index.js"
+import { createFormStore } from "../../src/core/index.js"
+import type * as RootPublic from "../../src/index.js"
 import {
-	type ArrayBinding,
-	createForm,
+	createFormKit,
+	defineControl,
 	extendValueChanges,
-	type FieldBinding,
-	type FormInstance,
+	type FormInput,
 	type FormRuntimeOptions,
 	useArrayField,
 	useField,
-	useForm,
 	useFormState,
 	useValue,
-	type ValueChange,
 } from "../../src/index.js"
 
 type Equal<Left, Right> =
@@ -28,316 +20,159 @@ type Equal<Left, Right> =
 	>() => Value extends Right ? 1 : 2
 		? true
 		: false
-
 type Expect<Condition extends true> = Condition
+type _noGlobalCreateForm = Expect<
+	Equal<"createForm" extends keyof typeof RootPublic ? true : false, false>
+>
+type _noGlobalUseForm = Expect<
+	Equal<"useForm" extends keyof typeof RootPublic ? true : false, false>
+>
+type _noGlobalKitForm = Expect<
+	Equal<"KitForm" extends keyof typeof RootPublic ? true : false, false>
+>
+type _noGlobalSubmit = Expect<
+	Equal<"Submit" extends keyof typeof RootPublic ? true : false, false>
+>
+type _noGlobalCreateFormStore = Expect<
+	Equal<"createFormStore" extends keyof typeof RootPublic ? true : false, false>
+>
+// @ts-expect-error UseFormOptions was removed without an alias
+type _removedUseFormOptions = RootPublic.UseFormOptions
 
 type ExampleInput = {
 	kind: "person" | "company"
-	profile: {
-		first: string
-		last: string
-		middle?: string
-	}
-	companyName?: string
-	contacts: readonly {
-		value: string
-		note?: string
-	}[]
-	flags?: {
-		newsletter: boolean
-	}
+	profile: { first: string; last: string; middle?: string }
+	contacts: readonly { value: string; note?: string }[]
 }
-
-type ExampleContext = {
-	readonly locked: boolean
-}
-
+type ExampleContext = { readonly locked: boolean }
 type ExampleSchema = StandardSchemaV1<ExampleInput>
 
-type ExampleControls = {
-	readonly text: ControlMetadata<string | undefined>
-	readonly kind: ControlMetadata<ExampleInput["kind"]>
-}
-
-function inspectValueChange(change: ValueChange<ExampleInput>) {
-	if (change.type === "set" && change.path === "kind") {
-		type _kindValue = Expect<Equal<typeof change.value, "person" | "company">>
-	}
-}
-
-void inspectValueChange
-
 declare const schema: ExampleSchema
-
-const controls = {
-	text: {
-		formData: {
-			mode: "native",
-		},
-	},
-	kind: {
-		formData: {
-			mode: "native",
-		},
-	},
-} satisfies ExampleControls
-
-const definition = normalizeDefinition<
-	ExampleSchema,
-	ExampleControls,
-	ExampleContext
->({
-	schema,
-	controls,
+const text = defineControl<string | undefined>({
+	component: () => null,
+	formData: { mode: "native" },
+})
+const kind = defineControl<ExampleInput["kind"]>({
+	component: () => null,
+	formData: { mode: "native" },
+})
+const kit = createFormKit({ controls: { text, kind } })
+const siblingKit = createFormKit({ controls: { text, kind } })
+const incompatibleKit = createFormKit({ controls: { text } })
+createFormKit({
+	controls: { text, kind },
+	// @ts-expect-error middleware belongs to each kit.createForm call
+	middleware: [],
+})
+// @ts-expect-error middleware is not kit extension configuration
+kit.extend({
+	controls: { extra: text },
+	middleware: [],
+})
+const definition = kit.defineForm(schema).withContext<ExampleContext>({
 	ui: [
-		{
-			kind: "field",
-			path: "kind",
-			control: "kind",
-		},
-		{
-			kind: "field",
-			path: "profile.first",
-			control: "text",
-		},
+		{ kind: "field", path: "kind", control: "kind" },
+		{ kind: "field", path: "profile.first", control: "text" },
 		{
 			kind: "array",
 			path: "contacts",
-			itemDefault: {
-				value: "",
-			},
-			children: [
-				{
-					kind: "field",
-					path: "value",
-					control: "text",
-				},
-			],
+			itemDefault: { value: "" },
+			children: [{ kind: "field", path: "value", control: "text" }],
 		},
-	] satisfies readonly UiNode<ExampleInput, ExampleControls, ExampleContext>[],
+	],
 })
-
-const exampleContext: ExampleContext = {
-	locked: false,
+kit.defineForm(schema)({
+	ui: [],
+	// @ts-expect-error normalized definitions do not retain middleware
+	middleware: [],
+})
+const exampleContext: ExampleContext = { locked: false }
+const defaults: ExampleInput = {
+	kind: "person",
+	profile: { first: "Grace", last: "Hopper" },
+	contacts: [],
 }
 
-const externalForm = createForm(definition, {
-	defaultValues: {
-		kind: "person",
-		profile: {
-			first: "Grace",
-			last: "Hopper",
-		},
-		contacts: [],
-	},
+const middleware: FormMiddleware<ExampleInput, ExampleContext> =
+	() => (next) => (transaction) =>
+		next(transaction)
+const wrongMiddleware: FormMiddleware<{ count: number }, ExampleContext> =
+	() => (next) => (transaction) =>
+		next(transaction)
+
+const form = kit.createForm(definition, {
+	defaultValues: defaults,
 	context: exampleContext,
+	middleware: [middleware],
+	beforeUpdate(event) {
+		type _values = Expect<
+			Equal<typeof event.nextValues, Readonly<ExampleInput>>
+		>
+		type _context = Expect<
+			Equal<typeof event.context, Readonly<ExampleContext>>
+		>
+		return extendValueChanges(event, [
+			{ type: "set", path: "profile.first", value: "Ada" },
+		])
+	},
 })
 
-const externalRuntimeOptions = {
+type _input = Expect<Equal<FormInput<ExampleSchema>, ExampleInput>>
+type _values = Expect<Equal<ReturnType<typeof form.getValues>, ExampleInput>>
+
+kit.createForm(definition, {
+	defaultValues: defaults,
+	context: exampleContext,
+	// @ts-expect-error middleware input must match the form schema input
+	middleware: [wrongMiddleware],
+})
+
+const runtimeOptions = {
 	context: exampleContext,
 	disabled: false,
 } satisfies FormRuntimeOptions<ExampleSchema, ExampleContext>
 
-type _formInput = Expect<Equal<FormInput<ExampleSchema>, ExampleInput>>
-
 function TypeHarness() {
-	const form = useForm(definition, {
-		defaultValues: {
-			kind: "person",
-			profile: {
-				first: "Grace",
-				last: "Hopper",
-			},
-			contacts: [{ value: "grace@example.test" }],
-		},
-		context: exampleContext,
-		beforeUpdate(event) {
-			type _values = Expect<
-				Equal<typeof event.nextValues, Readonly<ExampleInput>>
-			>
-			type _context = Expect<
-				Equal<typeof event.context, Readonly<ExampleContext>>
-			>
-			return extendValueChanges(event, [
-				{ type: "set", path: "profile.first", value: "Ada" },
-			])
-		},
-		afterUpdate(event) {
-			event.changes.forEach(inspectValueChange)
-		},
-	})
+	const bound = kit.useForm(form, runtimeOptions)
+	type _sameForm = Expect<Equal<typeof bound, typeof form>>
 
-	useForm(definition, {
-		defaultValues: {
-			kind: "person",
-			profile: { first: "Grace", last: "Hopper" },
-			contacts: [],
-		},
-		context: exampleContext,
-		beforeUpdate(event) {
-			return extendValueChanges(event, [
-				// @ts-expect-error replacement values must match their selected path
-				{ type: "set", path: "kind", value: "enterprise" },
-			])
-		},
-	})
+	kit.Form({ form })
+	kit.AutoForm({ form, context: exampleContext })
 
-	type _form = Expect<
-		Equal<
-			typeof form,
-			FormInstance<
-				ExampleSchema,
-				ExampleContext,
-				ExampleControls,
-				CoreUiPresentation
-			>
-		>
-	>
-
-	const boundExternalForm = useForm(externalForm, externalRuntimeOptions)
-	type _externalForm = Expect<
-		Equal<
-			typeof boundExternalForm,
-			FormInstance<
-				ExampleSchema,
-				ExampleContext,
-				ExampleControls,
-				CoreUiPresentation
-			>
-		>
-	>
-
-	externalForm.replaceContext({
-		locked: true,
-	})
-	externalForm.replaceOptions({
-		beforeUpdate(event) {
-			type _context = Expect<
-				Equal<typeof event.context, Readonly<ExampleContext>>
-			>
-		},
-		onSubmit({ form: submittedForm, value }) {
-			type _value = Expect<Equal<typeof value, ExampleInput>>
-			type _form = Expect<
-				Equal<typeof submittedForm, FormInstance<ExampleSchema, ExampleContext>>
-			>
-		},
-	})
-
-	externalForm.replaceOptions({
-		// @ts-expect-error context is replaced through replaceContext
-		context: exampleContext,
-	})
-
-	// @ts-expect-error an existing instance already owns defaultValues
-	useForm(externalForm, {
-		defaultValues: {
-			kind: "person",
-			profile: {
-				first: "Grace",
-				last: "Hopper",
-			},
-			contacts: [],
-		},
-	})
+	// @ts-expect-error a kit with an incompatible control snapshot cannot bind this form
+	incompatibleKit.useForm(form, runtimeOptions)
+	// Structurally equal sibling kits are rejected by the runtime identity check.
+	siblingKit.useForm(form, runtimeOptions)
 
 	const first = useValue(form, "profile.first")
-	type _valueInference = Expect<Equal<typeof first, string>>
-
-	const field = useField(form, "profile.middle")
-	type _fieldInference = Expect<
-		Equal<typeof field, FieldBinding<string | undefined>>
-	>
-
-	field.setValue("Amazing")
-	field.setValue(undefined)
-
-	// @ts-expect-error field setter requires the selected path value
-	field.setValue(42)
+	type _value = Expect<Equal<typeof first, string>>
+	const middle = useField(form, "profile.middle")
+	middle.setValue(undefined)
+	// @ts-expect-error field values remain path typed
+	middle.setValue(42)
 
 	const contacts = useArrayField(form, "contacts")
-	type _arrayInference = Expect<
-		Equal<
-			typeof contacts,
-			ArrayBinding<{
-				value: string
-				note?: string
-			}>
-		>
-	>
-
 	contacts.append({ value: "ada@example.test" })
-	contacts.insert(0, { value: "ada@example.test", note: "work" })
-
-	// @ts-expect-error array item commands require the selected item type
-	contacts.append({ note: "missing value" })
+	// @ts-expect-error array items require value
+	contacts.append({ note: "missing" })
 
 	const selected = useFormState(form, (state) => state.values.kind)
-	type _selectorInference = Expect<Equal<typeof selected, "person" | "company">>
-
-	useFormState(
-		form,
-		(state) => ({
-			dirty: state.isDirty,
-		}),
-		{
-			equalityFn: (previous, next) => previous.dirty === next.dirty,
-		},
-	)
-
-	useValue(form, "contacts.0.value", {
-		equalityFn: (previous, next) =>
-			previous.toLowerCase() === next.toLowerCase(),
-	})
-
-	const wrongStringEquality = (previous: number, next: number) =>
-		previous === next
-
-	useValue(form, "contacts.0.value", {
-		// @ts-expect-error equality functions receive the selected value type
-		equalityFn: wrongStringEquality,
-	})
-
-	// @ts-expect-error unknown paths are rejected
-	useField(form, "profile.nickname")
-
-	// @ts-expect-error array hooks accept array paths only
-	useArrayField(form, "profile.first")
-
-	// @ts-expect-error defaultValues is required
-	useForm(definition, {
-		context: {
-			locked: false,
-		},
-	})
-
-	// @ts-expect-error defaultValues must include required nested properties
-	useForm(definition, {
-		defaultValues: {
-			kind: "person",
-			profile: {
-				first: "Grace",
-			},
-			contacts: [],
-		},
-		context: exampleContext,
-	})
-
-	useForm(definition, {
-		defaultValues: {
-			kind: "person",
-			profile: {
-				first: "Grace",
-				last: "Hopper",
-			},
-			contacts: [],
-		},
-		context: {
-			locked: false,
-		},
-	})
-
+	type _selected = Expect<Equal<typeof selected, "person" | "company">>
 	return null
 }
 
 void TypeHarness
+
+// Core construction remains available only from form-please/core.
+createFormStore({
+	definition,
+	defaultValues: defaults,
+	context: exampleContext,
+})
+createFormStore({
+	definition,
+	defaultValues: defaults,
+	context: exampleContext,
+	// @ts-expect-error the React-free store does not configure middleware
+	middleware: [],
+})

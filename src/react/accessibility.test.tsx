@@ -149,15 +149,11 @@ const defaultSlotsDefinition = defaultSlotsKit.defineForm(schema)({
 
 describe("generated field accessibility", () => {
 	it("uses deterministic IDs, ARIA, public data state, and displayed-error invalid state", async () => {
+		const form = kit.createForm(definition, {
+			defaultValues: { name: "", email: "invalid" },
+		})
 		render(
-			<kit.AutoForm
-				defaultValues={{
-					name: "",
-					email: "invalid",
-				}}
-				definition={definition}
-				id="profile"
-			>
+			<kit.AutoForm form={form} id="profile">
 				<ValidateEmail />
 			</kit.AutoForm>,
 		)
@@ -198,15 +194,11 @@ describe("generated field accessibility", () => {
 	})
 
 	it("preserves generated label, description, error, and focus props with the default slots", async () => {
+		const form = defaultSlotsKit.createForm(defaultSlotsDefinition, {
+			defaultValues: { name: "Ada", email: "invalid" },
+		})
 		render(
-			<defaultSlotsKit.AutoForm
-				defaultValues={{
-					name: "Ada",
-					email: "invalid",
-				}}
-				definition={defaultSlotsDefinition}
-				id="profile"
-			>
+			<defaultSlotsKit.AutoForm form={form} id="profile">
 				<ValidateEmail />
 			</defaultSlotsKit.AutoForm>,
 		)

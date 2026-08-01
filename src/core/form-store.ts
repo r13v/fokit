@@ -1,17 +1,32 @@
 import {
 	type ArrayCommand,
 	createArrayCommandChange,
+	createRowIdentityChanges,
+	createRowIdentityState,
 	findArrayNodeForPath,
 	isKnownArrayDescendantFieldPath,
+	reconcileRowIdentityState,
 	reindexRowIdentity,
-	reindexTouchedArrayPaths,
 	replaceRowIdentity,
 } from "./array-state.js"
 import type {
 	NormalizedArrayNode,
 	NormalizedFormDefinition,
 } from "./definition.js"
-import type { UpdateSource } from "./form-events.js"
+import { type FocusTarget, FormFocus } from "./focus.js"
+import type {
+	FormDocumentEvent,
+	FormRuntimeEvent,
+	RestoreOrigin,
+	UpdateSource,
+} from "./form-events.js"
+import type { FormDocument, FormModel } from "./form-model.js"
+import {
+	createDocumentCommittedEvent,
+	createDocumentRestoredEvent,
+	createFormDocument,
+	reduceFormDocument,
+} from "./form-reducer.js"
 import {
 	type FormResult,
 	normalizeFormResult,
@@ -24,32 +39,30 @@ import {
 	freezeFormValue,
 } from "./form-state.js"
 import {
-	clearImperativeIssues,
-	clearServerIssuesForChanges,
-	createIssueState,
 	deriveFormErrors,
-	exposeIssuePaths,
 	type FormIssue,
 	type ImperativeFormIssue,
-	type IssueState,
-	isIssueStateEmpty,
-	reindexIssueStateArrayPaths,
-	replaceSchemaIssues,
-	replaceServerIssues,
-	setImperativeIssues,
 } from "./issues.js"
-import {
-	createInitialMetadataState,
-	createMetadataState,
-	deriveFormMetadata,
-	isFormMetadataTouched,
-	type MetadataState,
-	touchMetadataPath,
-} from "./metadata.js"
+import { deriveFormMetadata, isFormMetadataTouched } from "./metadata.js"
 import { isPlainObject } from "./object.js"
 import { formatPath, type PathInput, pathsOverlap } from "./path.js"
 import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
+import { FormPublication } from "./publication.js"
 import { type ResolvedUiState, resolveUi } from "./resolve-ui.js"
+import {
+	createFieldBlurredEvent,
+	createFieldTouchedEvent,
+	createFormRuntimeState,
+	createIssuesChangedEvent,
+	createRuntimeReplacedEvent,
+	createRuntimeResetEvent,
+	createSubmissionFinishedEvent,
+	createSubmissionStartedEvent,
+	createValidationFailedEvent,
+	createValidationResolvedEvent,
+	createValidationStartedEvent,
+	reduceFormRuntime,
+} from "./runtime-reducer.js"
 import type {
 	FormInput,
 	FormOutput,
@@ -67,29 +80,15 @@ import {
 } from "./transaction.js"
 import type { ArrayItemValue } from "./ui-types.js"
 import {
-	isPromiseLike,
 	normalizeValidationOptions,
-	normalizeValidationResult,
-	runStandardSchemaValidation,
 	type ValidationOptions,
 	type ValidationResult,
 } from "./validation.js"
-import {
-	cloneMutableValueLeaves,
-	getPathValue,
-	hasPathValue,
-	isDirtyEqual,
-} from "./value.js"
+import { ValidationLifecycle } from "./validation-lifecycle.js"
+import { cloneMutableValueLeaves, getPathValue, hasPathValue } from "./value.js"
 
+export type { FocusTarget } from "./focus.js"
 export type { ValueChange } from "./transaction.js"
-
-type FocusTargetOptions = {
-	readonly preventScroll?: boolean
-}
-
-export type FocusTarget = {
-	focus(options?: FocusTargetOptions): void
-}
 
 export const errorSummaryFocusTargetRegistration = Symbol(
 	"form-please.errorSummaryFocusTargetRegistration",
@@ -258,17 +257,9 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 	): boolean
 }
 
-type Subscription<Input, Context, Selected = unknown> = {
-	readonly selector: FormStoreSelector<Input, Context, Selected>
-	readonly listener: FormStoreListener<Selected>
-	readonly equalityFn: (previous: Selected, next: Selected) => boolean
-	selected: Selected
-}
-
 type ActiveBatch = {
 	changes: NormalizedValueChange[]
-	issueState?: IssueState
-	metadataState?: MetadataState
+	rowIdentity: FormDocument<unknown>["rowIdentity"]
 	abortedError?: unknown
 }
 
@@ -282,22 +273,9 @@ type ValueCommitResult<Input> =
 	  }
 
 type ValueCommitOptions<Context> = {
-	readonly issueState?: IssueState
-	readonly metadataState?: MetadataState
+	readonly rowIdentity?: FormDocument<unknown>["rowIdentity"]
 	readonly resetAfterCommit?: boolean
 	readonly transitionFromUi?: ResolvedUiState<Context>
-}
-
-type ValidationRuntimeState = {
-	readonly isValidating: boolean
-	readonly isSubmitting: boolean
-	readonly validationStatus: "invalid" | "unvalidated" | "valid"
-	readonly submitCount: number
-}
-
-type ActiveValidation = {
-	readonly id: number
-	readonly kind: "nonSubmit" | "submit"
 }
 
 type ValueProposal<Input, Context> = {
@@ -350,6 +328,24 @@ export function replaceFormStoreRuntime<
 	options: FormStoreRuntimeOptions,
 ): void {
 	asCoreFormStore(store).replaceRuntime(context, options)
+}
+
+export function getFormStoreDocument<
+	Schema extends StandardSchema,
+	Context = unknown,
+>(store: FormStore<Schema, Context>): FormDocument<FormInput<Schema>> {
+	return asCoreFormStore(store).getDocument()
+}
+
+export function restoreFormStoreDocument<
+	Schema extends StandardSchema,
+	Context = unknown,
+>(
+	store: FormStore<Schema, Context>,
+	document: FormDocument<FormInput<Schema>>,
+	origin: RestoreOrigin,
+): void {
+	asCoreFormStore(store).restoreDocument(document, origin)
 }
 
 export function startFormSubmission<
@@ -418,31 +414,18 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	readonly definition: NormalizedFormDefinition<Schema>
 	readonly schema: Schema
 
-	#baselineValues: FormInput<Schema>
-	#context: Context
-	#issueState: IssueState
-	#metadataState: MetadataState
-	#snapshot: FormSnapshot<FormInput<Schema>, Context>
-	#serverSnapshot: FormSnapshot<FormInput<Schema>, Context>
-	#values: FormInput<Schema>
+	#model: FormModel<FormInput<Schema>, Context>
+	readonly #publication: FormPublication<
+		FormSnapshot<FormInput<Schema>, Context>
+	>
 
 	#activeBatch: ActiveBatch | undefined
-	#activeValidation: ActiveValidation | undefined
-	#disabled: boolean
-	#hasValidationResult = false
-	#nextValidationId = 0
-	#activeSubmissionId: number | undefined
+	readonly #focus = new FormFocus<FormInput<Schema>, Context>()
+	#nextEventSequence = 0
 	#nextSubmissionId = 0
-	#nonSubmitAbortController: AbortController | undefined
-	#scheduledValidation: ReturnType<typeof setTimeout> | undefined
-	#validationOptions: ValidationOptions
-	#validationRevision = 0
-	#validationState: ValidationRuntimeState = createValidationRuntimeState()
-	readonly #focusTargets = new Map<string, FocusTarget>()
-	readonly #summaryFocusTargets = new Map<number, FocusTarget>()
+	#nextValidationId = 0
+	readonly #validationLifecycle: ValidationLifecycle<Schema>
 	#isRunningBeforeUpdate = false
-	#readOnly: boolean
-	readonly #subscriptions = new Set<Subscription<FormInput<Schema>, Context>>()
 	readonly #beforeUpdate: RuntimeFormStoreOptions<
 		Schema,
 		Context
@@ -452,49 +435,59 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	constructor(options: RuntimeFormStoreOptions<Schema, Context>) {
 		this.definition = options.definition
 		this.schema = options.definition.schema
-		this.#context = options.context as Context
-		this.#disabled = options.disabled === true
-		this.#readOnly = options.readOnly === true
-		this.#validationOptions = normalizeValidationOptions(options.validation)
+		const context = options.context as Context
+		const runtimeOptions = Object.freeze({
+			disabled: options.disabled === true,
+			readOnly: options.readOnly === true,
+			validation: normalizeValidationOptions(options.validation),
+		})
 		const initialState = createInitialValuePolicyState(
 			this.definition,
 			cloneAndFreezeValue(options.defaultValues),
-			this.#context,
+			context,
 			{
-				disabled: this.#disabled,
-				readOnly: this.#readOnly,
+				disabled: runtimeOptions.disabled,
+				readOnly: runtimeOptions.readOnly,
 			},
 		)
-		this.#values = initialState.values
-		this.#baselineValues = cloneAndFreezeValue(this.#values)
-		this.#issueState = createIssueState()
-		this.#metadataState = createInitialMetadataState(
-			this.definition,
-			this.#values,
+		const document = createFormDocument(
+			initialState.values,
+			createRowIdentityState(this.definition, initialState.values),
 		)
-		this.#snapshot = this.#createSnapshot({
-			resolvedUi: initialState.resolvedUi,
+		this.#model = Object.freeze({
+			document,
+			runtime: createFormRuntimeState({
+				baselineDocument: document,
+				context,
+				options: runtimeOptions,
+				resolvedUi: initialState.resolvedUi,
+			}),
 		})
-		this.#serverSnapshot = this.#snapshot
+		this.#publication = new FormPublication(this.#createSnapshot())
+		this.#validationLifecycle = new ValidationLifecycle(this.schema)
 		this.#beforeUpdate = options.beforeUpdate
 		this.#afterUpdate = options.afterUpdate
 	}
 
 	getSnapshot(): FormSnapshot<FormInput<Schema>, Context> {
-		return this.#snapshot
+		return this.#publication.getSnapshot()
 	}
 
 	getServerSnapshot(): FormSnapshot<FormInput<Schema>, Context> {
-		return this.#serverSnapshot
+		return this.#publication.getServerSnapshot()
 	}
 
 	getValues(): FormInput<Schema> {
-		return clonePublicValue(this.#values)
+		return clonePublicValue(this.#model.document.values)
 	}
 
 	getValue(path: PathInput): unknown
 	getValue(path: PathInput): unknown {
-		return clonePublicValue(getPathValue(this.#values, path))
+		return clonePublicValue(getPathValue(this.#model.document.values, path))
+	}
+
+	getDocument(): FormDocument<FormInput<Schema>> {
+		return this.#model.document
 	}
 
 	setValue<Path extends FieldPath<FormInput<Schema>>>(
@@ -566,11 +559,19 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			throw new TypeError("reset cannot be called inside a batch")
 		}
 
-		const resetValues = cloneAndFreezeValue(values ?? this.#baselineValues)
+		const resetValues = cloneAndFreezeValue(
+			values ?? this.#model.runtime.baselineDocument.values,
+		)
 		const result = this.#commitValueChanges(
-			createResetChanges(this.#values, resetValues),
+			createResetChanges(this.#model.document.values, resetValues),
 			"reset",
-			{ resetAfterCommit: true },
+			{
+				resetAfterCommit: values !== undefined,
+				rowIdentity:
+					values === undefined
+						? this.#model.runtime.baselineDocument.rowIdentity
+						: undefined,
+			},
 		)
 
 		if (result.status === "cancelled") {
@@ -578,16 +579,37 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		if (result.status === "noValueChange") {
-			this.#applyResetMetadataOnly(result.values)
+			this.#validationLifecycle.invalidate(true)
+			this.#commitRuntimeEvents([
+				createRuntimeResetEvent({
+					sequence: this.#nextSequence(),
+					baseline: values === undefined ? "preserved" : "replaced",
+					baselineDocument:
+						values === undefined ? undefined : this.#model.document,
+				}),
+			])
 		}
 	}
 
 	setErrors(issues: readonly ImperativeFormIssue[]): void {
-		this.#commitIssueState(setImperativeIssues(this.#issueState, issues))
+		this.#commitRuntimeEvents([
+			createIssuesChangedEvent({
+				sequence: this.#nextSequence(),
+				change: { type: "imperative/set", issues },
+			}),
+		])
 	}
 
 	clearErrors(path?: PathInput): void {
-		this.#commitIssueState(clearImperativeIssues(this.#issueState, path))
+		this.#commitRuntimeEvents([
+			createIssuesChangedEvent({
+				sequence: this.#nextSequence(),
+				change: {
+					type: "imperative/clear",
+					...(path === undefined ? {} : { path: formatPath(path) }),
+				},
+			}),
+		])
 	}
 
 	validate(): Promise<ValidationResult<FormOutput<Schema>>>
@@ -595,7 +617,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	validate(
 		path?: PathInput,
 	): Promise<ValidationResult<FormOutput<Schema>> | readonly FormIssue[]> {
-		this.#cancelScheduledValidation()
+		this.#validationLifecycle.cancelScheduled()
 		const canonicalPath = path === undefined ? undefined : formatPath(path)
 
 		return this.#runValidation({
@@ -615,7 +637,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		const canonicalPaths = normalizePathSubset(paths, {
 			requireNonEmpty: true,
 		})
-		this.#cancelScheduledValidation()
+		this.#validationLifecycle.cancelScheduled()
 
 		return this.#runValidation({
 			kind: "nonSubmit",
@@ -630,17 +652,18 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	startSubmission(): number {
 		const id = ++this.#nextSubmissionId
-		this.#activeSubmissionId = id
-		this.#commitValidationRuntimeState({
-			...this.#validationState,
-			isSubmitting: true,
-			submitCount: this.#validationState.submitCount + 1,
-		})
+		this.#commitRuntimeEvents([
+			createSubmissionStartedEvent({
+				sequence: this.#nextSequence(),
+				attemptId: id,
+				documentRevision: this.#model.runtime.documentRevision,
+			}),
+		])
 		return id
 	}
 
 	validateSubmission(): Promise<ValidationResult<FormOutput<Schema>>> {
-		this.#cancelScheduledValidation()
+		this.#validationLifecycle.cancelScheduled()
 		return this.#runValidation({
 			kind: "submit",
 			exposeAll: true,
@@ -649,15 +672,18 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	}
 
 	finishSubmission(id: number): void {
-		if (this.#activeSubmissionId !== id) {
-			return
-		}
-
-		this.#activeSubmissionId = undefined
-		this.#commitValidationRuntimeState({
-			...this.#validationState,
-			isSubmitting: false,
-		})
+		const submission = this.#model.runtime.submission
+		const revision =
+			submission.status === "submitting"
+				? submission.documentRevision
+				: this.#model.runtime.documentRevision
+		this.#commitRuntimeEvents([
+			createSubmissionFinishedEvent({
+				sequence: this.#nextSequence(),
+				attemptId: id,
+				documentRevision: revision,
+			}),
+		])
 	}
 
 	applyActionResult(
@@ -694,6 +720,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 		const batch: ActiveBatch = {
 			changes: [],
+			rowIdentity: this.#model.document.rowIdentity,
 		}
 		this.#activeBatch = batch
 
@@ -710,8 +737,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		this.#commitValueChanges(batch.changes, "imperative", {
-			issueState: batch.issueState,
-			metadataState: batch.metadataState,
+			rowIdentity: batch.rowIdentity,
 		})
 	}
 
@@ -720,26 +746,15 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		listener: FormStoreListener<Selected>,
 		options: FormStoreSubscriptionOptions<Selected> = {},
 	): () => void {
-		const subscription: Subscription<FormInput<Schema>, Context, Selected> = {
+		return this.#publication.subscribe(
 			selector,
 			listener,
-			equalityFn: options.equalityFn ?? Object.is,
-			selected: selector(this.#snapshot),
-		}
-
-		this.#subscriptions.add(
-			subscription as Subscription<FormInput<Schema>, Context>,
+			options.equalityFn ?? Object.is,
 		)
-
-		return () => {
-			this.#subscriptions.delete(
-				subscription as Subscription<FormInput<Schema>, Context>,
-			)
-		}
 	}
 
 	replaceOptions(options: FormStoreRuntimeOptions): void {
-		this.#replaceRuntime(this.#context, options)
+		this.#replaceRuntime(this.#model.runtime.context as Context, options)
 	}
 
 	replaceContext(context: Context): void {
@@ -751,42 +766,61 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	}
 
 	#replaceRuntime(context: Context, options?: FormStoreRuntimeOptions): void {
-		const contextChanged = !Object.is(context, this.#context)
+		const current = this.#model.runtime
+		const contextChanged = !Object.is(context, current.context)
 		const nextDisabled =
-			options === undefined ? this.#disabled : options.disabled === true
+			options === undefined
+				? current.options.disabled
+				: options.disabled === true
 		const nextReadOnly =
-			options === undefined ? this.#readOnly : options.readOnly === true
+			options === undefined
+				? current.options.readOnly
+				: options.readOnly === true
 		const nextValidationOptions =
 			options === undefined
-				? this.#validationOptions
+				? current.options.validation
 				: normalizeValidationOptions(options.validation)
 		const validationChanged = !isSameValidationOptions(
-			this.#validationOptions,
+			current.options.validation,
 			nextValidationOptions,
 		)
 
 		if (
 			!contextChanged &&
-			this.#disabled === nextDisabled &&
-			this.#readOnly === nextReadOnly &&
+			current.options.disabled === nextDisabled &&
+			current.options.readOnly === nextReadOnly &&
 			!validationChanged
 		) {
 			return
 		}
 
-		const previousSnapshot = this.#snapshot
-		this.#context = context
-		this.#disabled = nextDisabled
-		this.#readOnly = nextReadOnly
-		this.#validationOptions = nextValidationOptions
+		const previousSnapshot = this.getSnapshot()
 		if (validationChanged) {
-			this.#cancelScheduledValidation()
-			this.#abortNonSubmitValidation(false)
+			this.#validationLifecycle.cancelScheduled()
+			this.#validationLifecycle.abortNonSubmit()
 		}
-		this.#snapshot = this.#createSnapshot({
-			previousResolvedUi: previousSnapshot.resolvedUi,
-		})
-		this.#notify()
+		const resolvedUi = resolveUi(
+			this.definition,
+			this.#model.document.values,
+			context,
+			{
+				disabled: nextDisabled,
+				readOnly: nextReadOnly,
+				previous: previousSnapshot.resolvedUi,
+			},
+		)
+		this.#commitRuntimeEvents([
+			createRuntimeReplacedEvent({
+				sequence: this.#nextSequence(),
+				context,
+				runtimeOptions: {
+					disabled: nextDisabled,
+					readOnly: nextReadOnly,
+					validation: nextValidationOptions,
+				},
+				resolvedUi,
+			}),
+		])
 		this.#commitValueChanges([], "valuePolicy", {
 			transitionFromUi: previousSnapshot.resolvedUi,
 		})
@@ -802,29 +836,17 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	#touchPath(path: PathInput, exposeIssues: boolean): void {
 		const canonicalPath = this.#normalizeKnownFieldPath(path)
-		const nextMetadataState = touchMetadataPath(
-			this.#metadataState,
-			canonicalPath,
-		)
-		const nextIssueState = exposeIssues
-			? exposeIssuePaths(this.#issueState, [canonicalPath])
-			: this.#issueState
-
-		if (
-			nextMetadataState === this.#metadataState &&
-			nextIssueState === this.#issueState
-		) {
-			this.#scheduleAutomaticValidation("blur", [canonicalPath])
-			return
-		}
-
-		const previousSnapshot = this.#snapshot
-		this.#metadataState = nextMetadataState
-		this.#issueState = nextIssueState
-		this.#snapshot = this.#createSnapshot({
-			resolvedUi: previousSnapshot.resolvedUi,
-		})
-		this.#notify()
+		this.#commitRuntimeEvents([
+			exposeIssues
+				? createFieldBlurredEvent({
+						sequence: this.#nextSequence(),
+						path: canonicalPath,
+					})
+				: createFieldTouchedEvent({
+						sequence: this.#nextSequence(),
+						path: canonicalPath,
+					}),
+		])
 		this.#scheduleAutomaticValidation("blur", [canonicalPath])
 	}
 
@@ -832,27 +854,21 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		const canonicalPath =
 			element === null ? formatPath(path) : this.#normalizeKnownFieldPath(path)
 		if (element === null) {
-			this.#focusTargets.delete(canonicalPath)
+			this.#focus.registerField(canonicalPath, null)
 			return
 		}
-
-		this.#focusTargets.set(canonicalPath, element)
+		this.#focus.registerField(canonicalPath, element)
 	}
 
 	[errorSummaryFocusTargetRegistration](
 		index: number,
 		element: FocusTarget | null,
 	): void {
-		if (element === null) {
-			this.#summaryFocusTargets.delete(index)
-			return
-		}
-
-		this.#summaryFocusTargets.set(index, element)
+		this.#focus.registerSummary(index, element)
 	}
 
 	focus(path: PathInput): void {
-		this.#focusFieldPath(formatPath(path))
+		this.#focus.focusField(formatPath(path), this.getSnapshot())
 	}
 
 	focusFirstError<Path extends FieldPath<FormInput<Schema>>>(
@@ -866,108 +882,45 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			return false
 		}
 
-		for (const [path, issues] of this.#snapshot.displayErrors.fields) {
-			if (
-				issues.length === 0 ||
-				!pathMatchesSubset(path, canonicalPaths) ||
-				!this.#focusFieldPath(path)
-			) {
-				continue
-			}
-
-			return true
-		}
-
-		for (const [
-			index,
-			issue,
-		] of this.#snapshot.displayErrors.summary.entries()) {
-			const matches =
-				issue.path === undefined
-					? canonicalPaths === undefined
-					: pathMatchesSubset(issue.path, canonicalPaths)
-			const target = this.#summaryFocusTargets.get(index)
-			if (!matches || target === undefined) {
-				continue
-			}
-
-			target.focus()
-			return true
-		}
-
-		return false
-	}
-
-	#focusFieldPath(canonicalPath: string): boolean {
-		const field = this.#snapshot.resolvedUi.fieldsByPath[canonicalPath]
-		if (
-			field === undefined ||
-			!field.visible ||
-			field.disabled ||
-			field.readOnly
-		) {
-			return false
-		}
-
-		const target = this.#focusTargets.get(canonicalPath)
-		if (target === undefined) {
-			return false
-		}
-
-		target.focus()
-		return true
+		return this.#focus.focusFirstError(
+			this.getSnapshot(),
+			canonicalPaths,
+			pathMatchesSubset,
+		)
 	}
 
 	#createSnapshot(
-		options: {
-			readonly previousResolvedUi?: ResolvedUiState<Context>
-			readonly resolvedUi?: ResolvedUiState<Context>
-		} = {},
+		options: { readonly resolvedUi?: ResolvedUiState<Context> } = {},
 	): FormSnapshot<FormInput<Schema>, Context> {
-		const resolvedUi =
-			options.resolvedUi ??
-			(options.previousResolvedUi === undefined
-				? resolveUi(this.definition, this.#values, this.#context, {
-						disabled: this.#disabled,
-						readOnly: this.#readOnly,
-					})
-				: resolveUi(this.definition, this.#values, this.#context, {
-						disabled: this.#disabled,
-						previous: options.previousResolvedUi,
-						readOnly: this.#readOnly,
-					}))
+		const { document, runtime } = this.#model
+		const resolvedUi = options.resolvedUi ?? runtime.resolvedUi
+		const isValidating = runtime.validation.status === "validating"
 		const metadata = deriveFormMetadata(
 			this.definition,
-			{
-				values: this.#values,
-				rowIdentity: this.#metadataState.rowIdentity,
-			},
-			{
-				values: this.#baselineValues,
-				rowIdentity: this.#metadataState.baselineRowIdentity,
-			},
-			this.#metadataState.touchedPaths,
-			this.#validationState.isValidating,
+			document,
+			runtime.baselineDocument,
+			runtime.touchedPaths,
+			isValidating,
 		)
 		const { errors, displayErrors } = deriveFormErrors(
-			this.#issueState,
+			runtime.issues,
 			resolvedUi,
 		)
-		const values = clonePublicValue(this.#values)
+		const values = clonePublicValue(document.values)
 
 		return createFormSnapshot({
 			values,
-			baselineValues: this.#baselineValues,
-			context: this.#context,
+			baselineValues: runtime.baselineDocument.values,
+			context: runtime.context as Context,
 			displayErrors,
 			errors,
 			resolvedUi,
 			metadata,
 			isTouched: isFormMetadataTouched(metadata),
-			isValidating: this.#validationState.isValidating,
-			isSubmitting: this.#validationState.isSubmitting,
-			validationStatus: this.#validationState.validationStatus,
-			submitCount: this.#validationState.submitCount,
+			isValidating,
+			isSubmitting: runtime.submission.status === "submitting",
+			validationStatus: runtime.validation.validationStatus,
+			submitCount: runtime.submission.submitCount,
 		})
 	}
 
@@ -976,11 +929,11 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		if (
 			this.definition.fieldsByPath[canonicalPath] === undefined &&
 			this.definition.arraysByPath[canonicalPath] === undefined &&
-			this.#snapshot.resolvedUi.fieldsByPath[canonicalPath] === undefined &&
-			this.#snapshot.resolvedUi.arraysByPath[canonicalPath] === undefined &&
+			this.getSnapshot().resolvedUi.fieldsByPath[canonicalPath] === undefined &&
+			this.getSnapshot().resolvedUi.arraysByPath[canonicalPath] === undefined &&
 			!isKnownArrayDescendantFieldPath(
 				this.definition,
-				this.#values,
+				this.#model.document.values,
 				canonicalPath,
 			)
 		) {
@@ -1041,16 +994,18 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			const canonicalPath = arrayTarget.path
 			const baseValues =
 				this.#activeBatch === undefined
-					? this.#values
-					: applyValueChanges(this.#values, this.#activeBatch.changes).values
-			const baseMetadataState =
-				this.#activeBatch?.metadataState ?? this.#metadataState
-			const baseIssueState = this.#activeBatch?.issueState ?? this.#issueState
+					? this.#model.document.values
+					: applyValueChanges(
+							this.#model.document.values,
+							this.#activeBatch.changes,
+						).values
+			const baseRowIdentity =
+				this.#activeBatch?.rowIdentity ?? this.#model.document.rowIdentity
 			const update = createArrayCommandChange(
 				canonicalPath,
 				arrayTarget.node,
 				baseValues,
-				baseMetadataState.rowIdentity,
+				baseRowIdentity,
 				command,
 			)
 
@@ -1058,42 +1013,25 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				return
 			}
 
-			const metadataState = createMetadataState({
-				touchedPaths: reindexTouchedArrayPaths(
-					baseMetadataState.touchedPaths,
+			const rowIdentity = replaceRowIdentity(
+				reindexRowIdentity(
+					baseRowIdentity,
 					canonicalPath,
 					update.previousKeys,
 					update.nextKeys,
 				),
-				rowIdentity: replaceRowIdentity(
-					reindexRowIdentity(
-						baseMetadataState.rowIdentity,
-						canonicalPath,
-						update.previousKeys,
-						update.nextKeys,
-					),
-					canonicalPath,
-					update.rowIdentity,
-				),
-				baselineRowIdentity: baseMetadataState.baselineRowIdentity,
-			})
-			const issueState = reindexIssueStateArrayPaths(
-				baseIssueState,
 				canonicalPath,
-				update.previousKeys,
-				update.nextKeys,
+				update.rowIdentity,
 			)
 
 			if (this.#activeBatch !== undefined) {
 				this.#activeBatch.changes.push(...update.changes)
-				this.#activeBatch.metadataState = metadataState
-				this.#activeBatch.issueState = issueState
+				this.#activeBatch.rowIdentity = rowIdentity
 				return
 			}
 
 			this.#commitValueChanges(update.changes, "array", {
-				issueState,
-				metadataState,
+				rowIdentity,
 			})
 		} catch (error) {
 			if (this.#activeBatch !== undefined) {
@@ -1109,27 +1047,54 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		options: ValueCommitOptions<Context> = {},
 	): ValueCommitResult<FormInput<Schema>> {
 		const transitionFromUi =
-			options.transitionFromUi ?? this.#snapshot.resolvedUi
+			options.transitionFromUi ?? this.getSnapshot().resolvedUi
 		const proposal = this.#createValueProposal(changes, transitionFromUi)
 		if (proposal === undefined) {
-			const issueState =
-				options.issueState === undefined
-					? undefined
-					: clearServerIssuesForChanges(
-							options.issueState,
-							changes.map((change) => change.path),
-						)
-			if (options.metadataState !== undefined || issueState !== undefined) {
-				this.#applyMetadataAndIssueOnly(options.metadataState, issueState)
+			const rowIdentity = reconcileRowIdentityState(
+				this.definition,
+				this.#model.document.values,
+				(options.rowIdentity as
+					| FormDocument<FormInput<Schema>>["rowIdentity"]
+					| undefined) ?? this.#model.document.rowIdentity,
+			)
+			const rowIdentityChanges = createRowIdentityChanges(
+				this.#model.document.rowIdentity,
+				rowIdentity,
+			)
+			if (rowIdentityChanges.length > 0) {
+				this.#validationLifecycle.invalidate(source === "reset")
+				this.#reduceDocumentEvent(
+					createDocumentCommittedEvent({
+						sequence: this.#nextSequence(),
+						source,
+						changes: [],
+						rowIdentityChanges,
+					}),
+				)
+				if (source === "reset") {
+					this.#reduceRuntimeEvent(
+						createRuntimeResetEvent({
+							sequence: this.#nextSequence(),
+							baseline: "preserved",
+						}),
+					)
+				}
+				this.#publishModel()
+				return { status: "committed" }
 			}
-			return { status: "noValueChange", values: this.#values }
+			return {
+				status: "noValueChange",
+				values: this.#model.document.values,
+			}
 		}
 
 		let nextValues = proposal.values
 		let effectiveChanges = proposal.changes
 		let resolvedUi = proposal.resolvedUi
-		let metadataState = options.metadataState
-		let issueState = options.issueState
+		let rowIdentity =
+			(options.rowIdentity as
+				| FormDocument<FormInput<Schema>>["rowIdentity"]
+				| undefined) ?? this.#model.document.rowIdentity
 
 		if (this.#beforeUpdate !== undefined) {
 			const replacement = this.#callBeforeUpdate(
@@ -1150,53 +1115,67 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					transitionFromUi,
 				)
 				if (replacementProposal === undefined) {
-					return { status: "noValueChange", values: this.#values }
+					return {
+						status: "noValueChange",
+						values: this.#model.document.values,
+					}
 				}
 
 				nextValues = replacementProposal.values
 				effectiveChanges = replacementProposal.changes
 				resolvedUi = replacementProposal.resolvedUi
-				metadataState = undefined
-				issueState = undefined
+				rowIdentity = this.#model.document.rowIdentity
 			}
 		}
 
-		const previousSnapshot = this.#snapshot
-		const previousValues = clonePublicValue(this.#values)
-		this.#values = nextValues
-		if (options.resetAfterCommit === true) {
-			this.#baselineValues = nextValues
-			this.#metadataState = createInitialMetadataState(
-				this.definition,
-				nextValues,
-			)
-			this.#issueState = createIssueState()
-			this.#resetValidationRuntime()
-		} else if (metadataState !== undefined) {
-			this.#metadataState = metadataState
-		}
-		if (options.resetAfterCommit !== true) {
-			this.#markValuesChangedForValidation()
-			this.#issueState = clearServerIssuesForChanges(
-				issueState ?? this.#issueState,
-				effectiveChanges.map((change) => change.path),
-			)
-		}
-		this.#snapshot = this.#createSnapshot({
-			previousResolvedUi: previousSnapshot.resolvedUi,
-			resolvedUi,
+		const previousDocument = this.#model.document
+		const previousValues = clonePublicValue(previousDocument.values)
+		rowIdentity = reconcileRowIdentityState(
+			this.definition,
+			nextValues,
+			rowIdentity,
+		)
+		const event = createDocumentCommittedEvent({
+			sequence: this.#nextSequence(),
+			source,
+			changes: effectiveChanges,
+			rowIdentityChanges: createRowIdentityChanges(
+				previousDocument.rowIdentity,
+				rowIdentity,
+			),
+			baseline: options.resetAfterCommit === true ? "replaced" : "preserved",
 		})
-		this.#notify()
+		this.#validationLifecycle.invalidate(
+			options.resetAfterCommit === true || source === "reset",
+		)
+		this.#reduceDocumentEvent(event)
+		if (source === "reset" && options.resetAfterCommit !== true) {
+			this.#reduceRuntimeEvent(
+				createRuntimeResetEvent({
+					sequence: this.#nextSequence(),
+					baseline: "preserved",
+				}),
+			)
+		}
+		this.#reduceRuntimeEvent(
+			createRuntimeReplacedEvent({
+				sequence: this.#nextSequence(),
+				context: this.#model.runtime.context as Context,
+				runtimeOptions: this.#model.runtime.options,
+				resolvedUi,
+			}),
+		)
+		this.#publishModel()
 		this.#afterUpdate?.(
 			Object.freeze({
 				previousValues,
-				values: this.#snapshot.values,
+				values: this.getSnapshot().values,
 				changes: effectiveChanges as readonly ValueChange[],
 				source,
-				context: this.#context as Readonly<Context>,
+				context: this.#model.runtime.context,
 			}),
 		)
-		if (options.resetAfterCommit !== true) {
+		if (source !== "reset") {
 			this.#scheduleAutomaticValidation(
 				"change",
 				effectiveChanges.map((change) => change.path),
@@ -1234,21 +1213,26 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		changes: readonly ValueChange[] | readonly NormalizedValueChange[],
 		transitionFromUi: ResolvedUiState<Context>,
 	): ValueProposal<FormInput<Schema>, Context> | undefined {
-		let proposal = applyValueChanges(this.#values, changes)
+		let proposal = applyValueChanges(this.#model.document.values, changes)
 		let nextValues = proposal.values
 		let effectiveChanges = proposal.changes
-		let previousResolvedUi = this.#snapshot.resolvedUi
+		let previousResolvedUi = this.getSnapshot().resolvedUi
 
 		for (
 			let pass = 0;
 			pass <= Object.keys(this.definition.fieldsByPath).length;
 			pass++
 		) {
-			const resolvedUi = resolveUi(this.definition, nextValues, this.#context, {
-				disabled: this.#disabled,
-				previous: previousResolvedUi,
-				readOnly: this.#readOnly,
-			})
+			const resolvedUi = resolveUi(
+				this.definition,
+				nextValues,
+				this.#model.runtime.context as Context,
+				{
+					disabled: this.#model.runtime.options.disabled,
+					previous: previousResolvedUi,
+					readOnly: this.#model.runtime.options.readOnly,
+				},
+			)
 			const policyChanges = this.#createValuePolicyChanges(
 				transitionFromUi,
 				resolvedUi,
@@ -1267,7 +1251,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				}
 			}
 
-			proposal = applyValueChanges(this.#values, [
+			proposal = applyValueChanges(this.#model.document.values, [
 				...effectiveChanges,
 				...policyChanges,
 			])
@@ -1287,67 +1271,6 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		return createHiddenValuePolicyChanges(resolvedUi, values, transitionFromUi)
 	}
 
-	#applyResetMetadataOnly(baselineValues: FormInput<Schema>): void {
-		const nextBaselineValues = cloneAndFreezeValue(baselineValues)
-		const nextValidationState = createValidationRuntimeState()
-		if (
-			isDirtyEqual(this.#baselineValues, nextBaselineValues) &&
-			this.#metadataState.touchedPaths.size === 0 &&
-			isIssueStateEmpty(this.#issueState) &&
-			isSameValidationRuntimeState(this.#validationState, nextValidationState)
-		) {
-			return
-		}
-
-		const previousSnapshot = this.#snapshot
-		this.#baselineValues = nextBaselineValues
-		this.#metadataState = createInitialMetadataState(
-			this.definition,
-			nextBaselineValues,
-		)
-		this.#issueState = createIssueState()
-		this.#resetValidationRuntime()
-		this.#snapshot = this.#createSnapshot({
-			resolvedUi: previousSnapshot.resolvedUi,
-		})
-		this.#notify()
-	}
-
-	#applyMetadataAndIssueOnly(
-		metadataState?: MetadataState,
-		issueState?: IssueState,
-	): void {
-		const nextMetadataState = metadataState ?? this.#metadataState
-		const nextIssueState = issueState ?? this.#issueState
-		if (
-			nextMetadataState === this.#metadataState &&
-			nextIssueState === this.#issueState
-		) {
-			return
-		}
-
-		const previousSnapshot = this.#snapshot
-		this.#metadataState = nextMetadataState
-		this.#issueState = nextIssueState
-		this.#snapshot = this.#createSnapshot({
-			resolvedUi: previousSnapshot.resolvedUi,
-		})
-		this.#notify()
-	}
-
-	#commitIssueState(issueState: IssueState): void {
-		if (issueState === this.#issueState) {
-			return
-		}
-
-		const previousSnapshot = this.#snapshot
-		this.#issueState = issueState
-		this.#snapshot = this.#createSnapshot({
-			resolvedUi: previousSnapshot.resolvedUi,
-		})
-		this.#notify()
-	}
-
 	#scheduleAutomaticValidation(
 		trigger: "blur" | "change",
 		paths: readonly string[],
@@ -1357,23 +1280,23 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		const exposePaths = paths.map((path) => formatPath(path))
-		this.#cancelScheduledValidation()
+		this.#validationLifecycle.cancelScheduled()
+		const validationOptions = this.#model.runtime.options.validation
 
-		if (
-			trigger === "change" &&
-			(this.#validationOptions.asyncDebounceMs ?? 0) > 0
-		) {
+		if (trigger === "change" && (validationOptions.asyncDebounceMs ?? 0) > 0) {
 			this.#abortNonSubmitValidation()
-			this.#scheduledValidation = setTimeout(() => {
-				this.#scheduledValidation = undefined
-				void this.#runValidation({
-					kind: "nonSubmit",
-					exposeAll: false,
-					exposePaths,
-				}).catch((error: unknown) => {
-					reportValidationHostException(error)
-				})
-			}, this.#validationOptions.asyncDebounceMs)
+			this.#validationLifecycle.schedule(
+				validationOptions.asyncDebounceMs ?? 0,
+				() => {
+					void this.#runValidation({
+						kind: "nonSubmit",
+						exposeAll: false,
+						exposePaths,
+					}).catch((error: unknown) => {
+						reportValidationHostException(error)
+					})
+				},
+			)
 			return
 		}
 
@@ -1387,9 +1310,10 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	}
 
 	#shouldRunAutomaticValidation(trigger: "blur" | "change"): boolean {
-		const mode = this.#hasValidationResult
-			? this.#validationOptions.revalidateMode
-			: this.#validationOptions.mode
+		const validationOptions = this.#model.runtime.options.validation
+		const mode = this.#validationLifecycle.hasResult
+			? validationOptions.revalidateMode
+			: validationOptions.mode
 
 		return mode === trigger
 	}
@@ -1399,224 +1323,96 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		readonly exposeAll: boolean
 		readonly exposePaths: readonly string[]
 	}): Promise<ValidationResult<FormOutput<Schema>>> {
-		const values = this.#values
-		const revision = this.#validationRevision
 		const id = ++this.#nextValidationId
-		const abortController = new AbortController()
-
-		if (options.kind === "nonSubmit") {
-			this.#abortNonSubmitValidation()
-			this.#nonSubmitAbortController = abortController
-		}
-		this.#activeValidation = {
-			id,
+		const values = this.#model.document.values
+		const revision = this.#model.runtime.documentRevision
+		const startedEvent = createValidationStartedEvent({
+			sequence: this.#nextSequence(),
+			attemptId: id,
+			documentRevision: revision,
 			kind: options.kind,
-		}
-
-		let schemaResult:
-			| Promise<unknown>
-			| ReturnType<typeof runStandardSchemaValidation<Schema>>
+			exposeAll: options.exposeAll,
+			exposePaths: options.exposePaths,
+		})
+		this.#reduceRuntimeEvent(startedEvent)
+		let attempt: ReturnType<ValidationLifecycle<Schema>["start"]>
 		try {
-			schemaResult = runStandardSchemaValidation(
-				this.schema,
+			attempt = this.#validationLifecycle.start(
+				id,
 				values,
-				abortController.signal,
+				revision,
+				options.kind,
 			)
 		} catch (error) {
-			this.#failValidation(id)
+			this.#commitRuntimeEvents([
+				createValidationFailedEvent({
+					sequence: this.#nextSequence(),
+					attemptId: id,
+					documentRevision: revision,
+				}),
+			])
 			return Promise.reject(error)
 		}
 
-		if (isPromiseLike(schemaResult)) {
-			this.#commitValidationRuntimeState({
-				...this.#validationState,
-				isValidating: true,
+		if (attempt.asynchronous) this.#publishModel()
+
+		return Promise.resolve(attempt.result)
+			.then((result) => this.#finishValidation(attempt, result))
+			.catch((error: unknown) => {
+				this.#failValidation(id, revision)
+				throw error
 			})
-
-			return Promise.resolve(schemaResult)
-				.then((result) =>
-					this.#finishValidation(
-						id,
-						revision,
-						values,
-						normalizeValidationResult(
-							result as Awaited<
-								ReturnType<typeof runStandardSchemaValidation<Schema>>
-							>,
-						),
-						options,
-					),
-				)
-				.catch((error: unknown) => {
-					this.#failValidation(id)
-					throw error
-				})
-		}
-
-		try {
-			return Promise.resolve(
-				this.#finishValidation(
-					id,
-					revision,
-					values,
-					normalizeValidationResult(schemaResult),
-					options,
-				),
-			)
-		} catch (error) {
-			this.#failValidation(id)
-			return Promise.reject(error)
-		}
 	}
 
 	#finishValidation(
-		id: number,
-		revision: number,
-		values: FormInput<Schema>,
+		attempt: ReturnType<ValidationLifecycle<Schema>["start"]>,
 		result: ValidationResult<FormOutput<Schema>>,
-		options: {
-			readonly exposeAll: boolean
-			readonly exposePaths: readonly string[]
-		},
 	): ValidationResult<FormOutput<Schema>> {
-		const isCurrentAttempt = this.#activeValidation?.id === id
-		const shouldInstall =
-			isCurrentAttempt &&
-			revision === this.#validationRevision &&
-			isDirtyEqual(values, this.#values)
-
-		if (isCurrentAttempt) {
-			if (this.#activeValidation?.kind === "nonSubmit") {
-				this.#nonSubmitAbortController = undefined
-			}
-			this.#activeValidation = undefined
-		}
-
-		if (!shouldInstall) {
-			if (isCurrentAttempt) {
-				this.#commitValidationRuntimeState({
-					...this.#validationState,
-					isValidating: false,
-				})
-			}
-			return result
-		}
-
-		this.#hasValidationResult = true
-		this.#commitIssueAndValidationState(
-			replaceSchemaIssues(
-				this.#issueState,
-				result.success ? [] : result.issues,
-				{
-					all: options.exposeAll,
-					paths: options.exposePaths,
-				},
+		if (!this.#validationLifecycle.finish(attempt.id, true)) return result
+		this.#commitRuntimeEvents([
+			createValidationResolvedEvent(
+				result.success
+					? {
+							sequence: this.#nextSequence(),
+							attemptId: attempt.id,
+							documentRevision: attempt.documentRevision,
+							status: "valid",
+						}
+					: {
+							sequence: this.#nextSequence(),
+							attemptId: attempt.id,
+							documentRevision: attempt.documentRevision,
+							status: "invalid",
+							issues: result.issues,
+						},
 			),
-			{
-				...this.#validationState,
-				isValidating: false,
-				validationStatus: result.success ? "valid" : "invalid",
-			},
-		)
+		])
 
 		return result
 	}
 
-	#failValidation(id: number): void {
-		if (this.#activeValidation?.id !== id) {
-			return
-		}
-
-		if (this.#activeValidation.kind === "nonSubmit") {
-			this.#nonSubmitAbortController = undefined
-		}
-		this.#activeValidation = undefined
-		this.#commitValidationRuntimeState({
-			...this.#validationState,
-			isValidating: false,
-			validationStatus: "unvalidated",
-		})
+	#failValidation(id: number, documentRevision: number): void {
+		if (!this.#validationLifecycle.finish(id, false)) return
+		this.#commitRuntimeEvents([
+			createValidationFailedEvent({
+				sequence: this.#nextSequence(),
+				attemptId: id,
+				documentRevision,
+			}),
+		])
 	}
 
-	#markValuesChangedForValidation(): void {
-		this.#validationRevision += 1
-		this.#cancelScheduledValidation()
-		this.#validationState = createValidationRuntimeState({
-			...this.#validationState,
-			validationStatus: "unvalidated",
-		})
-	}
-
-	#resetValidationRuntime(): void {
-		this.#validationRevision += 1
-		this.#cancelScheduledValidation()
-		this.#abortNonSubmitValidation(false)
-		this.#activeSubmissionId = undefined
-		this.#hasValidationResult = false
-		this.#validationState = createValidationRuntimeState()
-	}
-
-	#cancelScheduledValidation(): void {
-		if (this.#scheduledValidation === undefined) {
-			return
-		}
-
-		clearTimeout(this.#scheduledValidation)
-		this.#scheduledValidation = undefined
-	}
-
-	#abortNonSubmitValidation(notify = true): void {
-		this.#nonSubmitAbortController?.abort()
-		this.#nonSubmitAbortController = undefined
-
-		if (this.#activeValidation?.kind !== "nonSubmit") {
-			return
-		}
-
-		this.#activeValidation = undefined
-		const nextValidationState = createValidationRuntimeState({
-			...this.#validationState,
-			isValidating: false,
-		})
-		if (notify) {
-			this.#commitValidationRuntimeState(nextValidationState)
-			return
-		}
-
-		this.#validationState = nextValidationState
-	}
-
-	#commitIssueAndValidationState(
-		issueState: IssueState,
-		validationState: ValidationRuntimeState,
-	): void {
-		if (
-			issueState === this.#issueState &&
-			isSameValidationRuntimeState(validationState, this.#validationState)
-		) {
-			return
-		}
-
-		const previousSnapshot = this.#snapshot
-		this.#issueState = issueState
-		this.#validationState = validationState
-		this.#snapshot = this.#createSnapshot({
-			resolvedUi: previousSnapshot.resolvedUi,
-		})
-		this.#notify()
-	}
-
-	#commitValidationRuntimeState(validationState: ValidationRuntimeState): void {
-		if (isSameValidationRuntimeState(validationState, this.#validationState)) {
-			return
-		}
-
-		const previousSnapshot = this.#snapshot
-		this.#validationState = validationState
-		this.#snapshot = this.#createSnapshot({
-			resolvedUi: previousSnapshot.resolvedUi,
-		})
-		this.#notify()
+	#abortNonSubmitValidation(): void {
+		const validation = this.#model.runtime.validation
+		if (!this.#validationLifecycle.abortNonSubmit()) return
+		if (validation.status !== "validating") return
+		this.#commitRuntimeEvents([
+			createValidationFailedEvent({
+				sequence: this.#nextSequence(),
+				attemptId: validation.attemptId,
+				documentRevision: validation.documentRevision,
+			}),
+		])
 	}
 
 	#applyActionSuccess(
@@ -1636,15 +1432,25 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		const changedPaths = normalizeChangedPaths(options.changedPaths)
-		const nextIssueState = replaceServerIssues(
-			replaceSchemaIssues(this.#issueState, []),
-			[],
+		const events: FormRuntimeEvent<Context, FormInput<Schema>>[] = []
+		if (changedPaths.length === 0) {
+			events.push(...this.#createValidationResultEvents("valid", []))
+		} else {
+			events.push(
+				createIssuesChangedEvent({
+					sequence: this.#nextSequence(),
+					change: { type: "schema/replace", issues: [] },
+				}),
+			)
+		}
+		events.push(
+			createIssuesChangedEvent({
+				sequence: this.#nextSequence(),
+				change: { type: "server/replace", issues: [] },
+			}),
+			...this.#createSubmissionFinishedEvents(),
 		)
-		this.#commitIssueAndValidationState(nextIssueState, {
-			...this.#validationState,
-			isSubmitting: false,
-			validationStatus: changedPaths.length === 0 ? "valid" : "unvalidated",
-		})
+		this.#commitRuntimeEvents(events)
 	}
 
 	#applyActionError(
@@ -1675,16 +1481,18 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			serverIssues.push(toImperativeServerIssue(issue))
 		}
 
-		const nextIssueState = replaceServerIssues(
-			replaceSchemaIssues(this.#issueState, schemaIssues, { all: true }),
-			serverIssues,
-			{ all: true },
-		)
-		this.#commitIssueAndValidationState(nextIssueState, {
-			...this.#validationState,
-			isSubmitting: false,
-			validationStatus: "invalid",
-		})
+		this.#commitRuntimeEvents([
+			...this.#createValidationResultEvents("invalid", schemaIssues),
+			createIssuesChangedEvent({
+				sequence: this.#nextSequence(),
+				change: {
+					type: "server/replace",
+					issues: serverIssues,
+					exposeAll: true,
+				},
+			}),
+			...this.#createSubmissionFinishedEvents(),
+		])
 
 		if (staleSchema) {
 			queueMicrotask(() => {
@@ -1701,18 +1509,20 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	#resetBaselineTo(values: FormInput<Schema>): void {
 		const nextBaselineValues = cloneAndFreezeValue(values)
-		const previousSnapshot = this.#snapshot
-		this.#baselineValues = nextBaselineValues
-		this.#metadataState = createInitialMetadataState(
+		const rowIdentity = reconcileRowIdentityState(
 			this.definition,
-			this.#values,
+			nextBaselineValues,
+			this.#model.document.rowIdentity,
 		)
-		this.#issueState = createIssueState()
-		this.#resetValidationRuntime()
-		this.#snapshot = this.#createSnapshot({
-			previousResolvedUi: previousSnapshot.resolvedUi,
-		})
-		this.#notify()
+		const baselineDocument = createFormDocument(nextBaselineValues, rowIdentity)
+		this.#validationLifecycle.invalidate(true)
+		this.#commitRuntimeEvents([
+			createRuntimeResetEvent({
+				sequence: this.#nextSequence(),
+				baseline: "replaced",
+				baselineDocument,
+			}),
+		])
 	}
 
 	#callBeforeUpdate(
@@ -1729,11 +1539,11 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		try {
 			return beforeUpdate(
 				Object.freeze({
-					currentValues: clonePublicValue(this.#values),
+					currentValues: clonePublicValue(this.#model.document.values),
 					nextValues: clonePublicValue(nextValues),
 					changes: changes as readonly ValueChange[],
 					source,
-					context: this.#context as Readonly<Context>,
+					context: this.#model.runtime.context,
 				}),
 			)
 		} finally {
@@ -1749,21 +1559,131 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 	}
 
-	#notify(): void {
-		for (const subscription of [...this.#subscriptions]) {
-			if (!this.#subscriptions.has(subscription)) {
-				continue
-			}
+	#createValidationResultEvents(
+		status: "valid" | "invalid",
+		issues: readonly FormIssue[],
+	): readonly FormRuntimeEvent<Context, FormInput<Schema>>[] {
+		const id = ++this.#nextValidationId
+		const revision = this.#model.runtime.documentRevision
+		return [
+			createValidationStartedEvent({
+				sequence: this.#nextSequence(),
+				attemptId: id,
+				documentRevision: revision,
+				kind: "submit",
+				exposeAll: true,
+			}),
+			createValidationResolvedEvent(
+				status === "valid"
+					? {
+							sequence: this.#nextSequence(),
+							attemptId: id,
+							documentRevision: revision,
+							status,
+						}
+					: {
+							sequence: this.#nextSequence(),
+							attemptId: id,
+							documentRevision: revision,
+							status,
+							issues,
+						},
+			),
+		]
+	}
 
-			const nextSelected = subscription.selector(this.#snapshot)
-			if (subscription.equalityFn(subscription.selected, nextSelected)) {
-				continue
-			}
+	#createSubmissionFinishedEvents(): readonly FormRuntimeEvent<
+		Context,
+		FormInput<Schema>
+	>[] {
+		const submission = this.#model.runtime.submission
+		if (submission.status !== "submitting") return []
+		return [
+			createSubmissionFinishedEvent({
+				sequence: this.#nextSequence(),
+				attemptId: submission.attemptId,
+				documentRevision: submission.documentRevision,
+			}),
+		]
+	}
 
-			const previousSelected = subscription.selected
-			subscription.selected = nextSelected
-			subscription.listener(nextSelected, previousSelected)
+	#nextSequence(): number {
+		return ++this.#nextEventSequence
+	}
+
+	#reduceRuntimeEvent(
+		event: FormRuntimeEvent<Context, FormInput<Schema>>,
+	): void {
+		const runtime = reduceFormRuntime(
+			this.#model.runtime,
+			event,
+			this.#model.document,
+		)
+		if (runtime === this.#model.runtime) return
+		this.#model = Object.freeze({ ...this.#model, runtime })
+	}
+
+	#reduceDocumentEvent(event: FormDocumentEvent<FormInput<Schema>>): void {
+		const previousDocument = this.#model.document
+		const document = reduceFormDocument(previousDocument, event)
+		const runtime = reduceFormRuntime(
+			this.#model.runtime,
+			event,
+			document,
+			previousDocument,
+		)
+		this.#model = Object.freeze({ document, runtime })
+	}
+
+	#commitRuntimeEvents(
+		events: readonly FormRuntimeEvent<Context, FormInput<Schema>>[],
+	): void {
+		const previousRuntime = this.#model.runtime
+		for (const event of events) this.#reduceRuntimeEvent(event)
+		if (this.#model.runtime !== previousRuntime) this.#publishModel()
+	}
+
+	#publishModel(): void {
+		this.#publication.publish(this.#createSnapshot())
+	}
+
+	restoreDocument(
+		document: FormDocument<FormInput<Schema>>,
+		origin: RestoreOrigin,
+	): void {
+		this.#assertValueCommandAllowed()
+		if (this.#activeBatch !== undefined) {
+			throw new TypeError("restoreDocument cannot be called inside a batch")
 		}
+		this.#validationLifecycle.invalidate()
+		this.#reduceDocumentEvent(
+			createDocumentRestoredEvent({
+				sequence: this.#nextSequence(),
+				document,
+				origin,
+				history: "skip",
+			}),
+		)
+		const runtime = this.#model.runtime
+		const resolvedUi = resolveUi(
+			this.definition,
+			this.#model.document.values,
+			runtime.context as Context,
+			{
+				disabled: runtime.options.disabled,
+				readOnly: runtime.options.readOnly,
+				previous: runtime.resolvedUi,
+			},
+		)
+		this.#reduceRuntimeEvent(
+			createRuntimeReplacedEvent({
+				sequence: this.#nextSequence(),
+				context: runtime.context as Context,
+				runtimeOptions: runtime.options,
+				resolvedUi,
+			}),
+		)
+		this.#publishModel()
 	}
 }
 
@@ -1899,29 +1819,6 @@ function isStaleServerIssue(
 	return (
 		issue.path === undefined ||
 		changedPaths.some((path) => pathsOverlap(issue.path as string, path))
-	)
-}
-
-function createValidationRuntimeState(
-	state: Partial<ValidationRuntimeState> = {},
-): ValidationRuntimeState {
-	return Object.freeze({
-		isValidating: state.isValidating === true,
-		isSubmitting: state.isSubmitting === true,
-		validationStatus: state.validationStatus ?? "unvalidated",
-		submitCount: state.submitCount ?? 0,
-	})
-}
-
-function isSameValidationRuntimeState(
-	left: ValidationRuntimeState,
-	right: ValidationRuntimeState,
-): boolean {
-	return (
-		left.isValidating === right.isValidating &&
-		left.isSubmitting === right.isSubmitting &&
-		left.validationStatus === right.validationStatus &&
-		left.submitCount === right.submitCount
 	)
 }
 

@@ -1,3 +1,4 @@
+import { reconcileRowIdentityPaths } from "./array-state.js"
 import type {
 	DocumentCommittedEvent,
 	FieldBlurredEvent,
@@ -7,6 +8,7 @@ import type {
 	IssuesChange,
 	IssuesChangedEvent,
 	RuntimeReplacedEvent,
+	RuntimeResetEvent,
 	SubmissionFinishedEvent,
 	SubmissionStartedEvent,
 	ValidationFailedEvent,
@@ -27,6 +29,7 @@ import {
 	exposeIssuePaths,
 	type FormIssue,
 	type ImperativeFormIssue,
+	reconcileIssueStateRowIdentity,
 	replaceSchemaIssues,
 	replaceServerIssues,
 	setImperativeIssues,
@@ -214,16 +217,19 @@ export function createIssuesChangedEvent(options: {
 
 export function reduceFormRuntime<Input, Context>(
 	state: FormRuntimeState<Context, Input>,
-	event: FormRuntimeEvent<Context> | FormDocumentEvent<Input>,
+	event: FormRuntimeEvent<Context, Input> | FormDocumentEvent<Input>,
 	document: FormDocument<Input>,
+	previousDocument: FormDocument<Input> = document,
 ): FormRuntimeState<Context, Input> {
 	switch (event.type) {
 		case "document/committed":
-			return reduceDocumentCommit(state, event, document)
+			return reduceDocumentCommit(state, event, document, previousDocument)
 		case "document/restored":
-			return reduceDocumentRestore(state)
+			return reduceDocumentRestore(state, document, previousDocument)
 		case "runtime/replaced":
 			return reduceRuntimeReplacement(state, event)
+		case "runtime/reset":
+			return reduceRuntimeReset(state, event, document)
 		case "field/touched":
 			return reduceTouched(state, event.path, false)
 		case "field/blurred":
@@ -275,6 +281,7 @@ function reduceDocumentCommit<Input, Context>(
 	state: FormRuntimeState<Context, Input>,
 	event: DocumentCommittedEvent<Input>,
 	document: FormDocument<Input>,
+	previousDocument: FormDocument<Input>,
 ): FormRuntimeState<Context, Input> {
 	const documentRevision = state.documentRevision + 1
 	if (event.baseline === "replaced") {
@@ -290,22 +297,93 @@ function reduceDocumentCommit<Input, Context>(
 
 	return replaceRuntimeState(state, {
 		documentRevision,
+		touchedPaths: reconcileRowIdentityPaths(
+			state.touchedPaths,
+			previousDocument.rowIdentity,
+			document.rowIdentity,
+		),
 		issues: clearServerIssuesForChanges(
-			state.issues,
-			event.changes.map((change) => change.path),
+			reconcileIssueStateRowIdentity(
+				state.issues,
+				previousDocument.rowIdentity,
+				document.rowIdentity,
+			),
+			[
+				...event.changes.map((change) => change.path),
+				...event.rowIdentityChanges.flatMap(getRowIdentityChangedPaths),
+			],
 		),
 		validation: markValidationUnvalidated(state.validation, documentRevision),
 	})
 }
 
+function getRowIdentityChangedPaths(
+	change: DocumentCommittedEvent<unknown>["rowIdentityChanges"][number],
+): readonly string[] {
+	if (change.type === "array/path-reindexed") {
+		return [change.previousPath, change.path]
+	}
+	if (change.type === "array/paths-reindexed") {
+		return change.paths.flatMap((path) => [path.previousPath, path.path])
+	}
+	return [change.path]
+}
+
 function reduceDocumentRestore<Input, Context>(
 	state: FormRuntimeState<Context, Input>,
+	document: FormDocument<Input>,
+	previousDocument: FormDocument<Input>,
 ): FormRuntimeState<Context, Input> {
 	const documentRevision = state.documentRevision + 1
 	return replaceRuntimeState(state, {
 		documentRevision,
-		issues: replaceServerIssues(state.issues, []),
+		touchedPaths: reconcileRowIdentityPaths(
+			state.touchedPaths,
+			previousDocument.rowIdentity,
+			document.rowIdentity,
+		),
+		issues: replaceServerIssues(
+			reconcileIssueStateRowIdentity(
+				state.issues,
+				previousDocument.rowIdentity,
+				document.rowIdentity,
+			),
+			[],
+		),
 		validation: markValidationUnvalidated(state.validation, documentRevision),
+	})
+}
+
+export function createRuntimeResetEvent<Input>(options: {
+	readonly sequence: number
+	readonly baseline: RuntimeResetEvent<Input>["baseline"]
+	readonly baselineDocument?: FormDocument<Input>
+}): RuntimeResetEvent<Input> {
+	assertEventSequence(options.sequence)
+	return Object.freeze({
+		type: "runtime/reset",
+		sequence: options.sequence,
+		baseline: options.baseline,
+		...(options.baselineDocument === undefined
+			? {}
+			: { baselineDocument: options.baselineDocument }),
+	})
+}
+
+function reduceRuntimeReset<Input, Context>(
+	state: FormRuntimeState<Context, Input>,
+	event: RuntimeResetEvent<Input>,
+	document: FormDocument<Input>,
+): FormRuntimeState<Context, Input> {
+	return replaceRuntimeState(state, {
+		baselineDocument:
+			event.baseline === "replaced"
+				? (event.baselineDocument ?? document)
+				: state.baselineDocument,
+		touchedPaths: new Set(),
+		issues: createIssueState(),
+		validation: createIdleValidationState(state.documentRevision),
+		submission: createIdleSubmissionState(),
 	})
 }
 
@@ -444,17 +522,10 @@ function reduceValidationFailed<Input, Context>(
 }
 
 function markValidationUnvalidated(
-	validation: ValidationState,
+	_validation: ValidationState,
 	documentRevision: number,
 ): ValidationState {
-	if (validation.status === "idle") {
-		return createIdleValidationState(documentRevision)
-	}
-
-	return Object.freeze({
-		...validation,
-		validationStatus: "unvalidated",
-	})
+	return createIdleValidationState(documentRevision)
 }
 
 function createIdleValidationState(

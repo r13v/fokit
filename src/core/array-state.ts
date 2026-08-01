@@ -237,6 +237,135 @@ export function cloneRowIdentityState(
 	)
 }
 
+export function reconcileRowIdentityState<Schema extends StandardSchema>(
+	definition: NormalizedFormDefinition<Schema>,
+	values: FormInput<Schema>,
+	previous: RowIdentityState,
+): RowIdentityState {
+	const initial = createRowIdentityState(definition, values)
+	const previousEntries = rowIdentityEntries(previous)
+	const nextEntries = Object.create(null) as Record<string, RowIdentityEntry>
+
+	for (const [path, entry] of Object.entries(rowIdentityEntries(initial))) {
+		nextEntries[path] = reconcileRowState(
+			path,
+			previousEntries[path] ?? entry,
+			entry.keys.length,
+		)
+	}
+
+	return freezeRowIdentityState(nextEntries)
+}
+
+export function createRowIdentityChanges(
+	previous: RowIdentityState,
+	next: RowIdentityState,
+): readonly RowIdentityChange[] {
+	const previousEntries = rowIdentityEntries(previous)
+	const nextEntries = rowIdentityEntries(next)
+	const changes: RowIdentityChange[] = []
+
+	for (const path of Object.keys(previousEntries)) {
+		if (nextEntries[path] === undefined) {
+			changes.push(Object.freeze({ type: "array/deleted", path }))
+		}
+	}
+
+	for (const [path, entry] of Object.entries(nextEntries)) {
+		const previousEntry = previousEntries[path]
+		if (
+			previousEntry !== undefined &&
+			previousEntry.nextKeyIndex === entry.nextKeyIndex &&
+			previousEntry.keys.length === entry.keys.length &&
+			previousEntry.keys.every((key, index) => key === entry.keys[index])
+		) {
+			continue
+		}
+
+		changes.push(
+			Object.freeze({
+				type: "array/replaced",
+				path,
+				keys: entry.keys,
+				nextKeyIndex: entry.nextKeyIndex,
+			}),
+		)
+	}
+
+	return Object.freeze(changes)
+}
+
+export function reconcileRowIdentityPaths(
+	paths: Iterable<string>,
+	previous: RowIdentityState,
+	next: RowIdentityState,
+): ReadonlySet<string> {
+	const originalPaths = [...paths]
+	const previousEntries = rowIdentityEntries(previous)
+	const nextEntries = rowIdentityEntries(next)
+	const orderedPaths = Object.keys(previousEntries).sort(
+		(left, right) => parsePath(left).length - parsePath(right).length,
+	)
+	const result = new Set<string>()
+
+	for (const originalPath of originalPaths) {
+		let path: string | undefined = originalPath
+		for (const previousArrayPath of orderedPaths) {
+			if (path === undefined) break
+			const currentArrayPath = reconcileParentArrayPath(
+				previousArrayPath,
+				previousEntries,
+				nextEntries,
+				orderedPaths,
+			)
+			if (currentArrayPath === undefined) continue
+			path = reindexArrayPath(
+				path,
+				currentArrayPath,
+				previousEntries[previousArrayPath]?.keys ?? [],
+				nextEntries[currentArrayPath]?.keys ?? [],
+			)
+		}
+		if (path !== undefined) result.add(path)
+	}
+
+	if (
+		paths instanceof Set &&
+		result.size === paths.size &&
+		[...result].every((path) => paths.has(path))
+	) {
+		return paths
+	}
+
+	return result
+}
+
+function reconcileParentArrayPath(
+	path: string,
+	previousEntries: RowIdentityEntries,
+	nextEntries: RowIdentityEntries,
+	orderedPaths: readonly string[],
+): string | undefined {
+	let reconciled: string | undefined = path
+	for (const parentPath of orderedPaths) {
+		if (parentPath === path || reconciled === undefined) break
+		const nextParentPath = reconcileParentArrayPath(
+			parentPath,
+			previousEntries,
+			nextEntries,
+			orderedPaths,
+		)
+		if (nextParentPath === undefined) continue
+		reconciled = reindexArrayPath(
+			reconciled,
+			parentPath,
+			previousEntries[parentPath]?.keys ?? [],
+			nextEntries[nextParentPath]?.keys ?? [],
+		)
+	}
+	return reconciled
+}
+
 export function reduceRowIdentity(
 	rowIdentity: RowIdentityState,
 	changes: readonly RowIdentityChange[],
@@ -406,40 +535,7 @@ function assertExpectedKey(
 	}
 }
 
-export function reindexTouchedArrayPaths(
-	touchedPaths: ReadonlySet<string>,
-	arrayPath: string,
-	previousKeys: readonly string[],
-	nextKeys: readonly string[],
-): ReadonlySet<string> {
-	if (touchedPaths.size === 0) {
-		return touchedPaths
-	}
-
-	let changed = false
-	const nextTouchedPaths = new Set<string>()
-
-	for (const touchedPath of touchedPaths) {
-		const nextPath = reindexArrayPath(
-			touchedPath,
-			arrayPath,
-			previousKeys,
-			nextKeys,
-		)
-
-		if (nextPath === undefined) {
-			changed = true
-			continue
-		}
-
-		changed ||= nextPath !== touchedPath
-		nextTouchedPaths.add(nextPath)
-	}
-
-	return changed ? nextTouchedPaths : touchedPaths
-}
-
-export function reindexArrayPath(
+function reindexArrayPath(
 	path: string,
 	arrayPath: string,
 	previousKeys: readonly string[],

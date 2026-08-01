@@ -1,8 +1,4 @@
-import {
-	createRowIdentityState,
-	getRowIdentityKeys,
-	type RowIdentityState,
-} from "./array-state.js"
+import { getRowIdentityKeys, type RowIdentityState } from "./array-state.js"
 import type {
 	NormalizedArrayNode,
 	NormalizedFormDefinition,
@@ -38,58 +34,10 @@ export type FormMetadata = {
 	readonly arraysByPath: Readonly<Record<string, ArrayMetadata>>
 }
 
-export type MetadataState = {
-	readonly touchedPaths: ReadonlySet<string>
-	readonly rowIdentity: RowIdentityState
-	readonly baselineRowIdentity: RowIdentityState
-}
-
-export type CreateMetadataStateOptions = {
-	readonly touchedPaths?: Iterable<string>
-	readonly rowIdentity?: RowIdentityState
-	readonly baselineRowIdentity?: RowIdentityState
-}
-
 type MetadataDerivationState = {
 	readonly touchedPaths: ReadonlySet<string>
 	readonly rowIdentity: RowIdentityState
 	readonly baselineRowIdentity: RowIdentityState
-}
-
-const emptyRowIdentity = Object.freeze(Object.create(null)) as RowIdentityState
-
-export function createMetadataState(
-	options: CreateMetadataStateOptions = {},
-): MetadataState {
-	return Object.freeze({
-		touchedPaths: new Set(options.touchedPaths),
-		rowIdentity: options.rowIdentity ?? emptyRowIdentity,
-		baselineRowIdentity: options.baselineRowIdentity ?? emptyRowIdentity,
-	})
-}
-
-export function createInitialMetadataState<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
-	values: FormInput<Schema>,
-): MetadataState {
-	const rowIdentity = createRowIdentityState(definition, values)
-	return createMetadataState({ rowIdentity, baselineRowIdentity: rowIdentity })
-}
-
-export function touchMetadataPath(
-	state: MetadataState,
-	path: string,
-): MetadataState {
-	const touchedPaths = addTouchedPath(state.touchedPaths, path)
-	if (touchedPaths === state.touchedPaths) {
-		return state
-	}
-
-	return createMetadataState({
-		touchedPaths,
-		rowIdentity: state.rowIdentity,
-		baselineRowIdentity: state.baselineRowIdentity,
-	})
 }
 
 export function addTouchedPath(

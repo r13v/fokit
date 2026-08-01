@@ -467,39 +467,39 @@ optional features can be correct.
 - Modify: src/core/validation.test.ts
 - Modify: src/core/array-state.test.ts
 
-- [ ] Make CoreFormStore own one FormModel rather than separate values,
+- [x] Make CoreFormStore own one FormModel rather than separate values,
   baseline, metadata, issue, context, and validation fields.
-- [ ] Convert setValue, setValues, unsetValue, array commands, batch, reset,
+- [x] Convert setValue, setValues, unsetValue, array commands, batch, reset,
   context/options replacement, touch/blur, issue commands, validation, and
   submission bookkeeping into normalized events reduced by
   reduceFormDocument and the runtime reducer.
-- [ ] Keep transaction proposal, valuePolicy convergence, beforeUpdate, and
+- [x] Keep transaction proposal, valuePolicy convergence, beforeUpdate, and
   effective change normalization in the coordinator before the reducer commit.
-- [ ] Extract selector subscription state and notification into
+- [x] Extract selector subscription state and notification into
   src/core/publication.ts, validation timers/aborts/schema effects into
   src/core/validation-lifecycle.ts, and focus-target selection into
   src/core/focus.ts.
-- [ ] Add a package-private restoreDocument operation that accepts an immutable
+- [x] Add a package-private restoreDocument operation that accepts an immutable
   target FormDocument and origin. It must reduce one DocumentRestoredEvent
   without beforeUpdate, afterUpdate, valuePolicy, automatic validation,
   itemDefault, schemas, or mutation callbacks.
-- [ ] During restore, invalidate captured validation revisions, return changed
+- [x] During restore, invalidate captured validation revisions, return changed
   values to unvalidated, remove stale server issues, reconcile touched/issues
   against row identity, preserve the clean baseline, and retain current
   context/options.
-- [ ] Implement the selected reset semantics: reset(nextValues) installs the
+- [x] Implement the selected reset semantics: reset(nextValues) installs the
   actual committed document as the clean baseline; reset() proposes the stored
   baseline document as an ordinary undoable document transition; same-value
   reset still clears the required runtime state without creating a document
   event.
-- [ ] Derive the next snapshot before notifying and publish at most once per
+- [x] Derive the next snapshot before notifying and publish at most once per
   transition. Publish exactly once when the derived snapshot changed; a
   committed identity event such as repeated blur does not notify form
   subscribers.
-- [ ] Add restore tests for nested arrays, suppressed effects, baseline/touch
+- [x] Add restore tests for nested arrays, suppressed effects, baseline/touch
   preservation, stale validation/server results, metadata reconciliation, and
   one coherent subscriber snapshot.
-- [ ] Run npx vitest run src/core/restore.test.ts src/core/form-store.test.ts
+- [x] Run npx vitest run src/core/restore.test.ts src/core/form-store.test.ts
   src/core/reset.test.ts src/core/subscriptions.test.ts
   src/core/validation.test.ts src/core/array-state.test.ts.
 

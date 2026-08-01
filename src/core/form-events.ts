@@ -100,6 +100,12 @@ export type RuntimeReplacedEvent<Context> = RuntimeEventBase & {
 	readonly resolvedUi: ResolvedUiState<Context>
 }
 
+export type RuntimeResetEvent<Input> = RuntimeEventBase & {
+	readonly type: "runtime/reset"
+	readonly baseline: BaselineDisposition
+	readonly baselineDocument?: FormDocument<Input>
+}
+
 export type ValidationStartedEvent = RuntimeEventBase & {
 	readonly type: "validation/started"
 	readonly attemptId: number
@@ -182,8 +188,9 @@ export type IssuesChangedEvent = RuntimeEventBase & {
 	readonly change: IssuesChange
 }
 
-export type FormRuntimeEvent<Context> =
+export type FormRuntimeEvent<Context, Input = unknown> =
 	| RuntimeReplacedEvent<Context>
+	| RuntimeResetEvent<Input>
 	| ValidationStartedEvent
 	| ValidationResolvedEvent
 	| ValidationFailedEvent
@@ -195,4 +202,4 @@ export type FormRuntimeEvent<Context> =
 
 export type FormEvent<Input, Context> =
 	| FormDocumentEvent<Input>
-	| FormRuntimeEvent<Context>
+	| FormRuntimeEvent<Context, Input>

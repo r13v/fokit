@@ -291,6 +291,20 @@ describe("array commands and row metadata", () => {
 		])
 	})
 
+	it("restores the stored baseline row identity when reset restores baseline values", () => {
+		const form = createAccountStore()
+		const initialKeys = contactKeys(form)
+
+		form.move("contacts", 0, 1)
+		expect(contactKeys(form)).toEqual([initialKeys[1], initialKeys[0]])
+
+		form.reset()
+
+		expect(form.getValues()).toEqual(defaultValues)
+		expect(contactKeys(form)).toEqual(initialKeys)
+		expect(form.getSnapshot().isDirty).toBe(false)
+	})
+
 	it("keeps nested array descendants clean when a parent row moves first", () => {
 		const form = createGroupStore()
 		const originalMemberKey =

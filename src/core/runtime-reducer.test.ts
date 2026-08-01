@@ -529,6 +529,7 @@ describe("reduceFormRuntime", () => {
 		function discriminate(event: FormRuntimeEvent<Context>): string {
 			switch (event.type) {
 				case "runtime/replaced":
+				case "runtime/reset":
 				case "validation/started":
 				case "validation/resolved":
 				case "validation/failed":

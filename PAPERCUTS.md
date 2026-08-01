@@ -58,3 +58,10 @@ the valid optional leaf `groups.0.members.1.nickname`, although one-level array
 optional paths are covered by type tests. Add a nested-array type case and inspect
 the strict path-value recursion; the characterization uses a top-level optional
 field to keep this task scoped to existing behavior.
+
+## 2026-08-01 19:55 — gpt-5.6-sol
+
+Removing reducer-migration dead code → a multi-file patch failed because Biome
+had reordered one import block after the patch context was drafted. Inspect the
+formatted import order before applying a broad cleanup patch, or split it into
+smaller file-local patches.

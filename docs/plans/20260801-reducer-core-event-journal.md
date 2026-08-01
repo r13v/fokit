@@ -314,26 +314,26 @@ behavior explicit without creating a general compatibility promise.
 - Modify: src/core/value-policy.test.ts
 - Modify: src/react19/result-sync.test.ts
 
-- [ ] Add a characterization case proving that values and nested array keys
+- [x] Add a characterization case proving that values and nested array keys
   change coherently for append, insert, move, remove, setValues, unsetValue,
   batch, and reset.
-- [ ] Add a case proving that context/options replacement can trigger
+- [x] Add a case proving that context/options replacement can trigger
   valuePolicy without resetting baseline, touched paths, or unrelated issues.
-- [ ] Keep context replacement and a resulting valuePolicy document change as
+- [x] Keep context replacement and a resulting valuePolicy document change as
   two explicit transactions: publish the runtime-context snapshot first, then
   publish the effective document snapshot. This separation is part of the new
   event model, not a backward-compatibility shim.
-- [ ] Add reset cases distinguishing reset() to the existing clean baseline
+- [x] Add reset cases distinguishing reset() to the existing clean baseline
   from reset(nextValues), including same-value resets and hook replacement.
-- [ ] Add validation cases proving that a newer value revision makes captured
+- [x] Add validation cases proving that a newer value revision makes captured
   validation and server results stale.
-- [ ] Add subscription cases proving one coherent notification per committed
+- [x] Add subscription cases proving one coherent notification per committed
   state transition, the selected two-notification context/valuePolicy sequence,
   and no notification for true snapshot no-ops.
-- [ ] Add a React 19 result-sync case proving why effective committed paths,
+- [x] Add a React 19 result-sync case proving why effective committed paths,
   rather than requested paths or afterUpdate alone, determine Action result
   staleness.
-- [ ] Run npx vitest run src/core/form-store.test.ts
+- [x] Run npx vitest run src/core/form-store.test.ts
   src/core/array-state.test.ts src/core/reset.test.ts
   src/core/validation.test.ts src/core/subscriptions.test.ts
   src/core/value-policy.test.ts

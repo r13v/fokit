@@ -79,6 +79,50 @@ describe("form reset", () => {
 		expect(listener).toHaveBeenLastCalledWith(false, true)
 	})
 
+	it("distinguishes restoring the stored baseline from installing same current values", () => {
+		const restoreBeforeUpdate = vi.fn()
+		const restoreAfterUpdate = vi.fn()
+		const restore = createProfileStore({
+			beforeUpdate: restoreBeforeUpdate,
+			afterUpdate: restoreAfterUpdate,
+		})
+		restore.setValue("name", "Grace")
+		restore.blur("name")
+		restoreBeforeUpdate.mockClear()
+		restoreAfterUpdate.mockClear()
+
+		restore.reset()
+
+		expect(restore.getValues()).toEqual(defaultValues)
+		expect(restore.getSnapshot().isDirty).toBe(false)
+		expect(restore.getSnapshot().isTouched).toBe(false)
+		expect(restoreBeforeUpdate).toHaveBeenCalledTimes(1)
+		expect(restoreAfterUpdate).toHaveBeenCalledTimes(1)
+
+		const installBeforeUpdate = vi.fn()
+		const installAfterUpdate = vi.fn()
+		const install = createProfileStore({
+			beforeUpdate: installBeforeUpdate,
+			afterUpdate: installAfterUpdate,
+		})
+		install.setValue("name", "Grace")
+		install.blur("name")
+		installBeforeUpdate.mockClear()
+		installAfterUpdate.mockClear()
+		const currentValues = install.getValues()
+
+		install.reset(currentValues)
+
+		expect(install.getValues()).toEqual(currentValues)
+		expect(install.getSnapshot().isDirty).toBe(false)
+		expect(install.getSnapshot().isTouched).toBe(false)
+		expect(installBeforeUpdate).not.toHaveBeenCalled()
+		expect(installAfterUpdate).not.toHaveBeenCalled()
+
+		install.setValue("name", "Ada")
+		expect(install.getSnapshot().isDirty).toBe(true)
+	})
+
 	it("passes changed reset values through hooks and makes committed values the clean baseline", () => {
 		const beforeUpdate = vi.fn()
 		const afterUpdate = vi.fn()

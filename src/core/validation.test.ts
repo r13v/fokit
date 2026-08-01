@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it, vi } from "vitest"
 
+import { applyActionResult, startActionSubmission } from "./form-store.js"
 import type {
 	ControlMetadata,
 	StandardSchema,
@@ -532,6 +533,49 @@ describe("Standard Schema validation", () => {
 			expect.objectContaining({ message: "Current email is invalid" }),
 		])
 		expect(form.getSnapshot().isValidating).toBe(false)
+	})
+
+	it("does not attach captured server results to paths changed by a newer value revision", () => {
+		const form = createAccountForm()
+		const attempt = startActionSubmission(form)
+
+		form.setValue("email", "grace@example.test")
+		attempt.recordChanges(["email"])
+		attempt.finish()
+		applyActionResult(
+			form,
+			{
+				status: "error",
+				issues: [
+					{
+						source: "server",
+						message: "Submitted form is stale",
+					},
+					{
+						source: "server",
+						path: "email",
+						message: "Submitted email is unavailable",
+					},
+					{
+						source: "server",
+						path: "name",
+						message: "Name still needs review",
+					},
+				],
+			},
+			{
+				input: attempt.input,
+				changedPaths: [...attempt.changedPaths],
+			},
+		)
+
+		const snapshot = form.getSnapshot()
+		expect(snapshot.values.email).toBe("grace@example.test")
+		expect(snapshot.errors.form).toEqual([])
+		expect(snapshot.errors.fields.has("email")).toBe(false)
+		expect(snapshot.errors.fields.get("name")).toEqual([
+			expect.objectContaining({ message: "Name still needs review" }),
+		])
 	})
 
 	it("validates concrete nested array paths for current rows", async () => {

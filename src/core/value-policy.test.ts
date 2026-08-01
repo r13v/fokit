@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-
+import { replaceFormStoreRuntime } from "./form-store.js"
 import type {
 	ControlMetadata,
 	FormStoreOptions,
@@ -165,23 +165,40 @@ describe("visibility-driven valuePolicy", () => {
 		)
 	})
 
-	it("runs one separate valuePolicy transaction after a context-only hide", () => {
+	it("publishes runtime replacement before its separate valuePolicy transaction", () => {
 		const beforeUpdate = vi.fn()
 		const afterUpdate = vi.fn()
 		const form = createAccountStore({ beforeUpdate, afterUpdate })
 		const listener = vi.fn()
+		const hiddenContext = {
+			showCompany: false,
+		}
+		const runtimeOptions = {
+			disabled: true,
+		}
+
+		form.blur("kind")
+		form.setErrors([
+			{
+				source: "manual",
+				path: "kind",
+				message: "Keep this unrelated issue",
+			},
+		])
 
 		form.subscribe(
 			(snapshot) => ({
 				showCompany: snapshot.context.showCompany,
+				disabled: snapshot.resolvedUi.disabled,
 				companyName: snapshot.values.companyName,
+				dirty: snapshot.isDirty,
+				touched: snapshot.metadata.fieldsByPath.kind.touched,
+				kindIssue: snapshot.errors.fields.get("kind")?.[0]?.message,
 			}),
 			listener,
 		)
 
-		form.replaceContext({
-			showCompany: false,
-		})
+		replaceFormStoreRuntime(form, hiddenContext, runtimeOptions)
 
 		expect(form.getValues()).toEqual({
 			kind: "company",
@@ -189,11 +206,19 @@ describe("visibility-driven valuePolicy", () => {
 		expect(listener).toHaveBeenCalledTimes(2)
 		expect(listener.mock.calls[0]?.[0]).toEqual({
 			showCompany: false,
+			disabled: true,
 			companyName: "Analytical Engines Ltd",
+			dirty: false,
+			touched: true,
+			kindIssue: "Keep this unrelated issue",
 		})
 		expect(listener.mock.calls[1]?.[0]).toEqual({
 			showCompany: false,
+			disabled: true,
 			companyName: undefined,
+			dirty: true,
+			touched: true,
+			kindIssue: "Keep this unrelated issue",
 		})
 		expect(beforeUpdate).toHaveBeenCalledTimes(1)
 		expect(afterUpdate).toHaveBeenCalledTimes(1)
@@ -214,10 +239,9 @@ describe("visibility-driven valuePolicy", () => {
 			},
 		])
 
-		form.replaceContext({
-			showCompany: false,
-		})
+		replaceFormStoreRuntime(form, hiddenContext, runtimeOptions)
 
+		expect(listener).toHaveBeenCalledTimes(2)
 		expect(beforeUpdate).toHaveBeenCalledTimes(1)
 		expect(afterUpdate).toHaveBeenCalledTimes(1)
 	})

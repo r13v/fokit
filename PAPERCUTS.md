@@ -44,3 +44,17 @@ Reading the accepted proposal, architecture map, store, and package tests in
 parallel → the combined tool output was truncated and hid entire middle
 sections. Keep parallel discovery calls below the aggregate output budget or
 split large source files into focused, non-overlapping reads.
+
+## 2026-08-01 19:16 — gpt-5.6-sol
+
+Running the repository check after adding characterization tests → Biome found
+two formatting/import-order differences in the new tests. Run Biome on touched
+files before the repository-wide validation gate.
+
+## 2026-08-01 19:17 — gpt-5.6-sol
+
+Type-checking a nested-array unset characterization → OptionalFieldPath rejected
+the valid optional leaf `groups.0.members.1.nickname`, although one-level array
+optional paths are covered by type tests. Add a nested-array type case and inspect
+the strict path-value recursion; the characterization uses a top-level optional
+field to keep this task scoped to existing behavior.

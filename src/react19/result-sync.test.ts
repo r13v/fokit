@@ -6,6 +6,7 @@ import { startActionSubmission } from "../core/form-store.js"
 import {
 	createFormStore,
 	type FormStore,
+	type FormStoreOptions,
 	normalizeDefinition,
 } from "../core/index.js"
 import { defineControl } from "../react/control.js"
@@ -112,6 +113,66 @@ describe("React 19 Action result synchronization", () => {
 			"Name still needs review",
 		)
 		expect(validate).toHaveBeenCalledTimes(1)
+	})
+
+	it("uses effective committed paths when requested Action edits are replaced", () => {
+		let attempt: ReturnType<typeof startActionSubmission<Schema>> | undefined
+		const afterUpdate = vi.fn<
+			NonNullable<FormStoreOptions<Schema>["afterUpdate"]>
+		>((event) => {
+			// Restore will intentionally suppress this hook. The future commit timeline
+			// must preserve the effective-path behavior characterized here.
+			attempt?.recordChanges(event.changes.map((change) => change.path))
+		})
+		const form = createStore({
+			beforeUpdate: (event) =>
+				event.source === "imperative"
+					? [
+							{
+								type: "set",
+								path: "email",
+								value: "grace@example.test",
+							},
+						]
+					: undefined,
+			afterUpdate,
+		})
+		attempt = startActionSubmission(form)
+
+		form.setValue("name", "Grace")
+
+		expect(form.getSnapshot().values).toEqual({
+			name: "Ada",
+			email: "grace@example.test",
+		})
+		expect([...attempt.changedPaths]).toEqual(["email"])
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
+
+		syncActionResult(
+			form,
+			{
+				status: "error",
+				issues: [
+					{
+						source: "server",
+						message: "Requested name is invalid",
+						path: "name",
+					},
+					{
+						source: "server",
+						message: "Committed email is invalid",
+						path: "email",
+					},
+				],
+			},
+			attempt,
+		)
+
+		const snapshot = form.getSnapshot()
+		expect(snapshot.errors.fields.get("name")).toEqual([
+			expect.objectContaining({ message: "Requested name is invalid" }),
+		])
+		expect(snapshot.errors.fields.has("email")).toBe(false)
 	})
 
 	it("keeps pending edits while making the submitted snapshot the reset baseline", () => {
@@ -228,7 +289,11 @@ describe("React 19 Action result synchronization", () => {
 })
 
 function createStore(
-	options: { readonly validate?: Schema["~standard"]["validate"] } = {},
+	options: {
+		readonly validate?: Schema["~standard"]["validate"]
+		readonly beforeUpdate?: FormStoreOptions<Schema>["beforeUpdate"]
+		readonly afterUpdate?: FormStoreOptions<Schema>["afterUpdate"]
+	} = {},
 ): FormStore<Schema> {
 	const schema = createSchema(options.validate ?? validateValues)
 	const definition = normalizeDefinition({
@@ -240,6 +305,8 @@ function createStore(
 	return createFormStore({
 		definition,
 		defaultValues: defaultValues(),
+		beforeUpdate: options.beforeUpdate,
+		afterUpdate: options.afterUpdate,
 	})
 }
 

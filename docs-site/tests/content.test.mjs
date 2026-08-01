@@ -1419,11 +1419,10 @@ test("API shell keeps public exports discoverable", async () => {
 
 test("classic submit docs explain the async lifecycle", async () => {
 	const readme = await readRepositoryText("README.md")
-	const tutorial = await readRepositoryText("docs/tutorial.ru.md")
 	const getStarted = await readText("src/pages/get-started.mdx")
 	const api = await readText("src/pages/api.mdx")
 
-	for (const source of [readme, tutorial, getStarted, api]) {
+	for (const source of [readme, getStarted, api]) {
 		assert.match(source, /Promise<void>/)
 		assert.match(source, /form\.reset\(\.\.\.\)/)
 	}
@@ -1594,7 +1593,6 @@ test("bespoke SPA files and temporary migration content are removed", async () =
 
 test("superseded public guides and example copies are deleted", async () => {
 	const readme = await readRepositoryText("README.md")
-	const tutorial = await readRepositoryText("docs/tutorial.ru.md")
 
 	for (const file of supersededRepositoryFiles) {
 		assert.equal(
@@ -1603,7 +1601,6 @@ test("superseded public guides and example copies are deleted", async () => {
 			`${file} should be removed after Vocs parity passes`,
 		)
 		assert.doesNotMatch(readme, new RegExp(escapeRegExp(file)))
-		assert.doesNotMatch(tutorial, new RegExp(escapeRegExp(file)))
 	}
 
 	assert.match(readme, /https:\/\/r13v\.github\.io\/form-please\/get-started/)

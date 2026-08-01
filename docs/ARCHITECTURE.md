@@ -8,8 +8,7 @@ This document is a map of the current implementation. It explains where
 responsibilities live, how data moves through the library, and which
 boundaries changes must preserve.
 
-The [specification](docs/SPEC.md) is the normative product contract. The
-[architecture decision records](docs/adr/) explain why selected boundaries
+[Architecture decision records](docs/adr/) explain why selected boundaries
 exist. When this document disagrees with either the code or the specification,
 investigate the difference instead of treating this document as a new source
 of behavior.

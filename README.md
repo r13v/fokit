@@ -132,10 +132,8 @@ npx skills add r13v/form-please --skill form-please
 - [Async fields](https://r13v.github.io/form-please/guides/async-fields)
 - [React 19 Actions](https://r13v.github.io/form-please/guides/react-19-actions)
 - [API reference](https://r13v.github.io/form-please/api)
-- [Form, Please specification](docs/SPEC.md)
 - [Architecture map](docs/ARCHITECTURE.md)
 - [Styling boundary](docs/adr/0001-styling-and-layout-boundary.md)
-- [Russian tutorial](docs/tutorial.ru.md)
 - [Architecture decisions](docs/adr/)
 
 Canonical, typechecked examples live in

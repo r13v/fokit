@@ -18,6 +18,58 @@ resolver dependencies are bound to one definitely present object schema path
 and erased during definition normalization.
 _Avoid_: Subform, nested form, fragment node
 
+**Form kit snapshot**: An immutable controls-and-slots integration returned by
+`createFormKit` or `kit.extend`. A base kit and each extension are different
+snapshots.
+_Avoid_: Kit configuration, mutable kit
+
+**Form instance**: The imperative state and command owner created by one exact
+form kit snapshot.
+_Avoid_: Form store, form definition
+
+**Form command**: A typed request to perform work against one form instance.
+_Avoid_: Event, committed change
+
+**Form transaction**: A normalized candidate transition that middleware may
+forward, replace, or cancel before it becomes a committed fact.
+_Avoid_: Event, action
+
+**Form event**: An immutable fact produced when a form transaction reaches the
+reducer and commits.
+_Avoid_: Command, proposal, candidate event
+
+**Form event journal**: An optional ordered record of committed form document
+events used by history, replay, or persistence; it is not the live form's
+source of truth.
+_Avoid_: Event store, event-sourced core
+
+**Form middleware**: A Redux-shaped function passed to `kit.createForm`; its
+outer initialization runs once and owns state isolated to the created form.
+_Avoid_: Middleware factory layer, shared middleware state
+
+**Form middleware feature**: A configured form middleware whose typed,
+form-owned handle is retrieved after creation with `feature.handle(form)`.
+_Avoid_: Feature setup, shared feature handle
+
+**DevTools document projection**: The diagnostic representation of historical
+form values and logical row identity sent to Redux DevTools; it is not a full
+runtime snapshot or persistence format.
+_Avoid_: Form snapshot, persisted form
+
+**DevTools revision token**: An opaque per-form key embedded in a DevTools
+document projection and resolved through a bounded in-memory document cache for
+exact local time travel.
+_Avoid_: Serialized form document, history cursor
+
+**History checkpoint**: A complete recorded form document that roots replay and
+marks a boundary that undo and redo cannot cross. Creating a checkpoint does
+not by itself change the form's dirty baseline.
+_Avoid_: History epoch, dirty baseline
+
+**History group**: One undo or redo unit containing one or more consecutive form
+events.
+_Avoid_: Event, transaction
+
 **Loaded baseline**: Complete schema input loaded asynchronously and installed
 as the clean comparison point for one form instance.
 _Avoid_: Async defaults, initial data

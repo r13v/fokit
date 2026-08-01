@@ -6,19 +6,24 @@
 ## Context
 
 Applications may share one product form kit while a single form needs an
-additional control or a local structural slot. Rebuilding the complete kit
+additional control or local structural slot. Rebuilding the complete kit
 manually is possible, but it does not express compatibility or prevent a local
-control from silently replacing an existing contract.
+extension from silently replacing an existing contract.
 
 ## Decision
 
 Every form kit exposes `extend`, which creates an independent snapshot by
-adding controls and partially replacing resolved slots. Control names are
-add-only and collisions fail in TypeScript and at runtime. Definitions retain
-the complete structural registry requirement of the kit that created them, so
-a base definition works with an extension while an extended definition does
-not work with its base or a sibling missing a required control name. Siblings
-with the same complete registry contract remain compatible.
+adding controls and partially replacing resolved slots.
+Control names are add-only and collisions fail in TypeScript and at runtime.
+Definitions retain the complete structural registry requirement of the kit
+that created them, so a base definition works with an extension while an
+extended definition does not work with its base or a sibling missing a required
+control name. Siblings with the same complete registry contract remain
+compatible.
+
+Forms created through `kit.createForm` carry the exact creating kit snapshot's
+runtime identity. `kit.useForm` accepts only forms created by that same snapshot
+and rejects forms from a base, extension, sibling, or structurally equal kit.
 
 ## Considered Options
 
@@ -26,16 +31,21 @@ with the same complete registry contract remain compatible.
   explicit compatibility boundary or collision protection.
 - Last-write-wins control replacement can silently reinterpret field options,
   rendering, and `FormData` serialization in an existing definition.
+- Structural comparison of controls and slots cannot reliably prove that an
+  existing form has the runtime identity expected by a kit.
 - Tracking only the controls actually used by each definition would improve
   portability but substantially complicate inference and public types.
 
 ## Consequences
 
-- Extensions may be chained and may change only slots, only controls, or both.
+- Extensions may be chained and may change slots, controls, or both.
 - `extend({})` is invalid, while inherited resolved slots remain unchanged
   unless explicitly replaced.
 - A definition that must remain portable is created by the lowest common base
   kit.
+- A form instance is intentionally less portable than a definition: bound kit
+  hooks require the exact kit that created it. The global `useForm` remains the
+  escape hatch when kit-bound behavior is not required.
 - TypeScript cannot generate a fresh nominal identity for each `extend` call;
   compatibility follows the complete known registry contract instead.
 - Widening a registry to `ControlDefinitionRegistry` erases known-name

@@ -190,10 +190,10 @@ const kit = createFormKit({ controls: nativeControls })
 const defineLaunch = kit.defineForm(launchSchema)
 const stages = ["identity", "location", "capacity", "publishing"] as const
 const stageLabels = {
-	identity: "Identity",
-	location: "Location",
-	capacity: "Capacity & media",
-	publishing: "Publishing",
+	identity: "Step 1",
+	location: "Step 2",
+	capacity: "Step 3",
+	publishing: "Step 4",
 } satisfies Record<(typeof stages)[number], string>
 const stageValidationPaths = {
 	identity: ["identity"],
@@ -258,7 +258,7 @@ function WizardNavigation() {
 								}}
 								type="button"
 							>
-								{itemIndex + 1}. {stageLabels[item]}
+								{stageLabels[item]}
 							</button>
 						</li>
 					)

@@ -623,6 +623,7 @@ const requiredGuidePageContent = {
 		terms: [
 			"resolver",
 			'valuePolicy: "unset"',
+			"context={{",
 			"Replacing context",
 			"superRefine",
 		],

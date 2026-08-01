@@ -93,7 +93,8 @@ conditional UI change from making the editable input structurally incomplete.
 Context is runtime-only data. It can drive options and interaction state but
 never becomes form data and never makes the form dirty.
 
-```ts twoslash
+```tsx twoslash
+// @jsx: react-jsx
 import { createFormKit, nativeControls } from "form-please"
 import { z } from "zod"
 
@@ -124,6 +125,16 @@ const definition = kit
 			},
 		],
 	})
+
+function ProfileForm({ countries, locked }: ProfileContext) {
+	return (
+		<kit.AutoForm
+			definition={definition}
+			defaultValues={{ country: "" }}
+			context={{ countries, locked }}
+		/>
+	)
+}
 ```
 
 Load countries before rendering the form, then pass them through `context`.

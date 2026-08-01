@@ -21,40 +21,11 @@ the form and one explicit boundary for side effects.
 
 ## Compose generated and bespoke UI
 
-Create the form once. Use `FormProvider`, `useFormContext`, and granular hooks
-when a component must be independent of the generated tree.
+Create the form once. Use `FormProvider`, `useFormContext`, `useFormState`, and
+`kit.Fields` when a component must be independent of the generated tree.
 
 ```tsx
-import {
-	FormProvider,
-	createFormKit,
-	nativeControls,
-	useFormContext,
-	useFormState,
-} from "form-please"
-import { useState } from "react"
-
-const kit = createFormKit({ controls: nativeControls })
-
-function DirtyStatus() {
-	const form = useFormContext()
-	const dirty = useFormState(form, (snapshot) => snapshot.isDirty)
-	return <output>{dirty ? "Unsaved changes" : "Saved"}</output>
-}
-
-function Editor() {
-	const [form] = useState(() =>
-		kit.createForm(definition, { defaultValues }),
-	)
-
-	return (
-		<kit.Form form={form}>
-			<kit.Fields />
-			<DirtyStatus />
-			<kit.Submit>Save</kit.Submit>
-		</kit.Form>
-	)
-}
+// [!include ~/snippets/production-recipes.tsx:composition]
 ```
 
 Controls receive `labelProps`, descriptions, issues, and refs through their
@@ -67,17 +38,7 @@ Wait for loaded data before you mount the component that creates the form.
 This makes the loaded values the initial clean baseline.
 
 ```tsx
-function ProfileScreen({ profile }) {
-	if (profile === undefined) return <p>Loading…</p>
-	return <ProfileEditor key={profile.id} profile={profile} />
-}
-
-function ProfileEditor({ profile }) {
-	const [form] = useState(() =>
-		kit.createForm(definition, { defaultValues: profile }),
-	)
-	return <kit.AutoForm form={form} />
-}
+// [!include ~/snippets/production-recipes.tsx:edit-baseline]
 ```
 
 After a successful save, call `form.reset(profile)` to install the saved
@@ -87,17 +48,8 @@ document as the new baseline. A prop identity change does not reset a form.
 
 Configure middleware only in `kit.createForm`:
 
-```tsx
-import type { FormMiddleware } from "form-please"
-
-const audit: FormMiddleware<Input, Context> =
-	(api) => (next) => (transaction) => {
-		const before = api.getSnapshot()
-		const result = next(transaction)
-		const after = api.getSnapshot()
-		record({ transaction, result, before, after })
-		return result
-	}
+```ts
+// [!include ~/snippets/production-recipes.tsx:middleware]
 ```
 
 The declaration order is outer-to-inner. For `[audit, policy]`, `audit` sees
@@ -177,12 +129,10 @@ or isolate that mutation. Replace the leaf through a form command instead.
 
 ## Treat FormData as untrusted
 
-Parse server input through the server entry:
+Parse server input with `parseFormData` from the server entry:
 
-```tsx
-import { parseFormData } from "form-please/server"
-
-const result = await parseFormData(formData, schema)
+```ts
+// [!include ~/snippets/production-recipes.tsx:form-data]
 ```
 
 Do not use `Object.fromEntries` for nested forms. Apply request, multipart,

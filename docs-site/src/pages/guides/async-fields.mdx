@@ -190,13 +190,7 @@ when loading must not discard an existing edit value.
 For the complete form, match before rendering:
 
 ```tsx
-const disabled = matchResource(permission, {
-  pending: () => true,
-  success: ({ value }) => !value.canEdit,
-  error: () => true,
-})
-
-return <kit.AutoForm form={form} disabled={disabled} {...props} />
+// [!include ~/snippets/async-fields-permission.tsx:form]
 ```
 
 `matchResource` can also choose between a page skeleton, an error state, and

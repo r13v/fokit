@@ -12,23 +12,13 @@ a replayable journal. Import `createHistoryMiddleware` from
 
 ## First use
 
-```tsx
-import { createHistoryMiddleware } from "form-please/history"
-
-const historyFeature = createHistoryMiddleware()
-const form = kit.createForm(definition, {
-	defaultValues,
-	middleware: [historyFeature],
-})
-const history = historyFeature.handle(form)
-
-history.undo()
-history.redo()
+```ts
+// [!include ~/snippets/history-basics.tsx:first-use]
 ```
 
 The feature and its handle are separate. Keep the exact feature reference that
-you put in the middleware array. `handle(form)` rejects a form that does not
-use that feature.
+you put in the middleware array. `historyFeature.handle(form)` rejects a form
+that does not use that feature.
 
 ## State ownership
 
@@ -74,11 +64,8 @@ Each checkpoint and group in `journal.segments` has an opaque cursor. Use
 replay that checkpoint, or use `group.cursor` to replay the state after a
 specific group:
 
-```tsx
-const journal = history.export()
-const segment = journal.segments[0]
-const checkpoint = replayJournal(journal, segment.checkpoint.cursor)
-const firstGroup = replayJournal(journal, segment.groups[0].cursor)
+```ts
+// [!include ~/snippets/history-basics.tsx:replay]
 ```
 
 `history.import(value)` treats the value as untrusted. It validates protocol
@@ -87,13 +74,8 @@ and cursors. A valid import submits one live restore through middleware.
 
 Catch import errors and keep the current form active:
 
-```tsx
-try {
-	const result = await history.import(JSON.parse(uploadedText))
-	showResult(result)
-} catch (error) {
-	showInvalidJournal(error)
-}
+```ts
+// [!include ~/snippets/history-basics.tsx:import]
 ```
 
 `history.clear()` replaces the complete journal with a checkpoint of the

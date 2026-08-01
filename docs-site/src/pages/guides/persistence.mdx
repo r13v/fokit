@@ -12,24 +12,11 @@ restore validation. Your application owns the storage transport.
 
 ## First use with localStorage
 
-```tsx
-import {
-	createLocalStorageAdapter,
-	createPersistenceMiddleware,
-} from "form-please/persistence"
+Combine `createPersistenceMiddleware` with `createLocalStorageAdapter` for a
+browser-owned draft:
 
-const persistenceFeature = createPersistenceMiddleware({
-	adapter: createLocalStorageAdapter(() => window.localStorage),
-	key: "profile-draft",
-	version: 1,
-})
-
-const form = kit.createForm(definition, {
-	defaultValues,
-	middleware: [persistenceFeature],
-})
-const persistence = persistenceFeature.handle(form)
-await persistence.restore()
+```ts
+// [!include ~/snippets/persistence-basics.tsx:first-use]
 ```
 
 The storage getter runs only during an operation. Importing the adapter does
@@ -76,19 +63,8 @@ identity and installs the committed document as the clean baseline.
 History mode stores the complete `FormJournal`. Configure the exact history
 feature as a dependency and include both features in the form:
 
-```tsx
-const historyFeature = createHistoryMiddleware()
-const persistenceFeature = createPersistenceMiddleware({
-	adapter,
-	key: "draft",
-	version: 1,
-	history: historyFeature,
-})
-
-const form = kit.createForm(definition, {
-	defaultValues,
-	middleware: [historyFeature, persistenceFeature],
-})
+```ts
+// [!include ~/snippets/persistence-basics.tsx:history-mode]
 ```
 
 Declaration order does not change first-party behavior. Missing or duplicate
@@ -105,18 +81,10 @@ Use `createDateCodec()` for `Date`. Use `createFileCodec()` only when storing
 file bytes is appropriate. The file codec defaults to a 10 MiB limit and
 requires the browser `File` API. Codec tags must be non-empty and unique.
 
-Run an application migration when the stored application version differs:
+Provide `migrate` when the stored application version differs:
 
-```tsx
-const persistenceFeature = createPersistenceMiddleware({
-	adapter,
-	key: "profile",
-	version: 2,
-	migrate: async (payload, fromVersion, toVersion) => {
-		if (fromVersion === 1 && toVersion === 2) return migrateProfile(payload)
-		throw new Error("Unsupported profile draft version")
-	},
-})
+```ts
+// [!include ~/snippets/persistence-basics.tsx:migration]
 ```
 
 Migration receives untrusted JSON after envelope validation. The returned JSON

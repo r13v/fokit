@@ -12,15 +12,10 @@ not depend on Redux or `@redux-devtools/extension`.
 
 ## First use
 
-```tsx
-import { createDevToolsMiddleware } from "form-please/devtools"
+Create the optional middleware with `createDevToolsMiddleware`:
 
-const devToolsFeature = createDevToolsMiddleware({ name: "Profile editor" })
-const form = kit.createForm(definition, {
-	defaultValues,
-	middleware: [devToolsFeature],
-})
-const devTools = devToolsFeature.handle(form)
+```ts
+// [!include ~/snippets/devtools-basics.tsx:first-use]
 ```
 
 The feature is inert during SSR and when the extension is absent. One form can

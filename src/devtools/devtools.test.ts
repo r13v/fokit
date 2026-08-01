@@ -143,6 +143,32 @@ describe("Redux DevTools middleware", () => {
 		).toThrow(/unsupported.*shouldStartLocked/i)
 	})
 
+	it("passes mutable options because Redux DevTools assigns an instance id", () => {
+		const transport = createTransport()
+		const connect = vi.fn((options: Record<string, unknown>) => {
+			options.instanceId = 1
+			return transport.connection
+		})
+		vi.stubGlobal("window", {
+			__REDUX_DEVTOOLS_EXTENSION__: { connect },
+		})
+		const onError = vi.fn()
+		const feature = createDevToolsMiddleware({
+			name: "Article editor",
+			onError,
+		})
+		const form = createForm([feature])
+
+		activate(feature, form)
+
+		expect(connect.mock.calls[0]?.[0]).toMatchObject({
+			name: "Article editor",
+			instanceId: 1,
+		})
+		expect(transport.init).toHaveBeenCalledOnce()
+		expect(onError).not.toHaveBeenCalled()
+	})
+
 	it("sends every finalized document and runtime event, but no cancelled transaction", () => {
 		const transport = createTransport()
 		install(transport)

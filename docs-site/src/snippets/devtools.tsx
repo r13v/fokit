@@ -23,14 +23,38 @@ export function DevToolsExample() {
 			middleware: [devToolsFeature],
 		}),
 	)
+	const [isDisconnected, setIsDisconnected] = useState(false)
 	const devTools = devToolsFeature.handle(form)
 
+	function disconnectDevTools() {
+		devTools.disconnect()
+		setIsDisconnected(true)
+	}
+
+	let disconnectLabel = "Disconnect DevTools"
+	if (isDisconnected) {
+		disconnectLabel = "DevTools disconnected"
+	}
+
 	return (
-		<kit.AutoForm form={form}>
-			<p>Open Redux DevTools to inspect committed form events.</p>
-			<button onClick={() => devTools.disconnect()} type="button">
-				Disconnect DevTools
-			</button>
-		</kit.AutoForm>
+		<section className="form-please-lab">
+			<p className="form-please-lab__kicker">Redux DevTools</p>
+			<p className="form-please-lab__summary">
+				Change the title to create events. Select an earlier event in Redux
+				DevTools to restore its document.
+			</p>
+			<kit.AutoForm className="form-please-lab__form" form={form}>
+				<div className="form-please-lab__actions">
+					<button
+						className="form-please-lab__secondary"
+						disabled={isDisconnected}
+						onClick={disconnectDevTools}
+						type="button"
+					>
+						{disconnectLabel}
+					</button>
+				</div>
+			</kit.AutoForm>
+		</section>
 	)
 }

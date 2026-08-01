@@ -59,6 +59,7 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/examples/learning-cohort.md",
 		"assets/md/examples/membership-ladder.md",
 		"assets/md/examples/campaign-builder.md",
+		"assets/md/examples/devtools.md",
 		"llms.txt",
 		"llms-full.txt",
 		"sitemap.xml",
@@ -213,6 +214,10 @@ test("generated Markdown links live demos to their canonical source files", asyn
 		{
 			file: "assets/md/guides/async-multiselect.md",
 			path: "docs-site/src/snippets/async-multiselect.tsx",
+		},
+		{
+			file: "assets/md/examples/devtools.md",
+			path: "docs-site/src/snippets/devtools.tsx",
 		},
 		...[
 			"research-grant",

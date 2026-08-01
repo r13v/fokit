@@ -42,14 +42,14 @@ stable per-form handle.
 
 ## createFormKit
 
-```tsx
-createFormKit({ controls, slots? }) => FormKit
+```ts
+// [!include ~/snippets/api-reference.tsx:create-form-kit]
 ```
 
 The function freezes one controls-and-slots snapshot. `kit.extend` creates a
 new snapshot. A form belongs to the exact snapshot that created it.
 
-```tsx
+```tsx twoslash
 import { createFormKit, nativeControls } from "form-please"
 
 const kit = createFormKit({ controls: nativeControls })
@@ -61,10 +61,8 @@ different owners.
 
 ## kit.defineForm
 
-```tsx
-kit.defineForm(schema)({ ui }) => NormalizedFormDefinition
-kit.defineForm(schema).withContext<Context>()({ ui })
-kit.defineForm(schema).fragment(scope, nodes)
+```ts
+// [!include ~/snippets/api-reference.tsx:define-form]
 ```
 
 Normalization checks paths, IDs, controls, slots, and array defaults. Resolver
@@ -76,18 +74,8 @@ requires `itemDefault` when append or insert needs a default item.
 
 ## CreateFormOptions
 
-```tsx
-type CreateFormOptions<Schema, Context = unknown> = {
-	defaultValues: FormInput<Schema>
-	context?: Context
-	disabled?: boolean
-	readOnly?: boolean
-	validation?: Partial<ValidationOptions>
-	beforeUpdate?: (event: BeforeUpdateEvent) => false | readonly ValueChange[] | undefined
-	afterUpdate?: (event: UpdateEvent) => void
-	onSubmit?: SubmitHandler<Schema, Context>
-	middleware?: readonly FormMiddleware[]
-}
+```ts
+// [!include ~/snippets/api-reference.tsx:create-form-options]
 ```
 
 `defaultValues` is required. The middleware array is copied and frozen at form
@@ -99,21 +87,14 @@ Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
 
 ## kit.createForm
 
-```tsx
-kit.createForm(definition, options: CreateFormOptions) => FormInstance
+```ts
+// [!include ~/snippets/api-reference.tsx:create-form]
 ```
 
 Use lazy React state for a component-local form:
 
 ```tsx
-import { useState } from "react"
-
-function Editor() {
-	const [form] = useState(() =>
-		kit.createForm(definition, { defaultValues }),
-	)
-	return <kit.AutoForm form={form} />
-}
+// [!include ~/snippets/api-reference.tsx:editor]
 ```
 
 Create a module-level form only when shared ownership and lifetime are
@@ -121,16 +102,8 @@ intentional. A new `defaultValues` object does not reset an existing form.
 
 ## FormRuntimeOptions
 
-```tsx
-type FormRuntimeOptions<Schema, Context = unknown> = {
-	context?: Context
-	disabled?: boolean
-	readOnly?: boolean
-	validation?: Partial<ValidationOptions>
-	beforeUpdate?: CreateFormOptions["beforeUpdate"]
-	afterUpdate?: CreateFormOptions["afterUpdate"]
-	onSubmit?: SubmitHandler<Schema, Context>
-}
+```ts
+// [!include ~/snippets/api-reference.tsx:runtime-options]
 ```
 
 Runtime options exclude `defaultValues` and `middleware`. A mounted binding
@@ -139,8 +112,8 @@ unmount.
 
 ## kit.useForm
 
-```tsx
-kit.useForm(form, runtimeOptions: FormRuntimeOptions) => same FormInstance
+```ts
+// [!include ~/snippets/api-reference.tsx:use-form]
 ```
 
 This hook binds an existing form. It never creates a form. One instance can
@@ -150,8 +123,7 @@ The hook rejects a form from any other kit snapshot.
 ## Form and AutoForm
 
 ```tsx
-<kit.Form form={form}>...</kit.Form>
-<kit.AutoForm form={form}>...</kit.AutoForm>
+// [!include ~/snippets/api-reference.tsx:form-components]
 ```
 
 `kit.Form` renders native form behavior and its children. It accepts native
@@ -180,38 +152,15 @@ Subscribe to the smallest state slice that a component needs.
 
 The instance is the primary command API:
 
-```tsx
-form.getSnapshot()
-form.getValues()
-form.getValue(path)
-form.setValue(path, value)
-form.setValues(partialValues)
-form.unsetValue(path)
-form.append(path, value?)
-form.insert(path, index, value?)
-form.remove(path, index)
-form.move(path, from, to)
-form.batch(callback)
-form.reset(values?)
-form.touch(path)
-form.blur(path)
-form.setErrors(issues)
-form.clearErrors(path?)
-form.validate()
-form.validate(path)
-form.validatePaths(paths)
-form.focus(path)
-form.focusFirstError(paths?)
-form.replaceContext(context)
-form.replaceOptions(options)
-form.subscribe(selector, listener, options?)
-form.submit()
+```ts
+// [!include ~/snippets/api-reference.tsx:form-instance]
 ```
 
 Mutation commands return `void`. `validate()` returns a schema validation
 result. Path validation returns overlapping issues. `focusFirstError` returns
 whether focus moved. `reset(values)` installs a new clean document. `reset()`
-restores the current clean baseline.
+restores the current clean baseline. Use `clearErrors()` for every imperative
+issue or `clearErrors(path)` for one path.
 
 ### Classic submission
 
@@ -229,23 +178,8 @@ native classic submit.
 `FormCommand<Input, Context>` is the union accepted by middleware
 `api.dispatch`:
 
-```tsx
-type FormCommand<Input, Context> =
-	| { type: "value/set"; path: FieldPath<Input>; value: unknown }
-	| { type: "values/set"; values: FormDeepPartial<Input> }
-	| { type: "value/unset"; path: OptionalFieldPath<Input> }
-	| { type: "array/append"; path: ArrayFieldPath<Input>; value?: unknown }
-	| { type: "array/insert"; path: ArrayFieldPath<Input>; index: number; value?: unknown }
-	| { type: "array/remove"; path: ArrayFieldPath<Input>; index: number }
-	| { type: "array/move"; path: ArrayFieldPath<Input>; from: number; to: number }
-	| { type: "form/reset"; values?: Input }
-	| { type: "field/touch" | "field/blur"; path: FieldPath<Input> }
-	| { type: "validation/run"; path?: FieldPath<Input> }
-	| { type: "validation/runPaths"; paths: readonly FieldPath<Input>[] }
-	| { type: "issues/set"; issues: readonly ImperativeFormIssue[] }
-	| { type: "issues/clear"; path?: PathInput }
-	| { type: "runtime/replaceContext"; context: Context }
-	| { type: "runtime/replaceOptions"; options: FormStoreRuntimeOptions }
+```ts
+// [!include ~/snippets/api-reference.tsx:commands]
 ```
 
 Nested dispatch runs after the current transaction completes. It does not
@@ -253,15 +187,11 @@ interrupt the current middleware stack.
 
 ## Transactions
 
-```tsx
-type FormTransaction<Input, Context> =
-	| DocumentTransaction<Input>
-	| RestoreTransaction<Input>
-	| RuntimeTransaction<Context, Input>
+`FormTransaction<Input, Context>` is the immutable transaction union handled
+by middleware:
 
-type FormDispatchResult<Input, Context> =
-	| { status: "committed"; event: FormEvent<Input, Context> }
-	| { status: "cancelled" }
+```ts
+// [!include ~/snippets/api-reference.tsx:transactions]
 ```
 
 `DocumentTransaction` has `type: "document/committed"`, a source, grouping,
@@ -289,14 +219,8 @@ Runtime events are not stored in history or persistence.
 
 ## Middleware
 
-```tsx
-type FormMiddleware<Input, Context> =
-	(api: {
-		getSnapshot(): FormSnapshot<Input, Context>
-		dispatch(command: FormCommand<Input, Context>): void
-	}) =>
-	(next: FormTransactionDispatch<Input, Context>) =>
-	(transaction: FormTransaction<Input, Context>) => FormDispatchResult<Input, Context>
+```ts
+// [!include ~/snippets/api-reference.tsx:middleware]
 ```
 
 Middleware is synchronous. See [Production recipes](/advanced) for ordering,
@@ -304,11 +228,11 @@ cancellation, replacement, restore, nested dispatch, and error rules.
 
 ## History
 
-```tsx
-import { createHistoryMiddleware, replayJournal } from "form-please/history"
+Create the feature with `createHistoryMiddleware`, then keep its handle with
+the form owner:
 
-createHistoryMiddleware({ limit?: number, groupWindow?: number }) => HistoryFeature
-historyFeature.handle(form) => HistoryHandle
+```ts
+// [!include ~/snippets/api-reference.tsx:history]
 ```
 
 `limit` is an unlimited group count by default. It accepts non-negative
@@ -317,16 +241,8 @@ to `0` to disable time-based group closure. Consecutive control commits to one
 path can share a group. A batch is one group. Forwarded blur closes the active
 group.
 
-```tsx
-history.getSnapshot() // { canUndo, canRedo, index, length }
-history.subscribe(listener) => unsubscribe
-history.undo() => HistoryOperationResult
-history.redo() => HistoryOperationResult
-history.seek(index) => HistoryOperationResult
-history.clear()
-history.export() => FormJournal
-await history.import(unknown) => HistoryOperationResult
-replayJournal(journal, cursor) => FormDocument
+```ts
+// [!include ~/snippets/api-reference.tsx:history-operations]
 ```
 
 `FormJournal` contains checkpoint segments. Each checkpoint and group owns an
@@ -334,11 +250,8 @@ opaque `cursor`. Use `journal.cursor` for the current position,
 `segment.checkpoint.cursor` for a checkpoint, or `group.cursor` for the state
 after that group:
 
-```tsx
-const journal = history.export()
-const firstSegment = journal.segments[0]
-const checkpoint = replayJournal(journal, firstSegment.checkpoint.cursor)
-const firstGroup = replayJournal(journal, firstSegment.groups[0].cursor)
+```ts
+// [!include ~/snippets/api-reference.tsx:replay]
 ```
 
 An operation result is `"applied"`, `"unavailable"`, `"cancelled"`, or
@@ -351,32 +264,19 @@ See [History and journals](/guides/history) for complete examples.
 
 ## Persistence
 
-```tsx
-createPersistenceMiddleware({
-	adapter,
-	key,
-	version,
-	codecs?,
-	migrate?,
-	saveDelay?,
-	onError?,
-	history?,
-}) => PersistenceFeature
+Create persistence with `createPersistenceMiddleware` and an
+application-owned adapter:
 
-persistenceFeature.handle(form) => PersistenceHandle
+```ts
+// [!include ~/snippets/api-reference.tsx:persistence]
 ```
 
 `key` must be non-empty. `version` must be a non-negative integer.
 `saveDelay` defaults to `500` milliseconds. Supply the same `HistoryFeature`
 in `history` and in the form middleware list to persist the journal.
 
-```tsx
-await persistence.restore() => PersistenceRestoreResult
-persistence.start()
-await persistence.flush()
-await persistence.clear()
-persistence.getSnapshot() => PersistenceSnapshot
-persistence.subscribe(listener) => unsubscribe
+```ts
+// [!include ~/snippets/api-reference.tsx:persistence-operations]
 ```
 
 The phase is `"idle"`, `"restoring"`, `"active"`, or `"conflict"`. Save state
@@ -391,14 +291,8 @@ conflict and remains authoritative.
 
 ### Adapters
 
-```tsx
-type FormPersistenceAdapter = {
-	load(key: string): Promise<JsonValue | undefined>
-	save(key: string, value: JsonValue): Promise<void>
-	remove(key: string): Promise<void>
-}
-
-createLocalStorageAdapter(() => window.localStorage)
+```ts
+// [!include ~/snippets/api-reference.tsx:persistence-adapter]
 ```
 
 The local storage adapter reads storage only when an operation runs, so its
@@ -408,20 +302,8 @@ call `onError`.
 
 ### Codecs and migration
 
-```tsx
-type PersistenceCodec<Value> = {
-	tag: string
-	canEncode(value: unknown): value is Value
-	encode(value: Value): JsonValue | Promise<JsonValue>
-	decode(value: JsonValue): Value | Promise<Value>
-}
-
-createDateCodec(tag = "date")
-createFileCodec({ tag = "file", maxSize = 10 * 1024 * 1024 })
-
-type PersistenceMigration =
-	(payload: JsonValue, fromVersion: number, toVersion: number) =>
-		JsonValue | Promise<JsonValue>
+```ts
+// [!include ~/snippets/api-reference.tsx:persistence-codecs]
 ```
 
 Codec tags must be non-empty and unique. `createFileCodec` is opt-in and
@@ -434,10 +316,10 @@ Query transports.
 
 ## Redux DevTools
 
-```tsx
-createDevToolsMiddleware(options?: CreateDevToolsOptions) => DevToolsFeature
-devToolsFeature.handle(form) => DevToolsHandle
-devTools.disconnect()
+Create the optional integration with `createDevToolsMiddleware`:
+
+```ts
+// [!include ~/snippets/api-reference.tsx:devtools]
 ```
 
 The feature connects only after the form completes its first retained React
@@ -445,28 +327,8 @@ binding through `kit.useForm`, `kit.AutoForm`, or `ActionForm`. A form that is
 never bound does not open a DevTools listener. For manual `kit.Form`
 composition, call `kit.useForm(form, runtimeOptions)` in the component.
 
-```tsx
-type CreateDevToolsOptions = {
-	name?: string
-	latency?: number
-	maxAge?: number
-	trace?: boolean | ((action: FormEvent<unknown, unknown>) => string | undefined)
-	traceLimit?: number
-	serialize?: boolean | Readonly<Record<string, unknown>>
-	actionSanitizer?: (action: FormEvent<unknown, unknown>, id: number) => unknown
-	stateSanitizer?: (
-		state: { values: unknown; rowIdentity: LogicalRowIdentity },
-		index: number,
-	) => unknown
-	actionsAllowlist?: string | readonly string[]
-	actionsDenylist?: string | readonly string[]
-	predicate?: (
-		state: DevToolsFormState<unknown>,
-		action: FormEvent<unknown, unknown>,
-	) => boolean
-	autoPause?: boolean
-	onError?: (error: unknown) => void
-}
+```ts
+// [!include ~/snippets/api-reference.tsx:devtools-options]
 ```
 
 Supported connection options are `name`, `latency`, `maxAge`, `trace`,
@@ -498,8 +360,8 @@ accessibility, and `FormData` contracts. Use `mode: "native"`, `"hidden"`, or
 
 ## createDefaultSlots
 
-```tsx
-createDefaultSlots({ i18n? }) => FormKitSlots
+```ts
+// [!include ~/snippets/api-reference.tsx:default-slots]
 ```
 
 The default slots provide semantic markup and English array action labels.
@@ -508,11 +370,7 @@ They do not provide a visual theme.
 ## React 19
 
 ```tsx
-import { ActionForm, ActionSubmit } from "form-please/react19"
-
-<ActionForm form={form} action={action} result={result}>
-	<ActionSubmit>Save</ActionSubmit>
-</ActionForm>
+// [!include ~/snippets/api-reference.tsx:react-19]
 ```
 
 `ActionForm` gets its definition, controls, slots, and defaults from `form`.
@@ -544,10 +402,8 @@ Defaults are `maxEntries: 1_000`, `maxPathLength: 1_024`, `maxDepth: 32`, and
 
 ## React-free core
 
-```tsx
-import { createFormStore } from "form-please/core"
-
-createFormStore({ definition, defaultValues, context?, ...runtimeOptions })
+```ts
+// [!include ~/snippets/api-reference.tsx:core]
 ```
 
 Use this constructor for React-free state. It exposes the imperative store,

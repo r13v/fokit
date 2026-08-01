@@ -155,9 +155,9 @@ const canonicalPages = [
 	{
 		path: "src/pages/examples/index.mdx",
 		route: "/examples",
-		title: "Complex examples",
+		title: "Examples",
 		description:
-			"Explore six production-shaped forms that stress branching, arrays, workflows, custom UI, and fake TanStack Query requests without hiding state from Form, Please.",
+			"Explore six production-shaped forms and a live Redux DevTools workflow without hiding state from Form, Please.",
 	},
 	{
 		path: "src/pages/examples/research-grant.mdx",
@@ -204,6 +204,14 @@ const canonicalPages = [
 		title: "Campaign builder",
 		description:
 			"A create-or-edit campaign form with seven conditional templates, shared audience and scheduling, payment variants, transactional cleanup, and fake mutations.",
+	},
+	{
+		path: "src/pages/examples/devtools.mdx",
+		route: "/examples/devtools",
+		title: "Redux DevTools workflow",
+		navText: "DevTools workflow",
+		description:
+			"Use Redux DevTools to inspect committed form events and restore known local documents in a live article editor.",
 	},
 	{
 		path: "src/pages/api.mdx",
@@ -253,6 +261,45 @@ const canonicalSnippets = [
 		target: "src/snippets/form-kit.tsx",
 		include: "~/snippets/form-kit.tsx",
 		terms: ["createFormKit", "visible:", "profileSchema"],
+	},
+	{
+		target: "src/snippets/api-reference.tsx",
+		include: "~/snippets/api-reference.tsx",
+		terms: [
+			"createFormKit",
+			"FormCommand",
+			"createPersistenceMiddleware",
+			"createDevToolsMiddleware",
+		],
+	},
+	{
+		target: "src/snippets/production-recipes.tsx",
+		include: "~/snippets/production-recipes.tsx",
+		terms: ["DirtyStatus", "ProfileEditor", "FormMiddleware", "parseFormData"],
+	},
+	{
+		target: "src/snippets/async-fields-permission.tsx",
+		include: "~/snippets/async-fields-permission.tsx",
+		terms: ["PermissionForm", "matchResource", "ResourceState"],
+	},
+	{
+		target: "src/snippets/history-basics.tsx",
+		include: "~/snippets/history-basics.tsx",
+		terms: ["createHistoryMiddleware", "replayJournal", "history.import"],
+	},
+	{
+		target: "src/snippets/persistence-basics.tsx",
+		include: "~/snippets/persistence-basics.tsx",
+		terms: [
+			"createPersistenceMiddleware",
+			"createLocalStorageAdapter",
+			"historyPersistenceFeature",
+		],
+	},
+	{
+		target: "src/snippets/devtools-basics.tsx",
+		include: "~/snippets/devtools-basics.tsx",
+		terms: ["createDevToolsMiddleware", "devToolsFeature.handle"],
 	},
 	{
 		target: "src/snippets/basic-form.tsx",
@@ -1284,6 +1331,29 @@ test("six complex examples stay public, documented, networked, and independent",
 	for (const example of complexExampleCases) {
 		assert.match(index, new RegExp(`\\/examples\\/${example.slug}`))
 	}
+})
+
+test("Redux DevTools example runs the same public integration that it documents", async () => {
+	const wrapper = await readText("src/components/devtools-demo.tsx")
+	const client = await readText("src/components/devtools-demo.client.tsx")
+	const snippet = await readText("src/snippets/devtools.tsx")
+	const page = await readText("src/pages/examples/devtools.mdx")
+	const index = await readText("src/pages/examples/index.mdx")
+
+	assert.match(wrapper, /from "\.\/devtools-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(wrapper, /from "\.\/markdown-fallback"/)
+	assert.match(wrapper, /docs-site\/src\/snippets\/devtools\.tsx/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/devtools"/)
+	assert.match(snippet, /from "form-please\/devtools"/)
+	assert.match(snippet, /createDevToolsMiddleware/)
+	assert.match(snippet, /middleware:\s*\[devToolsFeature\]/)
+	assert.match(snippet, /devTools\.disconnect\(\)/)
+	assert.match(page, /<DevToolsDemo \/>/)
+	assert.match(page, /~\/snippets\/devtools\.tsx/)
+	assert.match(index, /\/examples\/devtools/)
+	assert.doesNotMatch(snippet, /from "(?:\.\.\/)+src\//)
 })
 
 test("canonical TypeScript snippets are physical files covered by docs typecheck", async () => {

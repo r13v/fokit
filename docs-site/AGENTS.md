@@ -6,6 +6,10 @@
   syntax highlighting, Markdown output, and static rendering.
 - Complete copyable TypeScript programs live as physical snippets under
   `src/snippets` once the snippet migration task creates them.
+- Use `ts` or `tsx` fences for TypeScript examples. Never downgrade code to
+  `text` or use `// ---cut---` to hide setup; move that setup to a typechecked
+  physical snippet under `src/snippets` and include only its named region.
+  Reserve `text` fences for non-code diagrams, formulas, and plain output.
 - Docs examples and interactive components must use public package imports from
   `form-please`, not source imports or mocked APIs.
 - Do not add an OpenAI Sites worker, `.openai/hosting.json`, redirects, a custom

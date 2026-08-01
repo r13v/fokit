@@ -260,7 +260,7 @@ class DevToolsState<Input, Context> {
 
 		let connection: DevToolsConnection | undefined
 		try {
-			connection = extension.connect(this.#options.connection)
+			connection = extension.connect({ ...this.#options.connection })
 			this.#connection = connection
 			const unsubscribe = connection.subscribe((message) => {
 				try {

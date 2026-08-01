@@ -59,7 +59,6 @@ type SaveProfile = (
 	formData: FormData,
 ) => Promise<FormResult>
 
-// ---cut---
 function ProfileActionForm({
 	saveProfile,
 }: {
@@ -112,7 +111,6 @@ The Action returns one small transport:
 ```ts twoslash
 import type { SubmissionIssue } from "form-please/server"
 
-// ---cut---
 type FormResult =
 	| { status: "success"; reset?: "defaults" | "submitted" }
 	| { status: "error"; issues: readonly SubmissionIssue[] }

@@ -92,24 +92,8 @@ const kit = createFormKit({
 		productText,
 	},
 })
-```
 
-The registry key becomes the definition discriminator:
-
-```ts twoslash
-import { createFormKit, defineControl, nativeControls } from "form-please"
-import { z } from "zod"
-
-const productText = defineControl<string | undefined>({
-	component: () => null,
-	formData: { mode: "native" },
-})
-const kit = createFormKit({
-	controls: { ...nativeControls, productText },
-})
-const schema = z.object({ name: z.string().optional() })
-
-// ---cut---
+// The registry key becomes the definition discriminator
 const definition = kit.defineForm(schema)({
 	ui: [
 		{
@@ -140,7 +124,6 @@ const addressPicker = defineControl<string>({
 	formData: { mode: "native" },
 })
 
-// ---cut---
 const checkoutKit = productKit.extend({
 	controls: { addressPicker },
 })

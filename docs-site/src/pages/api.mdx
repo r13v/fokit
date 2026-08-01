@@ -79,7 +79,6 @@ const money = defineControl<number>({
 	},
 })
 
-// ---cut---
 const checkoutKit = baseKit.extend({
 	controls: { money },
 })
@@ -117,7 +116,6 @@ import { z } from "zod"
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
 
-// ---cut---
 const definition = kit.defineForm(schema)({
 	ui: [
 		{
@@ -153,7 +151,6 @@ const schema = z.object({
 const kit = createFormKit({ controls: nativeControls })
 const define = kit.defineForm(schema)
 
-// ---cut---
 const profile = define.fragment("profile", [
 	{ kind: "field", path: "first", control: "text", label: "First name" },
 	{ kind: "field", path: "last", control: "text", label: "Last name" },
@@ -194,7 +191,6 @@ function NamePreview({ disabled, readOnly }: RenderNodeProps) {
 	return <output aria-disabled={disabled || undefined}>{readOnly && "Locked: "}{name}</output>
 }
 
-// ---cut---
 kit.defineForm(schema)({
 	ui: [
 		{
@@ -234,7 +230,6 @@ const schema = z.object({
 })
 const kit = createFormKit({ controls: nativeControls })
 
-// ---cut---
 kit.defineForm(schema)({
 	ui: [
 		{
@@ -479,7 +474,6 @@ const definition = kit.defineForm(schema)({
 	],
 })
 
-// ---cut---
 function ProfileForm() {
 	const form = useForm(definition, {
 		defaultValues: { name: "" },
@@ -513,7 +507,6 @@ const profileForm = createForm(definition, {
 	defaultValues: { name: "" },
 })
 
-// ---cut---
 function ProfileForm({ disabled }: { readonly disabled: boolean }) {
 	const form = useForm(profileForm, {
 		disabled,
@@ -725,7 +718,6 @@ const schema = z.object({ name: z.string().min(1) })
 const formData = new FormData()
 formData.set("name", "Ada")
 
-// ---cut---
 const result = await parseFormData(formData, schema)
 
 if (result.success) {

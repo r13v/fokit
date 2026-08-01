@@ -32,7 +32,6 @@ const schema = z.object({
 
 const kit = createFormKit({ controls: nativeControls })
 
-// ---cut---
 const definition = kit.defineForm(schema)({
 	ui: [
 		{
@@ -86,7 +85,6 @@ const schema = z.object({
 	),
 })
 
-// ---cut---
 const defaultValues = {
 	contacts: [{ email: "ada@example.com", label: "primary" }],
 } satisfies FormInput<typeof schema>
@@ -133,7 +131,6 @@ const definition = kit.defineForm(schema)({
 	],
 })
 
-// ---cut---
 function ContactsEditor() {
 	const form = useForm(definition, {
 		defaultValues: { contacts: [] },
@@ -180,7 +177,6 @@ const schema = z.object({
 })
 declare const formData: FormData
 
-// ---cut---
 const result = await parseFormData(formData, schema)
 
 if (result.success) {

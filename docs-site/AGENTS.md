@@ -1,6 +1,7 @@
 # Form, Please Docs Site
 
 - This is an English-only Vocs site with clean path routes for static GitHub Pages.
+- Use STE skill
 - Keep authored pages in `src/pages` and let Vocs own navigation, search,
   syntax highlighting, Markdown output, and static rendering.
 - Complete copyable TypeScript programs live as physical snippets under

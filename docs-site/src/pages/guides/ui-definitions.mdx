@@ -78,7 +78,6 @@ const schema = z.object({
 const kit = createFormKit({ controls: nativeControls })
 const define = kit.defineForm(schema)
 
-// ---cut---
 const billing = define.fragment("billing", [
 	{
 		kind: "field",
@@ -268,7 +267,6 @@ function NamePreview({ disabled, readOnly }: RenderNodeProps) {
 	)
 }
 
-// ---cut---
 const definition = kit.defineForm(schema)({
 	ui: [
 		{

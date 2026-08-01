@@ -80,19 +80,28 @@ export function touchMetadataPath(
 	state: MetadataState,
 	path: string,
 ): MetadataState {
-	const canonicalPath = formatPath(path)
-	if (state.touchedPaths.has(canonicalPath)) {
+	const touchedPaths = addTouchedPath(state.touchedPaths, path)
+	if (touchedPaths === state.touchedPaths) {
 		return state
 	}
-
-	const touchedPaths = new Set(state.touchedPaths)
-	touchedPaths.add(canonicalPath)
 
 	return createMetadataState({
 		touchedPaths,
 		rowIdentity: state.rowIdentity,
 		baselineRowIdentity: state.baselineRowIdentity,
 	})
+}
+
+export function addTouchedPath(
+	touchedPaths: ReadonlySet<string>,
+	path: string,
+): ReadonlySet<string> {
+	const canonicalPath = formatPath(path)
+	if (touchedPaths.has(canonicalPath)) {
+		return touchedPaths
+	}
+
+	return new Set([...touchedPaths, canonicalPath])
 }
 
 export function deriveFormMetadata<Schema extends StandardSchema>(

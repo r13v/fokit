@@ -417,35 +417,35 @@ must remain explicit and testable without entering the historical journal.
 - Modify: src/core/validation.test.ts
 - Modify: src/react/submission.test.tsx
 
-- [ ] Define discriminated validation and submission states with attempt IDs
+- [x] Define discriminated validation and submission states with attempt IDs
   and document revisions in FormRuntimeState.
-- [ ] Define RuntimeReplacedEvent, ValidationStartedEvent,
+- [x] Define RuntimeReplacedEvent, ValidationStartedEvent,
   ValidationResolvedEvent, ValidationFailedEvent, SubmissionStartedEvent, and
   SubmissionFinishedEvent in src/core/form-events.ts. Also define explicit
   FieldTouchedEvent, FieldBlurredEvent, and IssuesChangedEvent variants so every
   state-changing public runtime command has a terminal event.
-- [ ] Implement pure runtime transitions for context/options replacement,
+- [x] Implement pure runtime transitions for context/options replacement,
   touched/exposed paths, manual/server/schema issues, validation start/success/
   failure/staleness, submission start/finish, and clean-baseline replacement.
-- [ ] Make a forwarded blur commit FieldBlurredEvent even when touched/exposure
+- [x] Make a forwarded blur commit FieldBlurredEvent even when touched/exposure
   reduction is an identity. The committed event closes an active history group
   and permits blur validation scheduling without publishing an unchanged form
   snapshot. Middleware cancellation suppresses the event, group closure, and
   automatic validation. True no-op touch and issue commands have no effects and
   may return cancelled without an event.
-- [ ] Keep AbortController, timers, Standard Schema execution, host-error
+- [x] Keep AbortController, timers, Standard Schema execution, host-error
   reporting, focus, and callbacks outside runtime-reducer.ts.
-- [ ] Enforce the rule that successful transformed schema output
+- [x] Enforce the rule that successful transformed schema output
   never overwrites FormInput values.
-- [ ] Add tests for overlapping validation attempts, stale success and failure,
+- [x] Add tests for overlapping validation attempts, stale success and failure,
   submission attempt ordering, issue exposure, and reset-to-clean runtime
   state.
-- [ ] Add exhaustive event tests for touch, repeated blur, setErrors, and
+- [x] Add exhaustive event tests for touch, repeated blur, setErrors, and
   clearErrors, including identity reduction and the repeated-blur signal used
   by the core validation lifecycle.
-- [ ] Add tests proving runtime events never change FormDocument and document
+- [x] Add tests proving runtime events never change FormDocument and document
   events do not implicitly restore runtime state.
-- [ ] Run npx vitest run src/core/runtime-reducer.test.ts
+- [x] Run npx vitest run src/core/runtime-reducer.test.ts
   src/core/validation.test.ts src/core/issues.test.ts
   src/react/submission.test.tsx.
 

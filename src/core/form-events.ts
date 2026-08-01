@@ -1,4 +1,10 @@
-import type { FormDocument } from "./form-model.js"
+import type {
+	FormDocument,
+	FormRuntimeOptionsState,
+	ValidationKind,
+} from "./form-model.js"
+import type { FormIssue, ImperativeFormIssue } from "./issues.js"
+import type { ResolvedUiState } from "./resolve-ui.js"
 import type { ValueChange } from "./transaction.js"
 
 export type UpdateSource =
@@ -82,3 +88,111 @@ export type DocumentRestoredEvent<Input> = {
 export type FormDocumentEvent<Input> =
 	| DocumentCommittedEvent<Input>
 	| DocumentRestoredEvent<Input>
+
+type RuntimeEventBase = {
+	readonly sequence: number
+}
+
+export type RuntimeReplacedEvent<Context> = RuntimeEventBase & {
+	readonly type: "runtime/replaced"
+	readonly context: Readonly<Context>
+	readonly options: FormRuntimeOptionsState
+	readonly resolvedUi: ResolvedUiState<Context>
+}
+
+export type ValidationStartedEvent = RuntimeEventBase & {
+	readonly type: "validation/started"
+	readonly attemptId: number
+	readonly documentRevision: number
+	readonly kind: ValidationKind
+	readonly exposeAll: boolean
+	readonly exposePaths: readonly string[]
+}
+
+type ValidationResolvedEventBase = RuntimeEventBase & {
+	readonly type: "validation/resolved"
+	readonly attemptId: number
+	readonly documentRevision: number
+}
+
+export type ValidationResolvedEvent =
+	| (ValidationResolvedEventBase & {
+			readonly status: "valid"
+	  })
+	| (ValidationResolvedEventBase & {
+			readonly status: "invalid"
+			readonly issues: readonly FormIssue[]
+	  })
+
+export type ValidationFailedEvent = RuntimeEventBase & {
+	readonly type: "validation/failed"
+	readonly attemptId: number
+	readonly documentRevision: number
+}
+
+export type SubmissionStartedEvent = RuntimeEventBase & {
+	readonly type: "submission/started"
+	readonly attemptId: number
+	readonly documentRevision: number
+}
+
+export type SubmissionFinishedEvent = RuntimeEventBase & {
+	readonly type: "submission/finished"
+	readonly attemptId: number
+	readonly documentRevision: number
+}
+
+export type FieldTouchedEvent = RuntimeEventBase & {
+	readonly type: "field/touched"
+	readonly path: string
+}
+
+export type FieldBlurredEvent = RuntimeEventBase & {
+	readonly type: "field/blurred"
+	readonly path: string
+}
+
+export type IssuesChange =
+	| {
+			readonly type: "imperative/set"
+			readonly issues: readonly ImperativeFormIssue[]
+	  }
+	| {
+			readonly type: "imperative/clear"
+			readonly path?: string
+	  }
+	| {
+			readonly type: "schema/replace"
+			readonly issues: readonly FormIssue[]
+			readonly exposeAll?: boolean
+			readonly exposePaths?: readonly string[]
+	  }
+	| {
+			readonly type: "server/replace"
+			readonly issues: readonly ImperativeFormIssue[]
+			readonly exposeAll?: boolean
+	  }
+	| {
+			readonly type: "server/clearChanged"
+			readonly paths: readonly string[]
+	  }
+
+export type IssuesChangedEvent = RuntimeEventBase & {
+	readonly type: "issues/changed"
+	readonly change: IssuesChange
+}
+
+export type FormRuntimeEvent<Context> =
+	| RuntimeReplacedEvent<Context>
+	| ValidationStartedEvent
+	| ValidationResolvedEvent
+	| ValidationFailedEvent
+	| SubmissionStartedEvent
+	| SubmissionFinishedEvent
+	| FieldTouchedEvent
+	| FieldBlurredEvent
+	| IssuesChangedEvent
+
+export type FormEvent<Input, Context> =
+	| FormDocumentEvent<Input>
+	| FormRuntimeEvent<Context>

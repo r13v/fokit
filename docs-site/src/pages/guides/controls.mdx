@@ -37,6 +37,7 @@ import {
 	nativeControls,
 } from "form-please"
 import type { ComponentPropsWithRef } from "react"
+import { z } from "zod"
 
 type TextOptions = {
 	readonly placeholder?: string
@@ -92,6 +93,7 @@ const kit = createFormKit({
 		productText,
 	},
 })
+const schema = z.object({ name: z.string().optional() })
 
 // The registry key becomes the definition discriminator
 const definition = kit.defineForm(schema)({

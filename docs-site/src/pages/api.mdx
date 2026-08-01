@@ -42,14 +42,14 @@ stable per-form handle.
 
 ## createFormKit
 
-```text
+```tsx
 createFormKit({ controls, slots? }) => FormKit
 ```
 
 The function freezes one controls-and-slots snapshot. `kit.extend` creates a
 new snapshot. A form belongs to the exact snapshot that created it.
 
-```text
+```tsx
 import { createFormKit, nativeControls } from "form-please"
 
 const kit = createFormKit({ controls: nativeControls })
@@ -61,7 +61,7 @@ different owners.
 
 ## kit.defineForm
 
-```text
+```tsx
 kit.defineForm(schema)({ ui }) => NormalizedFormDefinition
 kit.defineForm(schema).withContext<Context>()({ ui })
 kit.defineForm(schema).fragment(scope, nodes)
@@ -76,7 +76,7 @@ requires `itemDefault` when append or insert needs a default item.
 
 ## CreateFormOptions
 
-```text
+```tsx
 type CreateFormOptions<Schema, Context = unknown> = {
 	defaultValues: FormInput<Schema>
 	context?: Context
@@ -99,13 +99,13 @@ Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
 
 ## kit.createForm
 
-```text
+```tsx
 kit.createForm(definition, options: CreateFormOptions) => FormInstance
 ```
 
 Use lazy React state for a component-local form:
 
-```text
+```tsx
 import { useState } from "react"
 
 function Editor() {
@@ -121,7 +121,7 @@ intentional. A new `defaultValues` object does not reset an existing form.
 
 ## FormRuntimeOptions
 
-```text
+```tsx
 type FormRuntimeOptions<Schema, Context = unknown> = {
 	context?: Context
 	disabled?: boolean
@@ -139,7 +139,7 @@ unmount.
 
 ## kit.useForm
 
-```text
+```tsx
 kit.useForm(form, runtimeOptions: FormRuntimeOptions) => same FormInstance
 ```
 
@@ -149,7 +149,7 @@ The hook rejects a form from any other kit snapshot.
 
 ## Form and AutoForm
 
-```text
+```tsx
 <kit.Form form={form}>...</kit.Form>
 <kit.AutoForm form={form}>...</kit.AutoForm>
 ```
@@ -180,7 +180,7 @@ Subscribe to the smallest state slice that a component needs.
 
 The instance is the primary command API:
 
-```text
+```tsx
 form.getSnapshot()
 form.getValues()
 form.getValue(path)
@@ -229,7 +229,7 @@ native classic submit.
 `FormCommand<Input, Context>` is the union accepted by middleware
 `api.dispatch`:
 
-```text
+```tsx
 type FormCommand<Input, Context> =
 	| { type: "value/set"; path: FieldPath<Input>; value: unknown }
 	| { type: "values/set"; values: FormDeepPartial<Input> }
@@ -253,7 +253,7 @@ interrupt the current middleware stack.
 
 ## Transactions
 
-```text
+```tsx
 type FormTransaction<Input, Context> =
 	| DocumentTransaction<Input>
 	| RestoreTransaction<Input>
@@ -289,7 +289,7 @@ Runtime events are not stored in history or persistence.
 
 ## Middleware
 
-```text
+```tsx
 type FormMiddleware<Input, Context> =
 	(api: {
 		getSnapshot(): FormSnapshot<Input, Context>
@@ -304,7 +304,7 @@ cancellation, replacement, restore, nested dispatch, and error rules.
 
 ## History
 
-```text
+```tsx
 import { createHistoryMiddleware, replayJournal } from "form-please/history"
 
 createHistoryMiddleware({ limit?: number, groupWindow?: number }) => HistoryFeature
@@ -317,7 +317,7 @@ to `0` to disable time-based group closure. Consecutive control commits to one
 path can share a group. A batch is one group. Forwarded blur closes the active
 group.
 
-```text
+```tsx
 history.getSnapshot() // { canUndo, canRedo, index, length }
 history.subscribe(listener) => unsubscribe
 history.undo() => HistoryOperationResult
@@ -334,7 +334,7 @@ opaque `cursor`. Use `journal.cursor` for the current position,
 `segment.checkpoint.cursor` for a checkpoint, or `group.cursor` for the state
 after that group:
 
-```text
+```tsx
 const journal = history.export()
 const firstSegment = journal.segments[0]
 const checkpoint = replayJournal(journal, firstSegment.checkpoint.cursor)
@@ -351,7 +351,7 @@ See [History and journals](/guides/history) for complete examples.
 
 ## Persistence
 
-```text
+```tsx
 createPersistenceMiddleware({
 	adapter,
 	key,
@@ -370,7 +370,7 @@ persistenceFeature.handle(form) => PersistenceHandle
 `saveDelay` defaults to `500` milliseconds. Supply the same `HistoryFeature`
 in `history` and in the form middleware list to persist the journal.
 
-```text
+```tsx
 await persistence.restore() => PersistenceRestoreResult
 persistence.start()
 await persistence.flush()
@@ -391,7 +391,7 @@ conflict and remains authoritative.
 
 ### Adapters
 
-```text
+```tsx
 type FormPersistenceAdapter = {
 	load(key: string): Promise<JsonValue | undefined>
 	save(key: string, value: JsonValue): Promise<void>
@@ -408,7 +408,7 @@ call `onError`.
 
 ### Codecs and migration
 
-```text
+```tsx
 type PersistenceCodec<Value> = {
 	tag: string
 	canEncode(value: unknown): value is Value
@@ -434,7 +434,7 @@ Query transports.
 
 ## Redux DevTools
 
-```text
+```tsx
 createDevToolsMiddleware(options?: CreateDevToolsOptions) => DevToolsFeature
 devToolsFeature.handle(form) => DevToolsHandle
 devTools.disconnect()
@@ -445,7 +445,7 @@ binding through `kit.useForm`, `kit.AutoForm`, or `ActionForm`. A form that is
 never bound does not open a DevTools listener. For manual `kit.Form`
 composition, call `kit.useForm(form, runtimeOptions)` in the component.
 
-```text
+```tsx
 type CreateDevToolsOptions = {
 	name?: string
 	latency?: number
@@ -498,7 +498,7 @@ accessibility, and `FormData` contracts. Use `mode: "native"`, `"hidden"`, or
 
 ## createDefaultSlots
 
-```text
+```tsx
 createDefaultSlots({ i18n? }) => FormKitSlots
 ```
 
@@ -507,7 +507,7 @@ They do not provide a visual theme.
 
 ## React 19
 
-```text
+```tsx
 import { ActionForm, ActionSubmit } from "form-please/react19"
 
 <ActionForm form={form} action={action} result={result}>
@@ -544,7 +544,7 @@ Defaults are `maxEntries: 1_000`, `maxPathLength: 1_024`, `maxDepth: 32`, and
 
 ## React-free core
 
-```text
+```tsx
 import { createFormStore } from "form-please/core"
 
 createFormStore({ definition, defaultValues, context?, ...runtimeOptions })

@@ -189,7 +189,7 @@ when loading must not discard an existing edit value.
 
 For the complete form, match before rendering:
 
-```text
+```tsx
 const disabled = matchResource(permission, {
   pending: () => true,
   success: ({ value }) => !value.canEdit,

@@ -24,7 +24,7 @@ the form and one explicit boundary for side effects.
 Create the form once. Use `FormProvider`, `useFormContext`, and granular hooks
 when a component must be independent of the generated tree.
 
-```text
+```tsx
 import {
 	FormProvider,
 	createFormKit,
@@ -66,7 +66,7 @@ parent form.
 Wait for loaded data before you mount the component that creates the form.
 This makes the loaded values the initial clean baseline.
 
-```text
+```tsx
 function ProfileScreen({ profile }) {
 	if (profile === undefined) return <p>Loading…</p>
 	return <ProfileEditor key={profile.id} profile={profile} />
@@ -87,7 +87,7 @@ document as the new baseline. A prop identity change does not reset a form.
 
 Configure middleware only in `kit.createForm`:
 
-```text
+```tsx
 import type { FormMiddleware } from "form-please"
 
 const audit: FormMiddleware<Input, Context> =
@@ -179,7 +179,7 @@ or isolate that mutation. Replace the leaf through a form command instead.
 
 Parse server input through the server entry:
 
-```text
+```tsx
 import { parseFormData } from "form-please/server"
 
 const result = await parseFormData(formData, schema)

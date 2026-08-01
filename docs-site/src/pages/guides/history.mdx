@@ -12,7 +12,7 @@ a replayable journal. Import `createHistoryMiddleware` from
 
 ## First use
 
-```text
+```tsx
 import { createHistoryMiddleware } from "form-please/history"
 
 const historyFeature = createHistoryMiddleware()
@@ -74,7 +74,7 @@ Each checkpoint and group in `journal.segments` has an opaque cursor. Use
 replay that checkpoint, or use `group.cursor` to replay the state after a
 specific group:
 
-```text
+```tsx
 const journal = history.export()
 const segment = journal.segments[0]
 const checkpoint = replayJournal(journal, segment.checkpoint.cursor)
@@ -87,7 +87,7 @@ and cursors. A valid import submits one live restore through middleware.
 
 Catch import errors and keep the current form active:
 
-```text
+```tsx
 try {
 	const result = await history.import(JSON.parse(uploadedText))
 	showResult(result)

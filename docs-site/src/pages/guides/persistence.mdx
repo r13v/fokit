@@ -12,7 +12,7 @@ restore validation. Your application owns the storage transport.
 
 ## First use with localStorage
 
-```text
+```tsx
 import {
 	createLocalStorageAdapter,
 	createPersistenceMiddleware,
@@ -76,7 +76,7 @@ identity and installs the committed document as the clean baseline.
 History mode stores the complete `FormJournal`. Configure the exact history
 feature as a dependency and include both features in the form:
 
-```text
+```tsx
 const historyFeature = createHistoryMiddleware()
 const persistenceFeature = createPersistenceMiddleware({
 	adapter,
@@ -107,7 +107,7 @@ requires the browser `File` API. Codec tags must be non-empty and unique.
 
 Run an application migration when the stored application version differs:
 
-```text
+```tsx
 const persistenceFeature = createPersistenceMiddleware({
 	adapter,
 	key: "profile",

@@ -9,6 +9,7 @@ export default defineConfig({
 					environment: "node",
 					include: [
 						"src/core/**/*.test.ts",
+						"src/devtools/**/*.test.ts",
 						"src/history/**/*.test.ts",
 						"src/persistence/**/*.test.ts",
 						"src/server/**/*.test.ts",

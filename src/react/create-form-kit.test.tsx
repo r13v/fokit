@@ -4,14 +4,15 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { StrictMode, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
+import { formBindingFinalizer } from "../core/feature-protocol.js"
 import type {
 	FormInput,
 	FormMiddleware,
 	ImperativeFormIssue,
 } from "../core/index.js"
+import { createDevToolsMiddleware } from "../devtools/devtools.js"
 import { FieldControl } from "./control.js"
 import { createFormKit, type FormKitSlots } from "./create-form-kit.js"
-import { formBindingFinalizer } from "./form-instance.js"
 import { useFormState } from "./hooks.js"
 import type { RenderNodeProps } from "./render-node.js"
 import type {
@@ -755,6 +756,50 @@ describe("createFormKit", () => {
 			</StrictMode>,
 		)
 		expect(activated).toHaveBeenCalledTimes(1)
+	})
+
+	it("activates DevTools only for the form retained and bound by Strict Mode", () => {
+		const listeners = new Set<(message: unknown) => void>()
+		const subscribe = vi.fn((listener: (message: unknown) => void) => {
+			listeners.add(listener)
+			return () => listeners.delete(listener)
+		})
+		const connect = vi.fn(() => ({
+			init: vi.fn(),
+			send: vi.fn(),
+			error: vi.fn(),
+			subscribe,
+			unsubscribe: vi.fn(() => listeners.clear()),
+		}))
+		Object.defineProperty(window, "__REDUX_DEVTOOLS_EXTENSION__", {
+			configurable: true,
+			value: { connect },
+		})
+		const feature = createDevToolsMiddleware()
+		const definition = createDefinition()
+
+		function BoundForm() {
+			const [form] = useState(() =>
+				testKit.createForm<TestSchema, unknown>(definition, {
+					defaultValues: defaultValues(),
+					middleware: [feature],
+				}),
+			)
+			return <testKit.AutoForm form={form} />
+		}
+
+		try {
+			render(
+				<StrictMode>
+					<BoundForm />
+				</StrictMode>,
+			)
+			expect(connect).toHaveBeenCalledOnce()
+			expect(subscribe).toHaveBeenCalledOnce()
+			expect(listeners.size).toBe(1)
+		} finally {
+			Reflect.deleteProperty(window, "__REDUX_DEVTOOLS_EXTENSION__")
+		}
 	})
 })
 

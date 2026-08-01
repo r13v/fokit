@@ -12,7 +12,14 @@ export const FORM_FEATURE_PROTOCOL_VERSION = 1
 export const formFeatureCapabilityKey = Symbol.for(
 	"form-please.feature-capability",
 )
+export const formBindingFinalizer = Symbol.for(
+	"form-please.form-binding-finalizer",
+)
 const formFeatureMetadataKey = Symbol.for("form-please.feature-metadata")
+
+export type FormBindingFinalizingMiddleware = object & {
+	readonly [formBindingFinalizer]?: (form: object) => void
+}
 
 type FirstPartyFeatureKind = "devtools" | "history" | "persistence"
 

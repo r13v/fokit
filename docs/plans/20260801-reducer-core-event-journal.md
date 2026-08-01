@@ -915,50 +915,50 @@ boundary.
 - Modify: vitest.config.ts
 - Modify: src/core/feature-protocol.ts
 
-- [ ] Define createDevToolsMiddleware, DevToolsFeature, DevToolsHandle, supported
+- [x] Define createDevToolsMiddleware, DevToolsFeature, DevToolsHandle, supported
   connection options, error callback, diagnostic state, and opaque revision
   token types in src/devtools/index.ts.
-- [ ] Connect directly through
+- [x] Connect directly through
   window.__REDUX_DEVTOOLS_EXTENSION__.connect without importing Redux or
   @redux-devtools/extension. Remain inert during SSR or when the extension is
   absent. Defer connect and subscribe until Task 6's first successful React
   binding finalization confirms that every middleware outer function
   initialized and that React retained the form.
-- [ ] If binding-time DevTools activation partially connects and then fails,
+- [x] If binding-time DevTools activation partially connects and then fails,
   unsubscribe and permanently disable that per-form connection. Report the
   diagnostic through onError without failing the binding. Do not add a general
   middleware cleanup hook.
-- [ ] Register first-party metadata so kit.createForm permits at most one
+- [x] Register first-party metadata so kit.createForm permits at most one
   DevTools feature per form.
-- [ ] Own the extension features option and reject actionCreators and
+- [x] Own the extension features option and reject actionCreators and
   enhancer-only options. Preserve official option defaults except autoPause,
   which defaults to true.
-- [ ] Send every committed FormEvent from the guaranteed finalized-event
+- [x] Send every committed FormEvent from the guaranteed finalized-event
   timeline, including runtime events, and no cancelled transaction. Send only
   values, logical row identity, and the reserved opaque revision token as state.
   A post-commit application error must not hide the event.
-- [ ] Apply stateSanitizer to the visible document projection before
+- [x] Apply stateSanitizer to the visible document projection before
   reattaching the reserved token. Never deserialize visible or exported
   extension state as a restore target.
-- [ ] Keep a per-form bounded token-to-immutable-FormDocument table based on
+- [x] Keep a per-form bounded token-to-immutable-FormDocument table based on
   maxAge plus initial and current committed baselines.
-- [ ] Support JUMP_TO_STATE, JUMP_TO_ACTION, RESET, and ROLLBACK through one
+- [x] Support JUMP_TO_STATE, JUMP_TO_ACTION, RESET, and ROLLBACK through one
   live restore with origin devtools and history record. Support COMMIT only as
   a DevTools baseline change.
-- [ ] Disable arbitrary dispatch, skip, reorder, import, lock, persisted monitor
+- [x] Disable arbitrary dispatch, skip, reorder, import, lock, persisted monitor
   state, and generated tests through the connection features contract.
-- [ ] Suppress echo of a successful DevTools restore already selected by the
+- [x] Suppress echo of a successful DevTools restore already selected by the
   monitor. Let history record it as a new group and active persistence observe
   it as a normal commit.
-- [ ] On expired token, cancellation, or transformed restore, leave or accept
+- [x] On expired token, cancellation, or transformed restore, leave or accept
   the actual form result as specified, call extension.error, and reinitialize
   the monitor with the actual live document.
-- [ ] Treat connection, sanitizer, serialization, send, subscribe, and
+- [x] Treat connection, sanitizer, serialization, send, subscribe, and
   unsubscribe failures as diagnostics that cannot fail a form commit. Call
   onError and permanently disable the broken per-form connection.
-- [ ] Implement idempotent devTools.disconnect() that removes only that form's
+- [x] Implement idempotent devTools.disconnect() that removes only that form's
   listener and permanently turns that middleware instance into a no-op.
-- [ ] Add a complete fake-extension test matrix for SSR, absent extension,
+- [x] Add a complete fake-extension test matrix for SSR, absent extension,
   options, event/state projection, runtime events, supported navigation,
   rejected monitor features, maxAge expiration, sanitizer token protection,
   cancellation/transformation resync, transport failures, and isolated
@@ -966,14 +966,14 @@ boundary.
   listener remains after kit.createForm throws. In React Strict Mode, create a
   form in a lazy state initializer and prove the discarded form creates no
   listener while the retained and bound form creates exactly one.
-- [ ] Put DevTools before and after middleware that commits and then throws;
+- [x] Put DevTools before and after middleware that commits and then throws;
   assert the form command throws while the extension receives the committed
   event exactly once in both orders.
-- [ ] Add type tests for allowed and rejected connection options and stable
+- [x] Add type tests for allowed and rejected connection options and stable
   per-form handle typing.
-- [ ] Extend the Vitest node project to include src/devtools tests.
-- [ ] Run npx vitest run src/devtools.
-- [ ] Run npm run typecheck.
+- [x] Extend the Vitest node project to include src/devtools tests.
+- [x] Run npx vitest run src/devtools.
+- [x] Run npm run typecheck.
 
 ### Task 11: Publish Optional Entries and Verify Build Isolation
 

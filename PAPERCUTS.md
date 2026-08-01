@@ -112,3 +112,7 @@ Type-checking the green history runtime suite → applying the Readonly mapped t
 ## 2026-08-01 21:15 — GPT-5
 
 Locating the Knip configuration → an unmatched zsh glob aborted the first read command. Use rg --files with include patterns instead of passing optional globs directly to zsh.
+
+## 2026-08-01 21:47 — GPT-5
+
+Type-checking the DevTools matrix after the runtime suite passed → Vitest inferred a zero-argument mock from its implementation, so inspecting its first recorded argument failed TypeScript. Declare callback parameters on mocks whose call arguments are part of the assertion.

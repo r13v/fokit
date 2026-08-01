@@ -3,6 +3,8 @@
 import {
 	assertFirstPartyFeatureConfiguration,
 	attachFormFeatureCapability,
+	type FormBindingFinalizingMiddleware,
+	formBindingFinalizer,
 } from "../core/feature-protocol.js"
 import {
 	createFormStoreWithMiddleware,
@@ -71,12 +73,6 @@ export type FormKitDescriptor = Readonly<{
 	controls: ControlRegistry
 	slots: RuntimeFormKitSlots
 }>
-
-export const formBindingFinalizer = Symbol("form-please.formBindingFinalizer")
-
-type BindingFinalizingMiddleware = AnyFormMiddleware & {
-	readonly [formBindingFinalizer]?: (form: object) => void
-}
 
 declare const formKitOwnerBrand: unique symbol
 
@@ -440,7 +436,7 @@ export function createFormInstance<
 		kitDescriptor,
 	)
 	const finalizers = middleware.flatMap((entry: AnyFormMiddleware) => {
-		const finalize = (entry as BindingFinalizingMiddleware)[
+		const finalize = (entry as FormBindingFinalizingMiddleware)[
 			formBindingFinalizer
 		]
 		return finalize === undefined ? [] : [() => finalize(instance as object)]

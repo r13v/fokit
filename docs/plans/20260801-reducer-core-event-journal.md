@@ -827,78 +827,78 @@ work to overwrite newer local state.
 - Modify: src/core/feature-protocol.ts
 - Modify: src/history/history.ts
 
-- [ ] Define createPersistenceMiddleware, PersistenceFeature,
+- [x] Define createPersistenceMiddleware, PersistenceFeature,
   PersistenceHandle, PersistenceSnapshot, FormPersistenceAdapter,
   PersistenceCodec, createDateCodec, createFileCodec, and
   createLocalStorageAdapter exports in src/persistence/index.ts.
-- [ ] Implement the exact idle/restoring/active/conflict phase axis and
+- [x] Implement the exact idle/restoring/active/conflict phase axis and
   idle/scheduled/saving/failed save axis from docs/proposal.md.
-- [ ] Keep construction idle. Implement restore(), start(), flush(), clear(),
+- [x] Keep construction idle. Implement restore(), start(), flush(), clear(),
   getSnapshot(), and subscribe() with the proposal's activation, retry, and
   suppression rules.
-- [ ] Register first-party metadata so kit.createForm permits one persistence
+- [x] Register first-party metadata so kit.createForm permits one persistence
   feature, validates an explicitly configured history dependency by exact
   feature reference, and requires both references in the same chain.
-- [ ] Keep first-party behavior independent of middleware declaration order:
+- [x] Keep first-party behavior independent of middleware declaration order:
   the guaranteed finalized-event listener increments the document revision and
   schedules work synchronously, while the asynchronous save captures the
   coherent latest document/history snapshot after the current dispatch
   completes. A post-commit application error must not hide the revision.
-- [ ] Implement revisioned serialized save/remove operations and coalescing so
+- [x] Implement revisioned serialized save/remove operations and coalescing so
   completion of an older save cannot replace a newer revision or recreate data
   after clear() completes.
-- [ ] Detect a local document edit during restore, leave that edit untouched,
+- [x] Detect a local document edit during restore, leave that edit untouched,
   enter inactive conflict, and perform no write. Let restore() from conflict
   choose stored state and start() choose current local state.
-- [ ] Use a default saveDelay of 500 milliseconds; restart it for each commit,
+- [x] Use a default saveDelay of 500 milliseconds; restart it for each commit,
   make zero schedule an immediate asynchronous write, and make flush bypass the
   timer.
-- [ ] Make storage failure non-transactional: retain the form commit, expose
+- [x] Make storage failure non-transactional: retain the form commit, expose
   failed save state, reject flush, invoke onError once per failed attempt, and
   retry the latest revision on the next commit or flush.
-- [ ] Define a versioned JSON envelope with protocol identifier, protocol
+- [x] Define a versioned JSON envelope with protocol identifier, protocol
   version, application data version, mode document or history, and an encoded
   payload.
-- [ ] Encode values with structural nodes for scalar JSON, undefined, arrays,
+- [x] Encode values with structural nodes for scalar JSON, undefined, arrays,
   objects, and tagged codec payloads rather than a collision-prone magic
   object property. Reject cyclic or unsupported opaque leaves with the exact
   canonical value path.
-- [ ] Make codec tags non-empty and unique. Run asynchronous codec encode and
+- [x] Make codec tags non-empty and unique. Run asynchronous codec encode and
   decode explicitly; do not auto-detect Date, File, or application values
   without a registered codec.
-- [ ] Implement createDateCodec and an opt-in createFileCodec that stores
+- [x] Implement createDateCodec and an opt-in createFileCodec that stores
   base64 content, name, media type, and lastModified. Enforce a default
   10 MiB source-file limit before encoding.
-- [ ] Run application migration on untrusted JSON after envelope/protocol
+- [x] Run application migration on untrusted JSON after envelope/protocol
   validation and before codec decoding and schema validation. Treat an
   unsupported library protocol as a hard error.
-- [ ] Validate canonical event paths, journal shapes, row-identity lengths,
+- [x] Validate canonical event paths, journal shapes, row-identity lengths,
   uniqueness, paths, counters, and final Standard Schema input before live
   restore. Use schema success only as validation; do not install transformed
   schema output.
-- [ ] In document mode persist the current FormDocument. In history mode persist
+- [x] In document mode persist the current FormDocument. In history mode persist
   the configured history feature's checkpoints, events, groups, and cursor.
-- [ ] On successful hydration, install the actual committed document as the
+- [x] On successful hydration, install the actual committed document as the
   clean baseline, clear live undo/redo, and append a history checkpoint.
   Respect cancelled, transformed, and runtime-only middleware outcomes. Install
   the baseline into the pending model during the same guaranteed finalization,
   before its single form publication; do not dispatch a second public runtime
   transaction.
-- [ ] Implement createLocalStorageAdapter(getStorage) without reading
+- [x] Implement createLocalStorageAdapter(getStorage) without reading
   localStorage at import time, so SSR imports remain safe.
-- [ ] Add fake-adapter/fake-timer tests for activation, no-record restore,
+- [x] Add fake-adapter/fake-timer tests for activation, no-record restore,
   migration rewrite, clear suppression, coalescing, stale save completion,
   clear during an in-flight save, restore conflict, retry, history mode,
   high-sequence history hydration followed by a live edit, codecs, File limit,
   malformed envelopes, and schema transforms.
-- [ ] Put persistence before and after middleware that commits and then throws;
+- [x] Put persistence before and after middleware that commits and then throws;
   assert the form commit is published, the public command throws, and the
   latest document revision is still scheduled exactly once in both orders.
-- [ ] Add type tests for adapter, codec, migration, feature dependency, and
+- [x] Add type tests for adapter, codec, migration, feature dependency, and
   document/history modes.
-- [ ] Extend the Vitest node project to include src/persistence tests.
-- [ ] Run npx vitest run src/persistence.
-- [ ] Run npm run typecheck.
+- [x] Extend the Vitest node project to include src/persistence tests.
+- [x] Run npx vitest run src/persistence.
+- [x] Run npm run typecheck.
 
 ### Task 10: Implement the Constrained Redux DevTools Feature
 

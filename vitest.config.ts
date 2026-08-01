@@ -10,6 +10,7 @@ export default defineConfig({
 					include: [
 						"src/core/**/*.test.ts",
 						"src/history/**/*.test.ts",
+						"src/persistence/**/*.test.ts",
 						"src/server/**/*.test.ts",
 					],
 				},

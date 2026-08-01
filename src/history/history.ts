@@ -59,6 +59,22 @@ export type HistoryFeature = FormAgnosticMiddleware & {
 	) => HistoryHandle<FormInput<Schema>>
 }
 
+export type HistoryPersistenceBridge<Input> = Readonly<{
+	export(): FormJournal<Input>
+	stageHydration(journal?: FormJournal<Input>): void
+	cancelHydration(): void
+}>
+
+const historyPersistenceBridgeKey = Symbol.for(
+	"form-please.history-persistence-bridge",
+)
+
+type HistoryPersistenceBridgeHost = {
+	readonly [historyPersistenceBridgeKey]?: (
+		target: object,
+	) => HistoryPersistenceBridge<unknown> | undefined
+}
+
 type HistoryGroup<Input> = {
 	events: FormDocumentEvent<Input>[]
 	document: FormDocument<Input>
@@ -116,6 +132,12 @@ export function createHistoryMiddleware(
 			return state.handle
 		},
 	})
+	Object.defineProperty(feature, historyPersistenceBridgeKey, {
+		value(target: object) {
+			const capability = getFormFeatureCapability(target)
+			return states.get(capability)?.persistenceBridge
+		},
+	})
 	attachFormFeatureMetadata(feature, {
 		kind: "history",
 		feature,
@@ -123,8 +145,24 @@ export function createHistoryMiddleware(
 	return Object.freeze(feature)
 }
 
+export function getHistoryPersistenceBridge<Input>(
+	feature: HistoryFeature,
+	target: object,
+): HistoryPersistenceBridge<Input> {
+	const bridge = (feature as HistoryPersistenceBridgeHost)[
+		historyPersistenceBridgeKey
+	]?.(target)
+	if (bridge === undefined) {
+		throw new TypeError(
+			"The configured history dependency is not initialized for this form",
+		)
+	}
+	return bridge as HistoryPersistenceBridge<Input>
+}
+
 class HistoryState<Input, Context> {
 	readonly handle: HistoryHandle<Input>
+	readonly persistenceBridge: HistoryPersistenceBridge<Input>
 	readonly #capability: HistoryCapability<Input, Context>
 	readonly #limit: number
 	readonly #groupWindow: number
@@ -136,6 +174,9 @@ class HistoryState<Input, Context> {
 	#lastSequence = 0
 	#snapshot: HistorySnapshot = createHistorySnapshot(0, 0)
 	#pendingRestore: PendingRestore<Input> | undefined
+	#pendingHydration:
+		| Readonly<{ journal: FormJournal<Input> | undefined }>
+		| undefined
 
 	constructor(
 		capability: HistoryCapability<Input, Context>,
@@ -167,6 +208,13 @@ class HistoryState<Input, Context> {
 			export: () => this.#export(),
 			import: (journal) => this.#import(journal),
 		})
+		this.persistenceBridge = Object.freeze({
+			export: () => this.#export(),
+			stageHydration: (journal) => this.#stageHydration(journal),
+			cancelHydration: () => {
+				this.#pendingHydration = undefined
+			},
+		})
 	}
 
 	#subscribe(listener: () => void): () => void {
@@ -187,6 +235,20 @@ class HistoryState<Input, Context> {
 		document: FormDocument<Input>,
 	): void {
 		this.#lastSequence = Math.max(this.#lastSequence, event.sequence)
+		const hydration = this.#pendingHydration
+		if (
+			hydration !== undefined &&
+			(event.type === "document/committed" ||
+				event.type === "document/restored")
+		) {
+			this.#pendingHydration = undefined
+			if (hydration.journal !== undefined) {
+				this.#installJournal(hydration.journal)
+			}
+			this.#appendCheckpoint(event.sequence, document)
+			return
+		}
+		if (hydration !== undefined) this.#pendingHydration = undefined
 		const pending = this.#pendingRestore
 		if (pending !== undefined) {
 			this.#pendingRestore = undefined
@@ -237,6 +299,18 @@ class HistoryState<Input, Context> {
 		if (event.history === "record") {
 			this.#recordSingleEvent(event, document)
 		}
+	}
+
+	#stageHydration(journal?: FormJournal<Input>): void {
+		if (this.#pendingHydration !== undefined) {
+			throw new TypeError("History hydration is already pending")
+		}
+		this.#pendingHydration = Object.freeze({
+			journal:
+				journal === undefined
+					? undefined
+					: normalizeJournal<Input>(journal).journal,
+		})
 	}
 
 	#recordCommittedEvent(

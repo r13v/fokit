@@ -18,6 +18,7 @@ export default {
 				"src/index.ts",
 				"src/core/index.ts",
 				"src/history/index.ts",
+				"src/persistence/index.ts",
 				"src/react19/index.ts",
 				"src/server/index.ts",
 			],

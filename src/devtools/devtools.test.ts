@@ -6,7 +6,11 @@ import type { FormMiddleware } from "../core/middleware.js"
 import { createHistoryMiddleware } from "../history/history.js"
 import { defineControl } from "../react/control.js"
 import { createFormKit } from "../react/create-form-kit.js"
-import type { FormInstance, FormKitOwner } from "../react/form-instance.js"
+import {
+	type FormInstance,
+	type FormKitOwner,
+	getFormStore,
+} from "../react/form-instance.js"
 import type { ReactUiPresentation } from "../react/slots.js"
 import {
 	createDevToolsMiddleware,
@@ -55,6 +59,7 @@ type TestForm = FormInstance<
 
 afterEach(() => {
 	vi.unstubAllGlobals()
+	vi.restoreAllMocks()
 })
 
 describe("Redux DevTools middleware", () => {
@@ -197,6 +202,61 @@ describe("Redux DevTools middleware", () => {
 		expect(form.getValues().name).toBe("Ada")
 	})
 
+	it("accepts serialized monitor state and resynchronizes malformed JSON", () => {
+		const transport = createTransport()
+		install(transport)
+		const feature = createDevToolsMiddleware()
+		const form = createForm([feature])
+		activate(feature, form)
+
+		form.setValue("name", "Grace")
+		const grace = transport.send.mock.calls.at(-1)?.[1]
+		form.setValue("name", "Lin")
+		transport.emit(dispatch("JUMP_TO_STATE", JSON.stringify(grace)))
+		expect(form.getValues().name).toBe("Grace")
+
+		form.setValue("name", "Katherine")
+		transport.emit(dispatch("JUMP_TO_STATE", "{malformed"))
+		expect(form.getValues().name).toBe("Katherine")
+		expect(transport.error).toHaveBeenLastCalledWith(
+			"Redux DevTools revision is unknown or expired",
+		)
+		expect(transport.init.mock.calls.at(-1)?.[0]).toMatchObject({
+			values: { name: "Katherine" },
+		})
+	})
+
+	it("keeps an applied restore applied while queued runtime events drain", () => {
+		const transport = createTransport()
+		install(transport)
+		const queueTouch: FormMiddleware<Values, Context> =
+			(api) => (next) => (transaction) => {
+				const result = next(transaction)
+				if (
+					transaction.type === "document/restored" &&
+					transaction.origin === "devtools"
+				) {
+					api.dispatch({ type: "field/touch", path: "name" })
+				}
+				return result
+			}
+		const feature = createDevToolsMiddleware()
+		const form = createForm([queueTouch, feature])
+		activate(feature, form)
+		const initial = transport.init.mock.calls[0]?.[0]
+		form.setValue("name", "Grace")
+		transport.emit(dispatch("JUMP_TO_STATE", initial))
+
+		expect(form.getValues().name).toBe("Ada")
+		expect(form.getSnapshot().isTouched).toBe(true)
+		expect(transport.error).not.toHaveBeenCalledWith(
+			"Redux DevTools restore was transformed",
+		)
+		expect(transport.send.mock.calls.at(-1)?.[0]).toMatchObject({
+			type: "field/touched",
+		})
+	})
+
 	it("uses COMMIT only as a monitor baseline and supports RESET and ROLLBACK restores", () => {
 		const transport = createTransport()
 		install(transport)
@@ -299,6 +359,39 @@ describe("Redux DevTools middleware", () => {
 		expect(transformedTransport.init.mock.calls.at(-1)?.[0]).toMatchObject({
 			values: { name: "Transformed" },
 		})
+	})
+
+	it("does not mistake a queued command for a cancelled restore", () => {
+		const cancelWithTargetEdit: FormMiddleware<Values, Context> =
+			(api) => (next) => (transaction) => {
+				if (
+					transaction.type !== "document/restored" ||
+					transaction.origin !== "devtools"
+				) {
+					return next(transaction)
+				}
+				api.dispatch({
+					type: "value/set",
+					path: "name",
+					value: transaction.document.values.name,
+				})
+				return { status: "cancelled" }
+			}
+		const transport = createTransport()
+		install(transport)
+		const feature = createDevToolsMiddleware()
+		const form = createForm([cancelWithTargetEdit, feature])
+		activate(feature, form)
+		const initial = transport.init.mock.calls[0]?.[0]
+		form.setValue("name", "Grace")
+
+		transport.emit(dispatch("JUMP_TO_STATE", initial))
+
+		expect(form.getValues().name).toBe("Ada")
+		expect(transport.error).toHaveBeenCalledWith(
+			"Redux DevTools restore was cancelled",
+		)
+		expect(transport.init).toHaveBeenCalledTimes(2)
 	})
 
 	it("turns connection, sanitizer, send, subscribe, and unsubscribe failures into isolated diagnostics", () => {
@@ -416,6 +509,23 @@ describe("Redux DevTools middleware", () => {
 		expect(secondTransport.send).toHaveBeenCalledOnce()
 		expect(firstTransport.returnedUnsubscribe).toHaveBeenCalledOnce()
 		expect(secondTransport.returnedUnsubscribe).not.toHaveBeenCalled()
+	})
+
+	it("unsubscribes from finalized core events on disconnect", () => {
+		const prototype = Object.getPrototypeOf(getFormStore(createForm([]))) as {
+			subscribeFinalized: (...args: unknown[]) => () => void
+		}
+		const unsubscribeFinalized = vi.fn()
+		vi.spyOn(prototype, "subscribeFinalized").mockReturnValueOnce(
+			unsubscribeFinalized,
+		)
+		const feature = createDevToolsMiddleware()
+		const form = createForm([feature])
+
+		feature.handle(form).disconnect()
+		feature.handle(form).disconnect()
+
+		expect(unsubscribeFinalized).toHaveBeenCalledOnce()
 	})
 
 	it("does not connect when later middleware initialization fails", () => {

@@ -8,6 +8,7 @@ import {
 	reconcileRowIdentityState,
 	reindexRowIdentity,
 	replaceRowIdentity,
+	validateRestoredRowIdentity,
 } from "./array-state.js"
 import { CommitTimeline } from "./commit-timeline.js"
 import type {
@@ -18,6 +19,8 @@ import {
 	type FinalizedFormEventListener,
 	FORM_FEATURE_PROTOCOL_VERSION,
 	type FormFeatureCapability,
+	type FormRestoreFinalizer,
+	MAX_EVENT_SEQUENCE_FLOOR,
 } from "./feature-protocol.js"
 import { type FocusTarget, FormFocus } from "./focus.js"
 import type { FormCommand } from "./form-commands.js"
@@ -281,7 +284,7 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 type ActiveBatch = {
 	changes: NormalizedValueChange[]
 	rowIdentity: FormDocument<unknown>["rowIdentity"]
-	abortedError?: unknown
+	failure?: { readonly error: unknown }
 }
 
 type ValueCommitResult<Input> =
@@ -317,12 +320,14 @@ export type ActionSubmissionAttempt<
 	Schema extends StandardSchema = StandardSchema,
 > = {
 	readonly input: FormInput<Schema>
+	readonly document: FormDocument<FormInput<Schema>>
 	readonly changedPaths: ReadonlySet<string>
 	finish(): void
 }
 
 export type ApplyActionResultOptions<Schema extends StandardSchema> = {
 	readonly input?: FormInput<Schema>
+	readonly document?: FormDocument<FormInput<Schema>>
 	readonly changedPaths?: readonly PathInput[]
 	readonly recordSubmit?: boolean
 }
@@ -431,9 +436,11 @@ export function startActionSubmission<
 	Schema extends StandardSchema,
 	Context = unknown,
 >(store: FormStore<Schema, Context>): ActionSubmissionAttempt<Schema> {
+	const core = asCoreFormStore(store)
 	const submission = startFormSubmission(store)
+	const document = core.getDocument()
 	const changedPaths = new Set<string>()
-	const unsubscribe = asCoreFormStore(store).subscribeFinalized(
+	const unsubscribe = core.subscribeFinalized(
 		({ event, changedPaths: committedPaths }) => {
 			if (
 				event.type !== "document/committed" &&
@@ -447,7 +454,8 @@ export function startActionSubmission<
 	let finished = false
 
 	return Object.freeze({
-		input: store.getSnapshot().values,
+		input: document.values,
+		document,
 		changedPaths,
 		finish() {
 			if (finished) {
@@ -488,6 +496,10 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	readonly #middleware: MiddlewareCoordinator
 	readonly #preparedTransactions = new WeakSet<object>()
 	readonly #preparedResolvedUi = new WeakMap<object, ResolvedUiState<Context>>()
+	readonly #preparedRestoreFinalizers = new WeakMap<
+		object,
+		FormRestoreFinalizer<FormInput<Schema>, Context>
+	>()
 	#pendingSnapshot: FormSnapshot<FormInput<Schema>, Context> | undefined
 	#pendingPreviousValues: FormInput<Schema> | undefined
 	#pendingPreviousDocument: FormDocument<FormInput<Schema>> | undefined
@@ -555,8 +567,14 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#featureCapability = Object.freeze({
 			version: FORM_FEATURE_PROTOCOL_VERSION,
 			getDocument: () => this.getDocument(),
-			restoreDocument: (nextDocument, origin, history) =>
-				this.restoreDocument(nextDocument, origin, history),
+			validateDocument: (nextDocument) =>
+				validateRestoredRowIdentity(
+					this.definition,
+					nextDocument.values,
+					nextDocument.rowIdentity,
+				),
+			restoreDocument: (nextDocument, origin, history, onFinalize) =>
+				this.restoreDocument(nextDocument, origin, history, onFinalize),
 			installCleanBaseline: (nextDocument) =>
 				this.installCleanBaseline(nextDocument),
 			validateRestoredInput: (input) => this.validateRestoredInput(input),
@@ -580,9 +598,10 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				this.#commitTransaction(
 					transaction as FormTransaction<FormInput<Schema>, Context>,
 				) as FormDispatchResult<unknown, unknown>,
-			finalize: (event) =>
+			finalize: (event, _transaction, rootTransaction) =>
 				this.#finalizeCommittedEvent(
 					event as FormEvent<FormInput<Schema>, Context>,
+					rootTransaction as object,
 				),
 			publish: () => this.#publishPendingSnapshot(),
 			afterPublication: (event, transaction) =>
@@ -625,9 +644,13 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	}
 
 	advanceEventSequenceFloor(sequence: number): void {
-		if (!Number.isSafeInteger(sequence) || sequence < 0) {
+		if (
+			!Number.isSafeInteger(sequence) ||
+			sequence < 0 ||
+			sequence > MAX_EVENT_SEQUENCE_FLOOR
+		) {
 			throw new TypeError(
-				"Form event-sequence floor must be a safe non-negative integer",
+				"Form event-sequence floor must reserve safe-integer headroom for live events",
 			)
 		}
 		this.#nextEventSequence = Math.max(this.#nextEventSequence, sequence)
@@ -765,7 +788,6 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		if (result.status === "noValueChange") {
-			this.#validationLifecycle.invalidate(true)
 			this.#commitRuntimeEvents([
 				createRuntimeResetEvent({
 					sequence: 0,
@@ -838,13 +860,30 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	startSubmission(): number {
 		const id = ++this.#nextSubmissionId
-		this.#commitRuntimeEvents([
-			createSubmissionStartedEvent({
-				sequence: 0,
-				attemptId: id,
-				documentRevision: this.#model.runtime.documentRevision,
-			}),
-		])
+		const documentRevision = this.#model.runtime.documentRevision
+		try {
+			this.#commitRuntimeEvents([
+				createSubmissionStartedEvent({
+					sequence: 0,
+					attemptId: id,
+					documentRevision,
+				}),
+			])
+		} catch (error) {
+			const submission = this.#model.runtime.submission
+			if (
+				submission.status === "submitting" &&
+				submission.attemptId === id &&
+				submission.documentRevision === documentRevision
+			) {
+				try {
+					this.finishSubmission(id)
+				} catch {
+					// The submission-start exception remains the first failure.
+				}
+			}
+			throw error
+		}
 		return id
 	}
 
@@ -898,7 +937,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			try {
 				callback()
 			} catch (error) {
-				this.#activeBatch.abortedError ??= error
+				this.#activeBatch.failure ??= { error }
 				throw error
 			}
 			return
@@ -913,13 +952,13 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		try {
 			callback()
 		} catch (error) {
-			batch.abortedError ??= error
+			batch.failure ??= { error }
 		} finally {
 			this.#activeBatch = undefined
 		}
 
-		if (batch.abortedError !== undefined) {
-			throw batch.abortedError
+		if (batch.failure !== undefined) {
+			throw batch.failure.error
 		}
 
 		this.#commitValueChanges(batch.changes, "imperative", {
@@ -982,10 +1021,6 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		const previousSnapshot = this.getSnapshot()
-		if (validationChanged) {
-			this.#validationLifecycle.cancelScheduled()
-			this.#validationLifecycle.abortNonSubmit()
-		}
 		const resolvedUi = resolveUi(
 			this.definition,
 			this.#model.document.values,
@@ -996,18 +1031,32 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				previous: previousSnapshot.resolvedUi,
 			},
 		)
-		this.#commitRuntimeEvents([
-			createRuntimeReplacedEvent({
-				sequence: 0,
-				context,
-				runtimeOptions: {
-					disabled: nextDisabled,
-					readOnly: nextReadOnly,
-					validation: nextValidationOptions,
-				},
-				resolvedUi,
-			}),
-		])
+		const sequenceBeforeReplacement = this.#nextEventSequence
+		try {
+			this.#commitRuntimeEvents([
+				createRuntimeReplacedEvent({
+					sequence: 0,
+					context,
+					runtimeOptions: {
+						disabled: nextDisabled,
+						readOnly: nextReadOnly,
+						validation: nextValidationOptions,
+					},
+					resolvedUi,
+				}),
+			])
+		} catch (error) {
+			if (this.#nextEventSequence > sequenceBeforeReplacement) {
+				try {
+					this.#commitValueChanges([], "valuePolicy", {
+						transitionFromUi: previousSnapshot.resolvedUi,
+					})
+				} catch {
+					// The runtime-replacement exception remains the first failure.
+				}
+			}
+			throw error
+		}
 		this.#commitValueChanges([], "valuePolicy", {
 			transitionFromUi: previousSnapshot.resolvedUi,
 		})
@@ -1169,7 +1218,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			this.#commitValueChanges(changes, source, { grouping })
 		} catch (error) {
 			if (this.#activeBatch !== undefined) {
-				this.#activeBatch.abortedError ??= error
+				this.#activeBatch.failure ??= { error }
 			}
 			throw error
 		}
@@ -1224,7 +1273,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 			})
 		} catch (error) {
 			if (this.#activeBatch !== undefined) {
-				this.#activeBatch.abortedError ??= error
+				this.#activeBatch.failure ??= { error }
 			}
 			throw error
 		}
@@ -1381,10 +1430,10 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					readOnly: this.#model.runtime.options.readOnly,
 				},
 			)
-			const policyChanges = this.#createValuePolicyChanges(
-				transitionFromUi,
+			const policyChanges = createHiddenValuePolicyChanges(
 				resolvedUi,
 				nextValues,
+				transitionFromUi,
 			)
 
 			if (policyChanges.length === 0) {
@@ -1411,19 +1460,17 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		throw new TypeError("valuePolicy changes did not converge")
 	}
 
-	#createValuePolicyChanges(
-		transitionFromUi: ResolvedUiState<Context>,
-		resolvedUi: ResolvedUiState<Context>,
-		values: FormInput<Schema>,
-	): readonly NormalizedValueChange[] {
-		return createHiddenValuePolicyChanges(resolvedUi, values, transitionFromUi)
-	}
-
 	#scheduleAutomaticValidation(
 		trigger: "blur" | "change",
 		paths: readonly string[],
 	): void {
 		if (!this.#shouldRunAutomaticValidation(trigger)) {
+			return
+		}
+		if (this.#middleware.isRunning) {
+			this.#middleware.afterCurrentRun(() => {
+				this.#scheduleAutomaticValidation(trigger, paths)
+			})
 			return
 		}
 
@@ -1485,7 +1532,37 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#suppressNextPublication = true
 		this.#suppressedPublicationModel = this.#model
 		const queued = this.#middleware.isRunning
-		const started = this.#dispatchEventCandidate(startedEvent)
+		let started: FormDispatchResult<FormInput<Schema>, Context>
+		try {
+			started = this.#dispatchEventCandidate(startedEvent)
+		} catch (error) {
+			const validation = this.#model.runtime.validation
+			const committed =
+				validation.status === "validating" &&
+				validation.attemptId === id &&
+				validation.documentRevision === revision
+			this.#suppressNextPublication = false
+			this.#suppressedPublicationModel = undefined
+			if (committed) {
+				try {
+					this.#publishPendingSnapshot()
+				} catch {
+					// The middleware exception remains the first failure.
+				}
+				try {
+					this.#commitRuntimeEvents([
+						createValidationFailedEvent({
+							sequence: 0,
+							attemptId: id,
+							documentRevision: revision,
+						}),
+					])
+				} catch {
+					// The middleware exception remains the first failure.
+				}
+			}
+			throw error
+		}
 		if (started.status === "cancelled" && !queued) {
 			this.#suppressNextPublication = false
 			this.#suppressedPublicationModel = undefined
@@ -1583,8 +1660,8 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 
 		if (result.reset === "submitted") {
-			if (options.input !== undefined) {
-				this.#resetBaselineTo(options.input)
+			if (options.document !== undefined) {
+				this.#resetBaselineTo(options.document)
 			}
 			return
 		}
@@ -1665,15 +1742,11 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		})
 	}
 
-	#resetBaselineTo(values: FormInput<Schema>): void {
-		const nextBaselineValues = cloneAndFreezeValue(values)
-		const rowIdentity = reconcileRowIdentityState(
-			this.definition,
-			nextBaselineValues,
-			this.#model.document.rowIdentity,
+	#resetBaselineTo(document: FormDocument<FormInput<Schema>>): void {
+		const baselineDocument = createFormDocument(
+			document.values,
+			document.rowIdentity,
 		)
-		const baselineDocument = createFormDocument(nextBaselineValues, rowIdentity)
-		this.#validationLifecycle.invalidate(true)
 		this.#commitRuntimeEvents([
 			createRuntimeResetEvent({
 				sequence: 0,
@@ -1781,18 +1854,6 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		this.#model = Object.freeze({ ...this.#model, runtime })
 	}
 
-	#reduceDocumentEvent(event: FormDocumentEvent<FormInput<Schema>>): void {
-		const previousDocument = this.#model.document
-		const document = reduceFormDocument(previousDocument, event)
-		const runtime = reduceFormRuntime(
-			this.#model.runtime,
-			event,
-			document,
-			previousDocument,
-		)
-		this.#model = Object.freeze({ document, runtime })
-	}
-
 	#commitRuntimeEvents(
 		events: readonly FormRuntimeEvent<Context, FormInput<Schema>>[],
 	): void {
@@ -1803,10 +1864,14 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		document: FormDocument<FormInput<Schema>>,
 		origin: RestoreOrigin,
 		history: "skip" | "record" = "skip",
+		onFinalize?: FormRestoreFinalizer<FormInput<Schema>, Context>,
 	): FormDispatchResult<FormInput<Schema>, Context> {
 		this.#assertValueCommandAllowed()
 		if (this.#activeBatch !== undefined) {
 			throw new TypeError("restoreDocument cannot be called inside a batch")
+		}
+		if (this.#middleware.isRunning) {
+			return Object.freeze({ status: "cancelled" })
 		}
 		return this.#dispatchEventCandidate(
 			createDocumentRestoredEvent({
@@ -1815,17 +1880,23 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				origin,
 				history,
 			}),
+			undefined,
+			onFinalize,
 		)
 	}
 
 	#dispatchEventCandidate(
 		event: FormEvent<FormInput<Schema>, Context>,
 		resolvedUi?: ResolvedUiState<Context>,
+		onRestoreFinalized?: FormRestoreFinalizer<FormInput<Schema>, Context>,
 	): FormDispatchResult<FormInput<Schema>, Context> {
 		const transaction = eventToTransaction(event)
 		this.#preparedTransactions.add(transaction)
 		if (resolvedUi !== undefined) {
 			this.#preparedResolvedUi.set(transaction, resolvedUi)
+		}
+		if (onRestoreFinalized !== undefined) {
+			this.#preparedRestoreFinalizers.set(transaction, onRestoreFinalized)
 		}
 		return this.#middleware.run(
 			transaction as FormTransaction<unknown, unknown>,
@@ -1838,32 +1909,40 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		const preparedResolvedUi = this.#preparedResolvedUi.get(transaction)
 		const event = this.#createCommittedEvent(transaction)
 		const previousModel = this.#model
-		this.#pendingPreviousDocument = previousModel.document
 		if (event.type === "document/committed") {
-			this.#pendingPreviousValues = clonePublicValue(
-				this.#model.document.values,
+			const previousValues = clonePublicValue(previousModel.document.values)
+			const model = this.#createDocumentModel(
+				previousModel,
+				event,
+				preparedResolvedUi,
 			)
 			this.#validationLifecycle.invalidate(
 				event.baseline === "replaced" || event.source === "reset",
 			)
-			this.#reduceDocumentEvent(event)
-			if (event.source === "reset" && event.baseline !== "replaced") {
-				this.#reduceRuntimeEvent(
-					createRuntimeResetEvent({
-						sequence: event.sequence,
-						baseline: "preserved",
-					}),
-				)
-			}
-			this.#refreshResolvedUi(event.sequence, preparedResolvedUi)
+			this.#model = model
+			this.#pendingPreviousValues = previousValues
 		} else if (event.type === "document/restored") {
+			const model = this.#createDocumentModel(previousModel, event)
 			this.#validationLifecycle.invalidate()
-			this.#reduceDocumentEvent(event)
-			this.#refreshResolvedUi(event.sequence)
+			this.#model = model
 		} else {
+			const validationChanged =
+				event.type === "runtime/replaced" &&
+				!isSameValidationOptions(
+					previousModel.runtime.options.validation,
+					event.options.validation,
+				)
 			this.#reduceRuntimeEvent(event)
+			if (event.type === "runtime/reset") {
+				this.#validationLifecycle.invalidate(true)
+			}
+			if (validationChanged) {
+				this.#validationLifecycle.cancelScheduled()
+				this.#abortNonSubmitValidation()
+			}
 		}
 
+		this.#pendingPreviousDocument = previousModel.document
 		if (this.#model !== previousModel) {
 			this.#pendingSnapshot = this.#createSnapshot()
 		}
@@ -1876,12 +1955,41 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		return this.#createEvent(transaction, this.#nextSequence())
 	}
 
-	#finalizeCommittedEvent(event: FormEvent<FormInput<Schema>, Context>): void {
+	#finalizeCommittedEvent(
+		event: FormEvent<FormInput<Schema>, Context>,
+		rootTransaction: object,
+	): void {
 		const previousDocument =
 			this.#pendingPreviousDocument ?? this.#model.document
 		this.#pendingPreviousDocument = undefined
-		this.#timeline.finalize(event, previousDocument, this.#model.document)
-		this.#onCommitFinalized(event)
+		let error: unknown
+		let hasError = false
+		const restoreFinalizer =
+			this.#preparedRestoreFinalizers.get(rootTransaction)
+		this.#preparedRestoreFinalizers.delete(rootTransaction)
+		if (restoreFinalizer !== undefined) {
+			try {
+				restoreFinalizer(
+					Object.freeze({ event, document: this.#model.document }),
+				)
+			} catch (caught) {
+				error = caught
+				hasError = true
+			}
+		}
+		try {
+			this.#timeline.finalize(event, previousDocument, this.#model.document)
+		} catch (caught) {
+			error = caught
+			hasError = true
+		}
+		try {
+			this.#onCommitFinalized(event)
+		} catch (caught) {
+			if (!hasError) error = caught
+			hasError = true
+		}
+		if (hasError) throw error
 	}
 
 	#freezeTransactionCandidate(
@@ -1900,8 +2008,15 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		switch (transaction.type) {
 			case "document/committed":
 				return createDocumentCommittedEvent({ sequence, ...transaction })
-			case "document/restored":
-				return createDocumentRestoredEvent({ sequence, ...transaction })
+			case "document/restored": {
+				const event = createDocumentRestoredEvent({ sequence, ...transaction })
+				validateRestoredRowIdentity(
+					this.definition,
+					event.document.values,
+					event.document.rowIdentity,
+				)
+				return event
+			}
 			case "runtime/replaced":
 				return createRuntimeReplacedEvent({
 					sequence,
@@ -1934,31 +2049,50 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		}
 	}
 
-	#refreshResolvedUi(
-		sequence: number,
+	#createDocumentModel(
+		previousModel: FormModel<FormInput<Schema>, Context>,
+		event: FormDocumentEvent<FormInput<Schema>>,
 		prepared?: ResolvedUiState<Context>,
-	): void {
-		const runtime = this.#model.runtime
+	): FormModel<FormInput<Schema>, Context> {
+		const document = reduceFormDocument(previousModel.document, event)
+		let runtime = reduceFormRuntime(
+			previousModel.runtime,
+			event,
+			document,
+			previousModel.document,
+		)
+		if (
+			event.type === "document/committed" &&
+			event.source === "reset" &&
+			event.baseline !== "replaced"
+		) {
+			runtime = reduceFormRuntime(
+				runtime,
+				createRuntimeResetEvent({
+					sequence: event.sequence,
+					baseline: "preserved",
+				}),
+				document,
+			)
+		}
 		const resolvedUi =
 			prepared ??
-			resolveUi(
-				this.definition,
-				this.#model.document.values,
-				runtime.context as Context,
-				{
-					disabled: runtime.options.disabled,
-					readOnly: runtime.options.readOnly,
-					previous: runtime.resolvedUi,
-				},
-			)
-		this.#reduceRuntimeEvent(
+			resolveUi(this.definition, document.values, runtime.context as Context, {
+				disabled: runtime.options.disabled,
+				readOnly: runtime.options.readOnly,
+				previous: runtime.resolvedUi,
+			})
+		runtime = reduceFormRuntime(
+			runtime,
 			createRuntimeReplacedEvent({
-				sequence,
+				sequence: event.sequence,
 				context: runtime.context as Context,
 				runtimeOptions: runtime.options,
 				resolvedUi,
 			}),
+			document,
 		)
+		return Object.freeze({ document, runtime })
 	}
 
 	#publishPendingSnapshot(): void {
@@ -1994,21 +2128,29 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 		const previousValues = this.#pendingPreviousValues
 		this.#pendingPreviousValues = undefined
 		if (previousValues === undefined) return
-		this.#afterUpdate?.(
-			Object.freeze({
-				previousValues,
-				values: this.getSnapshot().values,
-				changes: event.changes as readonly ValueChange[],
-				source: event.source,
-				context: this.#model.runtime.context,
-			}),
-		)
+		let error: unknown
+		let hasError = false
+		try {
+			this.#afterUpdate?.(
+				Object.freeze({
+					previousValues,
+					values: this.getSnapshot().values,
+					changes: event.changes as readonly ValueChange[],
+					source: event.source,
+					context: this.#model.runtime.context,
+				}),
+			)
+		} catch (caught) {
+			error = caught
+			hasError = true
+		}
 		if (event.source !== "reset") {
 			this.#scheduleAutomaticValidation(
 				"change",
 				event.changes.map((change) => change.path),
 			)
 		}
+		if (hasError) throw error
 	}
 
 	#executeMiddlewareCommand(
@@ -2025,14 +2167,19 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				this.unsetValue(command.path)
 				return
 			case "array/append":
-				command.value === undefined
-					? this.append(command.path)
-					: this.append(command.path, command.value)
+				this.#runArrayCommand(command.path, {
+					type: "append",
+					hasValue: Object.hasOwn(command, "value"),
+					value: command.value,
+				})
 				return
 			case "array/insert":
-				command.value === undefined
-					? this.insert(command.path, command.index)
-					: this.insert(command.path, command.index, command.value)
+				this.#runArrayCommand(command.path, {
+					type: "insert",
+					index: command.index,
+					hasValue: Object.hasOwn(command, "value"),
+					value: command.value,
+				})
 				return
 			case "array/remove":
 				this.remove(command.path, command.index)
@@ -2050,10 +2197,14 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				this.blur(command.path)
 				return
 			case "validation/run":
-				void this.validate(command.path as PathInput)
+				void this.validate(command.path as PathInput).catch(
+					reportValidationHostException,
+				)
 				return
 			case "validation/runPaths":
-				void this.validatePaths(command.paths)
+				void this.validatePaths(command.paths).catch(
+					reportValidationHostException,
+				)
 				return
 			case "issues/set":
 				this.setErrors(command.issues)

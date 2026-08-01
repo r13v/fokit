@@ -499,6 +499,10 @@ const extendedPresentationForm = extendedPresentationKit.createForm(
 	extendedPresentationDefinition,
 	{ defaultValues: presentationDefaultValues },
 )
+// @ts-expect-error a base kit cannot create a form that requires extended slot options
+basePresentationKit.createForm(extendedPresentationDefinition, {
+	defaultValues: presentationDefaultValues,
+})
 const extendedBasePresentationForm = extendedPresentationKit.createForm(
 	basePresentationDefinition,
 	{ defaultValues: presentationDefaultValues },

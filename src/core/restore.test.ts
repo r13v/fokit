@@ -2,6 +2,11 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it, vi } from "vitest"
 
 import {
+	createRowIdentityStateFromEntries,
+	type RowIdentityState,
+} from "./array-state.js"
+import { createFormDocument } from "./form-reducer.js"
+import {
 	createFormStore,
 	type FormStoreOptions,
 	getFormStoreDocument,
@@ -63,6 +68,59 @@ function createSchema(
 }
 
 describe("document restore", () => {
+	it("rejects missing and unexpected array identity before restoring", () => {
+		const schema = createSchema((value) => ({ value: value as Values }))
+		const definition = normalizeDefinition<typeof schema, Controls, Context>({
+			schema,
+			controls,
+			ui: [
+				{
+					kind: "array",
+					path: "groups",
+					itemDefault: { name: "", members: [] },
+					children: [
+						{
+							kind: "array",
+							path: "members",
+							itemDefault: { name: "" },
+							children: [],
+						},
+					],
+				},
+			],
+		})
+		const form = createFormStore({
+			definition,
+			defaultValues,
+			context: { showSecret: true },
+		})
+		const current = getFormStoreDocument(form)
+		const missing = createFormDocument(
+			current.values,
+			createRowIdentityStateFromEntries([]),
+		)
+		expect(() => restoreFormStoreDocument(form, missing, "replay")).toThrow(
+			/missing array path/i,
+		)
+
+		const entries = Object.entries(
+			current.rowIdentity as RowIdentityState as unknown as Record<
+				string,
+				{ readonly keys: readonly string[]; readonly nextKeyIndex: number }
+			>,
+		).map(([path, entry]) => ({ path, ...entry }))
+		const unexpected = createFormDocument(
+			{ ...current.values, untracked: [] } as Values,
+			createRowIdentityStateFromEntries([
+				...entries,
+				{ path: "untracked", keys: [], nextKeyIndex: 0 },
+			]),
+		)
+		expect(() => restoreFormStoreDocument(form, unexpected, "replay")).toThrow(
+			/unexpected array path/i,
+		)
+	})
+
 	it("restores one nested atomic document while reconciling runtime without mutation effects", async () => {
 		const validation = createDeferred<
 			| { readonly value: Values }

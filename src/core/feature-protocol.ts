@@ -9,6 +9,7 @@ import type {
 import type { ValidationResult } from "./validation.js"
 
 export const FORM_FEATURE_PROTOCOL_VERSION = 1
+export const MAX_EVENT_SEQUENCE_FLOOR = Math.floor(Number.MAX_SAFE_INTEGER / 2)
 export const formFeatureCapabilityKey = Symbol.for(
 	"form-please.feature-capability",
 )
@@ -26,7 +27,10 @@ type FirstPartyFeatureKind = "devtools" | "history" | "persistence"
 export type FormFeatureMetadata = Readonly<{
 	kind: FirstPartyFeatureKind
 	feature: object
-	dependencies?: readonly object[]
+	dependencies?: readonly Readonly<{
+		kind: FirstPartyFeatureKind
+		feature: object
+	}>[]
 }>
 
 export type FinalizedFormEventListener<Input, Context> = (
@@ -37,16 +41,25 @@ export type FinalizedFormEventListener<Input, Context> = (
 	}>,
 ) => void
 
+export type FormRestoreFinalizer<Input, Context> = (
+	notification: Readonly<{
+		event: FormEvent<Input, Context>
+		document: FormDocument<Input>
+	}>,
+) => void
+
 export type FormFeatureCapability<
 	Schema extends StandardSchema = StandardSchema,
 	Context = unknown,
 > = Readonly<{
 	version: typeof FORM_FEATURE_PROTOCOL_VERSION
 	getDocument(): FormDocument<FormInput<Schema>>
+	validateDocument(document: FormDocument<FormInput<Schema>>): void
 	restoreDocument(
 		document: FormDocument<FormInput<Schema>>,
 		origin: RestoreOrigin,
 		history?: "skip" | "record",
+		onFinalize?: FormRestoreFinalizer<FormInput<Schema>, Context>,
 	): FormDispatchResult<FormInput<Schema>, Context>
 	installCleanBaseline(document: FormDocument<FormInput<Schema>>): void
 	validateRestoredInput(
@@ -76,7 +89,11 @@ export function attachFormFeatureMetadata(
 		writable: false,
 		value: Object.freeze({
 			...metadata,
-			dependencies: Object.freeze([...(metadata.dependencies ?? [])]),
+			dependencies: Object.freeze(
+				(metadata.dependencies ?? []).map((dependency) =>
+					Object.freeze({ ...dependency }),
+				),
+			),
 		}),
 	})
 }
@@ -98,9 +115,17 @@ export function assertFirstPartyFeatureConfiguration(
 			)
 		}
 		for (const dependency of metadata.dependencies ?? []) {
-			if (!references.has(dependency)) {
+			const dependencyMetadata = (dependency.feature as FeatureMetadataHost)[
+				formFeatureMetadataKey
+			]
+			if (
+				!references.has(dependency.feature) ||
+				!isFormFeatureMetadata(dependencyMetadata) ||
+				dependencyMetadata.feature !== dependency.feature ||
+				dependencyMetadata.kind !== dependency.kind
+			) {
 				throw new TypeError(
-					`Form Please ${metadata.kind} requires its configured feature dependency in the same middleware chain`,
+					`Form Please ${metadata.kind} requires its configured ${dependency.kind} feature dependency in the same middleware chain`,
 				)
 			}
 		}
@@ -117,7 +142,22 @@ function isFormFeatureMetadata(value: unknown): value is FormFeatureMetadata {
 			candidate.kind === "devtools") &&
 		typeof candidate.feature === "function" &&
 		(candidate.dependencies === undefined ||
-			Array.isArray(candidate.dependencies))
+			(Array.isArray(candidate.dependencies) &&
+				candidate.dependencies.every(isFormFeatureDependency)))
+	)
+}
+
+function isFormFeatureDependency(value: unknown): boolean {
+	if (typeof value !== "object" || value === null) return false
+	const candidate = value as {
+		readonly kind?: unknown
+		readonly feature?: unknown
+	}
+	return (
+		(candidate.kind === "history" ||
+			candidate.kind === "persistence" ||
+			candidate.kind === "devtools") &&
+		typeof candidate.feature === "function"
 	)
 }
 
@@ -152,6 +192,7 @@ export function getFormFeatureCapability<
 	}
 	for (const operation of [
 		"getDocument",
+		"validateDocument",
 		"restoreDocument",
 		"installCleanBaseline",
 		"validateRestoredInput",

@@ -182,7 +182,7 @@ Parse server input through the server entry:
 ```text
 import { parseFormData } from "form-please/server"
 
-const result = await parseFormData(schema, formData)
+const result = await parseFormData(formData, schema)
 ```
 
 Do not use `Object.fromEntries` for nested forms. Apply request, multipart,

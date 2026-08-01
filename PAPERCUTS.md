@@ -151,3 +151,89 @@ directly in the docs-site package instead of relying on transitive installs.
 Closing the reducer-core plan as instructed → the target `docs/plans/completed`
 directory did not exist. Create the completion directory before attempting the
 final plan move, or keep an empty placeholder when the workflow depends on it.
+
+## 2026-08-01 22:24 — GPT-5
+
+Launching the requested reviewer batch → the agent executor rejected an
+explicit reviewer role combined with full-history inheritance, although the
+task prompt was self-contained. Launch role-specific reviewers without inherited
+turns when their prompts already name the repository and required commands.
+
+## 2026-08-01 22:41 — GPT-5
+
+Applying a cross-file documentation correction → one stale expected sentence
+made the full patch fail before any edit applied. Split broad documentation
+patches by file, and inspect exact section text before changing it.
+
+## 2026-08-01 22:43 — GPT-5
+
+Running the documentation checks → the guessed `docs:check` script did not
+exist; the repository names the relevant scripts `site:test`, `test:docs`, and
+`site:verify`. Inspect `package.json` scripts before selecting a project gate.
+
+## 2026-08-01 22:43 — GPT-5.6
+
+Formatting the focused React and DevTools changes → the repository has no
+`format` npm script. Run the configured Biome formatter directly or add a
+documented formatting script.
+
+## 2026-08-01 22:48 — GPT-5
+
+Searching documentation for a backticked API name → the shell interpreted the
+backticks in the command string and attempted to run the API name as a command.
+Use a single-quoted search pattern or omit Markdown delimiters in shell queries.
+## 2026-08-01 22:43 — GPT-5.6
+
+Checking the touched TypeScript files with `npx prettier --check` → the repository uses Biome, and `npx` downloaded an unrelated formatter before reporting every file as differently formatted. Use `npm run check` or `npx biome check` for repository formatting.
+
+## 2026-08-01 22:57 — GPT-5
+
+Tracing normalized node rendering during review → a source search guessed
+`src/react/render-node.tsx`, but the module uses the `.ts` extension. Discover
+the exact path with `rg --files src/react` before searching a guessed filename.
+
+## 2026-08-01 23:05 — GPT-5
+
+Waiting briefly for parallel reviewers → `wait_agent` rejected a 1-second poll
+because its minimum timeout is 10 seconds. Use at least 10000 milliseconds for
+mailbox waits.
+
+## 2026-08-01 23:16 — GPT-5
+
+Running the full verification after the focused runtime suite passed →
+TypeScript could not narrow an optional middleware command value from an own-
+property check, and a throwing test placeholder inferred a `never` return.
+Route through the internal `hasValue` command and annotate replaceable test
+callbacks as `() => void` before the repository-wide gate.
+
+## 2026-08-01 23:24 — GPT-5.6
+
+Reproducing a history retention edge case with `npx tsx -e` → the eval
+module resolved relative TypeScript imports through the temporary npx loader
+and failed to find repository sources. Use an existing Vitest file or a
+temporary on-disk module for source-level reproduction instead of tsx eval.
+
+## 2026-08-01 23:26 — GPT-5.6
+
+Reproducing Action submitted-baseline metadata → a React `FormInstance` was
+passed to a core helper that requires its private `FormStore`, producing the
+generic store-identity error. Use `getFormStore(form)` in source-level adapter
+reproductions that intentionally cross the React/core boundary.
+
+## 2026-08-01 23:31 — GPT-5
+
+Checking the focused review fix → Biome rejected one multi-line test call that
+fits the repository's single-line formatting rule. Run Biome on touched tests
+before the repository-wide validation gate.
+
+## 2026-08-01 23:37 — GPT-5
+
+Running the review test suite with a Jest-style serialization flag → Vitest 4
+rejected `--runInBand` as an unknown option. Use the repository's plain
+`npm test` command or Vitest's supported pool controls.
+
+## 2026-08-02 00:04 — GPT-5
+
+Inspecting repository instructions and state in one command → an unbounded
+parent-directory `find` exceeded the command timeout before Git status ran.
+Use repository-local `rg --files` searches and separate critical state checks.

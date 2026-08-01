@@ -6,7 +6,10 @@ import {
 } from "../core/feature-protocol.js"
 import type { FormEvent } from "../core/form-events.js"
 import type { FormDocument } from "../core/form-model.js"
-import { createFormDocument } from "../core/form-reducer.js"
+import {
+	areFormDocumentsEqual,
+	createFormDocument,
+} from "../core/form-reducer.js"
 import type { FormStore } from "../core/form-store.js"
 import type {
 	FormDispatchResult,
@@ -25,10 +28,11 @@ import {
 	type HistoryPersistenceBridge,
 } from "../history/history.js"
 import {
-	documentsEqual,
-	type FormJournal,
+	assertLiveEventSequenceHeadroom,
+	type NormalizedJournal,
 	normalizeJournal,
-	replayJournal,
+	replayNormalizedJournal,
+	validateJournalDocuments,
 } from "../history/journal.js"
 import {
 	decodePersistenceEnvelope,
@@ -97,6 +101,7 @@ type PendingHydration<Input> = {
 	target: FormDocument<Input>
 	document?: FormDocument<Input>
 	event?: FormEvent<Input, unknown>
+	rootEvent?: FormEvent<Input, unknown>
 	conflict?: boolean
 }
 
@@ -135,7 +140,9 @@ export function createPersistenceMiddleware(
 	attachFormFeatureMetadata(feature, {
 		kind: "persistence",
 		feature,
-		dependencies: normalized.history ? [normalized.history] : [],
+		dependencies: normalized.history
+			? [{ kind: "history", feature: normalized.history }]
+			: [],
 	})
 	return Object.freeze(feature)
 }
@@ -212,7 +219,7 @@ class PersistenceState<Input, Context> {
 			event.type !== "document/committed" &&
 			event.type !== "document/restored"
 		) {
-			if (this.#pendingHydration !== undefined) {
+			if (this.#pendingHydration?.rootEvent === event) {
 				this.#pendingHydration.event = event as FormEvent<Input, unknown>
 			}
 			return
@@ -221,7 +228,7 @@ class PersistenceState<Input, Context> {
 		this.#revision++
 		const pending = this.#pendingHydration
 		if (pending !== undefined) {
-			if (pending.event !== undefined) {
+			if (pending.rootEvent !== event || pending.event !== undefined) {
 				pending.conflict = true
 				return
 			}
@@ -262,8 +269,7 @@ class PersistenceState<Input, Context> {
 
 		let decoded: Awaited<ReturnType<typeof decodePersistenceEnvelope>>
 		let target: FormDocument<Input>
-		let journal: FormJournal<Input> | undefined
-		let maxSequence: number | undefined
+		let normalizedJournal: NormalizedJournal<Input> | undefined
 		try {
 			decoded = await decodePersistenceEnvelope(stored, {
 				version: this.#options.version,
@@ -272,10 +278,16 @@ class PersistenceState<Input, Context> {
 				migrate: this.#options.migrate,
 			})
 			if (this.#options.history) {
-				const normalized = normalizeJournal<Input>(decoded.value)
-				journal = normalized.journal
-				maxSequence = normalized.maxSequence
-				target = replayJournal(journal, journal.cursor)
+				normalizedJournal = normalizeJournal<Input>(decoded.value)
+				assertLiveEventSequenceHeadroom(normalizedJournal.maxSequence)
+				validateJournalDocuments(
+					normalizedJournal.journal,
+					this.#capability.validateDocument,
+				)
+				target = replayNormalizedJournal(
+					normalizedJournal.journal,
+					normalizedJournal.cursor,
+				)
 			} else {
 				target = normalizeDocument<Input>(decoded.value)
 			}
@@ -289,23 +301,34 @@ class PersistenceState<Input, Context> {
 		}
 		if (this.#revision !== startingRevision) return this.#conflict()
 
-		const history = this.#historyBridge()
-		history?.stageHydration(journal)
-		if (maxSequence !== undefined) {
-			this.#capability.advanceEventSequenceFloor(maxSequence)
+		let history: HistoryPersistenceBridge<Input> | undefined
+		try {
+			history = this.#historyBridge()
+			history?.stageHydration(normalizedJournal)
+		} catch (error) {
+			this.#fail(error, "idle")
+			throw error
 		}
 		const pending: PendingHydration<Input> = { target }
 		this.#pendingHydration = pending
 		let result: FormDispatchResult<Input, Context>
 		try {
-			result = this.#capability.restoreDocument(target, "hydrate")
+			result = this.#capability.restoreDocument(
+				target,
+				"hydrate",
+				undefined,
+				({ event }) => {
+					pending.rootEvent = event as FormEvent<Input, unknown>
+					history?.markHydrationRoot(event as FormEvent<Input, unknown>)
+				},
+			)
 		} catch (error) {
 			if (pending.conflict) this.#setSnapshot("conflict", idleSave)
 			else if (pending.document !== undefined) {
 				this.#savedRevision = this.#revision
 				this.#suppressedRevision = -1
 				this.#setSnapshot("active", idleSave)
-				if (decoded.migrated) this.#schedule(0)
+				if (decoded.migrated) this.#schedule(0, true)
 			} else this.#setSnapshot("idle", idleSave)
 			throw error
 		} finally {
@@ -326,8 +349,10 @@ class PersistenceState<Input, Context> {
 		this.#savedRevision = this.#revision
 		this.#suppressedRevision = -1
 		this.#setSnapshot("active", idleSave)
-		if (decoded.migrated) this.#schedule(0)
-		return documentsEqual(pending.document, target) ? "applied" : "transformed"
+		if (decoded.migrated) this.#schedule(0, true)
+		return areFormDocumentsEqual(pending.document, target)
+			? "applied"
+			: "transformed"
 	}
 
 	#conflict(): PersistenceRestoreResult {
@@ -358,15 +383,28 @@ class PersistenceState<Input, Context> {
 	}
 
 	async #clear(): Promise<void> {
+		if (this.#snapshot.phase === "restoring") {
+			throw new TypeError(
+				"Persistence clear cannot run while restore is running",
+			)
+		}
 		this.#cancelTimer()
-		this.#suppressedRevision = this.#revision
+		const clearedRevision = this.#revision
+		this.#suppressedRevision = clearedRevision
 		const operation = ++this.#statusOperation
 		this.#setSave(Object.freeze({ status: "saving" }))
 		await this.#enqueue(async () => {
 			try {
 				await this.#options.adapter.remove(this.#options.key)
-				this.#savedRevision = Math.max(this.#savedRevision, this.#revision)
-				if (operation === this.#statusOperation) this.#setSave(idleSave)
+				this.#savedRevision = Math.max(this.#savedRevision, clearedRevision)
+				if (operation === this.#statusOperation) {
+					if (
+						this.#snapshot.phase === "active" &&
+						this.#revision > clearedRevision
+					) {
+						this.#schedule()
+					} else this.#setSave(idleSave)
+				}
 			} catch (error) {
 				if (operation === this.#statusOperation) this.#fail(error)
 				else this.#reportError(error)
@@ -375,12 +413,12 @@ class PersistenceState<Input, Context> {
 		})
 	}
 
-	#schedule(delay = this.#options.saveDelay): void {
+	#schedule(delay = this.#options.saveDelay, force = false): void {
 		this.#cancelTimer()
 		this.#setSave(Object.freeze({ status: "scheduled" }))
 		this.#timer = setTimeout(() => {
 			this.#timer = undefined
-			void this.#queueSave().catch(() => undefined)
+			void this.#queueSave(force).catch(() => undefined)
 		}, delay)
 	}
 

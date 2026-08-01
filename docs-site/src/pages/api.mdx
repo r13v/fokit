@@ -25,6 +25,18 @@ The main entry does not export global `createForm`, global `useForm`, or
 `createFormStore`. It also does not export `KitForm`, a root `Submit` value,
 `UseFormOptions`, or optional feature code.
 
+### Migrate from version 0
+
+| Version 0 | Version 1 |
+| --- | --- |
+| `createForm(definition, options)` | `kit.createForm(definition, options)` |
+| `useForm(form, runtimeOptions)` | `kit.useForm(form, runtimeOptions)` |
+| Definition-based `AutoForm` | Create the form once, then pass `form` to `kit.AutoForm` |
+| `ActionForm` with `kit`, `definition`, and `defaultValues` | Create the form once, then pass `form` to `ActionForm` |
+| Root `KitForm` and `Submit` | `kit.Form` and `kit.Submit` |
+| Root `createFormStore` | Import `createFormStore` from `form-please/core` |
+| `UseFormOptions` | `CreateFormOptions` for creation and `FormRuntimeOptions` for binding |
+
 Every configured first-party feature uses `feature.handle(form)` to return its
 stable per-form handle.
 
@@ -142,9 +154,11 @@ The hook rejects a form from any other kit snapshot.
 <kit.AutoForm form={form}>...</kit.AutoForm>
 ```
 
-`kit.Form` renders native form behavior and its children. `kit.AutoForm` also
-renders the error summary and definition fields. Both accept native form props
-and `FormRuntimeOptions`. Both reject a form from another exact kit.
+`kit.Form` renders native form behavior and its children. It accepts native
+form props and `form`. Call `kit.useForm(form, runtimeOptions)` separately when
+a manual form needs a runtime binding. `kit.AutoForm` accepts native form props
+and `FormRuntimeOptions`, and it renders the error summary and definition
+fields. Both components reject a form from another exact kit.
 
 Use `kit.Fields` inside `kit.Form` for manual composition. Use `kit.Submit` for
 the kit-owned submit button.
@@ -297,9 +311,11 @@ createHistoryMiddleware({ limit?: number, groupWindow?: number }) => HistoryFeat
 historyFeature.handle(form) => HistoryHandle
 ```
 
-`limit` is an unlimited group count by default. `groupWindow` is `500`
-milliseconds by default. Consecutive control commits to one path can share a
-group. A batch is one group. Forwarded blur closes the active group.
+`limit` is an unlimited group count by default. It accepts non-negative
+integers, including `0`. `groupWindow` is `750` milliseconds by default. Set it
+to `0` to disable time-based group closure. Consecutive control commits to one
+path can share a group. A batch is one group. Forwarded blur closes the active
+group.
 
 ```text
 history.getSnapshot() // { canUndo, canRedo, index, length }
@@ -311,6 +327,18 @@ history.clear()
 history.export() => FormJournal
 await history.import(unknown) => HistoryOperationResult
 replayJournal(journal, cursor) => FormDocument
+```
+
+`FormJournal` contains checkpoint segments. Each checkpoint and group owns an
+opaque `cursor`. Use `journal.cursor` for the current position,
+`segment.checkpoint.cursor` for a checkpoint, or `group.cursor` for the state
+after that group:
+
+```text
+const journal = history.export()
+const firstSegment = journal.segments[0]
+const checkpoint = replayJournal(journal, firstSegment.checkpoint.cursor)
+const firstGroup = replayJournal(journal, firstSegment.groups[0].cursor)
 ```
 
 An operation result is `"applied"`, `"unavailable"`, `"cancelled"`, or
@@ -412,20 +440,54 @@ devToolsFeature.handle(form) => DevToolsHandle
 devTools.disconnect()
 ```
 
+The feature connects only after the form completes its first retained React
+binding through `kit.useForm`, `kit.AutoForm`, or `ActionForm`. A form that is
+never bound does not open a DevTools listener. For manual `kit.Form`
+composition, call `kit.useForm(form, runtimeOptions)` in the component.
+
+```text
+type CreateDevToolsOptions = {
+	name?: string
+	latency?: number
+	maxAge?: number
+	trace?: boolean | ((action: FormEvent<unknown, unknown>) => string | undefined)
+	traceLimit?: number
+	serialize?: boolean | Readonly<Record<string, unknown>>
+	actionSanitizer?: (action: FormEvent<unknown, unknown>, id: number) => unknown
+	stateSanitizer?: (
+		state: { values: unknown; rowIdentity: LogicalRowIdentity },
+		index: number,
+	) => unknown
+	actionsAllowlist?: string | readonly string[]
+	actionsDenylist?: string | readonly string[]
+	predicate?: (
+		state: DevToolsFormState<unknown>,
+		action: FormEvent<unknown, unknown>,
+	) => boolean
+	autoPause?: boolean
+	onError?: (error: unknown) => void
+}
+```
+
 Supported connection options are `name`, `latency`, `maxAge`, `trace`,
 `traceLimit`, `serialize`, `actionSanitizer`, `stateSanitizer`,
 `actionsAllowlist`, `actionsDenylist`, `predicate`, and `autoPause`.
-`onError` receives integration failures. `maxAge` defaults to `50`.
+`onError` receives integration failures. `maxAge` defaults to `50` and must be
+an integer greater than `1`. `autoPause` defaults to `true`.
 
 The integration sends committed events and a diagnostic projection of values
 and logical row identity. It supports `JUMP_TO_STATE`, `JUMP_TO_ACTION`,
-`RESET`, and `ROLLBACK`. It rejects arbitrary dispatch, skip, reorder, import,
-lock, persisted monitor state, and generated tests. Navigation uses only an
-opaque revision token from the bounded local table. Sanitized or serialized
-monitor state is never trusted as form input.
+`RESET`, `ROLLBACK`, and `COMMIT`. `COMMIT` changes only the monitor baseline.
+The integration rejects arbitrary dispatch, skip, reorder, import, lock,
+persisted monitor state, and generated tests. Navigation uses only an opaque
+revision token from the bounded local table. The integration adds this token
+after `stateSanitizer` runs, so a sanitizer cannot replace it. Sanitized or
+serialized monitor state is never trusted as form input.
 
-`disconnect()` is idempotent and affects only that form. The feature is inert
-during SSR or when the extension is absent. See [Redux DevTools](/guides/devtools).
+`disconnect()` is idempotent, permanent for that form, and affects only that
+form. It removes the extension listener and the form event listener. The
+feature is inert during SSR or when the extension is absent. See
+[Redux DevTools](/guides/devtools).
 
 ## defineControl
 

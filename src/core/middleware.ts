@@ -41,7 +41,11 @@ type ErasedCoordinatorOptions = {
 	readonly dispatchCommand: (command: unknown) => void
 	readonly prepareTransaction: (transaction: unknown) => unknown
 	readonly terminal: ErasedDispatch
-	readonly finalize: (event: unknown, transaction: unknown) => void
+	readonly finalize: (
+		event: unknown,
+		transaction: unknown,
+		rootTransaction: unknown,
+	) => void
 	readonly publish: () => void
 	readonly afterPublication: (event: unknown, transaction: unknown) => void
 	readonly featureCapability: FormFeatureCapability
@@ -114,6 +118,14 @@ export class MiddlewareCoordinator {
 		return this.#running
 	}
 
+	afterCurrentRun(callback: () => void): void {
+		if (this.#running) {
+			this.#queue.push(callback)
+			return
+		}
+		callback()
+	}
+
 	run(transaction: unknown): unknown {
 		if (this.#running) {
 			this.#queue.push(() => {
@@ -126,38 +138,59 @@ export class MiddlewareCoordinator {
 		this.#captured = undefined
 		let result: unknown
 		let error: unknown
+		let hasError = false
+		let rootTransaction: unknown
 		try {
-			result = this.#dispatch(this.#options.prepareTransaction(transaction))
+			rootTransaction = this.#options.prepareTransaction(transaction)
+			result = this.#dispatch(rootTransaction)
 			assertDispatchResult(result)
 		} catch (caught) {
 			error = caught
+			hasError = true
 		}
 
 		const committed = this.#readCaptured()
 		if (committed !== undefined) {
 			try {
-				this.#options.finalize(committed.result.event, committed.transaction)
+				this.#options.finalize(
+					committed.result.event,
+					committed.transaction,
+					rootTransaction,
+				)
+			} catch (caught) {
+				if (!hasError) error = caught
+				hasError = true
+			}
+			try {
 				this.#options.publish()
+			} catch (caught) {
+				if (!hasError) error = caught
+				hasError = true
+			}
+			try {
 				this.#options.afterPublication(
 					committed.result.event,
 					committed.transaction,
 				)
 			} catch (caught) {
-				error ??= caught
+				if (!hasError) error = caught
+				hasError = true
 			}
 		}
 
+		if (hasError && committed === undefined) this.#queue.length = 0
 		this.#running = false
 		while (this.#queue.length > 0) {
 			const queued = this.#queue.shift()
 			try {
 				queued?.()
 			} catch (caught) {
-				error ??= caught
+				if (!hasError) error = caught
+				hasError = true
 			}
 		}
 
-		if (error !== undefined) throw error
+		if (hasError) throw error
 		return result ?? cancelledResult
 	}
 

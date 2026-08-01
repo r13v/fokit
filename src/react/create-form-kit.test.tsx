@@ -152,6 +152,24 @@ describe("createFormKit", () => {
 		)
 	})
 
+	it("rejects a JavaScript-erased definition whose controls are missing", () => {
+		const baseKit = createFormKit({ controls: { text: textControl } })
+		const extendedKit = baseKit.extend({
+			controls: { localText: textControl },
+		})
+		const definition = extendedKit.defineForm(schema)({
+			ui: [{ kind: "field", path: "name", control: "localText" }],
+		})
+		const create = baseKit.createForm as (
+			definition: unknown,
+			options: { defaultValues: TestValues },
+		) => unknown
+
+		expect(() =>
+			create(definition, { defaultValues: defaultValues() }),
+		).toThrow(/kit\.createForm requires control "localText"/i)
+	})
+
 	it("rejects empty extensions, control replacement, and removed slots", () => {
 		const kit = createFormKit({
 			controls: {

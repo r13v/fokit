@@ -1,9 +1,15 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { getFormFeatureCapability } from "../core/feature-protocol.js"
+import {
+	getFormFeatureCapability,
+	MAX_EVENT_SEQUENCE_FLOOR,
+} from "../core/feature-protocol.js"
 import { createFormDocument } from "../core/form-reducer.js"
 import type { FormMiddleware } from "../core/middleware.js"
-import { createHistoryMiddleware } from "../history/history.js"
+import {
+	createHistoryMiddleware,
+	type HistoryFeature,
+} from "../history/history.js"
 import { normalizeJournal } from "../history/journal.js"
 import { defineControl } from "../react/control.js"
 import { createFormKit } from "../react/create-form-kit.js"
@@ -142,6 +148,7 @@ describe("persistence middleware", () => {
 
 	it("suppresses the cleared revision and serializes remove after an in-flight save", async () => {
 		const firstSave = deferred<void>()
+		const removal = deferred<void>()
 		const order: string[] = []
 		const adapter: FormPersistenceAdapter = {
 			load: vi.fn(async () => undefined),
@@ -152,6 +159,7 @@ describe("persistence middleware", () => {
 			}),
 			remove: vi.fn(async () => {
 				order.push("remove")
+				await removal.promise
 			}),
 		}
 		const feature = createPersistenceMiddleware({
@@ -167,12 +175,13 @@ describe("persistence middleware", () => {
 		const clearing = persistence.clear()
 		firstSave.resolve()
 		await flushing
+		await vi.waitFor(() => expect(adapter.remove).toHaveBeenCalledOnce())
+		form.setValue("name", "After clear")
+		expect(persistence.getSnapshot().save.status).toBe("scheduled")
+		removal.resolve()
 		await clearing
 		expect(order).toEqual(["save:start", "save:end", "remove"])
-		await persistence.flush()
-		expect(adapter.save).toHaveBeenCalledOnce()
-
-		form.setValue("name", "After clear")
+		expect(persistence.getSnapshot().save.status).toBe("scheduled")
 		await persistence.flush()
 		expect(adapter.save).toHaveBeenCalledTimes(2)
 	})
@@ -197,6 +206,7 @@ describe("persistence middleware", () => {
 		const form = createForm([feature])
 		const persistence = feature.handle(form)
 		const restoring = persistence.restore()
+		await expect(persistence.clear()).rejects.toThrow(/restore/i)
 		form.setValue("name", "Local edit")
 		loading.resolve(stored)
 		await expect(restoring).resolves.toBe("conflict")
@@ -279,6 +289,7 @@ describe("persistence middleware", () => {
 	})
 
 	it("migrates, hydrates the actual input as one clean baseline, and rewrites immediately", async () => {
+		vi.useFakeTimers()
 		const source = createForm([])
 		source.setValue("name", "stored input")
 		const oldEnvelope = await encodePersistenceEnvelope(
@@ -303,7 +314,7 @@ describe("persistence middleware", () => {
 		expect(form.getSnapshot().values.name).toBe("stored input")
 		expect(form.getSnapshot().values).not.toHaveProperty("normalized")
 		expect(form.getSnapshot().isDirty).toBe(false)
-		await persistence.flush()
+		await vi.advanceTimersByTimeAsync(0)
 		expect(storage.adapter.save).toHaveBeenCalledOnce()
 	})
 
@@ -356,6 +367,43 @@ describe("persistence middleware", () => {
 		},
 	)
 
+	it("keeps a queued local edit dirty when hydration is cancelled", async () => {
+		const sourceHistory = createHistoryMiddleware()
+		const source = createForm([sourceHistory])
+		source.setValue("name", "Stored")
+		const stored = await encodePersistenceEnvelope(
+			sourceHistory.handle(source).export(),
+			{ version: 1, mode: "history", codecs: [] },
+		)
+		const cancelled = Object.freeze({ status: "cancelled" as const })
+		const cancelWithEdit: FormMiddleware<Values, Context> =
+			(api) => (next) => (transaction) => {
+				if (
+					transaction.type === "document/restored" &&
+					transaction.origin === "hydrate"
+				) {
+					api.dispatch({ type: "value/set", path: "name", value: "Local" })
+					return cancelled
+				}
+				return next(transaction)
+			}
+		const history = createHistoryMiddleware()
+		const persistenceFeature = createPersistenceMiddleware({
+			adapter: createMemoryAdapter(stored).adapter,
+			key: "cancelled-with-local-edit",
+			version: 1,
+			history,
+		})
+		const form = createForm([cancelWithEdit, history, persistenceFeature])
+		const persistence = persistenceFeature.handle(form)
+
+		await expect(persistence.restore()).resolves.toBe("conflict")
+		expect(form.getSnapshot().values.name).toBe("Local")
+		expect(form.getSnapshot().isDirty).toBe(true)
+		expect(persistence.getSnapshot().phase).toBe("conflict")
+		expect(history.handle(form).export().segments).toHaveLength(1)
+	})
+
 	it("persists and hydrates history with a safe sequence floor and exact dependency validation", async () => {
 		const storage = createMemoryAdapter()
 		const history = createHistoryMiddleware()
@@ -371,6 +419,19 @@ describe("persistence middleware", () => {
 		const wrongHistory = createHistoryMiddleware()
 		expect(() => createForm([wrongHistory, persistenceFeature])).toThrow(
 			/requires.*dependency/i,
+		)
+		const notHistory = (() =>
+			(next: (transaction: unknown) => unknown) =>
+			(transaction: unknown) =>
+				next(transaction)) as unknown as HistoryFeature
+		const invalidPersistence = createPersistenceMiddleware({
+			adapter: storage.adapter,
+			key: "invalid-history",
+			version: 1,
+			history: notHistory,
+		})
+		expect(() => createForm([notHistory, invalidPersistence])).toThrow(
+			/requires.*history.*dependency/i,
 		)
 
 		const source = createForm([persistenceFeature, history])
@@ -397,6 +458,190 @@ describe("persistence middleware", () => {
 		target.setValue("name", "after hydration")
 		const normalized = normalizeJournal(targetHistory.handle(target).export())
 		expect(normalized.maxSequence).toBeGreaterThan(12)
+		expect(normalized.journal.segments).toHaveLength(2)
+		expect(normalized.journal.segments[0]?.groups).toHaveLength(12)
+	})
+
+	it("rejects malformed documents anywhere in a persisted history journal", async () => {
+		const sourceHistory = createHistoryMiddleware()
+		const source = createForm([sourceHistory])
+		source.reset({ name: "Latest", items: [] })
+		const journal = structuredClone(
+			sourceHistory.handle(source).export(),
+		) as unknown as MutableRowJournal
+		journal.segments[0].checkpoint.document.rowIdentity = {}
+		const stored = await encodePersistenceEnvelope(journal, {
+			version: 1,
+			mode: "history",
+			codecs: [],
+		})
+		const history = createHistoryMiddleware()
+		const persistence = createPersistenceMiddleware({
+			adapter: createMemoryAdapter(stored).adapter,
+			key: "malformed-history",
+			version: 1,
+			history,
+		})
+		const form = createForm([history, persistence])
+
+		await expect(persistence.handle(form).restore()).rejects.toThrow(
+			/missing array path/i,
+		)
+		expect(persistence.handle(form).getSnapshot().phase).toBe("idle")
+	})
+
+	it("leaves restore retryable when an initialized history bridge is unavailable", async () => {
+		const sourceHistory = createHistoryMiddleware()
+		const source = createForm([sourceHistory])
+		const stored = await encodePersistenceEnvelope(
+			sourceHistory.handle(source).export(),
+			{ version: 1, mode: "history", codecs: [] },
+		)
+		const forgedHistory = (() =>
+			(next: (transaction: unknown) => unknown) =>
+			(transaction: unknown) =>
+				next(transaction)) as unknown as HistoryFeature
+		Object.defineProperty(
+			forgedHistory,
+			Symbol.for("form-please.feature-metadata"),
+			{
+				value: Object.freeze({
+					kind: "history",
+					feature: forgedHistory,
+					dependencies: Object.freeze([]),
+				}),
+			},
+		)
+		const persistenceFeature = createPersistenceMiddleware({
+			adapter: createMemoryAdapter(stored).adapter,
+			key: "missing-history-bridge",
+			version: 1,
+			history: forgedHistory,
+		})
+		const form = createForm([forgedHistory, persistenceFeature])
+		const persistence = persistenceFeature.handle(form)
+
+		await expect(persistence.restore()).rejects.toThrow(/not initialized/i)
+		expect(persistence.getSnapshot().phase).toBe("idle")
+	})
+
+	it("preserves live-event headroom at the history hydration boundary", async () => {
+		const sourceHistory = createHistoryMiddleware()
+		const source = createForm([sourceHistory])
+		source.setValue("name", "stored")
+		const journal = structuredClone(
+			sourceHistory.handle(source).export(),
+		) as unknown as MutableJournalSequence
+		journal.segments[0].groups[0].events[0].sequence =
+			MAX_EVENT_SEQUENCE_FLOOR - 1
+		const stored = await encodePersistenceEnvelope(journal, {
+			version: 1,
+			mode: "history",
+			codecs: [],
+		})
+		const history = createHistoryMiddleware()
+		const persistence = createPersistenceMiddleware({
+			adapter: createMemoryAdapter(stored).adapter,
+			key: "history-boundary",
+			version: 1,
+			history,
+		})
+		const form = createForm([history, persistence])
+
+		await expect(persistence.handle(form).restore()).resolves.toBe("applied")
+		form.setValue("name", "after hydration")
+		expect(normalizeJournal(history.handle(form).export()).maxSequence).toBe(
+			MAX_EVENT_SEQUENCE_FLOOR + 1,
+		)
+	})
+
+	it.each(["cancelled", "runtime", "precommit"] as const)(
+		"does not retain a hydrated history sequence floor after a %s restore",
+		async (outcome) => {
+			const sourceHistory = createHistoryMiddleware()
+			const source = createForm([sourceHistory])
+			for (let index = 0; index < 12; index++) {
+				source.setValue("name", `stored-${index}`)
+			}
+			const stored = await encodePersistenceEnvelope(
+				sourceHistory.handle(source).export(),
+				{ version: 1, mode: "history", codecs: [] },
+			)
+			const policy: FormMiddleware<Values, Context> =
+				() => (next) => (transaction) => {
+					if (transaction.type !== "document/restored") {
+						return next(transaction)
+					}
+					if (outcome === "cancelled") {
+						return Object.freeze({ status: "cancelled" })
+					}
+					if (outcome === "runtime") {
+						return next({ type: "field/blurred", path: "name" })
+					}
+					throw new Error("precommit restore failure")
+				}
+			const history = createHistoryMiddleware()
+			const persistenceFeature = createPersistenceMiddleware({
+				adapter: createMemoryAdapter(stored).adapter,
+				key: outcome,
+				version: 1,
+				history,
+			})
+			const form = createForm([policy, history, persistenceFeature])
+			const restoring = persistenceFeature.handle(form).restore()
+			if (outcome === "precommit") {
+				await expect(restoring).rejects.toThrow("precommit restore failure")
+			} else {
+				await expect(restoring).resolves.toBe(
+					outcome === "cancelled" ? "cancelled" : "unavailable",
+				)
+			}
+
+			form.setValue("name", "local")
+			const localJournal = normalizeJournal(history.handle(form).export())
+			expect(localJournal.maxSequence).toBeLessThan(12)
+			expect(localJournal.journal.segments).toHaveLength(1)
+		},
+	)
+
+	it("installs hydrated history and a safe floor for a transformed restore", async () => {
+		const sourceHistory = createHistoryMiddleware()
+		const source = createForm([sourceHistory])
+		for (let index = 0; index < 12; index++) {
+			source.setValue("name", `stored-${index}`)
+		}
+		const stored = await encodePersistenceEnvelope(
+			sourceHistory.handle(source).export(),
+			{ version: 1, mode: "history", codecs: [] },
+		)
+		const transform: FormMiddleware<Values, Context> =
+			() => (next) => (transaction) =>
+				transaction.type === "document/restored"
+					? next({
+							...transaction,
+							document: createFormDocument(
+								{ ...transaction.document.values, name: "Transformed" },
+								transaction.document.rowIdentity,
+							),
+						})
+					: next(transaction)
+		const history = createHistoryMiddleware()
+		const persistenceFeature = createPersistenceMiddleware({
+			adapter: createMemoryAdapter(stored).adapter,
+			key: "transformed-history",
+			version: 1,
+			history,
+		})
+		const form = createForm([transform, history, persistenceFeature])
+		await expect(persistenceFeature.handle(form).restore()).resolves.toBe(
+			"transformed",
+		)
+		expect(form.getSnapshot().values.name).toBe("Transformed")
+		const hydrated = normalizeJournal(history.handle(form).export())
+		expect(hydrated.journal.segments).toHaveLength(2)
+		expect(hydrated.journal.segments[0]?.groups).toHaveLength(12)
+		form.setValue("name", "after transform")
+		expect(normalizeJournal(history.handle(form).export()).maxSequence).toBe(14)
 	})
 
 	it.each(["before", "after"] as const)(
@@ -479,6 +724,31 @@ describe("persistence middleware", () => {
 		await expect(
 			malformedFeature.handle(createForm([malformedFeature])).restore(),
 		).rejects.toThrow(/canonical/i)
+
+		const exhausted = await decodePersistenceEnvelope(envelope, {
+			version: 1,
+			mode: "document",
+			codecs: [createDateCodec()],
+		})
+		;(
+			(exhausted.value as { rowIdentity: Record<string, unknown> }).rowIdentity
+				.items as { nextKeyIndex: number }
+		).nextKeyIndex = Number.MAX_SAFE_INTEGER
+		const exhaustedEnvelope = await encodePersistenceEnvelope(exhausted.value, {
+			version: 1,
+			mode: "document",
+			codecs: [createDateCodec()],
+		})
+		const exhaustedStorage = createMemoryAdapter(exhaustedEnvelope)
+		const exhaustedFeature = createPersistenceMiddleware({
+			adapter: exhaustedStorage.adapter,
+			key: "exhausted",
+			version: 1,
+			codecs: [createDateCodec()],
+		})
+		await expect(
+			exhaustedFeature.handle(createForm([exhaustedFeature])).restore(),
+		).rejects.toThrow(/safe successor/i)
 	})
 })
 
@@ -519,6 +789,22 @@ function createMemoryAdapter(initial?: JsonValue) {
 		}),
 	}
 	return storage
+}
+
+type MutableJournalSequence = {
+	segments: {
+		groups: { events: { sequence: number }[] }[]
+	}[]
+}
+
+type MutableRowJournal = {
+	segments: {
+		checkpoint: {
+			document: {
+				rowIdentity: Record<string, unknown>
+			}
+		}
+	}[]
 }
 
 function deferred<Value>() {

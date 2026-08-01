@@ -8,10 +8,6 @@ import { isDirtyEqual } from "./value.js"
 export class CommitTimeline<Input, Context> {
 	#listeners: Set<FinalizedFormEventListener<Input, Context>> | undefined
 
-	get hasListeners(): boolean {
-		return this.#listeners !== undefined
-	}
-
 	subscribe(listener: FinalizedFormEventListener<Input, Context>): () => void {
 		if (typeof listener !== "function") {
 			throw new TypeError("Finalized-event listener must be a function")
@@ -46,7 +42,17 @@ export class CommitTimeline<Input, Context> {
 				document,
 			),
 		})
-		for (const listener of [...listeners]) listener(notification)
+		let error: unknown
+		let hasError = false
+		for (const listener of [...listeners]) {
+			try {
+				listener(notification)
+			} catch (caught) {
+				if (!hasError) error = caught
+				hasError = true
+			}
+		}
+		if (hasError) throw error
 	}
 }
 

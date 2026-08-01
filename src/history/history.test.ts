@@ -1,7 +1,10 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { getRowIdentityKeys } from "../core/array-state.js"
-import { getFormFeatureCapability } from "../core/feature-protocol.js"
+import {
+	getFormFeatureCapability,
+	MAX_EVENT_SEQUENCE_FLOOR,
+} from "../core/feature-protocol.js"
 import { createFormDocument } from "../core/form-reducer.js"
 import type { FormMiddleware } from "../core/middleware.js"
 import { defineControl } from "../react/control.js"
@@ -62,6 +65,7 @@ const definition = kit.defineForm(schema).withContext<Context>({
 
 afterEach(() => {
 	vi.useRealTimers()
+	vi.restoreAllMocks()
 })
 
 describe("history middleware", () => {
@@ -188,6 +192,71 @@ describe("history middleware", () => {
 		expect(expiringHistory.getSnapshot().length).toBe(0)
 	})
 
+	it("resolves navigation targets after closing and compacting an active group", () => {
+		const undoFeature = createHistoryMiddleware({ limit: 1 })
+		const undoForm = createForm(undoFeature)
+		const undoHistory = undoFeature.handle(undoForm)
+		undoForm.setValue("email", "grace@example.test")
+		setFormControlValue(undoForm, "name", "Grace")
+
+		expect(undoHistory.undo()).toBe("applied")
+		expect(undoForm.getSnapshot().values).toMatchObject({
+			name: "Ada",
+			email: "grace@example.test",
+		})
+
+		const seekFeature = createHistoryMiddleware({ limit: 1 })
+		const seekForm = createForm(seekFeature)
+		const seekHistory = seekFeature.handle(seekForm)
+		seekForm.setValue("email", "grace@example.test")
+		setFormControlValue(seekForm, "name", "Grace")
+
+		expect(seekHistory.seek(1)).toBe("applied")
+		expect(seekForm.getSnapshot().values).toMatchObject({
+			name: "Ada",
+			email: "grace@example.test",
+		})
+	})
+
+	it("keeps the latest cursor when compacting an older checkpoint segment", () => {
+		const feature = createHistoryMiddleware({ limit: 2 })
+		const form = createForm(feature)
+		const history = feature.handle(form)
+
+		form.reset(defaults({ name: "First checkpoint" }))
+		form.setValue("name", "First edit")
+		form.setValue("email", "first@example.test")
+		form.reset(defaults({ name: "Second checkpoint" }))
+		form.setValue("name", "Latest edit")
+
+		expect(history.getSnapshot()).toMatchObject({
+			canUndo: true,
+			canRedo: false,
+			index: 1,
+			length: 1,
+		})
+		expect(history.undo()).toBe("applied")
+		expect(form.getSnapshot().values.name).toBe("Second checkpoint")
+	})
+
+	it("cancels reentrant navigation without queueing a later restore", () => {
+		const feature = createHistoryMiddleware()
+		const form = createForm(feature)
+		const history = feature.handle(form)
+		let outcome: ReturnType<typeof history.undo> | undefined
+		history.subscribe(() => {
+			if (history.getSnapshot().length === 1 && outcome === undefined) {
+				outcome = history.undo()
+			}
+		})
+
+		form.setValue("name", "Grace")
+
+		expect(outcome).toBe("cancelled")
+		expect(form.getSnapshot().values.name).toBe("Grace")
+		expect(history.getSnapshot()).toMatchObject({ index: 1, canUndo: true })
+	})
+
 	it("checkpoints hydration, records DevTools restores, and keeps reset to the baseline undoable", () => {
 		const feature = createHistoryMiddleware()
 		const form = createForm(feature)
@@ -248,6 +317,53 @@ describe("history middleware", () => {
 		expect(
 			secondExport.segments[0]?.checkpoint.document.values.pattern.lastIndex,
 		).toBe(2)
+
+		const nextWhen = new Date("2027-01-01T00:00:00Z")
+		const nextPattern = Object.assign(/next/gi, { lastIndex: 3 })
+		form.setValue("when", nextWhen)
+		form.setValue("pattern", nextPattern)
+		const eventExport = history.export()
+		const committedEvents = eventExport.segments.flatMap((segment) =>
+			segment.groups.flatMap((group) =>
+				group.events.filter((event) => event.type === "document/committed"),
+			),
+		)
+		const exportedEventWhen = committedEvents
+			.flatMap((event) => event.changes)
+			.find((change) => change.type === "set" && change.path === "when")
+		const exportedEventPattern = committedEvents
+			.flatMap((event) => event.changes)
+			.find((change) => change.type === "set" && change.path === "pattern")
+		if (exportedEventWhen?.type === "set") {
+			;(exportedEventWhen.value as Date).setUTCFullYear(1999)
+		}
+		if (exportedEventPattern?.type === "set") {
+			;(exportedEventPattern.value as RegExp).lastIndex = 20
+		}
+		const isolatedEvents = history
+			.export()
+			.segments.flatMap((segment) =>
+				segment.groups.flatMap((group) => group.events),
+			)
+		const isolatedChanges = isolatedEvents.flatMap((event) =>
+			event.type === "document/committed" ? event.changes : [],
+		)
+		const isolatedWhen = isolatedChanges.find(
+			(change) => change.type === "set" && change.path === "when",
+		)
+		const isolatedPattern = isolatedChanges.find(
+			(change) => change.type === "set" && change.path === "pattern",
+		)
+		expect(
+			isolatedWhen?.type === "set"
+				? (isolatedWhen.value as Date).getUTCFullYear()
+				: undefined,
+		).toBe(2027)
+		expect(
+			isolatedPattern?.type === "set"
+				? (isolatedPattern.value as RegExp).lastIndex
+				: undefined,
+		).toBe(3)
 	})
 
 	it("reconciles cancelled, runtime-only, and transformed restores without moving an incorrect cursor", () => {
@@ -300,6 +416,32 @@ describe("history middleware", () => {
 		expect(history.getSnapshot()).toMatchObject({ index: 2, length: 2 })
 	})
 
+	it("does not mistake a queued command for a cancelled restore", () => {
+		const cancelled = Object.freeze({ status: "cancelled" as const })
+		let queueTarget = false
+		const restorePolicy: FormMiddleware<Values, Context> =
+			(api) => (next) => (transaction) => {
+				if (transaction.type !== "document/restored" || !queueTarget) {
+					return next(transaction)
+				}
+				api.dispatch({
+					type: "value/set",
+					path: "name",
+					value: transaction.document.values.name,
+				})
+				return cancelled
+			}
+		const feature = createHistoryMiddleware()
+		const form = createForm(feature, [restorePolicy, feature as unknown])
+		const history = feature.handle(form)
+		form.setValue("name", "Grace")
+		queueTarget = true
+
+		expect(history.undo()).toBe("cancelled")
+		expect(form.getSnapshot().values.name).toBe("Ada")
+		expect(history.getSnapshot()).toMatchObject({ index: 2, length: 2 })
+	})
+
 	it("imports only validated replayable journals and advances the event sequence floor", async () => {
 		const sourceFeature = createHistoryMiddleware()
 		const source = createForm(sourceFeature)
@@ -321,6 +463,14 @@ describe("history middleware", () => {
 			?.events.at(-1)?.sequence
 		expect(nextSequence).toBe(501)
 
+		const exhaustedSequence = structuredClone(
+			exported,
+		) as unknown as MutableJournal
+		exhaustedSequence.segments[0].groups[0].events[0].sequence =
+			MAX_EVENT_SEQUENCE_FLOOR
+		await expect(history.import(exhaustedSequence)).rejects.toThrow(/headroom/i)
+		expect(form.getSnapshot().values.name).toBe("Imported")
+
 		await expect(history.import({ ...exported, version: 99 })).rejects.toThrow(
 			/version/i,
 		)
@@ -337,6 +487,97 @@ describe("history middleware", () => {
 		await expect(
 			history.import(invalidFeature.handle(invalidSource).export()),
 		).rejects.toThrow(/valid schema input/i)
+	})
+
+	it("does not import over a document changed during asynchronous schema validation", async () => {
+		const sourceFeature = createHistoryMiddleware()
+		const source = createForm(sourceFeature)
+		source.setValue("name", "Imported")
+		const validation = deferred<{ value: Values }>()
+		vi.spyOn(schema["~standard"], "validate").mockReturnValueOnce(
+			validation.promise,
+		)
+
+		const feature = createHistoryMiddleware()
+		const form = createForm(feature)
+		const importing = feature
+			.handle(form)
+			.import(sourceFeature.handle(source).export())
+		form.setValue("name", "Local edit")
+		validation.resolve({ value: defaults() })
+
+		await expect(importing).resolves.toBe("unavailable")
+		expect(form.getSnapshot().values.name).toBe("Local edit")
+	})
+
+	it("does not resurrect cleared history after asynchronous import validation", async () => {
+		const sourceFeature = createHistoryMiddleware()
+		const source = createForm(sourceFeature)
+		source.setValue("name", "Imported")
+		const validation = deferred<{ value: Values }>()
+		vi.spyOn(schema["~standard"], "validate").mockReturnValueOnce(
+			validation.promise,
+		)
+
+		const feature = createHistoryMiddleware()
+		const form = createForm(feature)
+		form.setValue("name", "Local edit")
+		const history = feature.handle(form)
+		const importing = history.import(sourceFeature.handle(source).export())
+		history.clear()
+		validation.resolve({ value: defaults() })
+
+		await expect(importing).resolves.toBe("unavailable")
+		expect(form.getSnapshot().values.name).toBe("Local edit")
+		expect(history.getSnapshot()).toMatchObject({ index: 0, length: 0 })
+	})
+
+	it("does not import over a same-value reset checkpoint", async () => {
+		const sourceFeature = createHistoryMiddleware()
+		const source = createForm(sourceFeature)
+		source.setValue("name", "Imported")
+		const validation = deferred<{ value: Values }>()
+		vi.spyOn(schema["~standard"], "validate").mockReturnValueOnce(
+			validation.promise,
+		)
+
+		const feature = createHistoryMiddleware()
+		const form = createForm(feature)
+		const history = feature.handle(form)
+		const importing = history.import(sourceFeature.handle(source).export())
+		form.reset(form.getValues())
+		validation.resolve({ value: defaults() })
+
+		await expect(importing).resolves.toBe("unavailable")
+		expect(form.getSnapshot().values.name).toBe("Ada")
+		expect(history.export().segments).toHaveLength(2)
+	})
+
+	it("rejects imported row identity that cannot support live array edits", async () => {
+		const sourceFeature = createHistoryMiddleware()
+		const source = createForm(sourceFeature)
+		const exported = sourceFeature.handle(source).export()
+		const missing = structuredClone(exported) as unknown as MutableRowJournal
+		missing.segments[0].checkpoint.document.rowIdentity = {}
+
+		const feature = createHistoryMiddleware()
+		const form = createForm(feature)
+		const history = feature.handle(form)
+		await expect(history.import(missing)).rejects.toThrow(/missing array path/i)
+
+		const exhausted = structuredClone(exported) as unknown as MutableRowJournal
+		exhausted.segments[0].checkpoint.document.rowIdentity.items.nextKeyIndex =
+			Number.MAX_SAFE_INTEGER
+		await expect(history.import(exhausted)).rejects.toThrow(/safe successor/i)
+
+		source.reset(defaults({ name: "Later checkpoint" }))
+		const olderCheckpoint = structuredClone(
+			sourceFeature.handle(source).export(),
+		) as unknown as MutableRowJournal
+		olderCheckpoint.segments[0].checkpoint.document.rowIdentity = {}
+		await expect(history.import(olderCheckpoint)).rejects.toThrow(
+			/missing array path/i,
+		)
 	})
 
 	it("updates history before form publication and records commits despite post-commit errors in either middleware order", () => {
@@ -423,4 +664,24 @@ type MutableJournal = {
 	segments: {
 		groups: { events: { sequence: number }[] }[]
 	}[]
+}
+
+type MutableRowJournal = {
+	segments: {
+		checkpoint: {
+			document: {
+				rowIdentity: Record<string, { keys: string[]; nextKeyIndex: number }>
+			}
+		}
+	}[]
+}
+
+function deferred<Value>() {
+	let resolve!: (value: Value | PromiseLike<Value>) => void
+	let reject!: (error: unknown) => void
+	const promise = new Promise<Value>((onResolve, onReject) => {
+		resolve = onResolve
+		reject = onReject
+	})
+	return { promise, resolve, reject }
 }

@@ -212,6 +212,45 @@ describe("React 19 Action result synchronization", () => {
 		expect(snapshot.isSubmitting).toBe(false)
 	})
 
+	it("keeps submitted row identity when pending edits remove an earlier row", () => {
+		type ArrayValues = { rows: { name: string }[] }
+		const arraySchema = {
+			"~standard": {
+				version: 1,
+				vendor: "action-row-identity-test",
+				validate: (value: unknown) => ({ value: value as ArrayValues }),
+			},
+		} as StandardSchemaV1<ArrayValues>
+		const arrayDefinition = normalizeDefinition({
+			schema: arraySchema,
+			controls: {},
+			ui: [
+				{
+					kind: "array",
+					path: "rows",
+					itemDefault: { name: "" },
+					children: [],
+				},
+			],
+		})
+		const form = createFormStore({
+			definition: arrayDefinition,
+			defaultValues: { rows: [{ name: "A" }, { name: "B" }] },
+		})
+		const attempt = startActionSubmission(form)
+
+		form.remove("rows", 0)
+		syncActionResult(form, { status: "success", reset: "submitted" }, attempt)
+
+		const snapshot = form.getSnapshot()
+		expect(snapshot.values.rows).toEqual([{ name: "B" }])
+		expect(snapshot.isDirty).toBe(true)
+		expect(snapshot.metadata.arraysByPath.rows.items[0]).toMatchObject({
+			key: "rows:1",
+			dirty: false,
+		})
+	})
+
 	it("resets to defaults and clears metadata after a successful default reset", () => {
 		const form = createStore()
 		const attempt = startActionSubmission(form)

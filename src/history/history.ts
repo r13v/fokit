@@ -5,7 +5,10 @@ import {
 } from "../core/feature-protocol.js"
 import type { FormDocumentEvent, FormEvent } from "../core/form-events.js"
 import type { FormDocument } from "../core/form-model.js"
-import { reduceFormDocument } from "../core/form-reducer.js"
+import {
+	areFormDocumentsEqual,
+	reduceFormDocument,
+} from "../core/form-reducer.js"
 import type { FormStore } from "../core/form-store.js"
 import type { FormTransactionDispatch } from "../core/form-transactions.js"
 import type {
@@ -14,14 +17,16 @@ import type {
 } from "../core/middleware.js"
 import type { FormInput, StandardSchema } from "../core/standard-schema.js"
 import {
+	assertLiveEventSequenceHeadroom,
 	cloneDocument,
 	cloneDocumentEvent,
 	createFormJournal,
-	documentsEqual,
 	type FormJournal,
 	type JournalCursor,
+	type NormalizedJournal,
 	normalizeJournal,
-	replayJournal,
+	replayNormalizedJournal,
+	validateJournalDocuments,
 } from "./journal.js"
 
 export type HistorySnapshot = Readonly<{
@@ -61,7 +66,8 @@ export type HistoryFeature = FormAgnosticMiddleware & {
 
 export type HistoryPersistenceBridge<Input> = Readonly<{
 	export(): FormJournal<Input>
-	stageHydration(journal?: FormJournal<Input>): void
+	stageHydration(journal?: NormalizedJournal<Input>): void
+	markHydrationRoot(event: FormEvent<Input, unknown>): void
 	cancelHydration(): void
 }>
 
@@ -93,6 +99,7 @@ type HistorySegment<Input> = {
 type PendingRestore<Input> = {
 	readonly target: FormDocument<Input>
 	readonly onApplied: () => void
+	event?: FormEvent<Input, unknown>
 	outcome?: HistoryOperationResult
 }
 
@@ -173,9 +180,13 @@ class HistoryState<Input, Context> {
 	#cursor = 0
 	#lastSequence = 0
 	#snapshot: HistorySnapshot = createHistorySnapshot(0, 0)
+	#journalRevision = 0
 	#pendingRestore: PendingRestore<Input> | undefined
 	#pendingHydration:
-		| Readonly<{ journal: FormJournal<Input> | undefined }>
+		| {
+				normalized: NormalizedJournal<Input> | undefined
+				event?: FormEvent<Input, unknown>
+		  }
 		| undefined
 
 	constructor(
@@ -201,8 +212,8 @@ class HistoryState<Input, Context> {
 		this.handle = Object.freeze({
 			getSnapshot: () => this.#snapshot,
 			subscribe: (listener) => this.#subscribe(listener),
-			undo: () => this.#navigate(this.#cursor - 1, "undo"),
-			redo: () => this.#navigate(this.#cursor + 1, "redo"),
+			undo: () => this.#navigate(-1, "undo"),
+			redo: () => this.#navigate(1, "redo"),
 			seek: (index) => this.#seek(index),
 			clear: () => this.#clear(),
 			export: () => this.#export(),
@@ -211,6 +222,11 @@ class HistoryState<Input, Context> {
 		this.persistenceBridge = Object.freeze({
 			export: () => this.#export(),
 			stageHydration: (journal) => this.#stageHydration(journal),
+			markHydrationRoot: (event) => {
+				if (this.#pendingHydration !== undefined) {
+					this.#pendingHydration.event = event
+				}
+			},
 			cancelHydration: () => {
 				this.#pendingHydration = undefined
 			},
@@ -236,26 +252,32 @@ class HistoryState<Input, Context> {
 	): void {
 		this.#lastSequence = Math.max(this.#lastSequence, event.sequence)
 		const hydration = this.#pendingHydration
-		if (
-			hydration !== undefined &&
-			(event.type === "document/committed" ||
-				event.type === "document/restored")
-		) {
+		if (hydration?.event === event) {
 			this.#pendingHydration = undefined
-			if (hydration.journal !== undefined) {
-				this.#installJournal(hydration.journal)
+			if (
+				event.type === "document/committed" ||
+				event.type === "document/restored"
+			) {
+				let checkpointSequence = event.sequence
+				if (hydration.normalized !== undefined) {
+					this.#installJournal(hydration.normalized.journal)
+					checkpointSequence = Math.max(
+						event.sequence,
+						hydration.normalized.maxSequence + 1,
+					)
+					this.#capability.advanceEventSequenceFloor(checkpointSequence)
+				}
+				this.#appendCheckpoint(checkpointSequence, document)
 			}
-			this.#appendCheckpoint(event.sequence, document)
 			return
 		}
-		if (hydration !== undefined) this.#pendingHydration = undefined
 		const pending = this.#pendingRestore
-		if (pending !== undefined) {
+		if (pending?.event === event) {
 			this.#pendingRestore = undefined
 			if (
 				(event.type === "document/committed" ||
 					event.type === "document/restored") &&
-				documentsEqual(document, pending.target)
+				areFormDocumentsEqual(document, pending.target)
 			) {
 				pending.outcome = "applied"
 				pending.onApplied()
@@ -301,16 +323,13 @@ class HistoryState<Input, Context> {
 		}
 	}
 
-	#stageHydration(journal?: FormJournal<Input>): void {
+	#stageHydration(normalized?: NormalizedJournal<Input>): void {
 		if (this.#pendingHydration !== undefined) {
 			throw new TypeError("History hydration is already pending")
 		}
-		this.#pendingHydration = Object.freeze({
-			journal:
-				journal === undefined
-					? undefined
-					: normalizeJournal<Input>(journal).journal,
-		})
+		this.#pendingHydration = {
+			normalized,
+		}
 	}
 
 	#recordCommittedEvent(
@@ -375,6 +394,7 @@ class HistoryState<Input, Context> {
 		})
 		this.#cursor = 0
 		this.#activeGroup = undefined
+		this.#journalRevision++
 		this.#compact()
 		this.#updateSnapshot()
 	}
@@ -384,6 +404,7 @@ class HistoryState<Input, Context> {
 		if (this.#groupTimer !== undefined) clearTimeout(this.#groupTimer)
 		this.#groupTimer = undefined
 		this.#activeGroup = undefined
+		this.#journalRevision++
 		this.#compact()
 		if (update) this.#updateSnapshot()
 	}
@@ -418,6 +439,7 @@ class HistoryState<Input, Context> {
 			)
 			const group = segment.groups[groupIndex]
 			if (group === undefined) return
+			const compactingLatestSegment = segmentIndex === this.#segments.length - 1
 			const remaining = segment.groups.slice(groupIndex + 1)
 			if (remaining.length === 0 && this.#segments[segmentIndex + 1]) {
 				this.#segments.splice(0, segmentIndex + 1)
@@ -431,10 +453,7 @@ class HistoryState<Input, Context> {
 				},
 				groups: remaining,
 			})
-			if (
-				segmentIndex === this.#segments.length - 1 ||
-				this.#segments.length === 1
-			) {
+			if (compactingLatestSegment) {
 				this.#cursor = Math.max(0, this.#cursor - (groupIndex + 1))
 			}
 		}
@@ -450,8 +469,9 @@ class HistoryState<Input, Context> {
 		return count
 	}
 
-	#navigate(index: number, origin: "undo" | "redo"): HistoryOperationResult {
+	#navigate(offset: -1 | 1, origin: "undo" | "redo"): HistoryOperationResult {
 		this.#closeActiveGroup()
+		const index = this.#cursor + offset
 		if (index < 0 || index > this.#latestSegment().groups.length) {
 			return "unavailable"
 		}
@@ -465,13 +485,18 @@ class HistoryState<Input, Context> {
 		if (!Number.isSafeInteger(index)) {
 			throw new TypeError("History seek index must be an integer")
 		}
+		const cursorBeforeClose = this.#cursor
 		this.#closeActiveGroup()
-		if (index < 0 || index > this.#latestSegment().groups.length) {
+		const translatedIndex = index - (cursorBeforeClose - this.#cursor)
+		if (
+			translatedIndex < 0 ||
+			translatedIndex > this.#latestSegment().groups.length
+		) {
 			return "unavailable"
 		}
-		const origin = index < this.#cursor ? "undo" : "redo"
-		return this.#restore(this.#documentAt(index), origin, () => {
-			this.#cursor = index
+		const origin = translatedIndex < this.#cursor ? "undo" : "redo"
+		return this.#restore(this.#documentAt(translatedIndex), origin, () => {
+			this.#cursor = translatedIndex
 			this.#updateSnapshot()
 		})
 	}
@@ -488,7 +513,16 @@ class HistoryState<Input, Context> {
 		}
 		this.#pendingRestore = pending
 		try {
-			const result = this.#capability.restoreDocument(target, origin)
+			const result = this.#capability.restoreDocument(
+				target,
+				origin,
+				undefined,
+				({ event }) => {
+					if (this.#pendingRestore === pending) {
+						pending.event = event as FormEvent<Input, unknown>
+					}
+				},
+			)
 			if (result.status === "cancelled") return "cancelled"
 			return pending.outcome ?? "unavailable"
 		} finally {
@@ -519,6 +553,7 @@ class HistoryState<Input, Context> {
 		]
 		this.#activeGroup = undefined
 		this.#cursor = 0
+		this.#journalRevision++
 		this.#updateSnapshot()
 	}
 
@@ -528,7 +563,17 @@ class HistoryState<Input, Context> {
 
 	async #import(input: unknown): Promise<HistoryOperationResult> {
 		const normalized = normalizeJournal<Input>(input)
-		const target = replayJournal(normalized.journal, normalized.cursor)
+		assertLiveEventSequenceHeadroom(normalized.maxSequence)
+		validateJournalDocuments(
+			normalized.journal,
+			this.#capability.validateDocument,
+		)
+		const target = replayNormalizedJournal(
+			normalized.journal,
+			normalized.cursor,
+		)
+		const documentBeforeValidation = this.#capability.getDocument()
+		const journalRevisionBeforeValidation = this.#journalRevision
 		const validation = await this.#capability.validateRestoredInput(
 			target.values,
 		)
@@ -536,6 +581,12 @@ class HistoryState<Input, Context> {
 			throw new TypeError(
 				"Imported form journal does not contain valid schema input",
 			)
+		}
+		if (
+			this.#capability.getDocument() !== documentBeforeValidation ||
+			this.#journalRevision !== journalRevisionBeforeValidation
+		) {
+			return "unavailable"
 		}
 		return this.#restore(target, "replay", () => {
 			this.#capability.advanceEventSequenceFloor(normalized.maxSequence)
@@ -558,7 +609,7 @@ class HistoryState<Input, Context> {
 				},
 				groups: segment.groups.map((group) => {
 					for (const event of group.events) {
-						document = replayEvent(document, event)
+						document = reduceFormDocument(document, event)
 					}
 					return {
 						events: group.events.map(cloneDocumentEvent),
@@ -573,6 +624,7 @@ class HistoryState<Input, Context> {
 			lastJournalSequence(journal),
 		)
 		this.#activeGroup = undefined
+		this.#journalRevision++
 		this.#updateSnapshot()
 	}
 
@@ -597,13 +649,6 @@ class HistoryState<Input, Context> {
 		this.#snapshot = next
 		for (const listener of [...this.#listeners]) listener()
 	}
-}
-
-function replayEvent<Input>(
-	document: FormDocument<Input>,
-	event: FormDocumentEvent<Input>,
-): FormDocument<Input> {
-	return reduceFormDocument(document, event)
 }
 
 function lastJournalSequence<Input>(journal: FormJournal<Input>): number {

@@ -44,8 +44,9 @@ and rejects forms from a base, extension, sibling, or structurally equal kit.
 - A definition that must remain portable is created by the lowest common base
   kit.
 - A form instance is intentionally less portable than a definition: bound kit
-  hooks require the exact kit that created it. The global `useForm` remains the
-  escape hatch when kit-bound behavior is not required.
+  hooks require the exact kit that created it. Every public form instance is
+  created and bound through that exact kit; there is no global binding escape
+  hatch.
 - TypeScript cannot generate a fresh nominal identity for each `extend` call;
   compatibility follows the complete known registry contract instead.
 - Widening a registry to `ControlDefinitionRegistry` erases known-name

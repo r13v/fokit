@@ -10,6 +10,7 @@ import {
 } from "../core/feature-protocol.js"
 import type { FormEvent } from "../core/form-events.js"
 import type { FormDocument } from "../core/form-model.js"
+import { areFormDocumentsEqual } from "../core/form-reducer.js"
 import type { FormStore } from "../core/form-store.js"
 import type { FormTransactionDispatch } from "../core/form-transactions.js"
 import type {
@@ -17,7 +18,7 @@ import type {
 	FormMiddlewareApi,
 } from "../core/middleware.js"
 import type { StandardSchema } from "../core/standard-schema.js"
-import { cloneValue, isDirtyEqual } from "../core/value.js"
+import { cloneValue } from "../core/value.js"
 
 declare const devToolsRevisionBrand: unique symbol
 
@@ -130,6 +131,7 @@ type DevToolsWindow = Window & {
 type PendingRestore<Input> = {
 	readonly token: DevToolsRevisionToken
 	readonly target: FormDocument<Input>
+	event?: FormEvent<Input, unknown>
 	outcome?: "applied" | "transformed"
 }
 
@@ -218,9 +220,10 @@ class DevToolsState<Input, Context> {
 	readonly #options: NormalizedOptions
 	readonly #documents = new Map<DevToolsRevisionToken, FormDocument<Input>>()
 	readonly #recentTokens: DevToolsRevisionToken[] = []
-	#document: FormDocument<Input>
+	#document: FormDocument<Input> | undefined
 	#connection: DevToolsConnection | undefined
 	#unsubscribe: (() => void) | undefined
+	#unsubscribeFinalized: (() => void) | undefined
 	#diagnosticState: "idle" | "active" | "disconnected" | "failed" = "idle"
 	#nextRevision = 0
 	#initialToken: DevToolsRevisionToken | undefined
@@ -235,13 +238,15 @@ class DevToolsState<Input, Context> {
 		this.#capability = capability
 		this.#options = options
 		this.#document = capability.getDocument()
-		capability.subscribeFinalized(({ event, document }) => {
-			try {
-				this.#finalize(event, document)
-			} catch (error) {
-				this.#fail(error)
-			}
-		})
+		this.#unsubscribeFinalized = capability.subscribeFinalized(
+			({ event, document }) => {
+				try {
+					this.#finalize(event, document)
+				} catch (error) {
+					this.#fail(error)
+				}
+			},
+		)
 		this.handle = Object.freeze({
 			disconnect: () => this.#disconnect("disconnected"),
 		})
@@ -268,11 +273,15 @@ class DevToolsState<Input, Context> {
 				typeof unsubscribe === "function"
 					? unsubscribe
 					: () => connection?.unsubscribe()
-			const token = this.#remember(this.#document)
+			const document = this.#document
+			if (document === undefined) {
+				throw new TypeError("Redux DevTools form document is unavailable")
+			}
+			const token = this.#remember(document)
 			this.#initialToken = token
 			this.#baselineToken = token
 			this.#currentToken = token
-			connection.init(this.#project(this.#document, token))
+			connection.init(this.#project(document, token))
 			this.#diagnosticState = "active"
 		} catch (error) {
 			this.#report(error)
@@ -295,10 +304,10 @@ class DevToolsState<Input, Context> {
 
 		const pending = this.#pendingRestore
 		if (
-			pending !== undefined &&
+			pending?.event === event &&
 			(event.type === "document/committed" ||
 				event.type === "document/restored") &&
-			documentsEqual(document, pending.target)
+			areFormDocumentsEqual(document, pending.target)
 		) {
 			pending.outcome = "applied"
 			this.#documents.set(pending.token, document)
@@ -307,7 +316,14 @@ class DevToolsState<Input, Context> {
 			return
 		}
 
-		if (pending !== undefined) pending.outcome = "transformed"
+		if (
+			pending?.event === event &&
+			pending.outcome === undefined &&
+			(event.type === "document/committed" ||
+				event.type === "document/restored")
+		) {
+			pending.outcome = "transformed"
+		}
 		const token =
 			event.type === "document/committed" || event.type === "document/restored"
 				? this.#remember(document)
@@ -321,9 +337,13 @@ class DevToolsState<Input, Context> {
 		}
 		const type = message.payload?.type
 		if (type === "COMMIT") {
-			const token = this.#currentToken ?? this.#remember(this.#document)
+			const document = this.#document
+			if (document === undefined) {
+				throw new TypeError("Redux DevTools form document is unavailable")
+			}
+			const token = this.#currentToken ?? this.#remember(document)
 			this.#baselineToken = token
-			this.#connection?.init(this.#project(this.#document, token))
+			this.#connection?.init(this.#project(document, token))
 			this.#prune()
 			return
 		}
@@ -361,6 +381,11 @@ class DevToolsState<Input, Context> {
 				target,
 				"devtools",
 				"record",
+				({ event }) => {
+					if (this.#pendingRestore === pending) {
+						pending.event = event as FormEvent<Input, unknown>
+					}
+				},
 			)
 			if (pending.outcome === "applied") return
 			if (result.status === "cancelled") {
@@ -380,10 +405,11 @@ class DevToolsState<Input, Context> {
 
 	#resync(message: string): void {
 		const connection = this.#connection
-		if (connection === undefined) return
+		const document = this.#document
+		if (connection === undefined || document === undefined) return
 		connection.error(message)
-		const token = this.#remember(this.#document)
-		connection.init(this.#project(this.#document, token))
+		const token = this.#remember(document)
+		connection.init(this.#project(document, token))
 	}
 
 	#remember(document: FormDocument<Input>): DevToolsRevisionToken {
@@ -453,11 +479,26 @@ class DevToolsState<Input, Context> {
 		}
 		this.#diagnosticState = state
 		const unsubscribe = this.#unsubscribe
+		const unsubscribeFinalized = this.#unsubscribeFinalized
 		this.#unsubscribe = undefined
+		this.#unsubscribeFinalized = undefined
 		this.#connection = undefined
+		this.#document = undefined
+		this.#documents.clear()
+		this.#recentTokens.length = 0
+		this.#nextRevision = 0
+		this.#initialToken = undefined
+		this.#baselineToken = undefined
+		this.#currentToken = undefined
+		this.#pendingRestore = undefined
 		try {
 			if (unsubscribe !== undefined) unsubscribe()
 			else partialConnection?.unsubscribe()
+		} catch (error) {
+			this.#report(error)
+		}
+		try {
+			unsubscribeFinalized?.()
 		} catch (error) {
 			this.#report(error)
 		}
@@ -543,16 +584,4 @@ function readRevisionToken(input: unknown): DevToolsRevisionToken | undefined {
 	return typeof revision === "string"
 		? (revision as DevToolsRevisionToken)
 		: undefined
-}
-
-function documentsEqual<Input>(
-	left: FormDocument<Input>,
-	right: FormDocument<Input>,
-): boolean {
-	return (
-		isDirtyEqual(left.values, right.values) &&
-		createRowIdentityChanges(left.rowIdentity, right.rowIdentity).length ===
-			0 &&
-		createRowIdentityChanges(right.rowIdentity, left.rowIdentity).length === 0
-	)
 }

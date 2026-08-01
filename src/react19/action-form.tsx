@@ -84,6 +84,7 @@ export function ActionForm<
 	assertReact19ActionSupport()
 
 	const attemptRef = useRef<ActionSubmissionAttempt<Schema>>(undefined)
+	const attemptStoreRef = useRef<FormStore<Schema, Context>>(undefined)
 	const formElementRef = useRef<HTMLFormElement | null>(null)
 	const observedPendingRef = useRef(false)
 	const lastResultRef = useRef<FormResult | null | undefined>(undefined)
@@ -111,6 +112,17 @@ export function ActionForm<
 		submitting: snapshot.isSubmitting,
 	}))
 
+	useEffect(
+		() => () => {
+			if (attemptStoreRef.current !== store) return
+			attemptRef.current?.finish()
+			attemptRef.current = undefined
+			attemptStoreRef.current = undefined
+			observedPendingRef.current = false
+		},
+		[store],
+	)
+
 	useEffect(() => {
 		if (
 			result === null ||
@@ -130,6 +142,7 @@ export function ActionForm<
 		)
 		if (attempt !== undefined && Object.is(attemptRef.current, attempt)) {
 			attemptRef.current = undefined
+			attemptStoreRef.current = undefined
 		}
 	}, [result, store])
 
@@ -141,6 +154,7 @@ export function ActionForm<
 					const snapshot = form.getSnapshot()
 					if (!snapshot.resolvedUi.disabled && !snapshot.isSubmitting) {
 						attemptRef.current = startActionSubmission(store)
+						attemptStoreRef.current = store
 					}
 				}
 				return
@@ -173,6 +187,7 @@ export function ActionForm<
 		}
 
 		attemptRef.current = startActionSubmission(store)
+		attemptStoreRef.current = store
 	}
 
 	return (

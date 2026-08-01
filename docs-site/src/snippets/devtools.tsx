@@ -2,7 +2,7 @@
 
 import { createFormKit, nativeControls } from "form-please"
 import { createDevToolsMiddleware } from "form-please/devtools"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({ title: z.string() })
@@ -24,8 +24,6 @@ export function DevToolsExample() {
 		}),
 	)
 	const devTools = devToolsFeature.handle(form)
-
-	useEffect(() => () => devTools.disconnect(), [devTools])
 
 	return (
 		<kit.AutoForm form={form}>

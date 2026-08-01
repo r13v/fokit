@@ -69,7 +69,6 @@ export type FormRuntimeOptions<
 > = Omit<CreateFormOptions<Schema, Context>, "defaultValues" | "middleware">
 
 export type FormKitDescriptor = Readonly<{
-	identity: object
 	controls: ControlRegistry
 	slots: RuntimeFormKitSlots
 }>
@@ -342,12 +341,16 @@ export class FormInstanceImpl<
 
 	replaceOptions(options: ReplaceFormOptions<Schema, Context>): void {
 		this.#baseOptions = copyReplaceOptions(options)
-		this.#applyRuntime(this.#activeContext, this.#baseOptions)
+		if (this.#binding === undefined) {
+			this.#applyRuntime(this.#baseContext, this.#baseOptions)
+		}
 	}
 
 	replaceContext(context: Context): void {
 		this.#baseContext = context
-		this.#applyRuntime(context, this.#activeOptions)
+		if (this.#binding === undefined) {
+			this.#applyRuntime(this.#baseContext, this.#baseOptions)
+		}
 	}
 
 	touch(path: PathInput): void {
@@ -503,10 +506,7 @@ export function assertFormKitOwnership(
 	descriptor: FormKitDescriptor,
 	owner: "kit.useForm" | "kit.Form" | "kit.AutoForm",
 ): void {
-	if (
-		getFormInstanceImpl(form as never).getKitDescriptor().identity !==
-		descriptor.identity
-	) {
+	if (getFormInstanceImpl(form as never).getKitDescriptor() !== descriptor) {
 		throw new TypeError(
 			`${owner} requires a form created by this exact form kit`,
 		)

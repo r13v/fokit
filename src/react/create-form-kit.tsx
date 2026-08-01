@@ -9,7 +9,6 @@ import {
 	type PathValue,
 	type StandardSchema,
 	type UiNode,
-	type UiPresentation,
 } from "../core/index.js"
 import { createAutoFormComponent } from "./auto-form.js"
 import type { ControlDefinitionRegistry } from "./control.js"
@@ -320,23 +319,12 @@ type CreateKitForm<
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
-> = <
-	Schema extends StandardSchema,
-	Context = unknown,
-	RequiredControls extends ControlDefinitionRegistry | undefined =
-		| ControlDefinitionRegistry
-		| undefined,
-	DefinitionPresentation extends UiPresentation = ReactUiPresentation<
-		unknown,
-		unknown,
-		unknown
-	>,
->(
+> = <Schema extends StandardSchema, Context = unknown>(
 	definition: NormalizedFormDefinition<
 		Schema,
-		RequiredControls,
+		Controls,
 		RenderNodeComponent,
-		DefinitionPresentation
+		KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
 	>,
 	options: CreateFormOptions<Schema, Context>,
 ) => FormInstance<
@@ -661,7 +649,6 @@ function assembleFormKit(
 	slots: RuntimeFormKitSlots,
 ): RuntimeFormKit {
 	const descriptor = Object.freeze({
-		identity: Object.freeze({}),
 		controls,
 		slots,
 	}) satisfies FormKitDescriptor
@@ -708,12 +695,10 @@ function assembleFormKit(
 	const createForm = ((
 		definition: NormalizedFormDefinition<StandardSchema>,
 		options: CreateFormOptions<StandardSchema, unknown>,
-	) =>
-		createFormInstance(
-			definition,
-			options,
-			descriptor,
-		)) as RuntimeFormKit["createForm"]
+	) => {
+		assertDefinitionControls(definition, controls)
+		return createFormInstance(definition, options, descriptor)
+	}) as RuntimeFormKit["createForm"]
 	const useForm = ((
 		form: FormInstance<StandardSchema>,
 		options: FormRuntimeOptions<StandardSchema, unknown>,
@@ -780,6 +765,19 @@ function assertSlots(
 	] as const) {
 		if (slots[key] === undefined) {
 			throw new TypeError(`${owner} requires a ${key} slot`)
+		}
+	}
+}
+
+function assertDefinitionControls(
+	definition: NormalizedFormDefinition<StandardSchema>,
+	controls: ControlDefinitionRegistry,
+): void {
+	for (const node of definition.nodes) {
+		if (node.kind === "field" && !Object.hasOwn(controls, node.control)) {
+			throw new TypeError(
+				`kit.createForm requires control "${node.control}" used by the definition`,
+			)
 		}
 	}
 }

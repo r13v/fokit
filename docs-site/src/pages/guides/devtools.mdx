@@ -26,21 +26,30 @@ const devTools = devToolsFeature.handle(form)
 The feature is inert during SSR and when the extension is absent. One form can
 configure at most one DevTools feature.
 
+The feature connects only after the form completes its first retained React
+binding through `kit.useForm`, `kit.AutoForm`, or `ActionForm`. A form that is
+never bound does not open a listener. If you compose a manual `kit.Form`, call
+`kit.useForm(form, runtimeOptions)` in the component first.
+
 ## Visible state and events
 
 The monitor receives every finalized `FormEvent`. Visible state contains the
 current values and logical row identity. An internal opaque revision token
 selects the exact immutable document from a bounded per-form table.
 
-`maxAge` controls the token table and defaults to `50`. An expired token cannot
-restore a document. The feature reports the failure through the DevTools
-connection and keeps the live form unchanged.
+`maxAge` controls the token table and defaults to `50`. It must be an integer
+greater than `1`. An expired token cannot restore a document. The feature
+reports the failure through the DevTools connection and keeps the live form
+unchanged.
 
 The feature supports the standard connection options `name`, `latency`,
 `maxAge`, `trace`, `traceLimit`, `serialize`, `actionSanitizer`,
 `stateSanitizer`, `actionsAllowlist`, `actionsDenylist`, `predicate`, and
-`autoPause`. Use `onError` to report connection, sanitizer, serialization,
-send, subscription, and message failures.
+`autoPause`. The `autoPause` option defaults to `true`. `actionSanitizer`
+receives `(action, id)`. `stateSanitizer` receives the visible `(state, index)`.
+`predicate` receives `(state, action)`. The integration adds its protected
+revision token after `stateSanitizer` returns. Use `onError` to report
+connection, sanitizer, serialization, send, subscription, and message failures.
 
 ## Constrained time travel
 
@@ -73,8 +82,8 @@ the effective committed document.
 
 ## Complete example
 
-This example configures the connection, reports integration errors, and
-disconnects the per-form listener during cleanup:
+This example configures the connection, reports integration errors, and offers
+an explicit disconnect action:
 
 ```tsx
 // [!include ~/snippets/devtools.tsx]
@@ -86,9 +95,11 @@ when the extension is missing or after disconnect.
 
 ## Cleanup and failures
 
-Call `devTools.disconnect()` when the form's external connection must end. The
-operation is idempotent and removes only that form's subscription. Form,
-Please does not expose a general form-disposal or middleware-cleanup lifecycle.
+Call `devTools.disconnect()` only when the form's real owner ends its lifetime.
+The operation is idempotent and permanently removes the extension listener and
+form event listener for that form. Do not call it from an ordinary React effect
+cleanup because development Strict Mode replays effects. Form, Please does not
+expose a general form-disposal or middleware-cleanup lifecycle.
 
 `onError` is diagnostic. DevTools failures do not roll back form commits. Keep
 the form available and disable the integration after a transport failure.

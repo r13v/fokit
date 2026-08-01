@@ -9,7 +9,8 @@ responsibilities live, how data moves through the library, and which
 boundaries changes must preserve.
 
 [Architecture decision records](docs/adr/) explain why selected boundaries
-exist. When this document disagrees with either the code or the specification,
+exist. Public API documentation describes shipped behavior. When this document
+disagrees with the code, an accepted ADR, or public API documentation,
 investigate the difference instead of treating this document as a new source
 of behavior.
 
@@ -99,10 +100,10 @@ remain suitable for server-side use.
 | Paths and values | `src/core/path.ts`, `src/core/path-types.ts`, `src/core/value.ts` | Canonical deep paths and immutable value operations |
 | Form model | `src/core/form-model.ts`, `src/core/form-reducer.ts`, `src/core/runtime-reducer.ts` | Own the atomic historical document and pure document/runtime transitions |
 | Commands and events | `src/core/form-commands.ts`, `src/core/form-transactions.ts`, `src/core/form-events.ts`, `src/core/transaction.ts` | Type commands, normalized transactions, immutable events, and value-change normalization |
-| Runtime store | `src/core/form-store.ts`, `src/core/form-state.ts`, `src/core/publication.ts` | Coordinate reducers, effects, snapshots, subscriptions, reset, focus, and runtime options |
+| Runtime store | `src/core/form-store.ts`, `src/core/form-state.ts`, `src/core/publication.ts`, `src/core/focus.ts` | Coordinate reducers, effects, snapshots, subscriptions, reset, focus, and runtime options |
 | Middleware and features | `src/core/middleware.ts`, `src/core/commit-timeline.ts`, `src/core/feature-protocol.ts` | Run the synchronous chain and expose the package-private optional-feature capability |
 | Derived state | `src/core/resolve-ui.ts`, `src/core/resource.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, synchronous application-resource projection, dirty/touched state, issue exposure, and stable array rows |
-| Validation | `src/core/validation.ts`, `src/core/standard-schema.ts` | Standard Schema execution and normalized results |
+| Validation | `src/core/validation.ts`, `src/core/validation-lifecycle.ts`, `src/core/standard-schema.ts` | Standard Schema execution, attempt lifecycle, cancellation, and normalized results |
 | Form kits | `src/react/create-form-kit.tsx`, `src/react/default-slots.tsx`, `src/react/native-controls.tsx` | Bind control and slot registries into a rendering integration |
 | React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to the external store |
 | Rendering | `src/react/fields.tsx`, `src/react/array-field.tsx`, `src/react/control.tsx`, `src/react/render-node.ts`, `src/react/slots.ts` | Turn resolved nodes into slots, controls, and explicit render components |
@@ -439,7 +440,7 @@ and smoke verification described in `package.json`.
 
 When a change crosses a boundary:
 
-1. update the normative specification if public behavior changes;
+1. update the public API documentation if public behavior changes;
 2. add or supersede an ADR when the dependency or ownership decision changes;
 3. update this map when responsibility moves between modules;
 4. test the boundary at its narrowest layer and at the affected public entry

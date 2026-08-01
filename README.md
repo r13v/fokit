@@ -15,6 +15,16 @@ Form, Please supports React 18 and React 19.
 Version 1 is a breaking reducer-based redesign. It does not provide
 compatibility aliases for the removed global creation and binding APIs.
 
+| Version 0 | Version 1 |
+| --- | --- |
+| Global `createForm` | `kit.createForm` |
+| Global `useForm` | `kit.useForm` |
+| Definition-based `AutoForm` | Create a form once and pass it to `kit.AutoForm` |
+| `ActionForm` with kit and definition props | Create a form once and pass it to `ActionForm` |
+| Root `KitForm` and `Submit` | `kit.Form` and `kit.Submit` |
+| Root `createFormStore` | Import it from `form-please/core` |
+| `UseFormOptions` | `CreateFormOptions` or `FormRuntimeOptions` |
+
 ## Install
 
 Install `form-please` in an existing React application:
@@ -102,7 +112,9 @@ Form, Please owns the form store, update pipeline, validation lifecycle, structu
 rendering, and native form integration.
 
 You choose the schema and control registry. Your application owns visual
-components, styling, data loading, and persistence. A form definition selects
+components, styling, data loading, storage transport, authorization, server
+retention, and conflict policy. When configured, Form, Please owns draft
+encoding, migration, hydration, and save scheduling. A form definition selects
 registered controls by name. It does not embed a design system.
 
 ## Package entry points

@@ -151,7 +151,7 @@ context and state hooks remain public.
 - Core lifecycle hooks become compatibility middleware around the reducer,
   while reducers remain free of schemas, timers, storage, focus, and callbacks.
 - Adopting this boundary requires a substantial internal migration and updates
-  to the specification and architecture map before release.
+  to the public API documentation and architecture map before release.
 
 ## Implemented protocol and modules
 

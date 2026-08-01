@@ -52,12 +52,25 @@ export function createFileCodec(
 			if (typeof File === "undefined") {
 				throw new TypeError("File persistence decoding requires the File API")
 			}
-			return new File([base64ToBytes(payload.content).buffer], payload.name, {
+			if (payload.content.length > Math.ceil(maxSize / 3) * 4) {
+				throwFileSizeError(payload.name, maxSize)
+			}
+			const bytes = base64ToBytes(payload.content)
+			if (bytes.byteLength > maxSize) {
+				throwFileSizeError(payload.name, maxSize)
+			}
+			return new File([bytes.buffer], payload.name, {
 				type: payload.type,
 				lastModified: payload.lastModified,
 			})
 		},
 	})
+}
+
+function throwFileSizeError(name: string, maxSize: number): never {
+	throw new TypeError(
+		`File "${name}" exceeds the persistence limit of ${maxSize} bytes`,
+	)
 }
 
 function readFilePayload(value: JsonValue): {

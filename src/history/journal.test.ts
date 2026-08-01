@@ -61,8 +61,15 @@ describe("form journals", () => {
 
 		const first = replayJournal(journal, journal.cursor)
 		const second = replayJournal(journal, journal.cursor)
+		const checkpointReplay = replayJournal(
+			journal,
+			journal.segments[0]?.checkpoint.cursor as typeof journal.cursor,
+		)
 
 		expect(first).toEqual(second)
+		expect(checkpointReplay.values.groups[0]?.items).toEqual([
+			{ name: "first" },
+		])
 		expect(first.values.groups[0]?.items).toEqual([
 			{ name: "first" },
 			{ name: "second" },
@@ -116,6 +123,20 @@ describe("form journals", () => {
 			duplicateSequence as FormJournalShape
 		).segments[0].groups[0].events[0].sequence = 0
 		expect(() => normalizeJournal(duplicateSequence)).toThrow(/increasing/i)
+		const safeBoundarySequence = structuredClone(
+			journal,
+		) as unknown as FormJournalShape
+		safeBoundarySequence.segments[0].groups[0].events[0].sequence =
+			Number.MAX_SAFE_INTEGER
+		expect(normalizeJournal(safeBoundarySequence).maxSequence).toBe(
+			Number.MAX_SAFE_INTEGER,
+		)
+		const unsafeSequence = structuredClone(
+			journal,
+		) as unknown as FormJournalShape
+		unsafeSequence.segments[0].groups[0].events[0].sequence =
+			Number.MAX_SAFE_INTEGER + 1
+		expect(() => normalizeJournal(unsafeSequence)).toThrow(/sequences/i)
 
 		const invalidPath = structuredClone(journal) as never
 		;(
@@ -128,6 +149,18 @@ describe("form journals", () => {
 			invalidRows as FormJournalShape
 		).segments[0].checkpoint.document.rowIdentity.items.keys = ["extra"]
 		expect(() => normalizeJournal(invalidRows)).toThrow(/row identity/i)
+		const exhaustedRowKey = structuredClone(
+			journal,
+		) as unknown as FormJournalShape
+		exhaustedRowKey.segments[0].groups[0].events[0].rowIdentityChanges = [
+			{
+				type: "array/replaced",
+				path: "items",
+				keys: ["items:1"],
+				nextKeyIndex: 1,
+			},
+		]
+		expect(() => normalizeJournal(exhaustedRowKey)).toThrow(/generated key/i)
 
 		const invalidEvent = structuredClone(journal) as never
 		;(
@@ -152,6 +185,7 @@ describe("form journals", () => {
 type FormJournalShape = {
 	segments: {
 		checkpoint: {
+			sequence: number
 			document: {
 				rowIdentity: Record<string, { keys: string[] }>
 			}
@@ -160,6 +194,12 @@ type FormJournalShape = {
 			events: {
 				sequence: number
 				changes: { path: string }[]
+				rowIdentityChanges: {
+					type: string
+					path: string
+					keys: string[]
+					nextKeyIndex: number
+				}[]
 			}[]
 		}[]
 	}[]

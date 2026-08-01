@@ -5,6 +5,7 @@ import {
 	type FormFeatureCapability,
 	formFeatureCapabilityKey,
 	getFormFeatureCapability,
+	MAX_EVENT_SEQUENCE_FLOOR,
 } from "./feature-protocol.js"
 import {
 	createFormStoreWithMiddleware,
@@ -45,6 +46,7 @@ describe("feature capability protocol", () => {
 	it("validates the stable structural capability and version without class identity", () => {
 		const operations = {
 			getDocument: vi.fn(),
+			validateDocument: vi.fn(),
 			restoreDocument: vi.fn(),
 			installCleanBaseline: vi.fn(),
 			validateRestoredInput: vi.fn(),
@@ -101,6 +103,7 @@ describe("feature capability protocol", () => {
 			Context
 		>
 		const initial = protocol.getDocument()
+		expect(() => protocol.validateDocument(initial)).not.toThrow()
 
 		form.setValue("name", "Grace")
 		expect(form.getSnapshot().isDirty).toBe(true)
@@ -123,6 +126,10 @@ describe("feature capability protocol", () => {
 			type: "document/committed",
 			sequence: 51,
 		})
+		protocol.advanceEventSequenceFloor(MAX_EVENT_SEQUENCE_FLOOR)
+		expect(() =>
+			protocol.advanceEventSequenceFloor(MAX_EVENT_SEQUENCE_FLOOR + 1),
+		).toThrow(/headroom/i)
 	})
 
 	it.each(["before", "after"] as const)(

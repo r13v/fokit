@@ -59,6 +59,7 @@ const kind = defineControl<ExampleInput["kind"]>({
 const kit = createFormKit({ controls: { text, kind } })
 const siblingKit = createFormKit({ controls: { text, kind } })
 const incompatibleKit = createFormKit({ controls: { text } })
+const extendedKit = kit.extend({ controls: { extra: text } })
 createFormKit({
 	controls: { text, kind },
 	// @ts-expect-error middleware belongs to each kit.createForm call
@@ -81,6 +82,11 @@ const definition = kit.defineForm(schema).withContext<ExampleContext>({
 		},
 	],
 })
+const extendedDefinition = extendedKit
+	.defineForm(schema)
+	.withContext<ExampleContext>({
+		ui: [{ kind: "field", path: "profile.first", control: "extra" }],
+	})
 kit.defineForm(schema)({
 	ui: [],
 	// @ts-expect-error normalized definitions do not retain middleware
@@ -116,6 +122,15 @@ const form = kit.createForm(definition, {
 		])
 	},
 })
+extendedKit.createForm(definition, {
+	defaultValues: defaults,
+	context: exampleContext,
+})
+// @ts-expect-error a base kit cannot create a form from an extended-kit definition
+kit.createForm(extendedDefinition, {
+	defaultValues: defaults,
+	context: exampleContext,
+})
 
 type _input = Expect<Equal<FormInput<ExampleSchema>, ExampleInput>>
 type _values = Expect<Equal<ReturnType<typeof form.getValues>, ExampleInput>>
@@ -146,12 +161,22 @@ function TypeHarness() {
 
 	const first = useValue(form, "profile.first")
 	type _value = Expect<Equal<typeof first, string>>
+	// @ts-expect-error value paths must exist in the schema input
+	useValue(form, "profile.unknown")
+	useValue(form, "profile.first", {
+		// @ts-expect-error equality callbacks receive the selected path value
+		equalityFn: (left: number, right: number) => left === right,
+	})
 	const middle = useField(form, "profile.middle")
+	// @ts-expect-error field paths must exist in the schema input
+	useField(form, "missing")
 	middle.setValue(undefined)
 	// @ts-expect-error field values remain path typed
 	middle.setValue(42)
 
 	const contacts = useArrayField(form, "contacts")
+	// @ts-expect-error array hooks accept only array-valued paths
+	useArrayField(form, "profile.first")
 	contacts.append({ value: "ada@example.test" })
 	// @ts-expect-error array items require value
 	contacts.append({ note: "missing" })

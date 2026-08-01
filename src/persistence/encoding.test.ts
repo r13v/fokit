@@ -120,5 +120,23 @@ describe("persistence encoding", () => {
 		await expect(
 			codec.encode(new File([new Uint8Array(4)], "large.bin")),
 		).rejects.toThrow(/exceeds.*3 bytes/i)
+
+		const smallCodec = createFileCodec({ maxSize: 2 })
+		expect(() =>
+			smallCodec.decode({
+				content: "!!!!!!!!",
+				name: "oversized.bin",
+				type: "application/octet-stream",
+				lastModified: 123,
+			}),
+		).toThrow(/exceeds.*2 bytes/i)
+		expect(() =>
+			smallCodec.decode({
+				content: "AQID",
+				name: "decoded-too-large.bin",
+				type: "application/octet-stream",
+				lastModified: 123,
+			}),
+		).toThrow(/exceeds.*2 bytes/i)
 	})
 })

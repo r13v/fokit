@@ -41,13 +41,14 @@ Forms without the middleware do not retain checkpoints or events.
 
 ## Groups and retention
 
-Consecutive control edits to the same path share a group for `500`
+Consecutive control edits to the same path share a group for `750`
 milliseconds by default. A batch is one group. A forwarded blur, path change,
 timeout, reset, or restore closes the active group.
 
-Set `groupWindow` in milliseconds to change the time window. Set `limit` to a
-finite positive group count to compact old groups into a checkpoint. Omit
-`limit` for unlimited retention.
+Set `groupWindow` in milliseconds to change the time window. Set it to `0` to
+disable time-based closure. Set `limit` to a finite non-negative group count to
+compact old groups into a checkpoint. A limit of `0` retains no closed groups.
+Omit `limit` for unlimited retention.
 
 ## Undo, redo, and seek
 
@@ -67,6 +68,18 @@ and `length`. Navigation is limited to the latest checkpoint segment.
 `replayJournal(journal, cursor)` to calculate a document without changing a
 live form. Pure replay does not run middleware, hooks, schemas, value policies,
 validation, or callbacks.
+
+Each checkpoint and group in `journal.segments` has an opaque cursor. Use
+`journal.cursor` for the current position. Use `segment.checkpoint.cursor` to
+replay that checkpoint, or use `group.cursor` to replay the state after a
+specific group:
+
+```text
+const journal = history.export()
+const segment = journal.segments[0]
+const checkpoint = replayJournal(journal, segment.checkpoint.cursor)
+const firstGroup = replayJournal(journal, segment.groups[0].cursor)
+```
 
 `history.import(value)` treats the value as untrusted. It validates protocol
 version, sequences, paths, checkpoint documents, row identity, event shapes,

@@ -274,6 +274,51 @@ describe("React form hooks", () => {
 		expect(latestAfterUpdate).toHaveBeenCalledTimes(1)
 	})
 
+	it("keeps binding-owned context and value policy active until unbind", () => {
+		const policyDefinition = kit
+			.defineForm(schema)
+			.withContext<ProfileContext>({
+				ui: [
+					{
+						kind: "field",
+						path: "companyName",
+						control: "text",
+						visible: (_values, { context }) => !context.locked,
+						valuePolicy: "unset",
+					},
+				],
+			})
+		const form = kit.createForm<typeof schema, ProfileContext>(
+			policyDefinition,
+			{
+				defaultValues: {
+					...defaultValues(),
+					companyName: "Analytical Engines",
+				},
+				context: context(false),
+			},
+		)
+
+		function View() {
+			kit.useForm(form, { context: context(false) })
+			return null
+		}
+
+		const { unmount } = render(<View />)
+		form.replaceContext(context(true))
+		form.replaceOptions({ disabled: true })
+
+		expect(form.getSnapshot().context.locked).toBe(false)
+		expect(form.getSnapshot().resolvedUi.disabled).toBe(false)
+		expect(form.getValues().companyName).toBe("Analytical Engines")
+
+		unmount()
+
+		expect(form.getSnapshot().context.locked).toBe(true)
+		expect(form.getSnapshot().resolvedUi.disabled).toBe(true)
+		expect(form.getValues().companyName).toBeUndefined()
+	})
+
 	it("applies one React context and option update without an intermediate snapshot", () => {
 		const form = createProfileForm({
 			context: context(false),

@@ -1,5 +1,6 @@
 import {
 	cloneRowIdentityState,
+	createRowIdentityChanges,
 	reduceRowIdentity,
 	validateRowIdentity,
 } from "./array-state.js"
@@ -19,7 +20,7 @@ import {
 	type NormalizedValueChange,
 	type ValueChange,
 } from "./transaction.js"
-import { cloneValue } from "./value.js"
+import { cloneValue, isDirtyEqual } from "./value.js"
 
 export function createFormDocument<Input>(
 	values: Input,
@@ -104,6 +105,16 @@ export function reduceFormDocument<Input>(
 	})
 	validateRowIdentity(nextDocument.rowIdentity, nextDocument.values)
 	return nextDocument
+}
+
+export function areFormDocumentsEqual<Input>(
+	left: FormDocument<Input>,
+	right: FormDocument<Input>,
+): boolean {
+	return (
+		isDirtyEqual(left.values, right.values) &&
+		createRowIdentityChanges(left.rowIdentity, right.rowIdentity).length === 0
+	)
 }
 
 function freezeValueChanges<Input>(

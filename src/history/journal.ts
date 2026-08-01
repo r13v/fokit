@@ -1,4 +1,4 @@
-import { createRowIdentityChanges } from "../core/array-state.js"
+import { MAX_EVENT_SEQUENCE_FLOOR } from "../core/feature-protocol.js"
 import type {
 	DocumentCommitGrouping,
 	DocumentCommittedEvent,
@@ -16,7 +16,6 @@ import {
 	reduceFormDocument,
 } from "../core/form-reducer.js"
 import { formatPath } from "../core/path.js"
-import { isDirtyEqual } from "../core/value.js"
 
 export const FORM_JOURNAL_VERSION = 1 as const
 
@@ -162,6 +161,30 @@ export function normalizeJournal<Input>(
 	}
 }
 
+export function assertLiveEventSequenceHeadroom(maxSequence: number): void {
+	if (maxSequence >= MAX_EVENT_SEQUENCE_FLOOR) {
+		throw new TypeError(
+			"Form journal sequences must reserve safe-integer headroom for live events",
+		)
+	}
+}
+
+export function validateJournalDocuments<Input>(
+	journal: FormJournal<Input>,
+	validateDocument: (document: FormDocument<Input>) => void,
+): void {
+	for (const segment of journal.segments) {
+		let document = segment.checkpoint.document
+		validateDocument(document)
+		for (const group of segment.groups) {
+			for (const event of group.events) {
+				document = reduceFormDocument(document, event)
+				validateDocument(document)
+			}
+		}
+	}
+}
+
 export function createFormJournal<Input>(
 	segments: readonly JournalSegmentData<Input>[],
 	index: number,
@@ -237,28 +260,17 @@ export function cloneDocumentEvent<Input>(
 			})
 }
 
-export function documentsEqual<Input>(
-	left: FormDocument<Input>,
-	right: FormDocument<Input>,
-): boolean {
-	return (
-		isDirtyEqual(left.values, right.values) &&
-		createRowIdentityChanges(left.rowIdentity, right.rowIdentity).length ===
-			0 &&
-		createRowIdentityChanges(right.rowIdentity, left.rowIdentity).length === 0
-	)
-}
-
-function replayNormalizedJournal<Input>(
+export function replayNormalizedJournal<Input>(
 	journal: FormJournal<Input>,
-	cursor: RuntimeCursor,
+	cursor: JournalCursor,
 ): FormDocument<Input> {
-	const segment = journal.segments[cursor.segment]
-	if (segment === undefined || cursor.index > segment.groups.length) {
+	const target = readCursor(cursor, "Replay cursor")
+	const segment = journal.segments[target.segment]
+	if (segment === undefined || target.index > segment.groups.length) {
 		throw new TypeError("Replay cursor does not belong to this form journal")
 	}
 	let document = cloneDocument(segment.checkpoint.document)
-	for (const group of segment.groups.slice(0, cursor.index)) {
+	for (const group of segment.groups.slice(0, target.index)) {
 		for (const event of group.events) {
 			document = reduceFormDocument(document, event)
 		}

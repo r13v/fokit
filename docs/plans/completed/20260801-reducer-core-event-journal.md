@@ -179,8 +179,8 @@ Project constraints:
 - Confirmed scope update: remove global React creation/binding APIs and use one
   exact-kit-owned FormInstance model across kit.Form, kit.AutoForm, and
   ActionForm. Backward compatibility is not required.
-- Accepted source of truth: docs/proposal.md, status Accepted architecture;
-  implementation pending, dated 2026-08-01.
+- Accepted source of truth: docs/proposal.md, status Implemented, dated
+  2026-08-01. This completed plan records the implementation sequence.
 - Selected approach: one master plan that follows the proposal's staged
   migration, with a passing verification gate after each stage. This keeps the
   new architecture runnable at each boundary and gives an executor explicit
@@ -1380,6 +1380,9 @@ Verification record, 2026-08-01:
 ## Post-Completion
 
 Manual verification:
+
+Status: Outstanding. Automated checks passed during implementation, but the
+following checks still require their named browser integrations.
 
 - In a browser with Redux DevTools installed, create two forms with separate
   DevTools features, confirm their timelines remain isolated, navigate one

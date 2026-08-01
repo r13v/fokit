@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from "vitest"
-import { replaceFormStoreRuntime } from "./form-store.js"
+import {
+	createFormStoreWithMiddleware,
+	replaceFormStoreRuntime,
+} from "./form-store.js"
 import type {
 	ControlMetadata,
 	FormStoreOptions,
 	StandardSchema,
 	UiNode,
 } from "./index.js"
-import { createFormStore, normalizeDefinition } from "./index.js"
+import { normalizeDefinition } from "./index.js"
+import type { AnyFormMiddleware, FormMiddleware } from "./middleware.js"
 
 type AccountValues = {
 	kind: "person" | "company"
@@ -87,17 +91,22 @@ function createAccountStore(
 			typeof schema,
 			AccountContext
 		>["afterUpdate"]
+		readonly middleware?: readonly FormMiddleware<
+			AccountValues,
+			AccountContext
+		>[]
 	} = {},
 ) {
-	return createFormStore({
-		definition: createDefinition(),
-		defaultValues,
-		context: options.context ?? {
-			showCompany: true,
+	return createFormStoreWithMiddleware(
+		{
+			definition: createDefinition(),
+			defaultValues,
+			context: options.context ?? { showCompany: true },
+			beforeUpdate: options.beforeUpdate,
+			afterUpdate: options.afterUpdate,
 		},
-		beforeUpdate: options.beforeUpdate,
-		afterUpdate: options.afterUpdate,
-	})
+		(options.middleware ?? []) as unknown as readonly AnyFormMiddleware[],
+	)
 }
 
 describe("visibility-driven valuePolicy", () => {
@@ -244,5 +253,22 @@ describe("visibility-driven valuePolicy", () => {
 		expect(listener).toHaveBeenCalledTimes(2)
 		expect(beforeUpdate).toHaveBeenCalledTimes(1)
 		expect(afterUpdate).toHaveBeenCalledTimes(1)
+	})
+
+	it("applies valuePolicy after a committed runtime replacement throws", () => {
+		const failure = new Error("runtime post-commit failure")
+		const throwingReplacement: FormMiddleware<AccountValues, AccountContext> =
+			() => (next) => (transaction) => {
+				const result = next(transaction)
+				if (transaction.type === "runtime/replaced") throw failure
+				return result
+			}
+		const form = createAccountStore({ middleware: [throwingReplacement] })
+
+		expect(() =>
+			replaceFormStoreRuntime(form, { showCompany: false }, {}),
+		).toThrow(failure)
+		expect(form.getSnapshot().context.showCompany).toBe(false)
+		expect(form.getValues()).toEqual({ kind: "company" })
 	})
 })

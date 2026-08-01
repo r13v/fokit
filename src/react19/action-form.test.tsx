@@ -407,6 +407,43 @@ describe("React 19 ActionForm", () => {
 		})
 	})
 
+	it.each(["unmount", "form switch"] as const)(
+		"finishes an outstanding Action attempt on %s",
+		async (lifecycle) => {
+			const pending = createDeferred<void>()
+			const first = kit.createForm(definition, {
+				defaultValues: defaultValues(),
+			})
+			const second = kit.createForm(definition, {
+				defaultValues: defaultValues({ name: "Grace" }),
+			})
+			const action = vi.fn(() => pending.promise)
+			const view = render(
+				<ActionForm action={action} form={first}>
+					<ActionSubmit>Save</ActionSubmit>
+				</ActionForm>,
+			)
+
+			await userEvent.click(screen.getByRole("button", { name: "Save" }))
+			await waitFor(() => {
+				expect(first.getSnapshot().isSubmitting).toBe(true)
+			})
+
+			if (lifecycle === "unmount") {
+				view.unmount()
+			} else {
+				view.rerender(
+					<ActionForm action={action} form={second}>
+						<ActionSubmit>Save</ActionSubmit>
+					</ActionForm>,
+				)
+			}
+
+			expect(first.getSnapshot().isSubmitting).toBe(false)
+			pending.resolve()
+		},
+	)
+
 	it("uses effective restored paths when a history restore happens during a pending Action", async () => {
 		const pending = createDeferred<void>()
 		const historyFeature = createHistoryMiddleware()

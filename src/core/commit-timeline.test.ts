@@ -8,28 +8,6 @@ import {
 } from "./form-reducer.js"
 
 describe("commit timeline", () => {
-	it("allocates listener state only while a consumer is subscribed", () => {
-		const timeline = new CommitTimeline<{ name: string }, unknown>()
-		const document = createFormDocument(
-			{ name: "Ada" },
-			createRowIdentityStateFromEntries([]),
-		)
-		const event = createDocumentCommittedEvent<{ name: string }>({
-			sequence: 1,
-			source: "imperative",
-			changes: [],
-		})
-
-		expect(timeline.hasListeners).toBe(false)
-		timeline.finalize(event, document, document)
-		expect(timeline.hasListeners).toBe(false)
-
-		const unsubscribe = timeline.subscribe(vi.fn())
-		expect(timeline.hasListeners).toBe(true)
-		unsubscribe()
-		expect(timeline.hasListeners).toBe(false)
-	})
-
 	it("reports reducer-effective value and structural array paths", () => {
 		type Values = {
 			profile: { name: string }
@@ -114,5 +92,35 @@ describe("commit timeline", () => {
 		)
 
 		expect(listener.mock.calls[0]?.[0].changedPaths).toEqual(["name", "items"])
+	})
+
+	it("notifies later listeners before rethrowing the first listener error", () => {
+		const timeline = new CommitTimeline<{ name: string }, unknown>()
+		const document = createFormDocument(
+			{ name: "Ada" },
+			createRowIdentityStateFromEntries([]),
+		)
+		const firstError = new Error("first listener")
+		const later = vi.fn()
+		timeline.subscribe(() => {
+			throw firstError
+		})
+		timeline.subscribe(later)
+		timeline.subscribe(() => {
+			throw new Error("last listener")
+		})
+
+		expect(() =>
+			timeline.finalize(
+				createDocumentCommittedEvent({
+					sequence: 1,
+					source: "imperative",
+					changes: [],
+				}),
+				document,
+				document,
+			),
+		).toThrow(firstError)
+		expect(later).toHaveBeenCalledOnce()
 	})
 })

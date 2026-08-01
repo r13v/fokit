@@ -374,6 +374,23 @@ describe("array commands and row metadata", () => {
 		expect(form.getValues().groups[1]?.members).toEqual([{ name: "Grace" }])
 	})
 
+	it("keeps generated nested row keys globally unique after parent reindexing", () => {
+		const form = createGroupStore()
+		form.append("groups.1.members", { name: "Existing" })
+
+		form.remove("groups", 0)
+		form.append("groups")
+		form.append("groups.1.members", { name: "New" })
+
+		const preservedKey =
+			form.getSnapshot().metadata.arraysByPath["groups.0.members"].items[0]?.key
+		const newKey =
+			form.getSnapshot().metadata.arraysByPath["groups.1.members"].items[0]?.key
+		expect(preservedKey).toBe("groups.1.members:0")
+		expect(newKey).toBe("groups.1.members:1")
+		expect(newKey).not.toBe(preservedKey)
+	})
+
 	it("publishes values and nested row keys coherently for every value command shape", () => {
 		const form = createGroupStore()
 		let notificationCount = 0

@@ -1,10 +1,4 @@
 export type {
-	ArrayCommand,
-	ArrayCommandChange,
-	ArrayRowState,
-	ArrayRowsState,
-} from "./array-state.js"
-export type {
 	AnyControlMetadata,
 	ControlContextOf,
 	ControlFormData,
@@ -29,6 +23,15 @@ export type {
 	NormalizedUiNode,
 } from "./definition.js"
 export { normalizeDefinition } from "./definition.js"
+export type {
+	BaselineDisposition,
+	DocumentCommittedEvent,
+	DocumentRestoredEvent,
+	FormDocumentEvent,
+	RestoreOrigin,
+	RowIdentityChange,
+} from "./form-events.js"
+export type { FormDocument } from "./form-model.js"
 export type {
 	DisplayFormErrors,
 	FormErrors,

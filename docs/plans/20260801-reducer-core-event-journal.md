@@ -358,46 +358,46 @@ before middleware, replay, or persistence can observe commits safely.
 - Modify: src/index.ts
 - Create: tests/types/reducer-core.test.ts
 
-- [ ] Define read-only FormDocument<Input>, FormRuntimeState<Context>, and
+- [x] Define read-only FormDocument<Input>, FormRuntimeState<Context>, and
   FormModel<Input, Context> in src/core/form-model.ts. FormDocument contains
   values and the private current RowIdentityState; runtime contains the clean
   baseline document and all non-historical state.
-- [ ] Split ArrayRowState in src/core/array-state.ts so current keys and
+- [x] Split ArrayRowState in src/core/array-state.ts so current keys and
   nextKeyIndex belong to historical RowIdentityState while clean baseline keys
   are read from the runtime baseline document.
-- [ ] Define immutable DocumentCommittedEvent and DocumentRestoredEvent types
+- [x] Define immutable DocumentCommittedEvent and DocumentRestoredEvent types
   in src/core/form-events.ts. Committed events carry sequence, source,
   normalized effective ValueChange values, logical RowIdentityChange values,
   and whether the clean baseline was preserved or replaced.
-- [ ] Make logical row-identity changes describe assigned keys and structural
+- [x] Make logical row-identity changes describe assigned keys and structural
   operations without exporting the internal row-state map/tree.
-- [ ] Remove the current public ArrayCommand, ArrayCommandChange, ArrayRowState,
+- [x] Remove the current public ArrayCommand, ArrayCommandChange, ArrayRowState,
   and ArrayRowsState exports from form-please and form-please/core. They expose
   displaced implementation details and receive no compatibility aliases. Add
   type assertions that only the new opaque document/event surface is public.
-- [ ] Implement a pure reduceFormDocument(document, event) in
+- [x] Implement a pure reduceFormDocument(document, event) in
   src/core/form-reducer.ts. It must not call schemas, itemDefault, valuePolicy,
   hooks, clocks, random generators, storage, focus, or application callbacks.
-- [ ] Rework metadata derivation to compare the current document with the
+- [x] Rework metadata derivation to compare the current document with the
   runtime baseline document so moves retain per-row dirty identity without
   making baseline state historical.
-- [ ] Add reducer examples for set/unset and all array operations, including
+- [x] Add reducer examples for set/unset and all array operations, including
   nested arrays and identity-only structural changes.
-- [ ] Add a fast-check property test comparing reducer results with the
+- [x] Add a fast-check property test comparing reducer results with the
   reference transaction/array model already used by
   src/core/array-state.test.ts.
-- [ ] Prove replaying the same event sequence twice yields deeply equal values,
+- [x] Prove replaying the same event sequence twice yields deeply equal values,
   row keys, and next-key counters.
-- [ ] Reuse the existing value-cloning behavior so documents and reducer events
+- [x] Reuse the existing value-cloning behavior so documents and reducer events
   detach Date and RegExp leaves from caller-owned values. Treat other opaque
   leaves as application-owned immutable identities rather than inventing a
   generic clone protocol.
-- [ ] Export only the document/event types needed by public middleware from
+- [x] Export only the document/event types needed by public middleware from
   src/core/index.ts and src/index.ts; keep RowIdentityState representation and
   mutation helpers out of generated declarations.
-- [ ] Run npx vitest run src/core/form-reducer.test.ts
+- [x] Run npx vitest run src/core/form-reducer.test.ts
   src/core/array-state.test.ts src/core/transaction.test.ts.
-- [ ] Run npm run typecheck.
+- [x] Run npm run typecheck.
 
 ### Task 3: Move Runtime Bookkeeping into Pure Runtime Reducers
 

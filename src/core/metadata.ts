@@ -1,9 +1,14 @@
-import { type ArrayRowsState, createArrayRowsState } from "./array-state.js"
+import {
+	createRowIdentityState,
+	getRowIdentityKeys,
+	type RowIdentityState,
+} from "./array-state.js"
 import type {
 	NormalizedArrayNode,
 	NormalizedFormDefinition,
 	NormalizedRelativeUiNode,
 } from "./definition.js"
+import type { FormDocument } from "./form-model.js"
 import {
 	formatPath,
 	type PathSegment,
@@ -35,22 +40,31 @@ export type FormMetadata = {
 
 export type MetadataState = {
 	readonly touchedPaths: ReadonlySet<string>
-	readonly arrayRowsByPath: ArrayRowsState
+	readonly rowIdentity: RowIdentityState
+	readonly baselineRowIdentity: RowIdentityState
 }
 
 export type CreateMetadataStateOptions = {
 	readonly touchedPaths?: Iterable<string>
-	readonly arrayRowsByPath?: ArrayRowsState
+	readonly rowIdentity?: RowIdentityState
+	readonly baselineRowIdentity?: RowIdentityState
 }
+
+type MetadataDerivationState = {
+	readonly touchedPaths: ReadonlySet<string>
+	readonly rowIdentity: RowIdentityState
+	readonly baselineRowIdentity: RowIdentityState
+}
+
+const emptyRowIdentity = Object.freeze(Object.create(null)) as RowIdentityState
 
 export function createMetadataState(
 	options: CreateMetadataStateOptions = {},
 ): MetadataState {
 	return Object.freeze({
 		touchedPaths: new Set(options.touchedPaths),
-		arrayRowsByPath:
-			options.arrayRowsByPath ??
-			(Object.freeze(Object.create(null)) as ArrayRowsState),
+		rowIdentity: options.rowIdentity ?? emptyRowIdentity,
+		baselineRowIdentity: options.baselineRowIdentity ?? emptyRowIdentity,
 	})
 }
 
@@ -58,9 +72,8 @@ export function createInitialMetadataState<Schema extends StandardSchema>(
 	definition: NormalizedFormDefinition<Schema>,
 	values: FormInput<Schema>,
 ): MetadataState {
-	return createMetadataState({
-		arrayRowsByPath: createArrayRowsState(definition, values),
-	})
+	const rowIdentity = createRowIdentityState(definition, values)
+	return createMetadataState({ rowIdentity, baselineRowIdentity: rowIdentity })
 }
 
 export function touchMetadataPath(
@@ -77,17 +90,25 @@ export function touchMetadataPath(
 
 	return createMetadataState({
 		touchedPaths,
-		arrayRowsByPath: state.arrayRowsByPath,
+		rowIdentity: state.rowIdentity,
+		baselineRowIdentity: state.baselineRowIdentity,
 	})
 }
 
 export function deriveFormMetadata<Schema extends StandardSchema>(
 	definition: NormalizedFormDefinition<Schema>,
-	values: FormInput<Schema>,
-	baselineValues: FormInput<Schema>,
-	state: MetadataState,
+	document: FormDocument<FormInput<Schema>>,
+	baselineDocument: FormDocument<FormInput<Schema>>,
+	touchedPaths: ReadonlySet<string>,
 	isValidating = false,
 ): FormMetadata {
+	const values = document.values
+	const baselineValues = baselineDocument.values
+	const state: MetadataDerivationState = {
+		touchedPaths,
+		rowIdentity: document.rowIdentity,
+		baselineRowIdentity: baselineDocument.rowIdentity,
+	}
 	const fieldsByPath = Object.create(null) as Record<string, FieldMetadata>
 	for (const path of Object.keys(definition.fieldsByPath)) {
 		fieldsByPath[path] = createFieldMetadata(
@@ -133,7 +154,7 @@ function addArrayChildMetadata(
 	arraysByPath: Record<string, ArrayMetadata>,
 	values: unknown,
 	baselineValues: unknown,
-	state: MetadataState,
+	state: MetadataDerivationState,
 	isValidating: boolean,
 ): void {
 	const value = getPathValue(values, array.path)
@@ -162,7 +183,7 @@ function addRelativeMetadata(
 	arraysByPath: Record<string, ArrayMetadata>,
 	values: unknown,
 	baselineValues: unknown,
-	state: MetadataState,
+	state: MetadataDerivationState,
 	isValidating: boolean,
 ): void {
 	for (const node of nodes) {
@@ -216,7 +237,7 @@ function createArrayMetadata(
 	path: string,
 	values: unknown,
 	baselineValues: unknown,
-	state: MetadataState,
+	state: MetadataDerivationState,
 	isValidating: boolean,
 ): ArrayMetadata {
 	const fieldMetadata = createFieldMetadata(
@@ -244,7 +265,7 @@ function createArrayItemMetadata(
 	path: string,
 	values: unknown,
 	baselineValues: unknown,
-	state: MetadataState,
+	state: MetadataDerivationState,
 	isValidating: boolean,
 ): readonly ArrayItemMetadata[] {
 	const value = getPathValue(values, path)
@@ -258,10 +279,12 @@ function createArrayItemMetadata(
 			? undefined
 			: getPathValue(baselineValues, baselinePath)
 	const baselineArray = Array.isArray(baselineValue) ? baselineValue : []
-	const rowState = state.arrayRowsByPath[path]
-	const keys = rowState?.keys ?? createFallbackRowKeys(path, value.length)
+	const keys =
+		getRowIdentityKeys(state.rowIdentity, path) ??
+		createFallbackRowKeys(path, value.length)
 	const baselineKeys =
-		rowState?.baselineKeys ?? createFallbackRowKeys(path, baselineArray.length)
+		getRowIdentityKeys(state.baselineRowIdentity, baselinePath ?? path) ??
+		createFallbackRowKeys(path, baselineArray.length)
 
 	return Object.freeze(
 		value.map((item, index) => {
@@ -292,7 +315,7 @@ function createFieldMetadata(
 	path: string,
 	values: unknown,
 	baselineValues: unknown,
-	state: MetadataState,
+	state: MetadataDerivationState,
 	includeDescendants: boolean,
 	isValidating: boolean,
 ): FieldMetadata {
@@ -311,7 +334,7 @@ function createFieldMetadata(
 
 function createBaselinePath(
 	path: string,
-	state: MetadataState,
+	state: MetadataDerivationState,
 ): string | undefined {
 	const segments = parsePath(path)
 	const baselineSegments: PathSegment[] = []
@@ -320,19 +343,24 @@ function createBaselinePath(
 		const segment = segments[index] as PathSegment
 		baselineSegments.push(segment)
 
-		const rowState =
-			state.arrayRowsByPath[formatPath(segments.slice(0, index + 1))]
+		const currentArrayPath = formatPath(segments.slice(0, index + 1))
+		const baselineArrayPath = formatPath(baselineSegments)
 		const rowIndex = segments[index + 1]
-		if (rowState === undefined || typeof rowIndex !== "number") {
+		if (typeof rowIndex !== "number") {
 			continue
 		}
 
-		const key = rowState.keys[rowIndex]
+		const key = getRowIdentityKeys(state.rowIdentity, currentArrayPath)?.[
+			rowIndex
+		]
 		if (key === undefined) {
 			return undefined
 		}
 
-		const baselineIndex = rowState.baselineKeys.indexOf(key)
+		const baselineIndex =
+			getRowIdentityKeys(state.baselineRowIdentity, baselineArrayPath)?.indexOf(
+				key,
+			) ?? -1
 		if (baselineIndex === -1) {
 			return undefined
 		}
@@ -346,7 +374,7 @@ function createBaselinePath(
 
 function isPathTouched(
 	path: string,
-	state: MetadataState,
+	state: MetadataDerivationState,
 	includeDescendants: boolean,
 ): boolean {
 	if (state.touchedPaths.has(path)) {
@@ -364,7 +392,7 @@ function isPathTouched(
 function isArrayItemTouched(
 	arrayPath: string,
 	index: number,
-	state: MetadataState,
+	state: MetadataDerivationState,
 ): boolean {
 	const itemPath = `${arrayPath}.${index}`
 	return [...state.touchedPaths].some((touchedPath) =>

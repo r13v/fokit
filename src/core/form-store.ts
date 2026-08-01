@@ -3,14 +3,15 @@ import {
 	createArrayCommandChange,
 	findArrayNodeForPath,
 	isKnownArrayDescendantFieldPath,
-	reindexArrayRowsState,
+	reindexRowIdentity,
 	reindexTouchedArrayPaths,
-	replaceArrayRowState,
+	replaceRowIdentity,
 } from "./array-state.js"
 import type {
 	NormalizedArrayNode,
 	NormalizedFormDefinition,
 } from "./definition.js"
+import type { UpdateSource } from "./form-events.js"
 import {
 	type FormResult,
 	normalizeFormResult,
@@ -118,12 +119,7 @@ export function registerErrorSummaryFocusTarget(
 	register.call(form, index, element)
 }
 
-export type UpdateSource =
-	| "array"
-	| "control"
-	| "imperative"
-	| "reset"
-	| "valuePolicy"
+export type { UpdateSource } from "./form-events.js"
 
 export type BeforeUpdateEvent<Input, Context> = {
 	readonly currentValues: Readonly<Input>
@@ -942,9 +938,15 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					}))
 		const metadata = deriveFormMetadata(
 			this.definition,
-			this.#values,
-			this.#baselineValues,
-			this.#metadataState,
+			{
+				values: this.#values,
+				rowIdentity: this.#metadataState.rowIdentity,
+			},
+			{
+				values: this.#baselineValues,
+				rowIdentity: this.#metadataState.baselineRowIdentity,
+			},
+			this.#metadataState.touchedPaths,
 			this.#validationState.isValidating,
 		)
 		const { errors, displayErrors } = deriveFormErrors(
@@ -1048,7 +1050,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 				canonicalPath,
 				arrayTarget.node,
 				baseValues,
-				baseMetadataState.arrayRowsByPath,
+				baseMetadataState.rowIdentity,
 				command,
 			)
 
@@ -1063,16 +1065,17 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 					update.previousKeys,
 					update.nextKeys,
 				),
-				arrayRowsByPath: replaceArrayRowState(
-					reindexArrayRowsState(
-						baseMetadataState.arrayRowsByPath,
+				rowIdentity: replaceRowIdentity(
+					reindexRowIdentity(
+						baseMetadataState.rowIdentity,
 						canonicalPath,
 						update.previousKeys,
 						update.nextKeys,
 					),
 					canonicalPath,
-					update.rowState,
+					update.rowIdentity,
 				),
+				baselineRowIdentity: baseMetadataState.baselineRowIdentity,
 			})
 			const issueState = reindexIssueStateArrayPaths(
 				baseIssueState,

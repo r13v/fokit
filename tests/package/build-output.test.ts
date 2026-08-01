@@ -15,6 +15,9 @@ const packageJson = JSON.parse(
 const javaScriptEntrypoints = {
 	".": "index",
 	"./core": "core",
+	"./devtools": "devtools",
+	"./history": "history",
+	"./persistence": "persistence",
 	"./react19": "react19",
 	"./server": "server",
 } as const
@@ -48,17 +51,29 @@ describe("packed build output", () => {
 			expect(exported.require.types).toBe(`./dist/${distName}.d.cts`)
 			expect(exported.import.types).not.toBe(exported.require.types)
 
-			await assertPackageFileExists(exported.import.default)
-			await assertPackageFileExists(exported.require.default)
-			await assertPackageFileExists(exported.import.types)
-			await assertPackageFileExists(exported.require.types)
+			const targets = [
+				exported.import.default,
+				exported.require.default,
+				exported.import.types,
+				exported.require.types,
+			]
+			for (const target of targets) {
+				await assertPackageFileExists(target)
+			}
+			const mappedTargets: string[] = []
+			for (const target of targets) {
+				if ((await readPackageFile(target)).includes("sourceMappingURL=")) {
+					mappedTargets.push(target)
+				}
+			}
+			for (const target of mappedTargets) {
+				await assertPackageFileExists(`${target}.map`)
+			}
 
 			expect(packedFiles).toEqual(
 				expect.arrayContaining([
-					toPackedPath(exported.import.default),
-					toPackedPath(exported.require.default),
-					toPackedPath(exported.import.types),
-					toPackedPath(exported.require.types),
+					...targets.map(toPackedPath),
+					...mappedTargets.map((target) => toPackedPath(`${target}.map`)),
 				]),
 			)
 		}
@@ -105,6 +120,40 @@ describe("packed build output", () => {
 
 			await expectNoClientRuntimeImport(exported.import.default)
 			await expectNoClientRuntimeImport(exported.require.default)
+		}
+	})
+
+	it("keeps optional implementations out of the base entry graphs", async () => {
+		for (const entrypoint of [
+			".",
+			"./core",
+			"./react19",
+			"./server",
+		] as const) {
+			const exported = getJavaScriptExport(entrypoint)
+
+			await expectGraphNotToContainOptionalImplementation(
+				exported.import.default,
+			)
+			await expectGraphNotToContainOptionalImplementation(
+				exported.require.default,
+			)
+		}
+	})
+
+	it("keeps optional entries free of Redux runtime dependencies", async () => {
+		expect(packageJson.dependencies).not.toHaveProperty("redux")
+		expect(packageJson.dependencies).not.toHaveProperty(
+			"@redux-devtools/extension",
+		)
+		for (const entrypoint of [
+			"./devtools",
+			"./history",
+			"./persistence",
+		] as const) {
+			const exported = getJavaScriptExport(entrypoint)
+			await expectGraphNotToImportRedux(exported.import.default)
+			await expectGraphNotToImportRedux(exported.require.default)
 		}
 	})
 
@@ -198,6 +247,48 @@ async function expectNoClientRuntimeImport(
 
 		if (specifier.startsWith(".")) {
 			await expectNoClientRuntimeImport(
+				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				visited,
+			)
+		}
+	}
+}
+
+async function expectGraphNotToContainOptionalImplementation(
+	packagePath: string,
+	visited = new Set<string>(),
+): Promise<void> {
+	const absolutePath = packagePathToAbsolutePath(packagePath)
+	if (visited.has(absolutePath)) return
+	visited.add(absolutePath)
+
+	const source = await readFile(absolutePath, "utf8")
+	expect(source).not.toMatch(/src\/(?:devtools|history|persistence)\//)
+	for (const specifier of collectRuntimeSpecifiers(source)) {
+		if (specifier.startsWith(".")) {
+			await expectGraphNotToContainOptionalImplementation(
+				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				visited,
+			)
+		}
+	}
+}
+
+async function expectGraphNotToImportRedux(
+	packagePath: string,
+	visited = new Set<string>(),
+): Promise<void> {
+	const absolutePath = packagePathToAbsolutePath(packagePath)
+	if (visited.has(absolutePath)) return
+	visited.add(absolutePath)
+
+	const source = await readFile(absolutePath, "utf8")
+	for (const specifier of collectRuntimeSpecifiers(source)) {
+		expect(specifier).not.toMatch(
+			/^(?:redux|@redux-devtools\/extension)(?:\/|$)/,
+		)
+		if (specifier.startsWith(".")) {
+			await expectGraphNotToImportRedux(
 				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
 				visited,
 			)

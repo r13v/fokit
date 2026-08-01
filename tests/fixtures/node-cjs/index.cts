@@ -13,6 +13,16 @@ import {
 	type StandardSchema,
 	type UiNode,
 } from "form-please/core"
+import { createDevToolsMiddleware } from "form-please/devtools"
+import {
+	createHistoryMiddleware,
+	type FormJournal,
+	replayJournal,
+} from "form-please/history"
+import {
+	createPersistenceMiddleware,
+	type FormPersistenceAdapter,
+} from "form-please/persistence"
 import { type ParseResult, parseFormData } from "form-please/server"
 
 type ProfileInput = {
@@ -92,6 +102,20 @@ const slotI18n = {
 } satisfies Partial<DefaultSlotsI18n>
 
 const defaultSlots = createDefaultSlots()
+const historyFeature = createHistoryMiddleware()
+const adapter: FormPersistenceAdapter = {
+	load: async () => undefined,
+	save: async () => {},
+	remove: async () => {},
+}
+const persistenceFeature = createPersistenceMiddleware({
+	adapter,
+	key: "type-smoke",
+	version: 1,
+})
+const devToolsFeature = createDevToolsMiddleware()
+declare const journal: FormJournal<ProfileInput>
+const replayed = replayJournal(journal, journal.cursor)
 
 if (nativeControls.text.formData.mode !== "native") {
 	throw new Error("CommonJS declarations did not expose nativeControls values")
@@ -103,3 +127,7 @@ void textOptions
 void selectOptions
 void slotI18n
 void defaultSlots
+void historyFeature
+void persistenceFeature
+void devToolsFeature
+void replayed

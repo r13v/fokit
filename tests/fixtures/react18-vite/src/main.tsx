@@ -3,9 +3,7 @@ import {
 	type ArraySlotProps,
 	type ControlProps,
 	cloneValue,
-	createForm,
 	createFormKit,
-	createFormStore,
 	defineControl,
 	type ErrorMessageSlotProps,
 	extendValueChanges,
@@ -17,7 +15,6 @@ import {
 	isDescendantPath,
 	isDirtyEqual,
 	isSamePath,
-	KitForm,
 	mergePathValue,
 	nativeControls,
 	normalizeDefinition,
@@ -28,20 +25,19 @@ import {
 	resolveUi,
 	type SectionSlotProps,
 	type StandardSchema,
-	Submit,
 	setPathValue,
 	type UiNode,
 	type UiResolver,
 	unsetPathValue,
 	useArrayField,
 	useField,
-	useForm,
 	useFormContext,
 	useFormState,
 	useValue,
 } from "form-please"
+import { createFormStore } from "form-please/core"
 import type { ReactNode } from "react"
-import { StrictMode } from "react"
+import { StrictMode, useState } from "react"
 import { createRoot } from "react-dom/client"
 
 type MainExports = typeof import("form-please")
@@ -255,12 +251,15 @@ const extendedDefinition = extendedKit.defineForm(schema)({
 })
 
 function ExtendedFormProbe() {
-	return (
-		<extendedKit.AutoForm
-			defaultValues={{ name: "Ada Lovelace", settings: { nickname: "Ada" } }}
-			definition={extendedDefinition}
-		/>
+	const [form] = useState(() =>
+		extendedKit.createForm(extendedDefinition, {
+			defaultValues: {
+				name: "Ada Lovelace",
+				settings: { nickname: "Ada" },
+			},
+		}),
 	)
+	return <extendedKit.AutoForm form={form} />
 }
 
 const nativeKit = createFormKit({
@@ -375,8 +374,6 @@ void [
 	resolveUi(definition, snapshot.values, undefined),
 	unsetPathValue(mergedValues, "name"),
 	nativeKit.slots.Field,
-	KitForm,
-	Submit,
 	normalizeDefinition,
 	useArrayField,
 	ExtendedFormProbe,
@@ -392,12 +389,13 @@ function defaultValues(): FormInput<typeof schema> {
 }
 
 function RichFormProbe() {
-	return (
-		<kit.AutoForm defaultValues={defaultValues()} definition={richDefinition} />
+	const [form] = useState(() =>
+		kit.createForm(richDefinition, { defaultValues: defaultValues() }),
 	)
+	return <kit.AutoForm form={form} />
 }
 
-const externalForm = createForm(definition, {
+const externalForm = kit.createForm(definition, {
 	defaultValues: defaultValues(),
 })
 
@@ -415,7 +413,7 @@ function HookProbe() {
 }
 
 function App({ children }: { readonly children?: ReactNode }) {
-	const form = useForm(externalForm, {
+	const form = kit.useForm(externalForm, {
 		onSubmit({ value }) {
 			void value.slug
 		},
@@ -426,7 +424,6 @@ function App({ children }: { readonly children?: ReactNode }) {
 			<kit.Fields />
 			<HookProbe />
 			<kit.Submit>Save</kit.Submit>
-			<Submit>Save again</Submit>
 			{children}
 		</kit.Form>
 	)

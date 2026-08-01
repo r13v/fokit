@@ -116,3 +116,19 @@ Locating the Knip configuration → an unmatched zsh glob aborted the first read
 ## 2026-08-01 21:47 — GPT-5
 
 Type-checking the DevTools matrix after the runtime suite passed → Vitest inferred a zero-argument mock from its implementation, so inspecting its first recorded argument failed TypeScript. Declare callback parameters on mocks whose call arguments are part of the assertion.
+
+## 2026-08-01 21:55 — gpt-5.6-sol
+
+Type-checking the new optional package artifacts → TypeScript overflowed its
+instantiation stack without naming a source file, and the first single-file
+diagnostic command was rejected because TypeScript 6 requires `--ignoreConfig`
+when explicit files are passed. Isolate new declaration tests with an explicit
+compiler invocation and keep artifact-module casts shallow.
+
+## 2026-08-01 21:57 — gpt-5.6-sol
+
+Running the optional-entry package suite → the first assertions assumed every
+tree-shaken entry wrapper gets its own source map and that absent optional
+dependency maps are objects. Check a map next to each emitted mapping reference
+(tsdown can map a shared chunk instead of its re-export wrapper), and normalize
+absent dependency maps to an empty object.

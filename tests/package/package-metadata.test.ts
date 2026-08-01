@@ -21,6 +21,9 @@ const layoutCss = await readFile(
 const javaScriptEntrypoints = {
 	".": "index",
 	"./core": "core",
+	"./devtools": "devtools",
+	"./history": "history",
+	"./persistence": "persistence",
 	"./react19": "react19",
 	"./server": "server",
 } as const
@@ -46,6 +49,9 @@ describe("package metadata", () => {
 		expect(Object.keys(packageJson.exports)).toEqual([
 			".",
 			"./core",
+			"./devtools",
+			"./history",
+			"./persistence",
 			"./react19",
 			"./server",
 			"./layout.css",
@@ -66,8 +72,21 @@ describe("package metadata", () => {
 
 	it("runs strict package analyzers against JavaScript entry points", () => {
 		expect(packageJson.scripts["package:check"]).toBe(
-			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./react19 ./server",
+			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./devtools ./history ./persistence ./react19 ./server",
 		)
+	})
+
+	it("does not add Redux runtime dependencies for DevTools", () => {
+		for (const dependencySet of [
+			packageJson.dependencies,
+			packageJson.peerDependencies,
+			packageJson.optionalDependencies,
+		]) {
+			expect(dependencySet ?? {}).not.toHaveProperty("redux")
+			expect(dependencySet ?? {}).not.toHaveProperty(
+				"@redux-devtools/extension",
+			)
+		}
 	})
 
 	it("routes declarations to the matching module format", () => {

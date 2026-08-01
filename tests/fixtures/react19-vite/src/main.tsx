@@ -1,14 +1,9 @@
 import "form-please/layout.css"
 
-import {
-	createFormKit,
-	nativeControls,
-	type StandardSchema,
-	Submit,
-} from "form-please"
+import { createFormKit, nativeControls, type StandardSchema } from "form-please"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
-import { StrictMode } from "react"
+import { StrictMode, useState } from "react"
 import { createRoot } from "react-dom/client"
 
 type ProfileInput = {
@@ -50,16 +45,13 @@ async function saveProfile(_formData: FormData): Promise<void> {
 }
 
 function App() {
+	const [form] = useState(() =>
+		kit.createForm(definition, { defaultValues: { name: "Ada" } }),
+	)
 	return (
-		<ActionForm
-			action={saveProfile}
-			defaultValues={{ name: "Ada" }}
-			definition={definition}
-			kit={kit}
-			result={actionResult}
-		>
+		<ActionForm action={saveProfile} form={form} result={actionResult}>
 			<ActionSubmit>Save</ActionSubmit>
-			<Submit>Classic submit also remains importable</Submit>
+			<kit.Submit>Classic submit also remains available</kit.Submit>
 		</ActionForm>
 	)
 }

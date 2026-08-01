@@ -994,44 +994,44 @@ packed ESM and CommonJS package.
 - Modify: tests/fixtures/node-cjs/index.cts
 - Modify: scripts/verify-smoke-fixtures.mjs
 
-- [ ] Add history, persistence, and devtools build entries to tsdown.config.ts
+- [x] Add history, persistence, and devtools build entries to tsdown.config.ts
   for ESM, CommonJS, declarations, declaration maps, and source maps.
-- [ ] Add package exports for form-please/history,
+- [x] Add package exports for form-please/history,
   form-please/persistence, and form-please/devtools with matching import,
   require, types, default, and declaration-format targets.
-- [ ] Extend package:check attw entry points to include all three optional
+- [x] Extend package:check attw entry points to include all three optional
   subpaths.
-- [ ] Update exact export maps in package metadata/build tests and preserve
+- [x] Update exact export maps in package metadata/build tests and preserve
   use client only on the main and React 19 entries.
-- [ ] Assert built main declarations and runtime exports omit createForm,
+- [x] Assert built main declarations and runtime exports omit createForm,
   useForm, createFormStore, KitForm, and Submit. Assert form-please/core still
   exports createFormStore and form-please/react19 exports form-backed
   ActionForm and ActionSubmit.
-- [ ] Recursively assert that index, core, react19, and server built graphs do
+- [x] Recursively assert that index, core, react19, and server built graphs do
   not import or contain history, persistence, DevTools, codec, or storage
   implementation modules.
-- [ ] Assert optional entries do not add Redux or
+- [x] Assert optional entries do not add Redux or
   @redux-devtools/extension to package metadata or built imports.
-- [ ] Load main plus each optional entry from built ESM and CommonJS targets,
+- [x] Load main plus each optional entry from built ESM and CommonJS targets,
   create feature-enabled forms through kit.createForm, retrieve handles, and
   prove the Symbol.for capability identity and version guard work in both
   formats.
-- [ ] Add a mixed-format package test that obtains a form from one module format
+- [x] Add a mixed-format package test that obtains a form from one module format
   and attempts feature capability access from the other; it must either
   interoperate at the matching protocol version or fail only with the explicit
   version error, never an instanceof or missing-symbol error.
-- [ ] Extend node ESM/CJS smoke fixtures to import each optional entry, exercise
+- [x] Extend node ESM/CJS smoke fixtures to import each optional entry, exercise
   pure history replay and persistence encoding, and verify DevTools import is
   SSR-safe.
-- [ ] Update React 18, React 19, and Next.js fixtures to create forms through
+- [x] Update React 18, React 19, and Next.js fixtures to create forms through
   kit.createForm, bind existing forms where required, and render form-backed
   AutoForm and ActionForm without global constructors or a kit prop.
-- [ ] Add declaration tests for all public optional APIs from their subpaths and
+- [x] Add declaration tests for all public optional APIs from their subpaths and
   prove they are absent from the root, core, react19, and server namespaces.
-- [ ] Run npm run test:types.
-- [ ] Run npm run test:package.
-- [ ] Run npm run test:smoke.
-- [ ] Run npm run package:check.
+- [x] Run npm run test:types.
+- [x] Run npm run test:package.
+- [x] Run npm run test:smoke.
+- [x] Run npm run package:check.
 
 ### Task 12: Update Architecture, ADR, Proposal, and Website Documentation
 

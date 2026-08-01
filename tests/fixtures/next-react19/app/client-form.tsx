@@ -13,6 +13,7 @@ import {
 } from "form-please"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
+import { useState } from "react"
 
 type ClientInput = {
 	readonly name: string
@@ -118,14 +119,11 @@ async function submit(_formData: FormData): Promise<void> {
 }
 
 export function ClientForm() {
+	const [form] = useState(() =>
+		kit.createForm(definition, { defaultValues: { name: "Ada" } }),
+	)
 	return (
-		<ActionForm
-			action={submit}
-			defaultValues={{ name: "Ada" }}
-			definition={definition}
-			kit={kit}
-			result={actionResult}
-		>
+		<ActionForm action={submit} form={form} result={actionResult}>
 			<ActionSubmit>Save</ActionSubmit>
 		</ActionForm>
 	)

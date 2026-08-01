@@ -520,65 +520,65 @@ application middleware and all first-party optional features.
 - Modify: src/core/index.ts
 - Modify: src/index.ts
 
-- [ ] Define FormCommand<Input> families for value, array, reset, touch,
+- [x] Define FormCommand<Input> families for value, array, reset, touch,
   validation, issues, and runtime replacement in src/core/form-commands.ts.
-- [ ] Define DocumentTransaction, RestoreTransaction, RuntimeTransaction,
+- [x] Define DocumentTransaction, RestoreTransaction, RuntimeTransaction,
   FormTransaction, FormDispatchResult, FormTransactionDispatch,
   FormMiddlewareApi, and FormMiddleware in src/core/form-transactions.ts and
   src/core/middleware.ts.
-- [ ] Keep imperative command results minimal: mutation commands return void and
+- [x] Keep imperative command results minimal: mutation commands return void and
   validation commands retain their necessary Promise results. Only middleware
   next(transaction) returns committed event or cancelled. This is the selected
   API, not a compatibility layer.
-- [ ] Compose core lifecycle behavior outermost, application/form middleware in
+- [x] Compose core lifecycle behavior outermost, application/form middleware in
   declared order, and reducer event creation as the terminal dispatcher.
-- [ ] Freeze transactions, events, middleware arrays, and public snapshots.
-- [ ] Enforce synchronous next, at-most-once next, unchanged forwarding by
+- [x] Freeze transactions, events, middleware arrays, and public snapshots.
+- [x] Enforce synchronous next, at-most-once next, unchanged forwarding by
   default, non-Promise handlers/results, valid discriminated dispatch results,
   and actionable duplicate-reference errors.
-- [ ] Queue nested FormMiddlewareApi.dispatch commands FIFO and drain them only
+- [x] Queue nested FormMiddlewareApi.dispatch commands FIFO and drain them only
   after the current transaction has completed commit/publication handling.
-- [ ] Abort and propagate pre-commit middleware errors without changing or
+- [x] Abort and propagate pre-commit middleware errors without changing or
   publishing state.
-- [ ] When next has committed and later middleware throws or returns an invalid
+- [x] When next has committed and later middleware throws or returns an invalid
   result, publish the committed snapshot exactly once before propagating the
   protocol error; never attempt rollback.
-- [ ] Capture the terminal committed result in the coordinator independently of
+- [x] Capture the terminal committed result in the coordinator independently of
   whether it returns through every outer middleware frame. After middleware
   unwinding, run one package-private commit-finalization callback before form
   publication, including when an inner post-next handler threw. Task 7 attaches
   the lazy event timeline to this callback; do not add a second middleware
   chain.
-- [ ] Ensure middleware getSnapshot reads the effective pending committed
+- [x] Ensure middleware getSnapshot reads the effective pending committed
   snapshot after next, while form subscribers run only after middleware
   unwinding and guaranteed commit finalization.
-- [ ] Preserve lifecycle ordering for document updates:
+- [x] Preserve lifecycle ordering for document updates:
   beforeUpdate, reducer commit, middleware post-next unwinding, guaranteed
   commit finalization, publication, afterUpdate, validation scheduling. Drain
   nested commands after finalization/publication and before rethrowing the
   original post-commit error.
-- [ ] Detach Date and RegExp leaves exposed through transactions, committed
+- [x] Detach Date and RegExp leaves exposed through transactions, committed
   events, and middleware snapshots from the live FormDocument using the
   existing clone behavior. Do not introduce a general custom-value clone API.
-- [ ] Export public middleware/command/transaction/event types through
+- [x] Export public middleware/command/transaction/event types through
   form-please and form-please/core without exporting raw event dispatch.
-- [ ] Add unit tests for declared/reverse order, observation, cancellation,
+- [x] Add unit tests for declared/reverse order, observation, cancellation,
   transaction replacement, reset/runtime/validation/restore visibility,
   nested dispatch, duplicates, next twice, Promise results, invalid results,
   and pre/post-commit errors. Put a commit observer both before and after a
   middleware that commits and then throws; finalization and publication must
   each occur exactly once in both orders.
-- [ ] Prove cancelling repeated blur prevents FieldBlurredEvent and automatic
+- [x] Prove cancelling repeated blur prevents FieldBlurredEvent and automatic
   validation, while forwarding it permits both without an unchanged
   form-snapshot notification.
-- [ ] Add mutation-isolation tests proving that changing Date or RegExp values
+- [x] Add mutation-isolation tests proving that changing Date or RegExp values
   obtained from middleware cannot change the live document or committed event.
-- [ ] Add type tests for middleware Input/Context compatibility and command
+- [x] Add type tests for middleware Input/Context compatibility and command
   dispatch while proving FormStore and FormInstance have no raw dispatch
   method.
-- [ ] Run npx vitest run src/core/middleware.test.ts
+- [x] Run npx vitest run src/core/middleware.test.ts
   src/core/transaction.test.ts src/core/value-policy.test.ts.
-- [ ] Run npm run typecheck.
+- [x] Run npm run typecheck.
 
 ### Task 6: Make FormKit the Only React Creation and Binding Surface
 

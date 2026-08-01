@@ -65,3 +65,21 @@ Removing reducer-migration dead code → a multi-file patch failed because Biome
 had reordered one import block after the patch context was drafted. Inspect the
 formatted import order before applying a broad cleanup patch, or split it into
 smaller file-local patches.
+
+## 2026-08-01 20:10 — gpt-5.6-sol
+
+Moving synchronous validation publication behind middleware → a broad patch
+missed because its context no longer matched the edited validation method. Read
+the numbered local range and apply smaller hunks after structural store edits.
+
+## 2026-08-01 20:11 — gpt-5.6-sol
+
+Running the new blur middleware cases → the minimal test definition had no
+registered field, so touch and blur correctly rejected the path before reaching
+middleware. Register the exercised field in fixtures that test field commands.
+
+## 2026-08-01 20:12 — gpt-5.6-sol
+
+Checking repeated blur validation through middleware → only the first blur ran
+the schema because the fixture inherited the default change revalidation mode.
+Set both mode and revalidateMode when a test requires the same trigger twice.

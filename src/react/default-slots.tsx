@@ -9,6 +9,7 @@ import type {
 	ErrorMessageSlotProps,
 	FieldSlotProps,
 	SectionSlotProps,
+	SubmitSlotProps,
 } from "./slots.js"
 
 export type DefaultSlotI18nValue<Data> =
@@ -157,6 +158,7 @@ export function createDefaultSlots(options?: {
 		Array: DefaultArraySlot,
 		ArrayItem: DefaultArrayItemSlot,
 		ErrorMessage: DefaultErrorMessageSlot,
+		Submit: DefaultSubmitSlot,
 	})
 }
 
@@ -207,6 +209,10 @@ function DefaultErrorMessageSlot({ rootProps, issue }: ErrorMessageSlotProps) {
 			{issue.message}
 		</p>
 	)
+}
+
+function DefaultSubmitSlot({ buttonProps }: SubmitSlotProps) {
+	return <button {...buttonProps} />
 }
 
 function resolveMessage<Data>(

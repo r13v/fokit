@@ -15,6 +15,7 @@ import type {
 	ErrorMessageSlotProps,
 	FieldSlotProps,
 	SectionSlotProps,
+	SubmitSlotProps,
 } from "./slots.js"
 import type { FormInstance } from "./use-form.js"
 
@@ -381,26 +382,40 @@ describe("classic React submission", () => {
 		const localDefinition = kit.defineForm(createSchema(validate), {
 			ui: profileUi,
 		})
-		const form = kit.createForm(localDefinition, {
+		function SubmitSlot({ buttonProps, isSubmitting }: SubmitSlotProps) {
+			return (
+				<button
+					{...buttonProps}
+					data-submit-state={isSubmitting ? "submitting" : "idle"}
+				/>
+			)
+		}
+		const localKit = kit.extend({ slots: { Submit: SubmitSlot } })
+		const form = localKit.createForm(localDefinition, {
 			defaultValues: defaultValues(),
 			onSubmit,
 		})
 
 		function View() {
 			return (
-				<kit.Form aria-label="Profile" form={form}>
-					<kit.Fields />
-					<kit.Submit>Save</kit.Submit>
-				</kit.Form>
+				<localKit.Form aria-label="Profile" form={form}>
+					<localKit.Fields />
+					<localKit.Submit>Save</localKit.Submit>
+				</localKit.Form>
 			)
 		}
 
 		render(<View />)
 		await userEvent.click(screen.getByRole("button", { name: "Save" }))
 		const imperativePromise = form?.submit()
+		const submit = screen.getByRole("button", {
+			name: "Save",
+		}) as HTMLButtonElement
 
 		expect(validate).toHaveBeenCalledTimes(1)
 		expect(form?.getSnapshot().submitCount).toBe(1)
+		expect(submit.getAttribute("data-submit-state")).toBe("submitting")
+		expect(submit.disabled).toBe(true)
 
 		validation.resolve({
 			value: {
@@ -412,6 +427,7 @@ describe("classic React submission", () => {
 
 		expect(onSubmit).toHaveBeenCalledTimes(1)
 		expect(form?.getSnapshot().isSubmitting).toBe(false)
+		expect(submit.getAttribute("data-submit-state")).toBe("idle")
 	})
 
 	it("propagates submit callback failures after restoring pending state", async () => {

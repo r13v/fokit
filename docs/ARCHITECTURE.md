@@ -295,6 +295,11 @@ The renderer maps resolved nodes as follows:
 - `render` mounts the opaque component with effective `disabled` and
   `readOnly` props.
 
+`kit.Submit` subscribes to the current input values and submission state, then
+renders the kit's `Submit` slot. The wrapper owns the final disabled state and
+native `type="submit"`; the slot receives those button props, the immutable
+current input values, and `isSubmitting` for product-specific presentation.
+
 Slots own semantic structure. Controls own only the interactive value editor
 and must attach the supplied name, ID, ref, and ARIA relationships to the
 appropriate DOM element. Form, Please supplies unstyled accessible default slots and

@@ -233,7 +233,7 @@ const canonicalPages = [
 		title: "Redux DevTools workflow",
 		navText: "DevTools workflow",
 		description:
-			"Use Redux DevTools to inspect committed form events and restore known local documents in a live article editor.",
+			"Use Redux DevTools to inspect committed form events and restore known local documents in the profile form from get-started.",
 	},
 	{
 		path: "src/pages/api.mdx",
@@ -1448,6 +1448,8 @@ test("Redux DevTools example runs the same public integration that it documents"
 	assert.match(snippet, /createDevToolsMiddleware/)
 	assert.match(snippet, /middleware:\s*\[devToolsFeature\]/)
 	assert.match(snippet, /devTools\.disconnect\(\)/)
+	assert.match(snippet, /from "\.\/lab-profile-form"/)
+	assert.doesNotMatch(snippet, /kit\.defineForm|createFormKit|from "zod"/)
 	assert.match(page, /<DevToolsDemo \/>/)
 	assert.match(page, /~\/snippets\/devtools\.tsx/)
 	assert.match(index, /\/examples\/devtools/)

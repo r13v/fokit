@@ -212,6 +212,7 @@ export type {
 	SectionSlotProps,
 	StructuralNodeName,
 	StructuralRootProps,
+	SubmitSlotProps,
 } from "./react/slots.js"
 export type {
 	SubmitContext,

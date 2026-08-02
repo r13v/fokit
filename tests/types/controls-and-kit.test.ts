@@ -18,6 +18,7 @@ import {
 	type ResolvedArrayNode,
 	type SectionSlotProps,
 	type StructuralRootProps,
+	type SubmitSlotProps,
 	type UiNode,
 } from "../../src/index.js"
 import { ActionForm } from "../../src/react19/index.js"
@@ -73,6 +74,15 @@ const Section = (_props: SectionSlotProps) => null
 const ArraySlotComponent = (_props: ArraySlotProps) => null
 const ArrayItem = (_props: ArrayItemSlotProps) => null
 const ErrorMessage = (_props: ErrorMessageSlotProps) => null
+const Submit = (props: SubmitSlotProps) => {
+	type _buttonType = Expect<Equal<typeof props.buttonProps.type, "submit">>
+	type _disabled = Expect<Equal<typeof props.buttonProps.disabled, boolean>>
+	type _values = Expect<
+		Equal<typeof props.values, Readonly<Record<string, unknown>>>
+	>
+	type _isSubmitting = Expect<Equal<typeof props.isSubmitting, boolean>>
+	return null
+}
 
 const slots = {
 	Field,
@@ -80,6 +90,7 @@ const slots = {
 	Array: ArraySlotComponent,
 	ArrayItem,
 	ErrorMessage,
+	Submit,
 }
 
 type TextOptions = {

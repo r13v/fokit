@@ -135,7 +135,10 @@ props and `FormRuntimeOptions`, and it renders the error summary and definition
 fields. Both components reject a form from another exact kit.
 
 Use `kit.Fields` inside `kit.Form` for manual composition. Use `kit.Submit` for
-the kit-owned submit button.
+the kit-owned submit button. Register `slots.Submit` to replace its markup. The
+slot receives `buttonProps`, the immutable current input `values`, and
+`isSubmitting`. Forward `buttonProps` to the actual submit control so the
+owned `type="submit"`, disabled state, children, and native props remain intact.
 
 ## Hooks
 

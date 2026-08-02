@@ -3,6 +3,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
+import type { SubmitSlotProps } from "./slots.js"
 import { type TestValues, testKit } from "./test-kit.js"
 
 type TestSchema = StandardSchemaV1<TestValues>
@@ -107,6 +108,58 @@ describe("kit.Form and kit.Submit", () => {
 			(screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
 				.disabled,
 		).toBe(true)
+	})
+
+	it("renders the configured Submit slot with live values and owned button props", () => {
+		function DesignSystemSubmit({
+			buttonProps,
+			values,
+			isSubmitting,
+		}: SubmitSlotProps) {
+			return (
+				<button
+					{...buttonProps}
+					data-current-name={String(values.name)}
+					data-design-system=""
+					data-submitting={String(isSubmitting)}
+				/>
+			)
+		}
+		const kit = testKit.extend({
+			slots: {
+				Submit: DesignSystemSubmit,
+			},
+		})
+		const createdForm = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
+
+		render(
+			<kit.Form form={createdForm}>
+				<button
+					type="button"
+					onClick={() => createdForm.setValue("name", "Grace")}
+				>
+					Change
+				</button>
+				<kit.Submit name="intent" value="save">
+					Save
+				</kit.Submit>
+			</kit.Form>,
+		)
+
+		const submit = screen.getByRole("button", {
+			name: "Save",
+		}) as HTMLButtonElement
+		expect(submit.getAttribute("data-design-system")).toBe("")
+		expect(submit.getAttribute("data-current-name")).toBe("Ada")
+		expect(submit.getAttribute("data-submitting")).toBe("false")
+		expect(submit.type).toBe("submit")
+		expect(submit.name).toBe("intent")
+		expect(submit.value).toBe("save")
+
+		fireEvent.click(screen.getByRole("button", { name: "Change" }))
+		expect(submit.getAttribute("data-current-name")).toBe("Grace")
 	})
 
 	it("guards custom submit buttons through the owned form handler", () => {

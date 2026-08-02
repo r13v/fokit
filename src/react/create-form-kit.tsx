@@ -41,8 +41,13 @@ import type {
 	FieldSlotProps,
 	ReactUiPresentation,
 	SectionSlotProps,
+	SubmitSlotProps,
 } from "./slots.js"
-import { Submit, type SubmitProps } from "./submit.js"
+import {
+	createSubmitComponent,
+	type SubmitComponent,
+	type SubmitProps,
+} from "./submit.js"
 import { useFormBinding } from "./use-form.js"
 
 export type FormKitSlots<
@@ -55,6 +60,7 @@ export type FormKitSlots<
 	readonly Array: ComponentType<ArraySlotProps<ArraySlotOptions>>
 	readonly ArrayItem: ComponentType<ArrayItemSlotProps>
 	readonly ErrorMessage: ComponentType<ErrorMessageSlotProps>
+	readonly Submit: ComponentType<SubmitSlotProps>
 }
 
 export type RuntimeFormKitSlots = {
@@ -63,6 +69,7 @@ export type RuntimeFormKitSlots = {
 	readonly Array: ElementType
 	readonly ArrayItem: ComponentType<ArrayItemSlotProps>
 	readonly ErrorMessage: ComponentType<ErrorMessageSlotProps>
+	readonly Submit: ComponentType<SubmitSlotProps>
 }
 
 export type CreateFormKitOptions<
@@ -250,6 +257,7 @@ type FormKitSlotOverrides = {
 	readonly Array?: ComponentType<never>
 	readonly ArrayItem?: ComponentType<ArrayItemSlotProps>
 	readonly ErrorMessage?: ComponentType<ErrorMessageSlotProps>
+	readonly Submit?: ComponentType<SubmitSlotProps>
 }
 
 type FieldSlotOptionsOf<Slot> =
@@ -457,7 +465,7 @@ export interface FormKit<
 		KitOwner<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
 		Context
 	>
-	readonly Submit: typeof Submit
+	readonly Submit: SubmitComponent
 	readonly Fields: FieldsComponent
 	readonly AutoForm: AutoFormComponent<
 		Controls,
@@ -511,7 +519,7 @@ type RuntimeFormKit = {
 		unknown
 	>
 	readonly Form: KitFormComponent<ControlDefinitionRegistry>
-	readonly Submit: typeof Submit
+	readonly Submit: SubmitComponent
 	readonly Fields: FieldsComponent
 	readonly AutoForm: AutoFormComponent<
 		ControlDefinitionRegistry,
@@ -630,7 +638,7 @@ function assembleFormKit(
 		useCreateForm,
 		useBindForm,
 		Form: createFormComponent(controls, descriptor),
-		Submit,
+		Submit: createSubmitComponent(slots.Submit),
 		Fields: createFieldsComponent(controls, slots),
 		AutoForm: createAutoFormComponent(controls, slots, descriptor),
 	})
@@ -678,6 +686,7 @@ function assertSlots(
 		"Array",
 		"ArrayItem",
 		"ErrorMessage",
+		"Submit",
 	] as const) {
 		if (slots[key] === undefined) {
 			throw new TypeError(`${owner} requires a ${key} slot`)

@@ -90,6 +90,11 @@ waits for the promise and keeps the form in its submitting state. `kit.Submit`
 stays disabled until the promise settles. Form, Please does not reset the form after
 success. Call `form.reset(...)` when saved values must become the new baseline.
 
+Register `slots.Submit` when a design-system button needs different markup.
+The slot receives owned `buttonProps`, `isSubmitting`, and the immutable
+current input `values`; schema transformation still happens only during
+validation and submission.
+
 ## Responsibility boundary
 
 Form, Please owns the form store, update pipeline, validation lifecycle, structural

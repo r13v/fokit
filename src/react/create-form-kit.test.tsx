@@ -242,6 +242,13 @@ describe("createFormKit", () => {
 				},
 			}),
 		).toThrow(/requires a Field slot/i)
+		expect(() =>
+			extend({
+				slots: {
+					Submit: undefined,
+				},
+			}),
+		).toThrow(/requires a Submit slot/i)
 	})
 
 	it("normalizes definitions with kit controls when slots are omitted", () => {
@@ -822,4 +829,5 @@ function expectResolvedSlots(slots: FormKitSlots) {
 	expect(slots.Array).toBeTypeOf("function")
 	expect(slots.ArrayItem).toBeTypeOf("function")
 	expect(slots.ErrorMessage).toBeTypeOf("function")
+	expect(slots.Submit).toBeTypeOf("function")
 }

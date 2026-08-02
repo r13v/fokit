@@ -205,6 +205,7 @@ import {
 	createFormKit,
 	nativeControls,
 	type FieldSlotProps,
+	type SubmitSlotProps,
 } from "form-please"
 
 function ProductField({
@@ -228,6 +229,26 @@ function ProductField({
 	)
 }
 
+function ProductSubmit({
+	buttonProps,
+	values,
+	isSubmitting,
+}: SubmitSlotProps) {
+	let label = "Save"
+	if (values.accountType === "company") {
+		label = "Save company"
+	}
+	if (isSubmitting) {
+		label = "Saving…"
+	}
+
+	return (
+		<button {...buttonProps} data-product-submit="">
+			{label}
+		</button>
+	)
+}
+
 const kit = createFormKit({
 	controls: nativeControls,
 	slots: {
@@ -238,13 +259,17 @@ const kit = createFormKit({
 			},
 		}),
 		Field: ProductField,
+		Submit: ProductSubmit,
 	},
 })
 ```
 
-The five slots are `Field`, `Section`, `Array`, `ArrayItem`, and
-`ErrorMessage`. Keep forwarding their public props so labels, focus targets,
-layout data, and errors remain connected.
+The six slots are `Field`, `Section`, `Array`, `ArrayItem`, `ErrorMessage`, and
+`Submit`. Keep forwarding their public props so labels, focus targets, layout
+data, errors, and submit semantics remain connected. `SubmitSlotProps.values`
+contains the current input values, not validated or transformed schema output;
+because one kit can serve multiple schemas, its properties are typed as
+`unknown` and must be narrowed before use.
 
 `FieldSlotProps`, `SectionSlotProps`, and `ArraySlotProps` accept an independent
 generic options type. Registering `FieldSlotProps<{ labelTooltip?: string }>`

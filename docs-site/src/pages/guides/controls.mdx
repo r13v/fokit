@@ -155,6 +155,48 @@ preventing value mutation and exposing `aria-readonly`.
 Read [Choose disabled or read-only](/guides/ui-definitions#choose-disabled-or-read-only)
 for the product-level distinction between the two states.
 
+## Keep access to the control element
+
+`input.ref` connects the mounted interactive element to Form, Please. This
+connection lets the form find the control for `form.focus(path)` and
+`form.focusFirstError()`.
+
+If the control also needs direct access to its element, assign both refs in the
+same callback:
+
+```tsx twoslash
+// @jsx: react-jsx
+import type { ControlProps } from "form-please"
+import { useRef } from "react"
+
+function ProductTextControl({
+	value,
+	setValue,
+	blur,
+	input,
+}: ControlProps<string | undefined>) {
+	const elementRef = useRef<HTMLInputElement>(null)
+
+	return (
+		<input
+			id={input.id}
+			name={input.name}
+			onBlur={blur}
+			onChange={(event) => setValue(event.currentTarget.value)}
+			ref={(element) => {
+				elementRef.current = element
+				input.ref(element)
+			}}
+			value={value ?? ""}
+		/>
+	)
+}
+```
+
+Use the local ref for selection, scrolling, measurement, or a third-party
+widget. The callback clears both refs when the control unmounts. Do not replace
+`input.ref` with the local ref, or the form cannot find the control.
+
 ## Choose a FormData mode
 
 | Mode | Use it when | Serializer |

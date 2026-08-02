@@ -946,6 +946,7 @@ const requiredGuidePageContent = {
 			"Choose the smallest integration",
 			"Wrap a product input",
 			"Preserve the control contract",
+			"Keep access to the control element",
 			"Choose a FormData mode",
 			"Native controls",
 			"Replace structural slots",

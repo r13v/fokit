@@ -93,3 +93,8 @@ _Avoid_: Async field, async control data
 **Async definition node**: A field, section, array, or render node whose
 definition itself becomes available asynchronously.
 _Avoid_: Async field, asynchronous UI resolution
+
+**Resolvable structural presentation metadata**: A structural node's
+application-owned class or finite grid layout intent when it can be static or
+synchronously derived without changing the UI definition tree.
+_Avoid_: Dynamic UI structure, dynamic definition

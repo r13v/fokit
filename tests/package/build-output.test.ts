@@ -24,6 +24,7 @@ const javaScriptEntrypoints = {
 	"./preset-mui": "preset-mui",
 	"./react19": "react19",
 	"./server": "server",
+	"./tanstack": "tanstack",
 } as const
 
 type JavaScriptEntrypoint = keyof typeof javaScriptEntrypoints
@@ -107,6 +108,7 @@ describe("packed build output", () => {
 			"./preset-native",
 			"./preset-mui",
 			"./react19",
+			"./tanstack",
 		])
 
 		for (const entrypoint of Object.keys(
@@ -144,6 +146,7 @@ describe("packed build output", () => {
 			"./preset-mui",
 			"./react19",
 			"./server",
+			"./tanstack",
 		] as const) {
 			const exported = getJavaScriptExport(entrypoint)
 
@@ -207,6 +210,17 @@ describe("packed build output", () => {
 			const exported = getJavaScriptExport(entrypoint)
 			await expectGraphNotToImportMui(exported.import.default)
 			await expectGraphNotToImportMui(exported.require.default)
+		}
+	})
+
+	it("keeps TanStack Form imports isolated to the TanStack entry", async () => {
+		for (const entrypoint of Object.keys(
+			javaScriptEntrypoints,
+		) as JavaScriptEntrypoint[]) {
+			if (entrypoint === "./tanstack") continue
+			const exported = getJavaScriptExport(entrypoint)
+			await expectGraphNotToImportTanStack(exported.import.default)
+			await expectGraphNotToImportTanStack(exported.require.default)
 		}
 	})
 
@@ -403,6 +417,28 @@ async function expectGraphNotToImportMui(
 		expect(specifier).not.toMatch(/^@emotion\/(?:react|styled)(?:\/|$)/)
 		if (specifier.startsWith(".")) {
 			await expectGraphNotToImportMui(
+				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				visited,
+			)
+		}
+	}
+}
+
+async function expectGraphNotToImportTanStack(
+	packagePath: string,
+	visited = new Set<string>(),
+): Promise<void> {
+	const absolutePath = packagePathToAbsolutePath(packagePath)
+	if (visited.has(absolutePath)) return
+	visited.add(absolutePath)
+
+	const source = await readFile(absolutePath, "utf8")
+	for (const specifier of collectRuntimeSpecifiers(source)) {
+		expect(specifier).not.toMatch(
+			/^@tanstack\/(?:form-core|react-form|react-store)(?:\/|$)/,
+		)
+		if (specifier.startsWith(".")) {
+			await expectGraphNotToImportTanStack(
 				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
 				visited,
 			)

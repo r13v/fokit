@@ -30,6 +30,7 @@ export default {
 				"src/preset-mui/index.ts",
 				"src/react19/index.ts",
 				"src/server/index.ts",
+				"src/tanstack/index.ts",
 			],
 			project: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 		},

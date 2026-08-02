@@ -16,6 +16,7 @@ const requiredDependencies = {
 	"@fontsource-variable/newsreader": "5.3.0",
 	"@heroicons/react": "2.2.0",
 	"@mui/material": "9.2.0",
+	"@tanstack/react-form": "1.33.3",
 	"@tanstack/react-query": "5.101.4",
 	"@types/node": "26.1.2",
 	"@types/react": "19.2.17",
@@ -189,6 +190,13 @@ const canonicalPages = [
 			"Use the official Material UI preset to build and validate a conference proposal directly with Yup.",
 	},
 	{
+		path: "src/pages/examples/tanstack-form.mdx",
+		route: "/examples/tanstack-form",
+		title: "TanStack Form runtime",
+		description:
+			"Build a schema-defined conference planner while TanStack Form owns state, validation, subscriptions, and array operations.",
+	},
+	{
 		path: "src/pages/examples/shadcn-valibot.mdx",
 		route: "/examples/shadcn-valibot",
 		title: "Shadcn with Valibot",
@@ -307,6 +315,17 @@ const publicApiTerms = [
 ]
 
 const canonicalSnippets = [
+	{
+		target: "src/snippets/tanstack-conference-planner.tsx",
+		include: "~/snippets/tanstack-conference-planner.tsx",
+		terms: [
+			"TanStackConferencePlannerExample",
+			'from "form-please/tanstack"',
+			"kit.tf.Field",
+			"kit.tf.Subscribe",
+			"kit.AutoForm",
+		],
+	},
 	{
 		target: "src/snippets/mui-yup-conference.tsx",
 		include: "~/snippets/mui-yup-conference.tsx",
@@ -1606,6 +1625,37 @@ test("Material UI preset example uses the public factory and direct Yup Standard
 	for (const control of controls) {
 		assert.match(page, new RegExp(`\\b${control.replace("-", "\\-")}\\b`))
 	}
+})
+
+test("TanStack Form example keeps the alternative runtime public and namespaced", async () => {
+	const wrapper = await readText("src/components/tanstack-form-demo.tsx")
+	const client = await readText("src/components/tanstack-form-demo.client.tsx")
+	const snippet = await readText("src/snippets/tanstack-conference-planner.tsx")
+	const page = await readText("src/pages/examples/tanstack-form.mdx")
+	const index = await readText("src/pages/examples/index.mdx")
+
+	assert.match(wrapper, /from "\.\/tanstack-form-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(
+		wrapper,
+		/docs-site\/src\/snippets\/tanstack-conference-planner\.tsx/,
+	)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/tanstack-conference-planner"/)
+	assert.match(snippet, /from "form-please\/tanstack"/)
+	assert.match(snippet, /from "form-please\/default-slots"/)
+	assert.match(snippet, /from "form-please\/native-controls"/)
+	assert.match(snippet, /kit\.defineForm\(conferenceSchema/)
+	assert.match(snippet, /kit\.useForm\(definition/)
+	assert.match(snippet, /kit\.tf\.Field/)
+	assert.match(snippet, /kit\.tf\.Subscribe/)
+	assert.match(snippet, /kit\.AutoForm/)
+	assert.doesNotMatch(snippet, /from "form-please"/)
+	assert.doesNotMatch(snippet, /from "(?:\.\.\/)+src\//)
+	assert.match(page, /<TanStackFormDemo \/>/)
+	assert.match(page, /npm install form-please @tanstack\/react-form zod/)
+	assert.match(page, /~\/snippets\/tanstack-conference-planner\.tsx/)
+	assert.match(index, /\/examples\/tanstack-form/)
 })
 
 test("six complex examples stay public, documented, networked, and independent", async () => {

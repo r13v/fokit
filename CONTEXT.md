@@ -33,10 +33,10 @@ one exact TanStack form kit snapshot. It is not interchangeable with a form
 definition owned by the original runtime.
 _Avoid_: Portable form definition, Form instance
 
-**TanStack form API**: The React-bound TanStack Form object returned by a
-TanStack form kit snapshot. It remains the public runtime API instead of being
-hidden behind a Form Please form instance facade.
-_Avoid_: Form instance, TanStack form store
+**TanStack form namespace**: The context-bound TanStack Form components exposed
+as `kit.tf.Field`, `kit.tf.FormGroup`, and `kit.tf.Subscribe` by a TanStack form
+kit snapshot.
+_Avoid_: Top-level kit components, Form instance, TanStack form store
 
 **Shadcn form-kit adapter**: An application-owned Form, Please integration that
 maps the canonical form-kit control and slot contracts onto one supported

@@ -620,6 +620,69 @@ test.describe("Form, Please documentation", () => {
 		expect(pageErrors).toEqual([])
 	})
 
+	test("runs the TanStack Form definition, array, and validation flow", async ({
+		page,
+	}) => {
+		const pageErrors = collectPageErrors(page)
+		await page.goto("./examples/tanstack-form")
+
+		await expect(page).toHaveURL(/\/form-please\/examples\/tanstack-form$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "TanStack Form runtime" }),
+		).toBeVisible()
+		const demo = page.getByRole("region", {
+			name: "TanStack conference planner example",
+		})
+		await expect(demo).toBeVisible()
+		await page.waitForLoadState("networkidle")
+		expect(pageErrors).toEqual([])
+		await expect(
+			demo.getByRole("complementary", { name: "TanStack form state" }),
+		).toContainText("hybrid · 2 speakers")
+
+		await demo.getByLabel("Format").selectOption("remote")
+		await expect(demo.getByLabel("Room")).toHaveCount(0)
+		await expect(demo.getByLabel("Stream URL")).toBeVisible()
+
+		await demo.getByRole("button", { name: "Move item 1 down" }).click()
+		await expect(demo.getByLabel("Speaker name").first()).toHaveValue(
+			"Grace Park",
+		)
+		await demo.getByRole("button", { name: "Add item" }).click()
+		await expect(demo.getByLabel("Speaker name")).toHaveCount(3)
+		const addedSpeakerName = demo.getByLabel("Speaker name").last()
+		await demo.getByRole("button", { name: "Publish session" }).click()
+		await expect(addedSpeakerName).toBeFocused()
+		await expect(
+			demo.getByRole("alert").filter({ hasText: "Enter the speaker name" }),
+		).toBeVisible()
+		await addedSpeakerName.fill("Lin Chen")
+		await expect(
+			demo.getByText("Enter the speaker name", { exact: true }),
+		).toHaveCount(0)
+		await demo.getByLabel("Speaker email").last().fill("lin@example.test")
+
+		const title = demo.getByLabel("Session title")
+		await title.fill("")
+		await demo.getByRole("button", { name: "Publish session" }).click()
+		await expect(title).toBeFocused()
+		await expect(
+			demo.getByRole("alert").filter({
+				hasText: "Enter a specific session title",
+			}),
+		).toBeVisible()
+
+		await title.fill("Accessible component systems")
+		await expect(
+			demo.getByText("Enter a specific session title", { exact: true }),
+		).toHaveCount(0)
+		await demo.getByRole("button", { name: "Publish session" }).click()
+		await expect(demo.getByRole("status")).toHaveText(
+			"Published accessible-component-systems with 3 speakers.",
+		)
+		expect(pageErrors).toEqual([])
+	})
+
 	test("runs the branching grant and composite policy request flows", async ({
 		page,
 	}) => {

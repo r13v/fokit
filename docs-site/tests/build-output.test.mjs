@@ -54,6 +54,7 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/guides/devtools.md",
 		"assets/md/guides/core.md",
 		"assets/md/examples.md",
+		"assets/md/examples/tanstack-form.md",
 		"assets/md/examples/mui-yup.md",
 		"assets/md/examples/research-grant.md",
 		"assets/md/examples/studio-policies.md",
@@ -242,6 +243,10 @@ test("generated Markdown links live demos to their canonical source files", asyn
 		{
 			file: "assets/md/guides/async-multiselect.md",
 			path: "docs-site/src/snippets/async-multiselect.tsx",
+		},
+		{
+			file: "assets/md/examples/tanstack-form.md",
+			path: "docs-site/src/snippets/tanstack-conference-planner.tsx",
 		},
 		{
 			file: "assets/md/examples/devtools.md",

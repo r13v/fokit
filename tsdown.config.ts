@@ -13,6 +13,7 @@ export default defineConfig({
 		"preset-mui": "src/preset-mui/index.ts",
 		react19: "src/react19/index.ts",
 		server: "src/server/index.ts",
+		tanstack: "src/tanstack/index.ts",
 	},
 	format: ["esm", "cjs"],
 	platform: "neutral",

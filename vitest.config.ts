@@ -27,6 +27,7 @@ export default defineConfig({
 						"src/preset-mui/**/*.test.{ts,tsx}",
 						"src/react/**/*.test.{ts,tsx}",
 						"src/react19/**/*.test.{ts,tsx}",
+						"src/tanstack/**/*.test.{ts,tsx}",
 					],
 					setupFiles: ["tests/setup.ts"],
 				},

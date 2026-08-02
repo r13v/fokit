@@ -16,8 +16,8 @@ of behavior.
 
 ## Architectural shape
 
-Form, Please is one package with eleven JavaScript entry points and one optional CSS
-entry point:
+Form, Please is one package with twelve JavaScript entry points and one
+optional CSS entry point:
 
 ```mermaid
 flowchart TD
@@ -29,6 +29,7 @@ flowchart TD
     NativeControls["form-please/native-controls<br/>Native HTML controls"]
     PresetNative["form-please/preset-native<br/>Ready native form kit"]
     PresetMui["form-please/preset-mui<br/>Material UI form-kit factory"]
+    TanStack["form-please/tanstack<br/>Experimental TanStack Form runtime"]
     React19["form-please/react19<br/>React 19 Actions adapter"]
     Server["form-please/server<br/>FormData parsing and validation"]
     History["form-please/history<br/>History and journals"]
@@ -45,6 +46,7 @@ flowchart TD
     App --> NativeControls
     App --> PresetNative
     App --> PresetMui
+    App --> TanStack
     App --> React19
     App --> Server
     App --> History
@@ -81,8 +83,11 @@ Dependencies point inward:
   React modules. Nothing in the main entry point depends on it.
 - `src/server` reuses path, result, and Standard Schema logic from core but
   never imports React.
+- `src/tanstack` is a self-contained alternative React runtime. It imports only
+  its own copied contracts and external React, Standard Schema, and TanStack
+  Form packages; it never imports `src/core` or `src/react`.
 - `src/history`, `src/persistence`, and `src/devtools` own optional features.
-  Existing main, core, React 19, and server graphs do not import them.
+  Existing main, core, React 19, server, and TanStack graphs do not import them.
 - `src/persistence` can import the history protocol for history-mode storage.
   History and DevTools do not import persistence.
 - `src/layout.css` is independent. No JavaScript entry point imports it.
@@ -94,8 +99,8 @@ React-free dependency boundary without maintaining a second UI tree.
 ## Execution environments
 
 The `form-please`, `form-please/default-slots`, `form-please/native-controls`,
-`form-please/preset-native`, `form-please/preset-mui`, and `form-please/react19` entries retain
-`"use client"` directives.
+`form-please/preset-native`, `form-please/preset-mui`, `form-please/react19`, and
+`form-please/tanstack` entries retain `"use client"` directives.
 Importing any of these entries from a React Server Component establishes a
 client boundary. `form-please/core` and `form-please/server` contain no
 client directive or React runtime import and may be used independently in
@@ -114,7 +119,7 @@ remain suitable for server-side use.
 
 | Area | Primary files | Responsibility |
 | --- | --- | --- |
-| Public exports | `src/index.ts`, `src/core/index.ts`, `src/default-slots/index.ts`, `src/native-controls/index.ts`, `src/preset-native/index.ts`, `src/preset-mui/index.ts`, `src/react19/index.ts`, `src/server/index.ts`, and each optional `index.ts` | Define the supported package surface |
+| Public exports | `src/index.ts`, `src/core/index.ts`, `src/default-slots/index.ts`, `src/native-controls/index.ts`, `src/preset-native/index.ts`, `src/preset-mui/index.ts`, `src/react19/index.ts`, `src/server/index.ts`, `src/tanstack/index.ts`, and each optional `index.ts` | Define the supported package surface |
 | Definitions | `src/core/definition.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts`, `src/core/structural-presentation.ts` | Type, validate, normalize, and index reusable UI definitions |
 | Paths and values | `src/core/path.ts`, `src/core/path-types.ts`, `src/core/value.ts` | Canonical deep paths and immutable value operations |
 | Form model | `src/core/form-model.ts`, `src/core/form-reducer.ts`, `src/core/runtime-reducer.ts` | Own the atomic historical document and pure document/runtime transitions |
@@ -124,6 +129,7 @@ remain suitable for server-side use.
 | Derived state | `src/core/resolve-ui.ts`, `src/core/resource.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, synchronous application-resource projection, dirty/touched state, issue exposure, and stable array rows |
 | Validation | `src/core/validation.ts`, `src/core/validation-lifecycle.ts`, `src/core/standard-schema.ts` | Standard Schema execution, attempt lifecycle, cancellation, and normalized results |
 | Form kits | `src/react/create-form-kit.tsx`, `src/default-slots/default-slots.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-native/index.ts`, `src/preset-mui/index.ts` | Bind control and slot registries plus grid scales into rendering integrations and the native and Material UI presets |
+| TanStack runtime | `src/tanstack` | Independently define, resolve, render, validate, and submit schema-driven forms with TanStack Form state and `kit.tf` components |
 | React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-snapshot.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to external stores |
 | Rendering | `src/react/fields.tsx`, `src/react/array-field.tsx`, `src/react/control.tsx`, `src/react/render-node.ts`, `src/react/slots.ts` | Turn resolved nodes into slots, controls, and explicit render components |
 | Native forms | `src/react/form.tsx`, `src/react/hidden-inputs.tsx`, `src/react/submission.ts` | Accessibility, `FormData`, reset, and classic submission |

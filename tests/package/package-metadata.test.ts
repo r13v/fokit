@@ -30,6 +30,7 @@ const javaScriptEntrypoints = {
 	"./preset-mui": "preset-mui",
 	"./react19": "react19",
 	"./server": "server",
+	"./tanstack": "tanstack",
 } as const
 
 describe("package metadata", () => {
@@ -45,6 +46,7 @@ describe("package metadata", () => {
 				"@emotion/react": "^11.14.0",
 				"@emotion/styled": "^11.14.1",
 				"@mui/material": "^9.0.0",
+				"@tanstack/react-form": "^1.33.3",
 				react: "^18.0.0 || ^19.0.0",
 				"react-dom": "^18.0.0 || ^19.0.0",
 			},
@@ -65,6 +67,7 @@ describe("package metadata", () => {
 			"./preset-mui",
 			"./react19",
 			"./server",
+			"./tanstack",
 			"./layout.css",
 			"./package.json",
 		])
@@ -83,16 +86,30 @@ describe("package metadata", () => {
 
 	it("runs strict package analyzers against JavaScript entry points", () => {
 		expect(packageJson.scripts["package:check"]).toBe(
-			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./react19 ./server",
+			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./react19 ./server ./tanstack",
 		)
 	})
 
-	it("keeps Material UI peers optional for consumers of other entries", () => {
+	it("keeps optional integration peers isolated from other entries", () => {
 		expect(packageJson.peerDependenciesMeta).toMatchObject({
 			"@emotion/react": { optional: true },
 			"@emotion/styled": { optional: true },
 			"@mui/material": { optional: true },
+			"@tanstack/react-form": { optional: true },
 		})
+	})
+
+	it("keeps the TanStack source tree autonomous", async () => {
+		for (const path of [
+			"../../src/tanstack/control-definition.ts",
+			"../../src/tanstack/create-form-kit.tsx",
+			"../../src/tanstack/definition.ts",
+			"../../src/tanstack/index.ts",
+			"../../src/tanstack/types.ts",
+		]) {
+			const source = await readFile(new URL(path, import.meta.url), "utf8")
+			expect(source).not.toMatch(/from\s+["']\.\.\//)
+		}
 	})
 
 	it("does not add Redux runtime dependencies for DevTools", () => {

@@ -65,6 +65,20 @@ type React19Module = Readonly<{
 	ActionForm: unknown
 	ActionSubmit: unknown
 }>
+type TanStackModule = Readonly<{
+	createFormKit(options: {
+		readonly controls: object
+		readonly slots: object
+	}): {
+		readonly defineForm: unknown
+		readonly useForm: unknown
+		readonly tf: Readonly<{
+			readonly Field: unknown
+			readonly FormGroup: unknown
+			readonly Subscribe: unknown
+		}>
+	}
+}>
 
 const require = createRequire(import.meta.url)
 
@@ -133,6 +147,21 @@ describe("built optional package entries", () => {
 			expect(kit.controls).toHaveProperty("autocomplete-multiple")
 			expect(kit.controls).toHaveProperty("range-slider")
 			expect(kit.slots).toHaveProperty("Section")
+		}
+	})
+
+	it("loads the autonomous TanStack kit factory in ESM and CommonJS", async () => {
+		for (const modules of [await loadEsmModules(), loadCommonJsModules()]) {
+			const kit = modules.tanstack.createFormKit({
+				controls: {},
+				slots: modules.defaultSlots.createDefaultSlots(),
+			})
+			expect(Object.isFrozen(kit)).toBe(true)
+			expect(kit.defineForm).toBeTypeOf("function")
+			expect(kit.useForm).toBeTypeOf("function")
+			expect(kit.tf.Field).toBeTypeOf("function")
+			expect(kit.tf.FormGroup).toBeTypeOf("function")
+			expect(kit.tf.Subscribe).toBeTypeOf("function")
 		}
 	})
 
@@ -280,6 +309,7 @@ describe("built optional package entries", () => {
 				"preset-mui",
 				"react19",
 				"server",
+				"tanstack",
 			]) {
 				const declaration = await import("node:fs/promises").then(
 					({ readFile }) =>
@@ -367,6 +397,7 @@ type LoadedModules = Readonly<{
 	presetNative: PresetNativeModule
 	presetMui: PresetMuiModule
 	react19: React19Module
+	tanstack: TanStackModule
 }>
 
 async function loadEsmModules(): Promise<LoadedModules> {
@@ -397,6 +428,9 @@ async function loadEsmModules(): Promise<LoadedModules> {
 		react19: (await import(
 			"../../dist/react19.js"
 		)) as unknown as React19Module,
+		tanstack: (await import(
+			new URL("../../dist/tanstack.js", import.meta.url).href
+		)) as unknown as TanStackModule,
 	}
 }
 
@@ -413,6 +447,7 @@ function loadCommonJsModules(): LoadedModules {
 		presetNative: require("../../dist/preset-native.cjs") as PresetNativeModule,
 		presetMui: require("../../dist/preset-mui.cjs") as PresetMuiModule,
 		react19: require("../../dist/react19.cjs") as React19Module,
+		tanstack: require("../../dist/tanstack.cjs") as TanStackModule,
 	}
 }
 

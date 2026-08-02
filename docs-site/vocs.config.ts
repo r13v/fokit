@@ -66,6 +66,7 @@ export default defineConfig({
 			collapsed: false,
 			items: [
 				{ text: "Examples", link: "/examples" },
+				{ text: "TanStack Form runtime", link: "/examples/tanstack-form" },
 				{ text: "Material UI with Yup", link: "/examples/mui-yup" },
 				{ text: "Shadcn with Valibot", link: "/examples/shadcn-valibot" },
 				{ text: "Research grant", link: "/examples/research-grant" },

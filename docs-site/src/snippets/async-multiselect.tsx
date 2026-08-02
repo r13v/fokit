@@ -31,8 +31,9 @@ import {
 	createFormKit,
 	defineControl,
 	type FormInput,
-	nativeControls,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { z } from "zod"
 
@@ -470,9 +471,10 @@ const defaultValues = {
 
 const kit = createFormKit({
 	controls: {
-		...nativeControls,
+		...createNativeControls(),
 		asyncMultiSelect,
 	},
+	slots: createDefaultSlots(),
 })
 
 const definition = kit.defineForm(schema, {

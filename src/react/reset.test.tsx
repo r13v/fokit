@@ -4,12 +4,12 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
-
+import { createDefaultSlots } from "../default-slots/default-slots.js"
+import { createNativeControls } from "../native-controls/native-controls.js"
 import { defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import { useFormContext } from "./form-context.js"
 import { useField, useFormState } from "./hooks.js"
-import { nativeControls } from "./native-controls.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -59,12 +59,15 @@ const textControl = defineControl<string>({
 	},
 })
 
+const nativeControls = createNativeControls()
+
 const kit = createFormKit({
 	controls: {
 		text: textControl,
 		file: nativeControls.file,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,

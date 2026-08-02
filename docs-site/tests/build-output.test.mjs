@@ -167,7 +167,8 @@ test("Interactive Lab has meaningful generated Markdown fallbacks", async () => 
 	const fallbackTerms = [
 		"Interactive Form, Please Lab",
 		"runs only in a browser",
-		"createFormKit({ controls: nativeControls })",
+		"controls: createNativeControls()",
+		"slots: createDefaultSlots()",
 	]
 	const fallbackFiles = ["assets/md/get-started.md", "llms-full.txt"]
 
@@ -210,7 +211,7 @@ test("overview demo has a meaningful generated Markdown fallback", async () => {
 	const fallbackTerms = [
 		"live overview form runs only in a browser",
 		"validates it with Standard Schema",
-		"createFormKit({ controls: nativeControls })",
+		'nativeFormKit as kit } from "form-please/preset-native"',
 	]
 	const fallbackFiles = ["assets/md/index.md", "llms-full.txt"]
 

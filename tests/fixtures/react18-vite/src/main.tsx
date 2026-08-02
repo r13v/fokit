@@ -16,7 +16,6 @@ import {
 	isDirtyEqual,
 	isSamePath,
 	mergePathValue,
-	nativeControls,
 	normalizeDefinition,
 	parseArrayIndex,
 	parsePath,
@@ -36,6 +35,8 @@ import {
 	useValue,
 } from "form-please"
 import { createFormStore } from "form-please/core"
+import { createDefaultSlots } from "form-please/default-slots"
+import { nativeFormKit } from "form-please/preset-native"
 import type { ReactNode } from "react"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
@@ -211,6 +212,7 @@ const kit = createFormKit({
 		text,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field,
 		Section,
 		Array: ArraySlot,
@@ -260,9 +262,7 @@ function ExtendedFormProbe() {
 	return <extendedKit.AutoForm form={form} />
 }
 
-const nativeKit = createFormKit({
-	controls: nativeControls,
-})
+const nativeKit = nativeFormKit
 
 const description: UiResolver<string, ProfileInput> = ({ name }) =>
 	name.length > 0 ? `Editing ${name}` : "Profile"

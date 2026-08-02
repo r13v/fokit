@@ -1,8 +1,6 @@
-const {
-	createDefaultSlots,
-	createFormKit,
-	nativeControls,
-} = require("form-please")
+const { createFormKit } = require("form-please")
+const { createDefaultSlots } = require("form-please/default-slots")
+const { createNativeControls } = require("form-please/native-controls")
 const {
 	createFormStore,
 	normalizeDefinition,
@@ -16,6 +14,7 @@ const {
 	replayJournal,
 } = require("form-please/history")
 const { createPersistenceMiddleware } = require("form-please/persistence")
+const { nativeFormKit } = require("form-please/preset-native")
 
 const schema = {
 	"~standard": {
@@ -56,22 +55,33 @@ const store = createFormStore({
 store.setValue("name", "Grace")
 
 if (typeof createDefaultSlots().Field !== "function") {
-	throw new Error("CommonJS root export did not expose createDefaultSlots")
+	throw new Error(
+		"CommonJS default-slots entry did not expose createDefaultSlots",
+	)
 }
 
-if (nativeControls.text.formData.mode !== "native") {
-	throw new Error("CommonJS root export did not expose nativeControls")
+if (createNativeControls().text.formData.mode !== "native") {
+	throw new Error(
+		"CommonJS native-controls export did not create native controls",
+	)
+}
+
+if (nativeFormKit.controls.text.formData.mode !== "native") {
+	throw new Error("CommonJS preset-native entry did not expose nativeFormKit")
 }
 
 const coreExports = require("form-please/core")
 
-if ("createDefaultSlots" in coreExports || "nativeControls" in coreExports) {
+if (
+	"createDefaultSlots" in coreExports ||
+	"createNativeControls" in coreExports
+) {
 	throw new Error("CommonJS core entry leaked React defaults")
 }
 
 if (
 	"createDefaultSlots" in serverExports ||
-	"nativeControls" in serverExports
+	"createNativeControls" in serverExports
 ) {
 	throw new Error("CommonJS server entry leaked React defaults")
 }
@@ -91,7 +101,10 @@ async function main() {
 		throw new Error("CommonJS server parsing failed")
 	}
 
-	const featureKit = createFormKit({ controls: {} })
+	const featureKit = createFormKit({
+		controls: {},
+		slots: createDefaultSlots(),
+	})
 	const featureDefinition = featureKit.defineForm(schema, { ui: [] })
 	const historyFeature = createHistoryMiddleware({ groupWindow: 0 })
 	const saves = []

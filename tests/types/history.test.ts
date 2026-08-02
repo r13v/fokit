@@ -1,5 +1,6 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import type * as CorePublic from "../../src/core/index.js"
+import { createDefaultSlots } from "../../src/default-slots/index.js"
 import {
 	createHistoryMiddleware,
 	type FormJournal,
@@ -27,7 +28,7 @@ type Context = { readonly locale: string }
 type Schema = StandardSchemaV1<Input>
 
 declare const schema: Schema
-const kit = createFormKit({ controls: {} })
+const kit = createFormKit({ controls: {}, slots: createDefaultSlots() })
 const definition = kit.forContext<Context>().defineForm(schema, { ui: [] })
 const historyFeature = createHistoryMiddleware({ limit: 20, groupWindow: 0 })
 const middleware: FormMiddleware<Input, Context> = historyFeature

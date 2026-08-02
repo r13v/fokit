@@ -7,6 +7,7 @@ import {
 } from "../core/feature-protocol.js"
 import { createFormDocument } from "../core/form-reducer.js"
 import type { FormMiddleware } from "../core/middleware.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { defineControl } from "../react/control.js"
 import { createFormKit } from "../react/create-form-kit.js"
 import {
@@ -40,7 +41,10 @@ const text = defineControl<string>({
 	component: () => null,
 	formData: { mode: "native" },
 })
-const kit = createFormKit({ controls: { text } })
+const kit = createFormKit({
+	controls: { text },
+	slots: createDefaultSlots(),
+})
 const schema = createSchema()
 const definition = kit.forContext<Context>().defineForm(schema, {
 	ui: [

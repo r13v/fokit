@@ -6,6 +6,7 @@ import { hydrateRoot } from "react-dom/client"
 import { renderToString } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 import type { ImperativeFormIssue, StandardSchema } from "../core/index.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import type { CreateFormOptions } from "./form-instance.js"
@@ -29,7 +30,10 @@ const text = defineControl<string | undefined>({
 	component: () => null,
 	formData: { mode: "native" },
 })
-const kit = createFormKit({ controls: { text } })
+const kit = createFormKit({
+	controls: { text },
+	slots: createDefaultSlots(),
+})
 const definition = kit.forContext<ProfileContext>().defineForm(schema, {
 	ui: [
 		{

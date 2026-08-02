@@ -41,9 +41,9 @@ Start with native controls or bring your own design system.
 
 ## See it work
 
-This form uses the public package, `nativeControls`, and the default accessible
-slots. Clear the email address. Submit the form to see the schema error. Enter a
-valid email address. Submit again to see the typed output.
+This form uses the `nativeFormKit` preset with native controls and accessible
+default slots. Clear the email address. Submit the form to see the schema
+error. Enter a valid email address. Submit again to see the typed output.
 
 <OverviewDemo />
 
@@ -54,7 +54,8 @@ definition for structure, and a kit for rendering.
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls, type FormInput } from "form-please"
+import type { FormInput } from "form-please"
+import { nativeFormKit as kit } from "form-please/preset-native"
 import { z } from "zod"
 
 const profileSchema = z.object({
@@ -62,8 +63,6 @@ const profileSchema = z.object({
 	email: z.string().email("Enter a valid email"),
 	newsletter: z.boolean(),
 })
-
-const kit = createFormKit({ controls: nativeControls })
 
 const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [
@@ -117,8 +116,8 @@ silently change the interface.
 
 ### Your kit owns rendering
 
-Start with `nativeControls`. Replace controls and structural slots with your
-design-system components when needed. The form definition and state model stay
+Start with `nativeFormKit`. Extend it with your design-system controls and
+replace structural slots when needed. The form definition and state model stay
 the same.
 
 ## The responsibility boundary

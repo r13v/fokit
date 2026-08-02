@@ -15,9 +15,12 @@ const packageJson = JSON.parse(
 const javaScriptEntrypoints = {
 	".": "index",
 	"./core": "core",
+	"./default-slots": "default-slots",
 	"./devtools": "devtools",
 	"./history": "history",
+	"./native-controls": "native-controls",
 	"./persistence": "persistence",
+	"./preset-native": "preset-native",
 	"./react19": "react19",
 	"./server": "server",
 } as const
@@ -96,7 +99,13 @@ describe("packed build output", () => {
 	})
 
 	it("preserves client directives only on React entries", async () => {
-		const clientEntrypoints = new Set<JavaScriptEntrypoint>([".", "./react19"])
+		const clientEntrypoints = new Set<JavaScriptEntrypoint>([
+			".",
+			"./default-slots",
+			"./native-controls",
+			"./preset-native",
+			"./react19",
+		])
 
 		for (const entrypoint of Object.keys(
 			javaScriptEntrypoints,
@@ -127,6 +136,9 @@ describe("packed build output", () => {
 		for (const entrypoint of [
 			".",
 			"./core",
+			"./default-slots",
+			"./native-controls",
+			"./preset-native",
 			"./react19",
 			"./server",
 		] as const) {
@@ -138,6 +150,45 @@ describe("packed build output", () => {
 			await expectGraphNotToContainOptionalImplementation(
 				exported.require.default,
 			)
+		}
+	})
+
+	it("keeps rendering defaults out of the headless root graph", async () => {
+		const root = getJavaScriptExport(".")
+
+		await expectGraphNotToContainRenderingSources(root.import.default, [
+			"default-slots",
+			"native-controls",
+			"preset-native",
+		])
+		await expectGraphNotToContainRenderingSources(root.require.default, [
+			"default-slots",
+			"native-controls",
+			"preset-native",
+		])
+	})
+
+	it("keeps low-level rendering entries independent from the native preset", async () => {
+		const defaultSlots = getJavaScriptExport("./default-slots")
+		const nativeControls = getJavaScriptExport("./native-controls")
+
+		for (const target of [
+			defaultSlots.import.default,
+			defaultSlots.require.default,
+		]) {
+			await expectGraphNotToContainRenderingSources(target, [
+				"native-controls",
+				"preset-native",
+			])
+		}
+		for (const target of [
+			nativeControls.import.default,
+			nativeControls.require.default,
+		]) {
+			await expectGraphNotToContainRenderingSources(target, [
+				"default-slots",
+				"preset-native",
+			])
 		}
 	})
 
@@ -268,6 +319,30 @@ async function expectGraphNotToContainOptionalImplementation(
 		if (specifier.startsWith(".")) {
 			await expectGraphNotToContainOptionalImplementation(
 				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				visited,
+			)
+		}
+	}
+}
+
+async function expectGraphNotToContainRenderingSources(
+	packagePath: string,
+	sourceDirectories: readonly string[],
+	visited = new Set<string>(),
+): Promise<void> {
+	const absolutePath = packagePathToAbsolutePath(packagePath)
+	if (visited.has(absolutePath)) return
+	visited.add(absolutePath)
+
+	const source = await readFile(absolutePath, "utf8")
+	expect(source).not.toMatch(
+		new RegExp(`src/(?:${sourceDirectories.join("|")})/`),
+	)
+	for (const specifier of collectRuntimeSpecifiers(source)) {
+		if (specifier.startsWith(".")) {
+			await expectGraphNotToContainRenderingSources(
+				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				sourceDirectories,
 				visited,
 			)
 		}

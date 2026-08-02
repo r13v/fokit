@@ -12,11 +12,12 @@ import {
 	extendValueChanges,
 	type FormInput,
 	type FormOutput,
-	nativeControls,
 	useFormContext,
 	useFormState,
 	type ValueChange,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -172,7 +173,10 @@ const defaultValues = {
 	confirmAccuracy: false,
 } satisfies GrantInput
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 function OrganizationFinder() {
 	const form = useFormContext<typeof grantSchema>()

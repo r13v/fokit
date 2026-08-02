@@ -68,9 +68,10 @@ declared and where it is composed:
 import {
 	createFormKit,
 	type FormInput,
-	nativeControls,
 	type UiNode,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({
@@ -79,7 +80,10 @@ const schema = z.object({
 		invoiceNote: z.string().optional(),
 	}),
 })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 type Input = FormInput<typeof schema>
 
 const billing = [
@@ -114,11 +118,16 @@ elements for inline links, emphasis, or badges:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 kit.defineForm(schema, {
 	ui: [
@@ -143,9 +152,10 @@ with `createFormKit`:
 // @jsx: react-jsx
 import {
 	createFormKit,
-	nativeControls,
 	type FieldSlotProps,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 type OverviewFieldOptions = {
@@ -202,8 +212,8 @@ function OverviewField({
 
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({
-	controls: nativeControls,
-	slots: { Field: OverviewField },
+	controls: createNativeControls(),
+	slots: { ...createDefaultSlots(), Field: OverviewField },
 })
 
 kit.defineForm(schema, {
@@ -255,15 +265,19 @@ an exact position but does not represent one field:
 // @jsx: react-jsx
 import {
 	createFormKit,
-	nativeControls,
 	type RenderNodeProps,
 	useFormContext,
 	useFormState,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 function NamePreview({ disabled, readOnly }: RenderNodeProps) {
 	const form = useFormContext<typeof schema>()

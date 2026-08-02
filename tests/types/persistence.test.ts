@@ -1,5 +1,6 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import type * as CorePublic from "../../src/core/index.js"
+import { createDefaultSlots } from "../../src/default-slots/index.js"
 import { createHistoryMiddleware } from "../../src/history/index.js"
 import type * as RootPublic from "../../src/index.js"
 import { createFormKit, type FormMiddleware } from "../../src/index.js"
@@ -29,7 +30,7 @@ type Schema = StandardSchemaV1<Input>
 
 declare const schema: Schema
 declare const adapter: FormPersistenceAdapter
-const kit = createFormKit({ controls: {} })
+const kit = createFormKit({ controls: {}, slots: createDefaultSlots() })
 const definition = kit.forContext<Context>().defineForm(schema, { ui: [] })
 const history = createHistoryMiddleware()
 const documentPersistence = createPersistenceMiddleware({

@@ -361,13 +361,15 @@ test.describe("Form, Please documentation", () => {
 			.click()
 		const dialog = page.getByRole("dialog")
 		await expect(dialog).toBeVisible()
-		await dialog.getByRole("combobox").fill("nativeControls")
+		await dialog.getByRole("combobox").fill("createNativeControls")
 
-		const nativeControlsResult = dialog.locator(
+		const createNativeControlsResult = dialog.locator(
 			'a[href="/form-please/guides/controls#native-controls"]',
 		)
-		await expect(nativeControlsResult).toContainText("nativeControls")
-		await nativeControlsResult.click()
+		await expect(createNativeControlsResult).toContainText(
+			"createNativeControls",
+		)
+		await createNativeControlsResult.click()
 		await expect(page).toHaveURL(
 			/\/form-please\/guides\/controls#native-controls$/,
 		)

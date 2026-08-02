@@ -6,6 +6,7 @@ import { useRef } from "react"
 import { describe, expect, it } from "vitest"
 
 import type { ImperativeFormIssue } from "../core/index.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import { useFormContext } from "./form-context.js"
@@ -73,6 +74,7 @@ const kit = createFormKit({
 		text,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,

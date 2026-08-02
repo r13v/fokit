@@ -7,11 +7,12 @@ import { renderToString } from "react-dom/server"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { createFormStore } from "../core/index.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
+import { createNativeControls } from "../native-controls/native-controls.js"
 import { assertActionFormCompatible } from "../react19/action-form.js"
 import { parseFormData } from "../server/index.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
-import { nativeControls } from "./native-controls.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -87,6 +88,8 @@ type NativeChoiceFileValues = {
 type Context = {
 	readonly prefix: string
 }
+
+const nativeControls = createNativeControls()
 
 type TextOptions = {
 	readonly suffix?: string
@@ -433,6 +436,7 @@ const kit = createFormKit({
 		unavailable: unavailableControl,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,
@@ -446,6 +450,7 @@ const uploadKit = createFormKit({
 		file: fileControl,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,
@@ -457,6 +462,7 @@ const uploadKit = createFormKit({
 const nativeTextLikeKit = createFormKit({
 	controls: nativeControls,
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,
@@ -999,7 +1005,7 @@ describe("native FormData serialization", () => {
 		expect(parsed.value.avatar?.size).toBe(avatar.size)
 	})
 
-	it("preserves text-like nativeControls values as hidden FormData entries", async () => {
+	it("preserves native text-like control values as hidden FormData entries", async () => {
 		const defaultValues = {
 			name: "Ada",
 			note: "private",

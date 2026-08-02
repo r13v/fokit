@@ -14,7 +14,7 @@ generated and manually composed form.
 
 | Need | Start with |
 | --- | --- |
-| Working semantic HTML | `nativeControls` |
+| Working semantic HTML | `createNativeControls()` |
 | Product input components | Add controls with `defineControl` |
 | One form needs an extra control | Extend the shared kit |
 | Different field or array markup | Override structural slots |
@@ -34,8 +34,9 @@ import {
 	type ControlProps,
 	createFormKit,
 	defineControl,
-	nativeControls,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import type { ComponentPropsWithRef } from "react"
 import { z } from "zod"
 
@@ -89,9 +90,10 @@ const productText = defineControl<string | undefined, TextOptions>({
 
 const kit = createFormKit({
 	controls: {
-		...nativeControls,
+		...createNativeControls(),
 		productText,
 	},
+	slots: createDefaultSlots(),
 })
 const schema = z.object({ name: z.string().optional() })
 
@@ -118,9 +120,14 @@ only where it is needed:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, defineControl, nativeControls } from "form-please"
+import { createFormKit, defineControl } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 
-const productKit = createFormKit({ controls: nativeControls })
+const productKit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const addressPicker = defineControl<string>({
 	component: () => null,
 	formData: { mode: "native" },
@@ -218,7 +225,7 @@ TanStack Query while keeping remote options outside synchronous UI resolvers.
 
 ## Native controls
 
-`nativeControls` is a normal registry built with `defineControl`:
+`createNativeControls()` returns a fresh frozen registry built with `defineControl`:
 
 | Control | Store value | Options summary |
 | --- | --- | --- |
@@ -232,7 +239,7 @@ TanStack Query while keeping remote options outside synchronous UI resolvers.
 | `file` | `File \| undefined` | single file and `accept` |
 
 Start with these controls to prove the form model. Replace only the controls
-that need product components. The [API reference](/api#nativecontrols) lists
+that need product components. The [API reference](/api#createnativecontrols) lists
 every option with its exact type and default.
 
 ## Replace structural slots
@@ -243,12 +250,12 @@ control state:
 ```tsx twoslash
 // @jsx: react-jsx
 import {
-	createDefaultSlots,
 	createFormKit,
-	nativeControls,
 	type FieldSlotProps,
 	type SubmitSlotProps,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 
 function ProductField({
 	rootProps,
@@ -292,7 +299,7 @@ function ProductSubmit({
 }
 
 const kit = createFormKit({
-	controls: nativeControls,
+	controls: createNativeControls(),
 	slots: {
 		...createDefaultSlots({
 			i18n: {

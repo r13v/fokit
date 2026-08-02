@@ -14,12 +14,6 @@ export const InteractiveLab = Object.assign(
 					"The Interactive Form, Please Lab runs only in a browser. It demonstrates a generated form, validation, reset, classic submission, array actions, and native FormData.",
 					"docs-site/src/components/interactive-lab.client.tsx",
 				),
-				{
-					type: "code",
-					lang: "ts",
-					value:
-						'import { createFormKit, nativeControls } from "form-please"\n\nconst kit = createFormKit({ controls: nativeControls })',
-				},
 			]
 		},
 	},

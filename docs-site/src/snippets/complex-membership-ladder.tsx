@@ -12,7 +12,6 @@ import {
 	extendValueChanges,
 	type FormInput,
 	type FormOutput,
-	nativeControls,
 	type UiNode,
 	useArrayField,
 	useFormContext,
@@ -20,6 +19,8 @@ import {
 	useValue,
 	type ValueChange,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -132,7 +133,10 @@ const membershipDraft = {
 	],
 } satisfies MembershipInput
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const contextualKit = kit.forContext<MembershipContext>()
 
 function LadderPreview() {

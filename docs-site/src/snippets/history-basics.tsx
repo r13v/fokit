@@ -1,13 +1,15 @@
 // biome-ignore-all lint/correctness/noUnusedVariables: Named regions are consumed independently by the documentation.
 "use client"
 
-import {
-	createFormKit as createSetupKit,
-	nativeControls as setupControls,
-} from "form-please"
+import { createFormKit as createSetupKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
-const kit = createSetupKit({ controls: setupControls })
+const kit = createSetupKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const schema = z.object({ name: z.string() })
 const definition = kit.defineForm(schema, { ui: [] })
 const defaultValues = { name: "" }

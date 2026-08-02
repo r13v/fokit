@@ -1,6 +1,7 @@
 import "form-please/layout.css"
 
-import { createFormKit, nativeControls, type StandardSchema } from "form-please"
+import type { StandardSchema } from "form-please"
+import { nativeFormKit as kit } from "form-please/preset-native"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
 import { StrictMode } from "react"
@@ -19,10 +20,6 @@ const schema: StandardSchema<ProfileInput> = {
 		},
 	},
 }
-
-const kit = createFormKit({
-	controls: nativeControls,
-})
 
 const definition = kit.defineForm(schema, {
 	ui: [

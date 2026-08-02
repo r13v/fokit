@@ -21,9 +21,12 @@ const layoutCss = await readFile(
 const javaScriptEntrypoints = {
 	".": "index",
 	"./core": "core",
+	"./default-slots": "default-slots",
 	"./devtools": "devtools",
 	"./history": "history",
+	"./native-controls": "native-controls",
 	"./persistence": "persistence",
+	"./preset-native": "preset-native",
 	"./react19": "react19",
 	"./server": "server",
 } as const
@@ -49,9 +52,12 @@ describe("package metadata", () => {
 		expect(Object.keys(packageJson.exports)).toEqual([
 			".",
 			"./core",
+			"./default-slots",
 			"./devtools",
 			"./history",
+			"./native-controls",
 			"./persistence",
+			"./preset-native",
 			"./react19",
 			"./server",
 			"./layout.css",
@@ -72,7 +78,7 @@ describe("package metadata", () => {
 
 	it("runs strict package analyzers against JavaScript entry points", () => {
 		expect(packageJson.scripts["package:check"]).toBe(
-			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./devtools ./history ./persistence ./react19 ./server",
+			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./react19 ./server",
 		)
 	})
 

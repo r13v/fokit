@@ -36,6 +36,17 @@
 			},
 			"default": "./dist/core.js"
 		},
+		"./default-slots": {
+			"import": {
+				"types": "./dist/default-slots.d.ts",
+				"default": "./dist/default-slots.js"
+			},
+			"require": {
+				"types": "./dist/default-slots.d.cts",
+				"default": "./dist/default-slots.cjs"
+			},
+			"default": "./dist/default-slots.js"
+		},
 		"./devtools": {
 			"import": {
 				"types": "./dist/devtools.d.ts",
@@ -58,6 +69,17 @@
 			},
 			"default": "./dist/history.js"
 		},
+		"./native-controls": {
+			"import": {
+				"types": "./dist/native-controls.d.ts",
+				"default": "./dist/native-controls.js"
+			},
+			"require": {
+				"types": "./dist/native-controls.d.cts",
+				"default": "./dist/native-controls.cjs"
+			},
+			"default": "./dist/native-controls.js"
+		},
 		"./persistence": {
 			"import": {
 				"types": "./dist/persistence.d.ts",
@@ -68,6 +90,17 @@
 				"default": "./dist/persistence.cjs"
 			},
 			"default": "./dist/persistence.js"
+		},
+		"./preset-native": {
+			"import": {
+				"types": "./dist/preset-native.d.ts",
+				"default": "./dist/preset-native.js"
+			},
+			"require": {
+				"types": "./dist/preset-native.d.cts",
+				"default": "./dist/preset-native.cjs"
+			},
+			"default": "./dist/preset-native.js"
 		},
 		"./react19": {
 			"import": {
@@ -113,7 +146,7 @@
 		"site:verify:preview": "npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/form-please npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
 		"site:verify:production": "BASE_PATH=/form-please npm run site:build && EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
 		"site:verify": "npm run site:verify:preview && npm run site:verify:production",
-		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./devtools ./history ./persistence ./react19 ./server",
+		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./react19 ./server",
 		"knip": "knip --workspace . --workspace docs-site",
 		"verify": "npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:smoke && npm run package:check && npm run knip"
 	},

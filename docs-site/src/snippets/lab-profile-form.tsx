@@ -1,12 +1,8 @@
 "use client"
 
-import {
-	createDefaultSlots,
-	createFormKit,
-	type FormInput,
-	type FormOutput,
-	nativeControls,
-} from "form-please"
+import { createFormKit, type FormInput, type FormOutput } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -70,7 +66,7 @@ const countryOptions = [
 ]
 
 export const kit = createFormKit({
-	controls: nativeControls,
+	controls: createNativeControls(),
 	slots: createDefaultSlots({
 		i18n: {
 			arrayAdd: "Add contact",

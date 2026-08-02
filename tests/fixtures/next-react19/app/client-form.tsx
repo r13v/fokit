@@ -11,6 +11,7 @@ import {
 	type SectionSlotProps,
 	type StandardSchema,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
 
@@ -90,6 +91,7 @@ const kit = createFormKit({
 		text,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field,
 		Section,
 		Array: ArraySlot,

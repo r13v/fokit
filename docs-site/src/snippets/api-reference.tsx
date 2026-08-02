@@ -4,7 +4,6 @@
 import {
 	type BeforeUpdateEvent,
 	type CreateFormOptions,
-	createDefaultSlots,
 	createFormKit,
 	type FormCommand,
 	type FormDispatchResult,
@@ -12,7 +11,6 @@ import {
 	type FormMiddleware,
 	type FormRuntimeOptions,
 	type FormTransaction,
-	nativeControls,
 	type SubmitHandler,
 	type UpdateEvent,
 	type ValidationOptions,
@@ -23,11 +21,13 @@ import {
 	type UiNode as CoreUiNode,
 	normalizeDefinition as normalizeCoreDefinition,
 } from "form-please/core"
+import { createDefaultSlots } from "form-please/default-slots"
 import {
 	type CreateDevToolsOptions,
 	createDevToolsMiddleware,
 } from "form-please/devtools"
 import { createHistoryMiddleware, replayJournal } from "form-please/history"
+import { createNativeControls } from "form-please/native-controls"
 import {
 	createDateCodec,
 	createFileCodec,
@@ -51,10 +51,10 @@ const schema = z.object({
 type Input = FormInput<typeof schema>
 type Context = { readonly actorId: string }
 
-const controls = nativeControls
+const controls = createNativeControls()
 const slots = createDefaultSlots()
 const ui = [] as const
-const kit = createFormKit({ controls })
+const kit = createFormKit({ controls, slots })
 const definition = kit.defineForm(schema, { ui })
 const defaultValues = {
 	profile: { name: "Ada" },
@@ -71,7 +71,7 @@ const runtimeOptions = {
 } satisfies FormRuntimeOptions<typeof schema, Context>
 
 // [!region create-form-kit]
-const defaultKit = createFormKit({ controls })
+const defaultKit = createFormKit({ controls, slots: createDefaultSlots() })
 const customSlotKit = createFormKit({ controls, slots })
 // [!endregion create-form-kit]
 

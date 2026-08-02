@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { formBindingFinalizer } from "../core/feature-protocol.js"
 import { createFormDocument } from "../core/form-reducer.js"
 import type { FormMiddleware } from "../core/middleware.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { createHistoryMiddleware } from "../history/history.js"
 import { defineControl } from "../react/control.js"
 import { createFormKit } from "../react/create-form-kit.js"
@@ -29,7 +30,10 @@ const text = defineControl<string>({
 	component: () => null,
 	formData: { mode: "native" },
 })
-const kit = createFormKit({ controls: { text } })
+const kit = createFormKit({
+	controls: { text },
+	slots: createDefaultSlots(),
+})
 const schema: Schema = {
 	"~standard": {
 		version: 1,

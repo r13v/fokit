@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 
-import type { FormKitSlots } from "./create-form-kit.js"
+import type { FormKitSlots } from "../react/create-form-kit.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -10,7 +10,7 @@ import type {
 	FieldSlotProps,
 	SectionSlotProps,
 	SubmitSlotProps,
-} from "./slots.js"
+} from "../react/slots.js"
 
 export type DefaultSlotI18nValue<Data> =
 	| string
@@ -32,7 +32,7 @@ export type DefaultSlotsI18n = {
 	readonly arrayMoveDown: DefaultSlotI18nValue<DefaultArrayItemI18nData>
 }
 
-const englishDefaultSlotsI18n = Object.freeze({
+const englishDefaultSlotsI18n = /* @__PURE__ */ Object.freeze({
 	arrayAdd: "Add item",
 	arrayRemove: ({ position }) => `Remove item ${position}`,
 	arrayMoveUp: ({ position }) => `Move item ${position} up`,

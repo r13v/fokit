@@ -4,13 +4,6 @@ import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import type { FormIssue } from "../core/index.js"
-import {
-	createDefaultSlots,
-	type DefaultArrayAddI18nData,
-	type DefaultArrayItemI18nData,
-	type DefaultSlotI18nValue,
-	type DefaultSlotsI18n,
-} from "./default-slots.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -19,7 +12,14 @@ import type {
 	SectionSlotProps,
 	StructuralNodeName,
 	StructuralRootProps,
-} from "./slots.js"
+} from "../react/slots.js"
+import {
+	createDefaultSlots,
+	type DefaultArrayAddI18nData,
+	type DefaultArrayItemI18nData,
+	type DefaultSlotI18nValue,
+	type DefaultSlotsI18n,
+} from "./default-slots.js"
 
 const _arrayAddMessage: DefaultSlotI18nValue<DefaultArrayAddI18nData> = ({
 	label,

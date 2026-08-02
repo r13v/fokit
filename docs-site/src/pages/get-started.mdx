@@ -94,8 +94,10 @@ therefore cannot silently change the product UI.
 
 ### The kit owns rendering
 
-`createFormKit({ controls: nativeControls })` maps control names to the shipped
-native renderers. It also supplies accessible structural slots.
+The example constructs a kit explicitly because it localizes the default array
+actions. For the English baseline, import `nativeFormKit` from
+`form-please/preset-native`; it combines the shipped native renderers and
+accessible structural slots.
 
 `kit.createForm` creates the form instance. `kit.AutoForm` binds and renders
 that existing form. You can render the same form manually with `kit.Form`,
@@ -125,7 +127,7 @@ submission payload.
 
 ## Make it yours
 
-`nativeControls` and the default slots are a working baseline. They are not a
+Native controls and the default slots are a working baseline. They are not a
 design system. Use `defineControl` to replace controls. Override structural
 slots when their markup must change. Use `createDefaultSlots({ i18n })` to
 change the default action labels.

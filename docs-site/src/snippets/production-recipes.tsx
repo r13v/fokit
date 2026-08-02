@@ -2,13 +2,15 @@
 // biome-ignore-all lint/correctness/noUnusedVariables: Named regions are consumed independently by the documentation.
 "use client"
 
-import {
-	createFormKit as createSetupKit,
-	nativeControls as setupControls,
-} from "form-please"
+import { createFormKit as createSetupKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
-const setupKit = createSetupKit({ controls: setupControls })
+const setupKit = createSetupKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const setupSchema = z.object({ name: z.string() })
 const definition = setupKit.defineForm(setupSchema, {
 	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
@@ -19,12 +21,14 @@ const defaultValues = { name: "" }
 import {
 	createFormKit,
 	FormProvider,
-	nativeControls,
 	useFormContext,
 	useFormState,
 } from "form-please"
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 function DirtyStatus() {
 	const form = useFormContext()
@@ -48,7 +52,10 @@ function Editor() {
 
 const profileSchema = z.object({ id: z.string(), name: z.string() })
 type Profile = z.infer<typeof profileSchema>
-const profileKit = createSetupKit({ controls: setupControls })
+const profileKit = createSetupKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const profileDefinition = profileKit.defineForm(profileSchema, { ui: [] })
 
 // [!region edit-baseline]

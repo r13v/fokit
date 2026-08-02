@@ -50,11 +50,16 @@ Scope product styling through the native form class:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const definition = kit.defineForm(schema, {
 	ui: [
 		{

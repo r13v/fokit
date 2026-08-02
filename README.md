@@ -26,19 +26,12 @@ Schema implementation. This example uses Zod.
 ## Create a form
 
 ```tsx
-import {
-	createFormKit,
-	type FormMiddleware,
-	nativeControls,
-} from "form-please"
+import type { FormMiddleware } from "form-please"
+import { nativeFormKit as kit } from "form-please/preset-native"
 import { z } from "zod"
 
 const contactSchema = z.object({
 	email: z.string().email("Enter a valid email"),
-})
-
-const kit = createFormKit({
-	controls: nativeControls,
 })
 
 const contactForm = kit.defineForm(contactSchema, {
@@ -110,8 +103,11 @@ registered controls by name. It does not embed a design system.
 
 | Import | Purpose |
 | --- | --- |
-| `form-please` | React form kits, native controls, generated forms, hooks, and shared types |
+| `form-please` | React form-kit construction, generated forms, hooks, and shared types |
 | `form-please/core` | React-free stores, definitions, paths, UI resolution, and value helpers |
+| `form-please/default-slots` | Accessible structural slot factory and localization types |
+| `form-please/native-controls` | Native HTML control factory and option types |
+| `form-please/preset-native` | Ready native form kit with accessible English default slots |
 | `form-please/server` | Bounded `FormData` parsing and Standard Schema validation |
 | `form-please/react19` | `ActionForm` and `ActionSubmit` for React 19 |
 | `form-please/history` | Optional history, event journals, and deterministic replay |
@@ -128,8 +124,9 @@ import "form-please/layout.css"
 
 ## Stable defaults
 
-- Omitted slots use unstyled, semantic markup. Built-in array actions use
-  English labels.
+- `createFormKit` requires a complete slot registry.
+- `createDefaultSlots()` provides unstyled semantic markup and English array
+  action labels.
 - Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
   `asyncDebounceMs: 0`.
 - `parseFormData` defaults are `maxEntries: 1_000`, `maxPathLength: 1_024`,

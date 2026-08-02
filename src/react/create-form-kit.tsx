@@ -14,8 +14,7 @@ import {
 	type UiNode,
 } from "../core/index.js"
 import { createAutoFormComponent } from "./auto-form.js"
-import type { ControlDefinitionRegistry } from "./control.js"
-import { createDefaultSlots } from "./default-slots.js"
+import type { ControlDefinitionRegistry } from "./control-definition.js"
 import { createFieldsComponent } from "./fields.js"
 import type { NativeFormProps } from "./form.js"
 import {
@@ -79,8 +78,10 @@ export type CreateFormKitOptions<
 	ArraySlotOptions = never,
 > = {
 	readonly controls: Controls
-	readonly slots?: Partial<
-		FormKitSlots<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+	readonly slots: FormKitSlots<
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions
 	>
 }
 
@@ -543,7 +544,6 @@ export function createFormKit<
 	>,
 ): FormKit<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions> {
 	const slots = Object.freeze({
-		...createDefaultSlots(),
 		...options.slots,
 	}) as unknown as Partial<RuntimeFormKitSlots>
 	assertSlots(slots, "createFormKit")

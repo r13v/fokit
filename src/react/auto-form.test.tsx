@@ -4,6 +4,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import type { FormMiddleware, ImperativeFormIssue } from "../core/index.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import { useFormContext } from "./form-context.js"
@@ -86,6 +87,7 @@ const profileKit = createFormKit({
 		text,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,

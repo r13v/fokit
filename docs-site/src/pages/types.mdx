@@ -149,7 +149,8 @@ The main control types are:
 | `ControlContextOf` | Extract context requirements |
 | `IsValidControlValue` | Reject values outside the supported Form, Please data model |
 
-The shipped controls expose `NativeTextOptions`, `NativeTextareaOptions`,
+Import the shipped control option types from `form-please/native-controls`.
+They include `NativeTextOptions`, `NativeTextareaOptions`,
 `NativeSelectOptions`, `NativeSelectEmptyOption`, `NativeNumberOptions`,
 `NativeDateOptions`, `NativeTimeOptions`, and `NativeFileOptions`.
 
@@ -193,7 +194,8 @@ Structural contracts carry root props that preserve the Form, Please DOM
 protocol and accessible relationships. `SubmitSlotProps` carries owned button
 props, current input values, and submission state. The default-slot message contract is described by
 `DefaultSlotsI18n`, `DefaultArrayAddI18nData`,
-`DefaultArrayItemI18nData`, and `DefaultSlotI18nValue`.
+`DefaultArrayItemI18nData`, and `DefaultSlotI18nValue`; import those types from
+`form-please/default-slots`.
 
 ## Server results
 

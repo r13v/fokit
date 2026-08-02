@@ -139,15 +139,15 @@ export {
 	setPathValue,
 	unsetPathValue,
 } from "./core/index.js"
+export type { FieldControlProps } from "./react/control.js"
 export type {
 	AnyControlDefinition,
 	ControlDefinition,
 	ControlDefinitionRegistry,
 	ControlProps,
 	DefineControlInput,
-	FieldControlProps,
-} from "./react/control.js"
-export { defineControl } from "./react/control.js"
+} from "./react/control-definition.js"
+export { defineControl } from "./react/control-definition.js"
 export type {
 	AutoFormProps,
 	CreateFormKitOptions,
@@ -160,13 +160,6 @@ export type {
 	SubmitProps,
 } from "./react/create-form-kit.js"
 export { createFormKit } from "./react/create-form-kit.js"
-export type {
-	DefaultArrayAddI18nData,
-	DefaultArrayItemI18nData,
-	DefaultSlotI18nValue,
-	DefaultSlotsI18n,
-} from "./react/default-slots.js"
-export { createDefaultSlots } from "./react/default-slots.js"
 export type { NativeFormProps } from "./react/form.js"
 export type { FormProviderProps } from "./react/form-context.js"
 export { FormProvider, useFormContext } from "./react/form-context.js"
@@ -182,19 +175,6 @@ export {
 	useFormState,
 	useValue,
 } from "./react/hooks.js"
-export type {
-	NativeDateOptions,
-	NativeFileOptions,
-	NativeNumberOptions,
-	NativeSelectEmptyOption,
-	NativeSelectOption,
-	NativeSelectOptions,
-	NativeTextareaOptions,
-	NativeTextOptions,
-	NativeTextType,
-	NativeTimeOptions,
-} from "./react/native-controls.js"
-export { nativeControls } from "./react/native-controls.js"
 export type {
 	RenderNodeComponent,
 	RenderNodeProps,

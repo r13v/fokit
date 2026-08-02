@@ -13,11 +13,12 @@ import {
 	type FormInput,
 	type FormOutput,
 	fromResource,
-	nativeControls,
 	useFormContext,
 	useFormState,
 	type ValueChange,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -160,7 +161,10 @@ const equipmentCatalog: readonly EquipmentOption[] = [
 	{ value: "laser-cutter", label: "Laser cutter" },
 ]
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 function PolicyBalance() {
 	const form = useFormContext<typeof studioPolicySchema, PolicyContext>()

@@ -3,10 +3,9 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
-import { createDefaultSlots } from "./default-slots.js"
 import { useFormContext } from "./form-context.js"
 import type {
 	ArrayItemSlotProps,
@@ -87,6 +86,7 @@ const kit = createFormKit({
 		text,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,

@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import type { FormMiddleware } from "../../src/core/index.js"
 import { createFormStore } from "../../src/core/index.js"
+import { createDefaultSlots } from "../../src/default-slots/index.js"
 import type * as RootPublic from "../../src/index.js"
 import {
 	createFormKit,
@@ -62,9 +63,10 @@ const kind = defineControl<ExampleInput["kind"]>({
 	component: () => null,
 	formData: { mode: "native" },
 })
-const kit = createFormKit({ controls: { text, kind } })
-const siblingKit = createFormKit({ controls: { text, kind } })
-const incompatibleKit = createFormKit({ controls: { text } })
+const slots = createDefaultSlots()
+const kit = createFormKit({ controls: { text, kind }, slots })
+const siblingKit = createFormKit({ controls: { text, kind }, slots })
+const incompatibleKit = createFormKit({ controls: { text }, slots })
 const extendedKit = kit.extend({ controls: { extra: text } })
 const contextualKit = kit.forContext<ExampleContext>()
 contextualKit.forContext<ExampleContext & { readonly actor: string }>()
@@ -75,6 +77,7 @@ const contextualExtendedKit = contextualKit.extend({
 })
 createFormKit({
 	controls: { text, kind },
+	slots,
 	// @ts-expect-error middleware belongs to each kit.createForm call
 	middleware: [],
 })

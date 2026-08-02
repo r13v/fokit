@@ -14,12 +14,6 @@ export const OverviewDemo = Object.assign(
 					"The live overview form runs only in a browser. It renders an explicit profile definition, validates it with Standard Schema, and returns typed output.",
 					"docs-site/src/components/overview-demo.client.tsx",
 				),
-				{
-					type: "code",
-					lang: "tsx",
-					value:
-						'import { createFormKit, nativeControls } from "form-please"\n\nconst kit = createFormKit({ controls: nativeControls })\n\nfunction ProfileForm() {\n\tconst form = kit.useCreateForm(profileDefinition, { defaultValues })\n\treturn <kit.AutoForm form={form} onSubmit={({ value }) => saveProfile(value)} />\n}',
-				},
 			]
 		},
 	},

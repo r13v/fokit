@@ -15,15 +15,19 @@ behavior. Import each optional feature from its own package entry.
 | --- | --- |
 | `form-please` | Form kits, React components, hooks, commands, transactions, events, and shared types |
 | `form-please/core` | React-free `createFormStore` plus core types and helpers |
+| `form-please/default-slots` | Accessible structural slot factory and localization types |
 | `form-please/history` | History, journals, cursors, and pure replay |
+| `form-please/native-controls` | Native HTML control factory and option types |
 | `form-please/persistence` | Persistence, adapters, codecs, and migration |
+| `form-please/preset-native` | Ready-to-use native controls and accessible default slots |
 | `form-please/devtools` | Constrained Redux DevTools integration |
 | `form-please/react19` | `ActionForm` and `ActionSubmit` |
 | `form-please/server` | `parseFormData` and server result types |
 
 The main entry does not export global `createForm`, `useCreateForm`,
 `useBindForm`, `useForm`, or `createFormStore`. It also does not export
-`KitForm`, a root `Submit` value, `UseFormOptions`, or optional feature code.
+`KitForm`, a root `Submit` value, `UseFormOptions`, rendering defaults, or
+optional feature code.
 
 ## createFormKit
 
@@ -35,14 +39,33 @@ The function freezes one controls-and-slots snapshot. `kit.extend` creates a
 new snapshot. A form belongs to the exact snapshot that created it.
 
 ```tsx twoslash
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 ```
 
 Control names are add-only. An extension can replace compatible slots, but it
 cannot replace an inherited control. Base, extended, and sibling kits are
 different owners.
+
+## nativeFormKit
+
+Import `nativeFormKit` from `form-please/preset-native` when the shipped
+native controls and accessible English default slots are the desired baseline:
+
+```tsx twoslash
+import { nativeFormKit as kit } from "form-please/preset-native"
+```
+
+The preset is a frozen `FormKit`. Extend it to add application controls or
+replace compatible slots. Use `createFormKit`, `createNativeControls`, and
+`createDefaultSlots` directly when localization or complete registry
+construction must be explicit.
 
 ## kit.forContext
 
@@ -367,6 +390,12 @@ accessibility, and `FormData` contracts. Use `mode: "native"`, `"hidden"`, or
 `"none"` to declare submission behavior. Native option types include
 `NativeTextOptions`, `NativeSelectOptions`, and `NativeFileOptions`.
 
+## createNativeControls
+
+Import `createNativeControls` and its option types from
+`form-please/native-controls`. Each call returns a fresh frozen registry whose
+control definitions are also frozen.
+
 ## createDefaultSlots
 
 ```ts
@@ -374,7 +403,8 @@ accessibility, and `FormData` contracts. Use `mode: "native"`, `"hidden"`, or
 ```
 
 The default slots provide semantic markup and English array action labels.
-They do not provide a visual theme.
+Import them from `form-please/default-slots`. They do not provide a visual
+theme.
 
 ## React 19
 

@@ -21,6 +21,9 @@ export default defineConfig({
 					name: "react",
 					environment: "jsdom",
 					include: [
+						"src/default-slots/**/*.test.{ts,tsx}",
+						"src/native-controls/**/*.test.{ts,tsx}",
+						"src/preset-native/**/*.test.{ts,tsx}",
 						"src/react/**/*.test.{ts,tsx}",
 						"src/react19/**/*.test.{ts,tsx}",
 					],

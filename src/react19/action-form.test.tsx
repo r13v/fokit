@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { getFormFeatureCapability } from "../core/feature-protocol.js"
 import type { FormResult } from "../core/form-result.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { createHistoryMiddleware } from "../history/index.js"
 import { defineControl } from "../react/control.js"
 import { createFormKit } from "../react/create-form-kit.js"
@@ -101,6 +102,7 @@ const kit = createFormKit({
 		nativeWithoutSerializer,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,
@@ -511,7 +513,7 @@ describe("React 19 ActionForm", () => {
 		})
 		const baseKit = createFormKit({
 			controls: { baseText: baseControl },
-			slots: { Field: BaseOwnedField },
+			slots: { ...createDefaultSlots(), Field: BaseOwnedField },
 		})
 		const extendedKit = baseKit.extend({
 			controls: { extendedText: extendedControl },

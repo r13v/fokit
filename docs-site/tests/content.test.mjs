@@ -263,7 +263,8 @@ const canonicalPages = [
 const publicApiTerms = [
 	"createFormKit",
 	"createDefaultSlots",
-	"nativeControls",
+	"createNativeControls",
+	"nativeFormKit",
 	"defineControl",
 	"useCreateForm",
 	"useBindForm",
@@ -595,7 +596,7 @@ const requiredCorePageContent = {
 			"UI definition owns structure",
 			"Your kit owns rendering",
 			"OverviewDemo",
-			"nativeControls",
+			"nativeFormKit",
 			"kit.AutoForm",
 		],
 	},
@@ -610,8 +611,7 @@ const requiredCorePageContent = {
 			"Choose your next step",
 		],
 		terms: [
-			"createFormKit",
-			"nativeControls",
+			"nativeFormKit",
 			"createDefaultSlots",
 			"kit.AutoForm",
 			"Standard Schema",
@@ -622,6 +622,7 @@ const requiredCorePageContent = {
 		headings: [
 			"Entry points",
 			"createFormKit",
+			"nativeFormKit",
 			"kit.defineForm",
 			"kit.createForm",
 			"kit.useCreateForm",
@@ -649,6 +650,7 @@ const requiredCorePageContent = {
 			"form-please/history",
 			"form-please/persistence",
 			"form-please/devtools",
+			"form-please/preset-native",
 			"CreateFormOptions",
 			"FormRuntimeOptions",
 			"FormCommand",
@@ -743,7 +745,7 @@ const requiredCorePageContent = {
 			"Does Form, Please provide wizards or autosave?",
 		],
 		terms: [
-			"nativeControls",
+			"createNativeControls",
 			"createDefaultSlots",
 			"defineControl",
 			"Standard Schema",
@@ -955,7 +957,7 @@ const requiredGuidePageContent = {
 			"Replace structural slots",
 		],
 		terms: [
-			"nativeControls",
+			"createNativeControls",
 			"defineControl",
 			'mode: "native"',
 			"createDefaultSlots",
@@ -1286,7 +1288,8 @@ test("Interactive Lab uses Vocs components and public Form, Please defaults", as
 	assert.match(wrapper, /from "\.\/interactive-lab\.client"/)
 	assert.match(wrapper, /toMarkdown/)
 	assert.match(wrapper, /Interactive Form, Please Lab runs only in a browser/)
-	assert.match(wrapper, /createFormKit\(\{ controls: nativeControls \}\)/)
+	assert.match(wrapper, /\\tcontrols: createNativeControls\(\)/)
+	assert.match(wrapper, /\\tslots: createDefaultSlots\(\)/)
 	assert.match(wrapper, /from "\.\/markdown-fallback"/)
 	assert.match(
 		wrapper,
@@ -1308,7 +1311,8 @@ test("Interactive Lab uses Vocs components and public Form, Please defaults", as
 	assert.match(snippet, /^"use client"/)
 	assert.match(snippet, /createDefaultSlots/)
 	assert.match(snippet, /createFormKit/)
-	assert.match(snippet, /controls:\s*nativeControls/)
+	assert.match(snippet, /controls:\s*createNativeControls\(\)/)
+	assert.match(snippet, /slots:\s*createDefaultSlots\(/)
 	assert.match(snippet, /arrayAdd:\s*"Add contact"/)
 	assert.match(snippet, /Move contact \$\{position\} up/)
 	assert.match(snippet, /Move contact \$\{position\} down/)
@@ -1372,8 +1376,8 @@ test("overview proves the public Form, Please loop with a live typed form", asyn
 		/docs-site\/src\/components\/overview-demo\.client\.tsx/,
 	)
 	assert.match(client, /^"use client"/)
-	assert.match(client, /createFormKit/)
-	assert.match(client, /controls:\s*nativeControls/)
+	assert.match(client, /nativeFormKit as kit/)
+	assert.match(client, /form-please\/preset-native/)
 	assert.match(client, /kit\.useCreateForm/)
 	assert.match(client, /type:\s*"email"/)
 	assert.match(client, /FormOutput<typeof profileSchema>/)
@@ -1970,7 +1974,8 @@ test("Vocs root page and root CSS replace the custom app shell", async () => {
 	assert.match(page, /^---\ntitle: Form, Please\ndescription: /)
 	assert.match(page, /# Build forms with ease/)
 	assert.match(page, /<OverviewDemo \/>/)
-	assert.match(page, /createFormKit\(\{\s*controls: nativeControls/)
+	assert.match(page, /nativeFormKit as kit/)
+	assert.match(page, /form-please\/preset-native/)
 	assert.match(page, /kit\.AutoForm/)
 	assert.match(
 		page,

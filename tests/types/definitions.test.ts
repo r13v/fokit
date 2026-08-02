@@ -8,6 +8,7 @@ import {
 	type ErrorMessageSlotProps,
 	type FieldSlotProps,
 	type SectionSlotProps,
+	type SubmitSlotProps,
 } from "../../src/index.js"
 
 type ExampleInput = {
@@ -29,6 +30,7 @@ const Section = (_props: SectionSlotProps) => null
 const ArraySlotComponent = (_props: ArraySlotProps) => null
 const ArrayItem = (_props: ArrayItemSlotProps) => null
 const ErrorMessage = (_props: ErrorMessageSlotProps) => null
+const Submit = (_props: SubmitSlotProps) => null
 
 const text = defineControl<string | undefined>({
 	component(_props) {
@@ -59,9 +61,12 @@ const kit = createFormKit({
 		Array: ArraySlotComponent,
 		ArrayItem,
 		ErrorMessage,
+		Submit,
 	},
 })
 
+// Complete slots are explicit so custom design systems do not bundle defaults.
+// @ts-expect-error createFormKit requires a complete slot registry
 const omittedSlotsKit = createFormKit({
 	controls: {
 		optionalObject,
@@ -74,6 +79,7 @@ const partialSlotsKit = createFormKit({
 		optionalObject,
 		text,
 	},
+	// @ts-expect-error partial slots must be completed before creating a kit
 	slots: {
 		Field,
 	},

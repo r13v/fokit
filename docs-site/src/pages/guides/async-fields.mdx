@@ -95,15 +95,21 @@ still applies:
 import {
 	createFormKit,
 	fromResource,
-	nativeControls,
-	type NativeSelectOption,
 	type ResourceState,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import {
+	createNativeControls,
+	type NativeSelectOption,
+} from "form-please/native-controls"
 import { useEffect, useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({ city: z.string() })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 type Cities = ResourceState<readonly NativeSelectOption[], Error>
 type Context = {

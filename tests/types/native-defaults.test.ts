@@ -1,15 +1,21 @@
 import {
-	type ControlName,
-	type ControlOptionsOf,
-	type ControlValueOf,
 	createDefaultSlots,
-	createFormKit,
 	type DefaultArrayAddI18nData,
 	type DefaultArrayItemI18nData,
 	type DefaultSlotI18nValue,
 	type DefaultSlotsI18n,
+} from "../../src/default-slots/index.js"
+import {
+	type ControlName,
+	type ControlOptionsOf,
+	type ControlValueOf,
+	createFormKit,
 	defineControl,
 	type FormKitSlots,
+	type StandardSchema,
+} from "../../src/index.js"
+import {
+	createNativeControls,
 	type NativeDateOptions,
 	type NativeFileOptions,
 	type NativeNumberOptions,
@@ -20,9 +26,7 @@ import {
 	type NativeTextOptions,
 	type NativeTextType,
 	type NativeTimeOptions,
-	nativeControls,
-	type StandardSchema,
-} from "../../src/index.js"
+} from "../../src/native-controls/index.js"
 
 type Equal<Left, Right> =
 	(<Value>() => Value extends Left ? 1 : 2) extends <
@@ -64,6 +68,7 @@ const defaultSlots = createDefaultSlots({
 		arrayMoveDown: "Move down",
 	},
 })
+const nativeControls = createNativeControls()
 
 type _defaultSlotsAreComplete = Expect<Equal<typeof defaultSlots, FormKitSlots>>
 
@@ -80,6 +85,7 @@ const partialI18n = {
 
 const nativeKit = createFormKit({
 	controls: nativeControls,
+	slots: defaultSlots,
 })
 
 type NativeControlName = ControlName<typeof nativeKit.controls>
@@ -286,6 +292,7 @@ const mixedKit = createFormKit({
 		...nativeControls,
 		money,
 	},
+	slots: defaultSlots,
 })
 
 type _mixedControlNames = Expect<
@@ -416,16 +423,21 @@ const badOptionalSelectOptions = {
 } satisfies NativeSelectOptions<NativeValues["representation"]>
 
 type CoreExports = typeof import("../../src/core/index.js")
+type RootExports = typeof import("../../src/index.js")
 type ServerExports = typeof import("../../src/server/index.js")
 
+// @ts-expect-error default slots must stay out of the headless root entry
+type _noRootDefaultSlots = RootExports["createDefaultSlots"]
+// @ts-expect-error native controls must stay out of the headless root entry
+type _noRootNativeControls = RootExports["createNativeControls"]
 // @ts-expect-error React defaults must stay out of the core entry
 type _noCoreDefaultSlots = CoreExports["createDefaultSlots"]
 // @ts-expect-error native React controls must stay out of the core entry
-type _noCoreNativeControls = CoreExports["nativeControls"]
+type _noCoreNativeControls = CoreExports["createNativeControls"]
 // @ts-expect-error React defaults must stay out of the server entry
 type _noServerDefaultSlots = ServerExports["createDefaultSlots"]
 // @ts-expect-error native React controls must stay out of the server entry
-type _noServerNativeControls = ServerExports["nativeControls"]
+type _noServerNativeControls = ServerExports["createNativeControls"]
 
 void defaultSlots
 void partialI18n

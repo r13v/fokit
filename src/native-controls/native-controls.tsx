@@ -8,7 +8,10 @@ import {
 	useState,
 } from "react"
 
-import { type ControlProps, defineControl } from "./control.js"
+import {
+	type ControlProps,
+	defineControl,
+} from "../react/control-definition.js"
 
 export type NativeTextType =
 	| "text"
@@ -263,19 +266,21 @@ function NativeSelectControl({
 }: ControlProps<string | undefined, NativeSelectOptions>): ReactElement {
 	const selectOptions = options.options
 	if (!Array.isArray(selectOptions)) {
-		throw new TypeError("nativeControls.select requires options.options")
+		throw new TypeError(
+			"createNativeControls().select requires options.options",
+		)
 	}
 	if (
 		options.emptyOption !== undefined &&
 		selectOptions.some((option) => option.value === "")
 	) {
 		throw new TypeError(
-			'nativeControls.select cannot combine options.emptyOption with an option whose value is ""',
+			'createNativeControls().select cannot combine options.emptyOption with an option whose value is ""',
 		)
 	}
 	if (value === undefined && options.emptyOption === undefined) {
 		throw new TypeError(
-			"nativeControls.select requires options.emptyOption to represent undefined",
+			"createNativeControls().select requires options.emptyOption to represent undefined",
 		)
 	}
 
@@ -454,95 +459,97 @@ function NativeFileControl({
 	)
 }
 
-const text = defineControl<string | undefined, NativeTextOptions>({
-	component: NativeTextControl,
-	formData: {
-		mode: "native",
-		serialize: serializeOptionalString,
-	},
-})
-
-const textarea = defineControl<string | undefined, NativeTextareaOptions>({
-	component: NativeTextareaControl,
-	formData: {
-		mode: "native",
-		serialize: serializeOptionalString,
-	},
-})
-
-const number = defineControl<number | undefined, NativeNumberOptions>({
-	component: NativeNumberControl,
-	formData: {
-		mode: "native",
-		serialize(value, details) {
-			return value === undefined || Number.isNaN(value)
-				? []
-				: [
-						{
-							name: details.name,
-							value: String(value),
-						},
-					]
+export function createNativeControls() {
+	const text = defineControl<string | undefined, NativeTextOptions>({
+		component: NativeTextControl,
+		formData: {
+			mode: "native",
+			serialize: serializeOptionalString,
 		},
-	},
-})
+	})
 
-const date = defineControl<string | undefined, NativeDateOptions>({
-	component: NativeDateControl,
-	formData: {
-		mode: "native",
-		serialize: serializeOptionalString,
-	},
-})
-
-const time = defineControl<string | undefined, NativeTimeOptions>({
-	component: NativeTimeControl,
-	formData: {
-		mode: "native",
-		serialize: serializeOptionalString,
-	},
-})
-
-const select = defineControl<string | undefined, NativeSelectOptions>({
-	component: NativeSelectControl,
-	formData: {
-		mode: "native",
-		serialize: serializeOptionalString,
-	},
-})
-
-const checkbox = defineControl<boolean>({
-	component: NativeCheckboxControl,
-	formData: {
-		mode: "native",
-		serialize(value, details) {
-			return [
-				{
-					name: details.name,
-					value: String(value),
-				},
-			]
+	const textarea = defineControl<string | undefined, NativeTextareaOptions>({
+		component: NativeTextareaControl,
+		formData: {
+			mode: "native",
+			serialize: serializeOptionalString,
 		},
-	},
-})
+	})
 
-const file = defineControl<File | undefined, NativeFileOptions>({
-	component: NativeFileControl,
-	formData: {
-		mode: "native",
-	},
-})
+	const number = defineControl<number | undefined, NativeNumberOptions>({
+		component: NativeNumberControl,
+		formData: {
+			mode: "native",
+			serialize(value, details) {
+				return value === undefined || Number.isNaN(value)
+					? []
+					: [
+							{
+								name: details.name,
+								value: String(value),
+							},
+						]
+			},
+		},
+	})
 
-export const nativeControls = Object.freeze({
-	text,
-	textarea,
-	select,
-	checkbox,
-	number,
-	date,
-	time,
-	file,
-})
+	const date = defineControl<string | undefined, NativeDateOptions>({
+		component: NativeDateControl,
+		formData: {
+			mode: "native",
+			serialize: serializeOptionalString,
+		},
+	})
+
+	const time = defineControl<string | undefined, NativeTimeOptions>({
+		component: NativeTimeControl,
+		formData: {
+			mode: "native",
+			serialize: serializeOptionalString,
+		},
+	})
+
+	const select = defineControl<string | undefined, NativeSelectOptions>({
+		component: NativeSelectControl,
+		formData: {
+			mode: "native",
+			serialize: serializeOptionalString,
+		},
+	})
+
+	const checkbox = defineControl<boolean>({
+		component: NativeCheckboxControl,
+		formData: {
+			mode: "native",
+			serialize(value, details) {
+				return [
+					{
+						name: details.name,
+						value: String(value),
+					},
+				]
+			},
+		},
+	})
+
+	const file = defineControl<File | undefined, NativeFileOptions>({
+		component: NativeFileControl,
+		formData: {
+			mode: "native",
+		},
+	})
+
+	return Object.freeze({
+		text,
+		textarea,
+		select,
+		checkbox,
+		number,
+		date,
+		time,
+		file,
+	})
+}
 
 function serializeOptionalString(
 	value: string | undefined,

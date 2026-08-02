@@ -32,13 +32,18 @@ Use blur-first validation when early feedback helps:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({
 	email: z.string().email("Enter a valid email"),
 })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const definition = kit.defineForm(schema, {
 	ui: [
 		{

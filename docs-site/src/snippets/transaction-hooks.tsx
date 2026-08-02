@@ -5,9 +5,10 @@ import {
 	createFormKit,
 	extendValueChanges,
 	type FormInput,
-	nativeControls,
 	type UpdateEvent,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -24,7 +25,10 @@ const scheduleSchema = z
 
 type ScheduleInput = FormInput<typeof scheduleSchema>
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const scheduleDefinition = kit.defineForm(scheduleSchema, {
 	ui: [
 		{

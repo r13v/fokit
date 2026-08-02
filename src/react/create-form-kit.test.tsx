@@ -10,6 +10,7 @@ import type {
 	FormMiddleware,
 	ImperativeFormIssue,
 } from "../core/index.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { createDevToolsMiddleware } from "../devtools/devtools.js"
 import { FieldControl } from "./control.js"
 import { createFormKit, type FormKitSlots } from "./create-form-kit.js"
@@ -82,7 +83,10 @@ describe("createFormKit", () => {
 		const controls = {
 			text: textControl,
 		}
-		const baseKit = createFormKit({ controls })
+		const baseKit = createFormKit({
+			controls,
+			slots: createDefaultSlots(),
+		})
 		const LocalField = ({ rootProps, label, control }: FieldSlotProps) => (
 			<div {...rootProps} data-local-field="">
 				{label}
@@ -136,6 +140,7 @@ describe("createFormKit", () => {
 			controls: {
 				text: textControl,
 			},
+			slots: createDefaultSlots(),
 		})
 		const localKit = baseKit.extend({
 			controls: {
@@ -202,7 +207,10 @@ describe("createFormKit", () => {
 	})
 
 	it("rejects a JavaScript-erased definition whose controls are missing", () => {
-		const baseKit = createFormKit({ controls: { text: textControl } })
+		const baseKit = createFormKit({
+			controls: { text: textControl },
+			slots: createDefaultSlots(),
+		})
 		const extendedKit = baseKit.extend({
 			controls: { localText: textControl },
 		})
@@ -224,6 +232,7 @@ describe("createFormKit", () => {
 			controls: {
 				text: textControl,
 			},
+			slots: createDefaultSlots(),
 		})
 		const extend = kit.extend as (options: unknown) => unknown
 
@@ -251,11 +260,12 @@ describe("createFormKit", () => {
 		).toThrow(/requires a Submit slot/i)
 	})
 
-	it("normalizes definitions with kit controls when slots are omitted", () => {
+	it("normalizes definitions with an explicit complete slot registry", () => {
 		const kit = createFormKit({
 			controls: {
 				text: textControl,
 			},
+			slots: createDefaultSlots(),
 		})
 
 		const definition = kit.defineForm(schema, {
@@ -357,6 +367,7 @@ describe("createFormKit", () => {
 				text: textControl,
 			},
 			slots: {
+				...createDefaultSlots(),
 				Field,
 			},
 		})
@@ -461,6 +472,7 @@ describe("createFormKit", () => {
 				text: textControl,
 			},
 			slots: {
+				...createDefaultSlots(),
 				Field,
 				Section,
 				Array: ArraySlot,
@@ -660,9 +672,15 @@ describe("createFormKit", () => {
 	})
 
 	it("rejects forms from base, extended, and sibling kit snapshots", () => {
-		const base = createFormKit({ controls: { text: textControl } })
+		const base = createFormKit({
+			controls: { text: textControl },
+			slots: createDefaultSlots(),
+		})
 		const extended = base.extend({ controls: { extra: textControl } })
-		const sibling = createFormKit({ controls: { text: textControl } })
+		const sibling = createFormKit({
+			controls: { text: textControl },
+			slots: createDefaultSlots(),
+		})
 		const definition = base.defineForm(schema, { ui: [] })
 		const form = base.createForm(definition, {
 			defaultValues: defaultValues(),

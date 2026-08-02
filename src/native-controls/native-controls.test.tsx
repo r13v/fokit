@@ -6,10 +6,12 @@ import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { describe, expect, it } from "vitest"
 
-import { createFormKit } from "./create-form-kit.js"
-import { useFormContext } from "./form-context.js"
-import { useFormState } from "./hooks.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
+import { createFormKit } from "../react/create-form-kit.js"
+import { useFormContext } from "../react/form-context.js"
+import { useFormState } from "../react/hooks.js"
 import {
+	createNativeControls,
 	type NativeDateOptions,
 	type NativeFileOptions,
 	type NativeNumberOptions,
@@ -20,7 +22,6 @@ import {
 	type NativeTextOptions,
 	type NativeTextType,
 	type NativeTimeOptions,
-	nativeControls,
 } from "./native-controls.js"
 
 type Values = {
@@ -64,8 +65,11 @@ const schema = {
 	},
 } as Schema
 
+const nativeControls = createNativeControls()
+
 const kit = createFormKit({
 	controls: nativeControls,
+	slots: createDefaultSlots(),
 })
 
 const editableDefinition = kit.defineForm(schema, {
@@ -378,11 +382,15 @@ const readOnlyDefinition = kit.defineForm(schema, {
 	],
 })
 
-describe("nativeControls text-like controls", () => {
-	it("freezes the registry and every native control definition", () => {
+describe("createNativeControls text-like controls", () => {
+	it("creates fresh frozen registries and native control definitions", () => {
+		const nextControls = createNativeControls()
+
+		expect(nextControls).not.toBe(nativeControls)
 		expect(Object.isFrozen(nativeControls)).toBe(true)
-		for (const control of Object.values(nativeControls)) {
+		for (const [name, control] of Object.entries(nativeControls)) {
 			expect(Object.isFrozen(control)).toBe(true)
+			expect(nextControls[name as keyof typeof nextControls]).not.toBe(control)
 		}
 	})
 
@@ -589,14 +597,14 @@ describe("nativeControls text-like controls", () => {
 	})
 })
 
-describe("nativeControls choice and file controls", () => {
+describe("createNativeControls choice and file controls", () => {
 	it("fails clearly when a select field omits its option list", () => {
 		const form = kit.createForm(missingSelectOptionsDefinition, {
 			defaultValues: defaultValues(),
 		})
 		expect(() =>
 			render(<kit.AutoForm form={form} id="missing-select-options" />),
-		).toThrow("nativeControls.select requires options.options")
+		).toThrow("createNativeControls().select requires options.options")
 	})
 
 	it("fails clearly when undefined has no empty option", () => {
@@ -606,7 +614,7 @@ describe("nativeControls choice and file controls", () => {
 		expect(() =>
 			render(<kit.AutoForm form={form} id="missing-select-empty-option" />),
 		).toThrow(
-			"nativeControls.select requires options.emptyOption to represent undefined",
+			"createNativeControls().select requires options.emptyOption to represent undefined",
 		)
 	})
 
@@ -617,7 +625,7 @@ describe("nativeControls choice and file controls", () => {
 		expect(() =>
 			render(<kit.AutoForm form={form} id="conflicting-select-empty-option" />),
 		).toThrow(
-			'nativeControls.select cannot combine options.emptyOption with an option whose value is ""',
+			'createNativeControls().select cannot combine options.emptyOption with an option whose value is ""',
 		)
 	})
 

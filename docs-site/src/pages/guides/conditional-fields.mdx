@@ -17,14 +17,19 @@ Use a function anywhere a UI node accepts a resolvable value, including
 options.
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({
 	accountType: z.enum(["personal", "company"]),
 	companyName: z.string().optional(),
 })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 const definition = kit.defineForm(schema, {
 	ui: [
@@ -95,7 +100,9 @@ never becomes form data and never makes the form dirty.
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({ country: z.string() })
@@ -107,7 +114,10 @@ type ProfileContext = {
 	readonly locked: boolean
 }
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 const definition = kit.forContext<ProfileContext>().defineForm(schema, {
 		ui: [

@@ -180,6 +180,8 @@ const kit = createFormKit({
 	slots,
 })
 
+// Explicit slots keep headless kits independent from the optional defaults.
+// @ts-expect-error createFormKit requires a complete slot registry
 const omittedSlotsKit = createFormKit({
 	controls: {
 		text,
@@ -194,6 +196,7 @@ const partialSlotsKit = createFormKit({
 	controls: {
 		text,
 	},
+	// @ts-expect-error partial slots must be completed before creating a kit
 	slots: {
 		Field,
 	},
@@ -227,6 +230,9 @@ const richKit = createFormKit({
 		Field: RichField,
 		Section: RichSection,
 		Array: RichArray,
+		ArrayItem,
+		ErrorMessage,
+		Submit,
 	},
 })
 
@@ -353,6 +359,9 @@ const basePresentationKit = createFormKit({
 		Field: BaseField,
 		Section: BaseSection,
 		Array: BaseArray,
+		ArrayItem,
+		ErrorMessage,
+		Submit,
 	},
 })
 const extendedPresentationKit = basePresentationKit.extend({
@@ -631,6 +640,7 @@ const broadControls: ControlDefinitionRegistry = {
 }
 const broadKit = createFormKit({
 	controls: broadControls,
+	slots,
 })
 const broadExtendedKit = broadKit.extend({
 	controls: {

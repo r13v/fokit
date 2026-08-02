@@ -32,7 +32,9 @@ the Action boundary from `form-please/react19`:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
 import { useActionState } from "react"
@@ -41,7 +43,10 @@ import { z } from "zod"
 const schema = z.object({
 	name: z.string().min(1, "Name is required"),
 })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const definition = kit.defineForm(schema, {
 	ui: [
 		{

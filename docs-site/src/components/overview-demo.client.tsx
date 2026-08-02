@@ -1,11 +1,7 @@
 "use client"
 
-import {
-	createFormKit,
-	type FormInput,
-	type FormOutput,
-	nativeControls,
-} from "form-please"
+import type { FormInput, FormOutput } from "form-please"
+import { nativeFormKit as kit } from "form-please/preset-native"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -20,10 +16,6 @@ const defaultValues = {
 	email: "ada@example.com",
 	newsletter: true,
 } satisfies FormInput<typeof profileSchema>
-
-const kit = createFormKit({
-	controls: nativeControls,
-})
 
 const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [

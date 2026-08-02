@@ -11,12 +11,13 @@ import {
 	type FormInput,
 	type FormOutput,
 	matchResource,
-	nativeControls,
 	type UiNode,
 	useFormContext,
 	useFormState,
 	useValue,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -207,7 +208,10 @@ const draft = {
 	},
 } satisfies CohortInput
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 function TitleSuggestions() {
 	const form = useFormContext<typeof cohortSchema>()

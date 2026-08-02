@@ -23,6 +23,16 @@ returned by `createFormKit` or `kit.extend`. A base kit and each extension are
 different snapshots.
 _Avoid_: Kit configuration, mutable kit
 
+**Shadcn form-kit adapter**: An application-owned Form, Please integration that
+maps the canonical form-kit control and slot contracts onto one supported
+shadcn component base.
+_Avoid_: Shadcn preset, bundled shadcn kit, shadcn component library
+
+**Material UI preset**: A Form, Please-owned integration exported from
+`form-please/preset-mui` that creates form kit snapshots with canonical control
+and slot contracts mapped onto Material UI components.
+_Avoid_: Material adapter, application-owned Material UI kit
+
 **Form kit grid scale**: The finite numeric layout vocabulary owned by one form
 kit snapshot and shared by section column counts and numeric child spans.
 _Avoid_: Grid capability, global column range, CSS grid settings

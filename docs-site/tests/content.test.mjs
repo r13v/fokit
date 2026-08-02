@@ -9,6 +9,7 @@ const siteRoot = new URL("../", import.meta.url)
 const repositoryRoot = new URL("../", siteRoot)
 
 const requiredDependencies = {
+	"@base-ui/react": "1.6.0",
 	"@floating-ui/react": "0.27.20",
 	"@fontsource-variable/newsreader": "5.3.0",
 	"@heroicons/react": "2.2.0",
@@ -16,12 +17,21 @@ const requiredDependencies = {
 	"@types/node": "26.1.2",
 	"@types/react": "19.2.17",
 	"@types/react-dom": "19.2.3",
+	"class-variance-authority": "0.7.1",
+	clsx: "2.1.1",
+	"date-fns": "4.4.0",
 	"form-please": "file:..",
+	"input-otp": "1.4.2",
+	"lucide-react": "1.28.0",
 	nuqs: "2.9.2",
 	react: "19.2.8",
+	"react-day-picker": "10.0.1",
 	"react-dom": "19.2.8",
 	tailwindcss: "4.3.3",
+	"tailwind-merge": "3.6.0",
+	"tw-animate-css": "1.4.0",
 	typescript: "6.0.3",
+	valibot: "1.4.2",
 	vite: "8.1.5",
 	vocs: "2.7.2",
 	waku: "1.0.0-beta.6",
@@ -165,7 +175,14 @@ const canonicalPages = [
 		route: "/examples",
 		title: "Examples",
 		description:
-			"Explore six production-shaped forms and live workflows for History, Persistence, and Redux DevTools.",
+			"Explore production-shaped forms, an application-owned shadcn adapter, and live state workflows.",
+	},
+	{
+		path: "src/pages/examples/shadcn-valibot.mdx",
+		route: "/examples/shadcn-valibot",
+		title: "Shadcn with Valibot",
+		description:
+			"Install an application-owned Base UI adapter from the shadcn registry and validate a complete workshop proposal with Valibot.",
 	},
 	{
 		path: "src/pages/examples/research-grant.mdx",
@@ -278,6 +295,17 @@ const publicApiTerms = [
 ]
 
 const canonicalSnippets = [
+	{
+		target: "src/snippets/shadcn-valibot-workshop.tsx",
+		include: "~/snippets/shadcn-valibot-workshop.tsx",
+		terms: [
+			"ShadcnValibotWorkshopExample",
+			'from "valibot"',
+			'control: "rangeSlider"',
+			'control: "dateRangePicker"',
+			'control: "inputOtp"',
+		],
+	},
 	{
 		target: "src/snippets/lab-profile-form.tsx",
 		include: "~/snippets/lab-profile-form.tsx",
@@ -1238,8 +1266,12 @@ test("docs TypeScript and verification gates are wired", async () => {
 		"npm run site:verify:preview && npm run site:verify:production",
 	)
 	assert.equal(
+		rootPackageJson.scripts["test:registry"],
+		"node scripts/verify-shadcn-registry.mjs",
+	)
+	assert.equal(
 		rootPackageJson.scripts.verify,
-		"npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:smoke && npm run package:check && npm run knip",
+		"npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:registry && npm run test:smoke && npm run package:check && npm run knip",
 	)
 	assert.equal(rootPackageJson.scripts.verify.includes("test:docs"), false)
 	assert.deepEqual(knipConfig.workspaces["docs-site"].entry, [
@@ -1415,6 +1447,84 @@ test("async multiselect guide runs the same typed Floating UI and TanStack Query
 	assert.match(snippet, /QueryClientProvider/)
 	assert.match(guide, /<AsyncMultiSelectDemo \/>/)
 	assert.match(guide, /~\/snippets\/async-multiselect\.tsx/)
+})
+
+test("shadcn registry example keeps the adapter application-owned and Valibot-backed", async () => {
+	const registry = await readRepositoryJson("registry.json")
+	const adapter = await readText(
+		"src/components/ui/form-please/shadcn-form-kit.tsx",
+	)
+	const wrapper = await readText(
+		"src/components/shadcn-valibot-workshop-demo.tsx",
+	)
+	const client = await readText(
+		"src/components/shadcn-valibot-workshop-demo.client.tsx",
+	)
+	const snippet = await readText("src/snippets/shadcn-valibot-workshop.tsx")
+	const page = await readText("src/pages/examples/shadcn-valibot.mdx")
+	const index = await readText("src/pages/examples/index.mdx")
+	const rootCss = await readText("src/pages/_root.css")
+	const [item] = registry.items
+	const controls = [
+		"text",
+		"textarea",
+		"select",
+		"checkbox",
+		"number",
+		"date",
+		"time",
+		"file",
+		"radio",
+		"switch",
+		"slider",
+		"rangeSlider",
+		"multiSlider",
+		"combobox",
+		"multiCombobox",
+		"datePicker",
+		"dateRangePicker",
+		"inputOtp",
+	]
+
+	assert.equal(registry.name, "form-please")
+	assert.equal(item.name, "shadcn-form-kit")
+	assert.equal(item.type, "registry:item")
+	assert.deepEqual(item.files, [
+		{
+			path: "docs-site/src/components/ui/form-please/shadcn-form-kit.tsx",
+			type: "registry:component",
+			target: "@ui/form-please/shadcn-form-kit.tsx",
+		},
+	])
+	assert.equal(item.dependencies.includes("form-please@1.1.0"), true)
+	assert.equal(item.registryDependencies.includes("utils"), true)
+	assert.match(item.docs, /Base UI/)
+	for (const control of controls) {
+		assert.match(adapter, new RegExp(`\\n\\t${control}: defineControl<`))
+		assert.match(page, new RegExp(`\\b${control}\\b`))
+	}
+
+	assert.match(wrapper, /from "\.\/shadcn-valibot-workshop-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/shadcn-valibot-workshop"/)
+	assert.match(snippet, /import \* as v from "valibot"/)
+	assert.match(snippet, /kit\.defineForm\(workshopSchema/)
+	assert.match(snippet, /kit\.AutoForm/)
+	assert.doesNotMatch(snippet, /from "zod"/)
+	assert.match(adapter, /className="!size-4 self-start"/)
+	assert.match(adapter, /itemToStringLabel=/)
+	assert.match(rootCss, /@custom-variant data-horizontal/)
+	assert.match(rootCss, /@custom-variant data-vertical/)
+	assert.match(
+		page,
+		/npx shadcn@latest add r13v\/form-please\/shadcn-form-kit#v1\.1\.0/,
+	)
+	assert.match(page, /application-owned/)
+	assert.match(page, /Base UI/)
+	assert.match(page, /<ShadcnValibotWorkshopDemo \/>/)
+	assert.match(page, /~\/snippets\/shadcn-valibot-workshop\.tsx/)
+	assert.match(index, /\/examples\/shadcn-valibot/)
 })
 
 test("six complex examples stay public, documented, networked, and independent", async () => {

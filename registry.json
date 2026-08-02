@@ -1,0 +1,42 @@
+{
+	"$schema": "https://ui.shadcn.com/schema/registry.json",
+	"name": "form-please",
+	"homepage": "https://github.com/r13v/form-please",
+	"items": [
+		{
+			"name": "shadcn-form-kit",
+			"type": "registry:item",
+			"title": "Shadcn form-kit adapter",
+			"description": "An application-owned Base UI adapter that connects shadcn components to Form, Please controls and slots.",
+			"dependencies": [
+				"form-please@1.1.0",
+				"class-variance-authority",
+				"lucide-react"
+			],
+			"registryDependencies": [
+				"utils",
+				"input",
+				"textarea",
+				"native-select",
+				"checkbox",
+				"field",
+				"button",
+				"radio-group",
+				"switch",
+				"slider",
+				"combobox",
+				"calendar",
+				"popover",
+				"input-otp"
+			],
+			"files": [
+				{
+					"path": "docs-site/src/components/ui/form-please/shadcn-form-kit.tsx",
+					"type": "registry:component",
+					"target": "@ui/form-please/shadcn-form-kit.tsx"
+				}
+			],
+			"docs": "This item targets shadcn's Base UI implementation. The adapter is copied into the application so its imports and component props can be adjusted when the local shadcn components differ. It provides text, textarea, select, checkbox, number, date, time, file, radio, switch, slider, rangeSlider, multiSlider, combobox, multiCombobox, datePicker, dateRangePicker, and inputOtp controls."
+		}
+	]
+}

@@ -137,6 +137,7 @@
 		"test:types": "npm run build && tsc --project tsconfig.json",
 		"test:browser": "playwright test",
 		"test:package": "npm run build && vitest run --config vitest.package.config.ts",
+		"test:registry": "node scripts/verify-shadcn-registry.mjs",
 		"test:smoke": "node scripts/verify-smoke-fixtures.mjs",
 		"test:docs": "npm run build && npm run typecheck --prefix docs-site",
 		"site:dev": "npm run build && npm run dev --prefix docs-site",
@@ -148,7 +149,7 @@
 		"site:verify": "npm run site:verify:preview && npm run site:verify:production",
 		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./react19 ./server",
 		"knip": "knip --workspace . --workspace docs-site",
-		"verify": "npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:smoke && npm run package:check && npm run knip"
+		"verify": "npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:registry && npm run test:smoke && npm run package:check && npm run knip"
 	},
 	"repository": {
 		"type": "git",
@@ -182,6 +183,7 @@
 		"publint": "0.3.22",
 		"react": "19.2.8",
 		"react-dom": "19.2.8",
+		"shadcn": "4.16.1",
 		"tsdown": "0.22.14",
 		"typescript": "6.0.3",
 		"vitest": "4.1.10",

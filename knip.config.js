@@ -6,6 +6,9 @@ const docsStyleCompiler = (source) => {
 	if (source.includes("tailwindcss/")) {
 		imports.push('import "tailwindcss"')
 	}
+	if (source.includes("tw-animate-css")) {
+		imports.push('import "tw-animate-css"')
+	}
 	return imports.join("\n")
 }
 

@@ -1,4 +1,10 @@
 @import "@fontsource-variable/newsreader";
+@import "tailwindcss/theme.css" layer(fp-tailwind-theme);
+@import "tailwindcss/utilities.css" layer(fp-tailwind-utilities);
+
+@custom-variant dark (
+	&:where([data-vocs-theme="dark"], [data-vocs-theme="dark"] *)
+);
 
 :root {
 	--fp-brand-green: #3c7967;

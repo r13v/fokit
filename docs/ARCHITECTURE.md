@@ -96,7 +96,7 @@ remain suitable for server-side use.
 | Area | Primary files | Responsibility |
 | --- | --- | --- |
 | Public exports | `src/index.ts`, `src/core/index.ts`, `src/react19/index.ts`, `src/server/index.ts`, and each optional `index.ts` | Define the supported package surface |
-| Definitions | `src/core/definition.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts` | Type, validate, normalize, and index reusable UI definitions |
+| Definitions | `src/core/definition.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts`, `src/core/structural-presentation.ts` | Type, validate, normalize, and index reusable UI definitions |
 | Paths and values | `src/core/path.ts`, `src/core/path-types.ts`, `src/core/value.ts` | Canonical deep paths and immutable value operations |
 | Form model | `src/core/form-model.ts`, `src/core/form-reducer.ts`, `src/core/runtime-reducer.ts` | Own the atomic historical document and pure document/runtime transitions |
 | Commands and events | `src/core/form-commands.ts`, `src/core/form-transactions.ts`, `src/core/form-events.ts`, `src/core/transaction.ts` | Type commands, normalized transactions, immutable events, and value-change normalization |
@@ -136,11 +136,11 @@ definition can enter a contextual lifecycle and a definition requiring a base
 context can run with a richer context, but neither can weaken a concrete
 requirement to `unknown`.
 
-Normalization is a one-time boundary. It canonicalizes paths and defaults,
-checks node IDs and control references, freezes the tree, and builds flat
-indexes such as `nodesById`, `fieldsByPath`, and `arraysByPath`. Runtime code
-consumes this normalized definition; it does not repeatedly validate the
-authoring shape.
+Normalization is a one-time authoring boundary. It canonicalizes paths and
+defaults, checks node IDs, control references, and static presentation values,
+freezes the tree, and builds flat indexes such as `nodesById`, `fieldsByPath`,
+and `arraysByPath`. Runtime UI resolution validates the results of presentation
+resolvers such as `className`, `columns`, and `span` before React receives them.
 
 Definitions contain control names, not control components. Structural
 presentation is similarly mediated by slots. A `render` node is the explicit

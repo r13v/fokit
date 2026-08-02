@@ -335,16 +335,39 @@ describe("form definition normalization", () => {
 	it("stores UI resolver functions unchanged", () => {
 		const visible: UiResolver<boolean, ExampleValues> = ({ kind }) =>
 			kind === "person"
+		const className: UiResolver<string, ExampleValues> = ({ kind }) =>
+			kind === "person" ? "person" : "company"
+		const columns: UiResolver<1 | 2, ExampleValues> = ({ kind }) =>
+			kind === "person" ? 1 : 2
+		const span: UiResolver<1 | 2, ExampleValues> = ({ kind }) =>
+			kind === "person" ? 1 : 2
 		const definition = normalize([
 			{
-				kind: "field",
-				path: "companyName",
-				control: "text",
-				visible,
+				kind: "section",
+				id: "account",
+				className,
+				columns,
+				children: [
+					{
+						kind: "field",
+						path: "companyName",
+						control: "text",
+						visible,
+						span,
+					},
+				],
 			},
 		])
 
 		expect(definition.fieldsByPath.companyName?.visible).toBe(visible)
+		expect(definition.fieldsByPath.companyName?.span).toBe(span)
+		const account = definition.nodesById.account
+		expect(account.className).toBe(className)
+		expect(account.kind).toBe("section")
+		if (account.kind !== "section") {
+			throw new Error("Expected a section")
+		}
+		expect(account.columns).toBe(columns)
 	})
 
 	it("keeps presentation content and structural slot options opaque", () => {

@@ -14,6 +14,7 @@ type ExampleInput = {
 	requiredName: string
 	optionalName?: string
 	unionWithUndefined: string | undefined
+	contacts: { label?: string }[]
 	nested?: {
 		child: string
 	}
@@ -103,6 +104,59 @@ kit.defineForm(schema, {
 			path: "requiredName",
 			control: "text",
 			valuePolicy: "preserve",
+		},
+	],
+})
+
+kit.defineForm(schema, {
+	ui: [
+		{
+			kind: "section",
+			id: "dynamic-layout",
+			className: ({ requiredName }) =>
+				requiredName.length > 0 ? "complete" : "incomplete",
+			columns: ({ requiredName }) => (requiredName.length > 0 ? 2 : 1),
+			span: ({ requiredName }) => (requiredName.length > 0 ? 2 : 1),
+			children: [
+				{
+					kind: "field",
+					path: "requiredName",
+					control: "text",
+					className: ({ optionalName }) => optionalName ?? "empty",
+					span: ({ requiredName }) => (requiredName.length > 0 ? 2 : 1),
+				},
+			],
+		},
+		{
+			kind: "array",
+			path: "contacts",
+			className: ({ contacts }) =>
+				contacts.length > 0 ? "has-contacts" : "empty",
+			span: ({ contacts }) => (contacts.length > 0 ? "full" : 1),
+			itemDefault: { label: "" },
+			children: [
+				{
+					kind: "field",
+					path: "label",
+					control: "text",
+				},
+			],
+		},
+	],
+})
+
+kit.defineForm(schema, {
+	ui: [
+		{
+			kind: "section",
+			id: "invalid-resolvers",
+			// @ts-expect-error className resolvers must return strings
+			className: () => 1,
+			// @ts-expect-error columns resolvers must return a supported column count
+			columns: () => 5,
+			// @ts-expect-error span resolvers must return a supported span
+			span: () => "wide",
+			children: [],
 		},
 	],
 })

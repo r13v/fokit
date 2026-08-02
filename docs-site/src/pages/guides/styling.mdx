@@ -4,6 +4,8 @@ description: Add responsive structure and a copyable visual baseline without giv
 showAskAi: false
 ---
 
+import { TailwindProfileDemo } from "../../components/tailwind-profile-demo"
+
 # Styling
 
 Form, Please ships accessible semantic markup and optional responsive structure. Your
@@ -76,6 +78,27 @@ function ProfileForm() {
 	)
 }
 ```
+
+## Resolve Tailwind classes from form values
+
+`className` on fields, sections, and arrays can be a resolver. The live form
+below reuses the same `profileDefinition` and defaults as Get started, History,
+Persistence, and DevTools. Change **Account type** to **Company**: the account
+section changes from emerald to amber and reveals the company-name field.
+
+<TailwindProfileDemo />
+
+The definition returns complete literal class strings from each branch, so
+Tailwind can discover every utility at build time:
+
+```tsx
+// [!include ~/snippets/lab-profile-form.tsx:tailwind-class-name]
+```
+
+Tailwind remains application-owned. Form, Please resolves the string and
+forwards it to the structural slot; it does not install Tailwind or interpret
+its utilities. Avoid constructing class names such as `bg-${tone}-50`, because
+Tailwind cannot reliably discover them from source.
 
 ## Copy a visual baseline
 

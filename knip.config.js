@@ -1,7 +1,12 @@
 const docsStyleCompiler = (source) => {
-	return source.includes("@fontsource-variable/newsreader")
-		? 'import "@fontsource-variable/newsreader"'
-		: ""
+	const imports = []
+	if (source.includes("@fontsource-variable/newsreader")) {
+		imports.push('import "@fontsource-variable/newsreader"')
+	}
+	if (source.includes("tailwindcss/")) {
+		imports.push('import "tailwindcss"')
+	}
+	return imports.join("\n")
 }
 
 export default {

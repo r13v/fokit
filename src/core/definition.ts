@@ -3,6 +3,11 @@ import { hasOwn, isPlainObject } from "./object.js"
 import type { PathSegments } from "./path.js"
 import { formatPath, parsePath } from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
+import {
+	validateClassName,
+	validateGridColumns,
+	validateGridSpan,
+} from "./structural-presentation.js"
 import type {
 	AnyUiPresentation,
 	CoreUiPresentation,
@@ -101,8 +106,8 @@ type NormalizedNodeBase = {
 	readonly kind: NodeKind
 	readonly parentId?: string
 	readonly scopePath: string
-	readonly className?: string
-	readonly span?: GridSpan
+	readonly className?: Resolvable<string>
+	readonly span?: Resolvable<GridSpan>
 	readonly visible?: Resolvable<boolean>
 	readonly disabled?: Resolvable<boolean>
 	readonly readOnly?: Resolvable<boolean>
@@ -136,7 +141,7 @@ export type NormalizedSectionNode<
 	readonly title?: Resolvable<Presentation["content"]>
 	readonly description?: Resolvable<Presentation["content"]>
 	readonly slotOptions?: Resolvable<Presentation["sectionSlotOptions"]>
-	readonly columns: GridColumns
+	readonly columns: Resolvable<GridColumns>
 	readonly children: readonly NormalizedUiNode<RenderComponent, Presentation>[]
 }
 
@@ -328,7 +333,7 @@ function normalizeChildren<
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId?: string,
-	parentColumns?: GridColumns,
+	parentColumns?: Resolvable<GridColumns>,
 ): readonly NormalizedUiNode<RenderComponent, Presentation>[] {
 	if (!Array.isArray(nodes)) {
 		throw new TypeError("UI children must be an array")
@@ -346,7 +351,7 @@ function normalizeNode<RenderComponent, Presentation extends UiPresentation>(
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 ): NormalizedUiNode<RenderComponent, Presentation> {
 	if (!isPlainObject(node)) {
 		throw new TypeError("UI node must be an object")
@@ -394,7 +399,7 @@ function normalizeField<RenderComponent, Presentation extends UiPresentation>(
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 ): NormalizedFieldNode<Presentation> {
 	const path = normalizeNodePath(node.path, scope.relative)
 	const id = normalizeNodeId(node.id ?? joinId(scope.idPrefix, path), "field")
@@ -443,7 +448,7 @@ function normalizeSection<RenderComponent, Presentation extends UiPresentation>(
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 ): NormalizedSectionNode<RenderComponent, Presentation> {
 	const id = normalizeNodeId(node.id, "section")
 	registerNodeId(id, state)
@@ -489,7 +494,7 @@ function normalizeArray<RenderComponent, Presentation extends UiPresentation>(
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 ): NormalizedArrayNode<Presentation> {
 	const path = normalizeNodePath(node.path, scope.relative)
 	const id = normalizeNodeId(node.id ?? joinId(scope.idPrefix, path), "array")
@@ -647,23 +652,23 @@ function normalizeControl(control: unknown, controls: ControlRegistry): string {
 	return control
 }
 
-function normalizeColumns(columns: unknown): GridColumns {
+function normalizeColumns(columns: unknown): Resolvable<GridColumns> {
 	if (columns === undefined) {
 		return 1
 	}
 
-	if (columns === 1 || columns === 2 || columns === 3 || columns === 4) {
-		return columns
+	if (typeof columns === "function") {
+		return columns as Resolvable<GridColumns>
 	}
 
-	throw new TypeError("Section layout columns must be 1, 2, 3, or 4")
+	return validateGridColumns(columns)
 }
 
 function normalizeSpan(
 	span: unknown,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 	nodeKind: NodeKind,
-): GridSpan | undefined {
+): Resolvable<GridSpan> | undefined {
 	if (span === undefined) {
 		if (parentColumns === undefined) {
 			return undefined
@@ -671,19 +676,14 @@ function normalizeSpan(
 		return nodeKind === "field" ? 1 : "full"
 	}
 
-	if (span !== "full" && span !== 1 && span !== 2 && span !== 3 && span !== 4) {
-		throw new TypeError("Layout span must be 1, 2, 3, 4, or full")
+	if (typeof span === "function") {
+		return span as Resolvable<GridSpan>
 	}
 
-	if (parentColumns !== undefined && typeof span === "number") {
-		if (span > parentColumns) {
-			throw new TypeError(
-				`Layout span ${span} exceeds parent columns ${parentColumns}`,
-			)
-		}
-	}
-
-	return span
+	return validateGridSpan(
+		span,
+		typeof parentColumns === "function" ? undefined : parentColumns,
+	)
 }
 
 function normalizeValuePolicy(valuePolicy: unknown): ValuePolicy {
@@ -702,16 +702,18 @@ function asResolvable<Value>(value: unknown): Resolvable<Value> | undefined {
 	return value as Resolvable<Value> | undefined
 }
 
-function normalizeClassName(className: unknown): string | undefined {
+function normalizeClassName(
+	className: unknown,
+): Resolvable<string> | undefined {
 	if (className === undefined) {
 		return undefined
 	}
 
-	if (typeof className !== "string") {
-		throw new TypeError("className must be a string")
+	if (typeof className === "function") {
+		return className as Resolvable<string>
 	}
 
-	return className
+	return validateClassName(className)
 }
 
 function normalizeChildArray(

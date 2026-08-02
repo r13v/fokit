@@ -9,6 +9,11 @@ import type {
 import type { PathSegments } from "./path.js"
 import { formatPath, parsePath } from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
+import {
+	validateClassName,
+	validateGridColumns,
+	validateGridSpan,
+} from "./structural-presentation.js"
 import type {
 	AnyUiPresentation,
 	CoreUiPresentation,
@@ -193,6 +198,7 @@ type ParentState = {
 	readonly visible: boolean
 	readonly disabled: boolean
 	readonly readOnly: boolean
+	readonly columns?: GridColumns
 }
 
 type ResolveScope = {
@@ -200,6 +206,7 @@ type ResolveScope = {
 	readonly idPrefix: string
 	readonly registerNodes: boolean
 	readonly registerPaths: boolean
+	readonly resolveResolvers: boolean
 }
 
 export function resolveUi<
@@ -364,7 +371,27 @@ function resolveSection<
 	scope: ResolveScope,
 ): ResolvedSectionNode<Context, RenderComponent, Presentation> {
 	const resolvedParent = resolveParent(node, state, parent, scope)
-	const children = resolveNodes(node.children, state, resolvedParent, scope)
+	const columns = validateGridColumns(
+		resolveWithDefault(
+			`${resolvedParent.id}:columns`,
+			node.columns,
+			1,
+			state,
+			scope,
+		),
+	)
+	const children = resolveNodes(
+		node.children,
+		state,
+		{
+			...resolvedParent,
+			columns:
+				!scope.resolveResolvers && typeof node.columns === "function"
+					? undefined
+					: columns,
+		},
+		scope,
+	)
 	const resolved = Object.freeze({
 		...resolvedParent,
 		kind: "section" as const,
@@ -386,7 +413,7 @@ function resolveSection<
 			state,
 			scope,
 		),
-		columns: node.columns,
+		columns,
 		children,
 	})
 
@@ -474,6 +501,7 @@ function resolveArrayItemChildren<
 				idPrefix: itemPath,
 				registerNodes: true,
 				registerPaths: true,
+				resolveResolvers: true,
 			}) as readonly ResolvedRelativeUiNode<Context, Presentation>[]
 		}),
 	)
@@ -518,6 +546,13 @@ function resolveParent<
 	scope: ResolveScope,
 ): ResolvedNodeBase<Context> {
 	const id = joinScopedId(scope.idPrefix, node.id)
+	const className = resolveOptional(
+		`${id}:className`,
+		node.className,
+		state,
+		scope,
+	)
+	const span = resolveOptional(`${id}:span`, node.span, state, scope)
 
 	return {
 		id,
@@ -527,8 +562,10 @@ function resolveParent<
 				: joinScopedId(scope.idPrefix, node.parentId),
 		scopePath:
 			scope.pathPrefix.length === 0 ? node.scopePath : scope.pathPrefix,
-		className: node.className,
-		span: node.span,
+		className:
+			className === undefined ? undefined : validateClassName(className),
+		span:
+			span === undefined ? undefined : validateGridSpan(span, parent.columns),
 		visible:
 			parent.visible &&
 			resolveWithDefault(`${id}:visible`, node.visible, true, state, scope),
@@ -557,6 +594,9 @@ function resolveWithDefault<
 	if (value === undefined) {
 		return defaultValue
 	}
+	if (!scope.resolveResolvers && typeof value === "function") {
+		return defaultValue
+	}
 
 	return resolveResolvable(key, value, state, scope)
 }
@@ -573,6 +613,9 @@ function resolveOptional<
 	scope: ResolveScope,
 ): Value | undefined {
 	if (value === undefined) {
+		return undefined
+	}
+	if (!scope.resolveResolvers && typeof value === "function") {
 		return undefined
 	}
 
@@ -759,6 +802,7 @@ const rootScope = Object.freeze({
 	idPrefix: "",
 	registerNodes: true,
 	registerPaths: true,
+	resolveResolvers: true,
 }) satisfies ResolveScope
 
 const templateScope = Object.freeze({
@@ -766,4 +810,5 @@ const templateScope = Object.freeze({
 	idPrefix: "",
 	registerNodes: false,
 	registerPaths: false,
+	resolveResolvers: false,
 }) satisfies ResolveScope

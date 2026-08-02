@@ -468,6 +468,38 @@ test.describe("Form, Please documentation", () => {
 		)
 	})
 
+	test("resolves Tailwind classes in the live shared profile form", async ({
+		page,
+	}, testInfo) => {
+		await page.setViewportSize({ width: 1280, height: 920 })
+		await page.goto(
+			"./guides/styling#resolve-tailwind-classes-from-form-values",
+		)
+
+		const demo = page.getByRole("region", {
+			name: "Tailwind resolver profile form",
+		})
+		const account = demo.locator('[data-fp-node="section"]')
+		await expect(demo).toBeVisible()
+		await expect(account).toHaveClass(/border-emerald-300/)
+		await expect(account).toHaveCSS(
+			"background-color",
+			"oklch(0.979 0.021 166.113)",
+		)
+
+		await demo.getByLabel("Account type").selectOption("company")
+		await expect(demo.getByLabel("Company name")).toBeVisible()
+		await expect(account).toHaveClass(/border-amber-300/)
+		await expect(account).not.toHaveClass(/border-emerald-300/)
+		await expect(account).toHaveCSS(
+			"background-color",
+			"oklch(0.987 0.022 95.277)",
+		)
+		await page.screenshot({
+			path: testInfo.outputPath("form-please-tailwind-resolver.png"),
+		})
+	})
+
 	test("searches, toggles, and submits the async multiselect", async ({
 		page,
 	}, testInfo) => {

@@ -20,6 +20,7 @@ const requiredDependencies = {
 	nuqs: "2.9.2",
 	react: "19.2.8",
 	"react-dom": "19.2.8",
+	tailwindcss: "4.3.3",
 	typescript: "6.0.3",
 	vite: "8.1.5",
 	vocs: "2.7.2",
@@ -847,6 +848,8 @@ const requiredGuidePageContent = {
 			"Know the generated boundary",
 		],
 		terms: [
+			"data-testid",
+			"testId",
 			"relative child paths",
 			"itemDefault",
 			"resolver function",
@@ -1008,11 +1011,14 @@ const requiredGuidePageContent = {
 		headings: [
 			"Import responsive structure",
 			"Add a product class",
+			"Resolve Tailwind classes from form values",
 			"Copy a visual baseline",
 			"Style public states",
 			"Replace markup when selectors are not enough",
 		],
 		terms: [
+			"TailwindProfileDemo",
+			"tailwind-class-name",
 			"form-please/layout.css",
 			"--fp-column-gap",
 			"data-fp-node",
@@ -1246,6 +1252,10 @@ test("docs TypeScript and verification gates are wired", async () => {
 		"src/**/*.{js,jsx,mjs,ts,tsx,mdx,css}",
 	])
 	assert.equal(typeof knipConfig.compilers.css, "function")
+	assert.match(
+		knipConfig.compilers.css('@import "tailwindcss/utilities.css";'),
+		/import "tailwindcss"/,
+	)
 	assert.equal(knipConfig.compilers.mdx, true)
 	assert.deepEqual(knipConfig.ignoreFiles, [])
 	assert.match(gitignore, /^docs-site\/\.vocs\/$/m)
@@ -1315,6 +1325,36 @@ test("Interactive Lab uses Vocs components and public Form, Please defaults", as
 	assert.match(getStarted, /~\/snippets\/lab-profile-form\.tsx/)
 	assert.match(getStarted, /^### Interactive Form, Please Lab$/m)
 	assert.match(getStarted, /<InteractiveLab \/>/)
+})
+
+test("styling shows a live Tailwind resolver on the shared profile form", async () => {
+	const wrapper = await readText("src/components/tailwind-profile-demo.tsx")
+	const client = await readText(
+		"src/components/tailwind-profile-demo.client.tsx",
+	)
+	const snippet = await readText("src/snippets/lab-profile-form.tsx")
+	const styling = await readText("src/pages/guides/styling.mdx")
+	const rootCss = await readText("src/pages/_root.css")
+
+	assert.match(wrapper, /from "\.\/tailwind-profile-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(wrapper, /from "\.\/markdown-fallback"/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/lab-profile-form"/)
+	assert.match(client, /profileDefinition/)
+	assert.doesNotMatch(client, /kit\.defineForm/)
+	assert.match(snippet, /className:\s*\(\{ accountType \}\) =>/)
+	assert.match(snippet, /return "rounded-2xl border border-amber-300/)
+	assert.match(snippet, /return "rounded-2xl border border-emerald-300/)
+	assert.match(styling, /<TailwindProfileDemo \/>/)
+	assert.match(
+		styling,
+		/~\/snippets\/lab-profile-form\.tsx:tailwind-class-name/,
+	)
+	assert.match(rootCss, /tailwindcss\/theme\.css/)
+	assert.match(rootCss, /tailwindcss\/utilities\.css/)
+	assert.match(rootCss, /@custom-variant dark/)
+	assert.doesNotMatch(rootCss, /tailwindcss\/preflight\.css/)
 })
 
 test("overview proves the public Form, Please loop with a live typed form", async () => {
@@ -1591,6 +1631,7 @@ test("published code examples use explicit branches instead of ternaries", async
 		...(await listFiles("src/snippets/")),
 		"src/components/interactive-lab.client.tsx",
 		"src/components/overview-demo.client.tsx",
+		"src/components/tailwind-profile-demo.client.tsx",
 	].filter((file) => /\.[jt]sx?$/.test(file))
 
 	for (const file of sourceFiles) {

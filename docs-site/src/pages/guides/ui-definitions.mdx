@@ -150,6 +150,7 @@ import { z } from "zod"
 
 type OverviewFieldOptions = {
 	readonly labelTooltip?: string
+	readonly testId?: string
 }
 
 function FieldTooltip({
@@ -185,7 +186,7 @@ function OverviewField({
 	const tooltipId = `${labelProps.htmlFor}-tooltip`
 
 	return (
-		<div {...rootProps}>
+		<div {...rootProps} data-testid={slotOptions?.testId}>
 			{label !== undefined && <label {...labelProps}>{label}</label>}
 			{slotOptions?.labelTooltip !== undefined && (
 				<FieldTooltip content={slotOptions.labelTooltip} id={tooltipId} />
@@ -212,9 +213,15 @@ kit.defineForm(schema, {
 			path: "name",
 			control: "text",
 			label: "Name",
-			slotOptions: ({ name }) => ({
-				labelTooltip: `Editing ${name}`,
-			}),
+			slotOptions: ({ name }) => {
+				let testId = "profile-name"
+				if (name.length === 0) testId = "profile-name-empty"
+
+				return {
+					labelTooltip: `Editing ${name}`,
+					testId,
+				}
+			},
 		},
 	],
 })
@@ -222,7 +229,9 @@ kit.defineForm(schema, {
 
 `createFormKit` infers `OverviewFieldOptions` from the registered `Field` slot.
 The resolver reads `name` and returns the field slot options. `OverviewField`
-receives the resolved object through its `slotOptions` prop.
+receives the resolved object through its `slotOptions` prop. Its typed `testId`
+option is mapped to `data-testid`; use the same pattern for application-owned
+`data-*` attributes. Core does not add arbitrary DOM attributes to every node.
 
 `Field`, `Section`, and `Array` each have an independent slot option type. Field
 `slotOptions` belongs to structural presentation. Field `options` belongs to
@@ -304,8 +313,11 @@ fields default to one column while nested sections and arrays default to the
 full row. Import `form-please/layout.css` for the shipped responsive grid, or forward
 the same layout props through a custom `Section` slot.
 
-`className` is static escape-hatch metadata for product styling. It does not
-change the form state model.
+`className`, `span`, and `columns` can also be resolvers. A section resolves its
+column count before resolving child spans, so a child span is checked against
+the current grid. Invalid resolver results throw `TypeError` at the runtime
+boundary. These properties change presentation without changing the form state
+model or UI topology.
 
 ## Derive UI from tracked values
 
@@ -316,14 +328,14 @@ only when one of those values changes. The resolver can also read runtime
 
 | Node | Resolvable properties |
 | --- | --- |
-| `field` | `label`, `description`, `slotOptions`, `required`, `visible`, `disabled`, `readOnly`, `options` |
-| `section` | `title`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly` |
-| `array` | `label`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly` |
+| `field` | `label`, `description`, `slotOptions`, `required`, `visible`, `disabled`, `readOnly`, `options`, `className`, `span` |
+| `section` | `title`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly`, `className`, `columns`, `span` |
+| `array` | `label`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly`, `className`, `span` |
 | `render` | `visible`, `disabled`, `readOnly` |
 
-Structure stays static: paths, controls, children, layout, classes, and array
-defaults are not resolvable. Change resolvable properties for dynamic UI;
-compose manually when the product needs a different tree.
+Topology and behavior stay static: `kind`, paths, controls, children,
+`valuePolicy`, render components, and array `itemDefault` values are not
+resolvable. Compose manually when the product needs a different tree.
 
 Resolvers are synchronous and pure. Fetch remote options in application data
 flow, pass them through `context`, and let a resolver select the relevant result.

@@ -65,8 +65,8 @@ type FieldNodeBase<Input, Context, Presentation extends UiPresentation> = {
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
 	readonly visible?: Resolvable<boolean, Input, Context>
-	readonly className?: string
-	readonly span?: GridSpan
+	readonly className?: Resolvable<string, Input, Context>
+	readonly span?: Resolvable<GridSpan, Input, Context>
 }
 
 type FieldValuePolicy<Input, Path extends FieldPath<Input>> =
@@ -192,9 +192,9 @@ export type SectionNode<
 	readonly visible?: Resolvable<boolean, Input, Context>
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
-	readonly className?: string
-	readonly columns?: GridColumns
-	readonly span?: GridSpan
+	readonly className?: Resolvable<string, Input, Context>
+	readonly columns?: Resolvable<GridColumns, Input, Context>
+	readonly span?: Resolvable<GridSpan, Input, Context>
 	readonly children: readonly UiNode<
 		Input,
 		Controls,
@@ -234,8 +234,8 @@ type ArrayNodeForPath<
 	readonly visible?: Resolvable<boolean, Input, Context>
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
-	readonly className?: string
-	readonly span?: GridSpan
+	readonly className?: Resolvable<string, Input, Context>
+	readonly span?: Resolvable<GridSpan, Input, Context>
 	readonly itemDefault:
 		| ArrayItemValueAtPath<Input, Path>
 		| (() => ArrayItemValueAtPath<Input, Path>)

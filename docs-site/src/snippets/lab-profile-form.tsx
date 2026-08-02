@@ -88,6 +88,15 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 			id: "account",
 			title: "Profile",
 			description: "Edit a personal or company profile.",
+			// [!region tailwind-class-name]
+			className: ({ accountType }) => {
+				if (accountType === "company") {
+					return "rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm transition-colors dark:border-amber-700 dark:bg-amber-950/30"
+				}
+
+				return "rounded-2xl border border-emerald-300 bg-emerald-50 p-5 shadow-sm transition-colors dark:border-emerald-700 dark:bg-emerald-950/30"
+			},
+			// [!endregion tailwind-class-name]
 			columns: 2,
 			children: [
 				{

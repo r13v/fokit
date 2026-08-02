@@ -361,6 +361,64 @@ describe("kit.AutoForm and kit.Fields", () => {
 			true,
 		)
 	})
+
+	it("updates resolved classes and grid metadata without remounting the form", async () => {
+		const definition = profileKit
+			.forContext<ProfileContext>()
+			.defineForm(schema, {
+				ui: [
+					{
+						kind: "section",
+						id: "account",
+						className: ({ kind }) =>
+							kind === "company" ? "company-card" : "person-card",
+						columns: ({ kind }) => (kind === "company" ? 2 : 1),
+						children: [
+							{
+								kind: "field",
+								path: "name",
+								control: "text",
+								label: "Name",
+								className: ({ kind }) =>
+									kind === "company" ? "company-name" : "person-name",
+								span: ({ kind }) => (kind === "company" ? 2 : 1),
+							},
+						],
+					},
+				],
+			})
+		const form = profileKit.createForm(definition, {
+			defaultValues: defaultValues(),
+			context: { locked: false, showHidden: false },
+		})
+
+		render(
+			<profileKit.AutoForm
+				context={{ locked: false, showHidden: false }}
+				form={form}
+				id="profile-layout"
+			>
+				<KindButtons />
+			</profileKit.AutoForm>,
+		)
+
+		const section = screen.getByTestId("section-profile-layout-account")
+		const field = screen.getByTestId("field-name")
+		const layout = section.querySelector("[data-fp-layout='grid']")
+		expect(section.classList.contains("person-card")).toBe(true)
+		expect(field.classList.contains("person-name")).toBe(true)
+		expect(layout?.getAttribute("data-fp-columns")).toBe("1")
+		expect(field.getAttribute("data-fp-span")).toBe("1")
+
+		fireEvent.click(screen.getByRole("button", { name: "Company kind" }))
+		await waitFor(() => {
+			expect(section.classList.contains("company-card")).toBe(true)
+		})
+		expect(section.classList.contains("person-card")).toBe(false)
+		expect(field.classList.contains("company-name")).toBe(true)
+		expect(layout?.getAttribute("data-fp-columns")).toBe("2")
+		expect(field.getAttribute("data-fp-span")).toBe("2")
+	})
 })
 
 function ErrorButtons() {

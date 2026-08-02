@@ -53,7 +53,7 @@ export const kit = createFormKit({
 // [!endregion kit]
 
 // [!region definition]
-export const profileDefinition = kit.defineForm(profileSchema)({
+export const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [
 		{
 			kind: "section",

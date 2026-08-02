@@ -14,13 +14,14 @@ import {
 	assertFormKitOwnership,
 	type FormKitDescriptor,
 } from "./form-instance.js"
-import { useFormBinding } from "./use-form.js"
+import { type FormRuntimeOptions, useFormBinding } from "./use-form.js"
 
 export function createAutoFormComponent<
 	Controls extends ControlDefinitionRegistry,
 	FieldSlotOptions,
 	SectionSlotOptions,
 	ArraySlotOptions,
+	KitContext = unknown,
 >(
 	controls: Controls,
 	slots: RuntimeFormKitSlots,
@@ -29,9 +30,13 @@ export function createAutoFormComponent<
 	Controls,
 	FieldSlotOptions,
 	SectionSlotOptions,
-	ArraySlotOptions
+	ArraySlotOptions,
+	KitContext
 > {
-	function AutoForm<Schema extends StandardSchema, Context = unknown>({
+	function AutoForm<
+		Schema extends StandardSchema,
+		Context extends KitContext = KitContext,
+	>({
 		form,
 		context,
 		disabled,
@@ -59,7 +64,7 @@ export function createAutoFormComponent<
 			beforeUpdate,
 			afterUpdate,
 			onSubmit,
-		})
+		} as FormRuntimeOptions<Schema, Context>)
 
 		return (
 			<KitForm {...formProps} controls={controls} form={form}>

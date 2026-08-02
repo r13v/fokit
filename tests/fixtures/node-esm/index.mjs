@@ -85,7 +85,7 @@ if (!result.success || result.value.name !== "Grace") {
 }
 
 const featureKit = createFormKit({ controls: {} })
-const featureDefinition = featureKit.defineForm(schema)({ ui: [] })
+const featureDefinition = featureKit.defineForm(schema, { ui: [] })
 const historyFeature = createHistoryMiddleware({ groupWindow: 0 })
 const saves = []
 const persistenceFeature = createPersistenceMiddleware({

@@ -57,7 +57,8 @@ export type KitFormComponent<
 	Controls extends ControlDefinitionRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
 	Owner = FormKitOwner<Controls, Presentation>,
-> = <Schema extends StandardSchema, Context = unknown>(
+	KitContext = unknown,
+> = <Schema extends StandardSchema, Context extends KitContext = KitContext>(
 	props: Omit<
 		KitFormProps<Schema, Context, Controls, Presentation, Owner>,
 		"controls"
@@ -144,11 +145,12 @@ export function createFormComponent<
 	Controls extends ControlDefinitionRegistry,
 	Presentation extends UiPresentation = ReactUiPresentation,
 	Owner = FormKitOwner<Controls, Presentation>,
+	KitContext = unknown,
 >(
 	controls: Controls,
 	descriptor: FormKitDescriptor,
-): KitFormComponent<Controls, Presentation, Owner> {
-	function Form<Schema extends StandardSchema, Context>(
+): KitFormComponent<Controls, Presentation, Owner, KitContext> {
+	function Form<Schema extends StandardSchema, Context extends KitContext>(
 		props: Omit<
 			KitFormProps<Schema, Context, Controls, Presentation, Owner>,
 			"controls"

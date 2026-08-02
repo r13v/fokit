@@ -10,7 +10,7 @@ import { z } from "zod"
 
 const setupKit = createSetupKit({ controls: setupControls })
 const setupSchema = z.object({ name: z.string() })
-const definition = setupKit.defineForm(setupSchema)({
+const definition = setupKit.defineForm(setupSchema, {
 	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
 })
 const defaultValues = { name: "" }
@@ -49,7 +49,7 @@ function Editor() {
 const profileSchema = z.object({ id: z.string(), name: z.string() })
 type Profile = z.infer<typeof profileSchema>
 const profileKit = createSetupKit({ controls: setupControls })
-const profileDefinition = profileKit.defineForm(profileSchema)({ ui: [] })
+const profileDefinition = profileKit.defineForm(profileSchema, { ui: [] })
 
 // [!region edit-baseline]
 function ProfileScreen({ profile }: { profile: Profile | undefined }) {

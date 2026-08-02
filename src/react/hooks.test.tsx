@@ -30,7 +30,7 @@ const text = defineControl<string | undefined>({
 	formData: { mode: "native" },
 })
 const kit = createFormKit({ controls: { text } })
-const definition = kit.defineForm(schema).withContext<ProfileContext>({
+const definition = kit.forContext<ProfileContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -83,7 +83,7 @@ function createProfileForm(
 	options: Omit<
 		CreateFormOptions<typeof schema, ProfileContext>,
 		"defaultValues"
-	> = {},
+	> = { context: context() },
 ) {
 	return kit.createForm<typeof schema, ProfileContext>(definition, {
 		defaultValues: defaultValues(),
@@ -276,8 +276,8 @@ describe("React form hooks", () => {
 
 	it("keeps binding-owned context and value policy active until unbind", () => {
 		const policyDefinition = kit
-			.defineForm(schema)
-			.withContext<ProfileContext>({
+			.forContext<ProfileContext>()
+			.defineForm(schema, {
 				ui: [
 					{
 						kind: "field",

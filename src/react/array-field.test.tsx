@@ -81,7 +81,7 @@ const kit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "array",
@@ -110,7 +110,7 @@ const definition = kit.defineForm(schema)({
 	],
 })
 
-const disabledDefinition = kit.defineForm(schema)({
+const disabledDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "array",
@@ -133,7 +133,7 @@ const disabledDefinition = kit.defineForm(schema)({
 	],
 })
 
-const readOnlyDefinition = kit.defineForm(schema)({
+const readOnlyDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "array",
@@ -156,7 +156,7 @@ const readOnlyDefinition = kit.defineForm(schema)({
 	],
 })
 
-const nestedDefinition = kit.defineForm(schema)({
+const nestedDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "array",

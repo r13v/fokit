@@ -1,5 +1,6 @@
 "use client"
 
+import type { RuntimeNormalizedFormDefinition } from "../core/definition.js"
 import {
 	assertFirstPartyFeatureConfiguration,
 	attachFormFeatureCapability,
@@ -17,7 +18,6 @@ import {
 import type {
 	AnyUiPresentation,
 	ArrayFieldPath,
-	ArrayItemValue,
 	ControlRegistry,
 	FieldPath,
 	FocusTarget,
@@ -36,6 +36,8 @@ import type {
 	PathValue,
 	StandardSchema,
 	UiPresentation,
+	UpdateHooks,
+	ValidationOptions,
 	ValidationResult,
 } from "../core/index.js"
 import type {
@@ -44,6 +46,7 @@ import type {
 	FormMiddleware,
 } from "../core/middleware.js"
 import type { FormDeepPartial, OptionalFieldPath } from "../core/transaction.js"
+import type { ArrayItemValueAtPath } from "../core/ui-types.js"
 import type { RuntimeFormKitSlots } from "./create-form-kit.js"
 import type { ReactUiPresentation } from "./slots.js"
 import {
@@ -74,6 +77,43 @@ export type FormKitDescriptor = Readonly<{
 }>
 
 declare const formKitOwnerBrand: unique symbol
+declare const formContextBrand: unique symbol
+
+export type FormContextSource<Context> = {
+	readonly [formContextBrand]: {
+		readonly produce: () => Context
+	}
+}
+
+export type FormContextProp<Context> = 0 extends 1 & Context
+	? never
+	: unknown extends Context
+		? { readonly context?: Context }
+		: { readonly context: Context }
+
+type BoundFormDefinition<
+	Schema extends StandardSchema,
+	RequiredControls extends ControlRegistry | undefined,
+	Presentation extends UiPresentation,
+	Context,
+> = NormalizedFormDefinition<
+	Schema,
+	RequiredControls,
+	unknown,
+	Presentation,
+	Context
+>
+
+type RuntimeBoundFormDefinition<
+	Schema extends StandardSchema,
+	RequiredControls extends ControlRegistry | undefined,
+	Presentation extends UiPresentation,
+> = RuntimeNormalizedFormDefinition<
+	Schema,
+	RequiredControls,
+	unknown,
+	Presentation
+>
 
 export type FormKitOwner<Controls, Presentation> = {
 	readonly [formKitOwnerBrand]: {
@@ -82,10 +122,15 @@ export type FormKitOwner<Controls, Presentation> = {
 	}
 }
 
-type ReplaceFormOptions<Schema extends StandardSchema, Context> = Omit<
-	FormRuntimeOptions<Schema, Context>,
-	"context"
->
+type ReplaceFormOptions<Schema extends StandardSchema, Context> = UpdateHooks<
+	FormInput<Schema>,
+	Context
+> & {
+	readonly disabled?: boolean
+	readonly readOnly?: boolean
+	readonly validation?: Partial<ValidationOptions>
+	readonly onSubmit?: SubmitHandler<Schema, Context>
+}
 
 export type FormInstance<
 	Schema extends StandardSchema,
@@ -94,12 +139,15 @@ export type FormInstance<
 	Presentation extends UiPresentation = ReactUiPresentation,
 	Owner = FormKitOwner<RequiredControls, Presentation>,
 > = Omit<FormStore<Schema, Context>, "definition" | "replaceOptions"> & {
-	readonly definition: NormalizedFormDefinition<
+	readonly definition: BoundFormDefinition<
 		Schema,
 		RequiredControls,
-		unknown,
-		Presentation
+		Presentation,
+		Context
 	>
+	readonly [formContextBrand]: {
+		readonly produce: () => Context
+	}
 	readonly [formKitOwnerBrand]: Owner
 	replaceOptions(options: ReplaceFormOptions<Schema, Context>): void
 	submit(): Promise<void>
@@ -116,16 +164,30 @@ type FormBinding<Schema extends StandardSchema, Context> = {
 	readonly options: ReplaceFormOptions<Schema, Context>
 }
 
+type RuntimePathStore = {
+	setValue(path: PathInput, value: unknown): void
+	unsetValue(path: PathInput): void
+	append(path: PathInput, ...value: [] | [unknown]): void
+	insert(path: PathInput, index: number, ...value: [] | [unknown]): void
+	remove(path: PathInput, index: number): void
+	move(path: PathInput, from: number, to: number): void
+	validatePaths(paths: readonly string[]): Promise<readonly FormIssue[]>
+	focusFirstError(paths?: readonly string[]): boolean
+}
+
+function asRuntimePathStore(store: object): RuntimePathStore {
+	return store as RuntimePathStore
+}
+
 export class FormInstanceImpl<
 	Schema extends StandardSchema,
 	Context,
 	RequiredControls extends ControlRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
 > {
-	readonly definition: NormalizedFormDefinition<
+	readonly definition: RuntimeBoundFormDefinition<
 		Schema,
 		RequiredControls,
-		unknown,
 		Presentation
 	>
 	readonly schema: Schema
@@ -141,10 +203,9 @@ export class FormInstanceImpl<
 	#bindingFinalizers: readonly (() => void)[] = []
 
 	constructor(
-		definition: NormalizedFormDefinition<
+		definition: RuntimeBoundFormDefinition<
 			Schema,
 			RequiredControls,
-			unknown,
 			Presentation
 		>,
 		options: CreateFormOptions<Schema, Context>,
@@ -255,7 +316,7 @@ export class FormInstanceImpl<
 		path: Path,
 		value: PathValue<FormInput<Schema>, Path>,
 	): void {
-		this.#store.setValue(path, value)
+		asRuntimePathStore(this.#store).setValue(path, value)
 	}
 
 	setValues(values: FormDeepPartial<FormInput<Schema>>): void {
@@ -265,30 +326,29 @@ export class FormInstanceImpl<
 	unsetValue<Path extends OptionalFieldPath<FormInput<Schema>>>(
 		path: Path,
 	): void {
-		const unsetValue = this.#store.unsetValue as (path: PathInput) => void
-		unsetValue(path)
+		asRuntimePathStore(this.#store).unsetValue(path)
 	}
 
 	append<Path extends ArrayFieldPath<FormInput<Schema>>>(
 		path: Path,
-		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+		...value: [] | [ArrayItemValueAtPath<FormInput<Schema>, Path>]
 	): void {
-		this.#store.append(path, ...value)
+		asRuntimePathStore(this.#store).append(path, ...value)
 	}
 
 	insert<Path extends ArrayFieldPath<FormInput<Schema>>>(
 		path: Path,
 		index: number,
-		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+		...value: [] | [ArrayItemValueAtPath<FormInput<Schema>, Path>]
 	): void {
-		this.#store.insert(path, index, ...value)
+		asRuntimePathStore(this.#store).insert(path, index, ...value)
 	}
 
 	remove<Path extends ArrayFieldPath<FormInput<Schema>>>(
 		path: Path,
 		index: number,
 	): void {
-		this.#store.remove(path, index)
+		asRuntimePathStore(this.#store).remove(path, index)
 	}
 
 	move<Path extends ArrayFieldPath<FormInput<Schema>>>(
@@ -296,7 +356,7 @@ export class FormInstanceImpl<
 		from: number,
 		to: number,
 	): void {
-		this.#store.move(path, from, to)
+		asRuntimePathStore(this.#store).move(path, from, to)
 	}
 
 	reset(values?: FormInput<Schema>): void {
@@ -324,7 +384,7 @@ export class FormInstanceImpl<
 	validatePaths<Path extends FieldPath<FormInput<Schema>>>(
 		paths: readonly Path[],
 	): Promise<readonly FormIssue[]> {
-		return this.#store.validatePaths(paths)
+		return asRuntimePathStore(this.#store).validatePaths(paths)
 	}
 
 	batch(callback: () => void): void {
@@ -379,7 +439,7 @@ export class FormInstanceImpl<
 	focusFirstError<Path extends FieldPath<FormInput<Schema>>>(
 		paths?: readonly Path[],
 	): boolean {
-		return this.#store.focusFirstError(paths)
+		return asRuntimePathStore(this.#store).focusFirstError(paths)
 	}
 
 	submit(): Promise<void> {
@@ -404,7 +464,8 @@ export class FormInstanceImpl<
 
 export function createFormInstance<
 	Schema extends StandardSchema,
-	Context = unknown,
+	RequiredContext = unknown,
+	Context extends RequiredContext = RequiredContext,
 	RequiredControls extends ControlRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
 	Owner = FormKitOwner<RequiredControls, Presentation>,
@@ -413,7 +474,8 @@ export function createFormInstance<
 		Schema,
 		RequiredControls,
 		unknown,
-		Presentation
+		Presentation,
+		RequiredContext
 	>,
 	options: CreateFormOptions<Schema, Context>,
 	kitDescriptor: FormKitDescriptor,
@@ -454,19 +516,27 @@ export function createFormInstance<
 	>
 }
 
-export function setFormControlValue<
-	Schema extends StandardSchema,
-	Context,
-	RequiredControls extends ControlRegistry | undefined,
-	Presentation extends UiPresentation,
-	Owner,
-	Path extends FieldPath<FormInput<Schema>>,
->(
-	form: FormInstance<Schema, Context, RequiredControls, Presentation, Owner>,
-	path: Path,
-	value: PathValue<FormInput<Schema>, Path>,
+export function setFormControlValue(
+	form: object,
+	path: PathInput,
+	value: unknown,
 ): void {
-	setFormStoreControlValue(getFormStore(form), path, value)
+	setFormStoreControlValue(
+		getFormInstanceImpl(form as never).getStore(),
+		path,
+		value,
+	)
+}
+
+type RuntimeArrayActions = {
+	append(path: PathInput, ...value: [] | [unknown]): void
+	insert(path: PathInput, index: number, ...value: [] | [unknown]): void
+	remove(path: PathInput, index: number): void
+	move(path: PathInput, from: number, to: number): void
+}
+
+export function getFormArrayActions(form: object): RuntimeArrayActions {
+	return getFormInstanceImpl(form as never) as unknown as RuntimeArrayActions
 }
 
 export function getFormStore<

@@ -16,8 +16,8 @@ import {
 	type PathValue,
 	type StandardSchema,
 } from "../core/index.js"
-import type { ArrayItemValue } from "../core/ui-types.js"
-import { setFormControlValue } from "./form-instance.js"
+import type { ArrayItemValueAtPath } from "../core/ui-types.js"
+import { getFormArrayActions, setFormControlValue } from "./form-instance.js"
 import {
 	type ExternalSelectorOptions,
 	useExternalSelector,
@@ -178,7 +178,7 @@ export function useArrayField<
 >(
 	form: AnyFormInstance<Schema, Context>,
 	path: Path,
-): ArrayBinding<ArrayItemValue<FormInput<Schema>, Path>> {
+): ArrayBinding<ArrayItemValueAtPath<FormInput<Schema>, Path>> {
 	const canonicalPath = formatPath(path)
 	const selection = useExternalSelector(
 		form,
@@ -192,29 +192,30 @@ export function useArrayField<
 			equalityFn: arraySelectionEqual,
 		},
 	)
+	const actions = getFormArrayActions(form)
 	const append = useCallback(
-		(value: ArrayItemValue<FormInput<Schema>, Path>) => {
-			form.append(path, value)
+		(value: unknown) => {
+			actions.append(canonicalPath, value)
 		},
-		[form, path],
+		[actions, canonicalPath],
 	)
 	const insert = useCallback(
-		(index: number, value: ArrayItemValue<FormInput<Schema>, Path>) => {
-			form.insert(path, index, value)
+		(index: number, value: unknown) => {
+			actions.insert(canonicalPath, index, value)
 		},
-		[form, path],
+		[actions, canonicalPath],
 	)
 	const remove = useCallback(
 		(index: number) => {
-			form.remove(path, index)
+			actions.remove(canonicalPath, index)
 		},
-		[form, path],
+		[actions, canonicalPath],
 	)
 	const move = useCallback(
 		(from: number, to: number) => {
-			form.move(path, from, to)
+			actions.move(canonicalPath, from, to)
 		},
-		[form, path],
+		[actions, canonicalPath],
 	)
 	const meta = useMemo(
 		() =>
@@ -248,7 +249,7 @@ export function useArrayField<
 			move,
 		}),
 		[items, meta, append, insert, remove, move],
-	)
+	) as ArrayBinding<ArrayItemValueAtPath<FormInput<Schema>, Path>>
 }
 
 function createBindingMeta(

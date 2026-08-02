@@ -14,6 +14,7 @@ import { CommitTimeline } from "./commit-timeline.js"
 import type {
 	NormalizedArrayNode,
 	NormalizedFormDefinition,
+	RuntimeNormalizedFormDefinition,
 } from "./definition.js"
 import {
 	type FinalizedFormEventListener,
@@ -95,7 +96,7 @@ import {
 	type OptionalFieldPath,
 	type ValueChange,
 } from "./transaction.js"
-import type { ArrayItemValue } from "./ui-types.js"
+import type { AnyUiPresentation, ArrayItemValueAtPath } from "./ui-types.js"
 import {
 	normalizeValidationOptions,
 	normalizeValidationResult,
@@ -167,17 +168,30 @@ export type UpdateHooks<Input, Context> = {
 	readonly afterUpdate?: (event: UpdateEvent<Input, Context>) => void
 }
 
+type ContextOption<Context> = unknown extends Context
+	? { readonly context?: Context }
+	: { readonly context: Context }
+
+type RuntimeFormDefinition<Schema extends StandardSchema> =
+	RuntimeNormalizedFormDefinition<Schema>
+
 export type FormStoreOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
+	RequiredContext = Context,
 > = UpdateHooks<FormInput<Schema>, Context> & {
-	readonly definition: NormalizedFormDefinition<Schema>
+	readonly definition: NormalizedFormDefinition<
+		Schema,
+		undefined,
+		unknown,
+		AnyUiPresentation,
+		RequiredContext
+	>
 	readonly defaultValues: FormInput<Schema>
-	readonly context?: Context
 	readonly disabled?: boolean
 	readonly readOnly?: boolean
 	readonly validation?: Partial<ValidationOptions>
-}
+} & ContextOption<Context>
 
 type RuntimeBeforeUpdateEvent<Input, Context> = Omit<
 	BeforeUpdateEvent<Input, Context>,
@@ -193,10 +207,13 @@ type RuntimeUpdateEvent<Input, Context> = Omit<
 	readonly changes: readonly ValueChange[]
 }
 
-type RuntimeFormStoreOptions<Schema extends StandardSchema, Context> = Omit<
-	FormStoreOptions<Schema, Context>,
-	"beforeUpdate" | "afterUpdate"
-> & {
+type RuntimeFormStoreOptions<Schema extends StandardSchema, Context> = {
+	readonly definition: RuntimeFormDefinition<Schema>
+	readonly defaultValues: FormInput<Schema>
+	readonly context?: Context
+	readonly disabled?: boolean
+	readonly readOnly?: boolean
+	readonly validation?: Partial<ValidationOptions>
 	readonly beforeUpdate?: (
 		event: RuntimeBeforeUpdateEvent<FormInput<Schema>, Context>,
 	) => false | readonly ValueChange[] | undefined
@@ -224,7 +241,13 @@ export type FormStoreSubscriptionOptions<Selected> = {
 }
 
 export type FormStore<Schema extends StandardSchema, Context = unknown> = {
-	readonly definition: NormalizedFormDefinition<Schema>
+	readonly definition: NormalizedFormDefinition<
+		Schema,
+		undefined,
+		unknown,
+		AnyUiPresentation,
+		Context
+	>
 	readonly schema: Schema
 	getSnapshot(): FormSnapshot<FormInput<Schema>, Context>
 	getServerSnapshot(): FormSnapshot<FormInput<Schema>, Context>
@@ -240,12 +263,12 @@ export type FormStore<Schema extends StandardSchema, Context = unknown> = {
 	): void
 	append<Path extends ArrayFieldPath<FormInput<Schema>>>(
 		path: Path,
-		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+		...value: [] | [ArrayItemValueAtPath<FormInput<Schema>, Path>]
 	): void
 	insert<Path extends ArrayFieldPath<FormInput<Schema>>>(
 		path: Path,
 		index: number,
-		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+		...value: [] | [ArrayItemValueAtPath<FormInput<Schema>, Path>]
 	): void
 	remove<Path extends ArrayFieldPath<FormInput<Schema>>>(
 		path: Path,
@@ -338,8 +361,11 @@ export type ApplyActionResultOutcome = {
 
 export function createFormStore<
 	Schema extends StandardSchema,
-	Context = unknown,
->(options: FormStoreOptions<Schema, Context>): FormStore<Schema, Context> {
+	RequiredContext = unknown,
+	Context extends RequiredContext = RequiredContext,
+>(
+	options: FormStoreOptions<Schema, Context, RequiredContext>,
+): FormStore<Schema, Context> {
 	return new CoreFormStore(
 		options as RuntimeFormStoreOptions<Schema, Context>,
 	) as unknown as FormStore<Schema, Context>
@@ -347,9 +373,10 @@ export function createFormStore<
 
 export function createFormStoreWithMiddleware<
 	Schema extends StandardSchema,
-	Context = unknown,
+	RequiredContext = unknown,
+	Context extends RequiredContext = RequiredContext,
 >(
-	options: FormStoreOptions<Schema, Context>,
+	options: FormStoreOptions<Schema, Context, RequiredContext>,
 	middleware: readonly AnyFormMiddleware[],
 	onCommitFinalized: (
 		event: FormEvent<FormInput<Schema>, Context>,
@@ -392,16 +419,17 @@ export function restoreFormStoreDocument<
 	return asCoreFormStore(store).restoreDocument(document, origin, history)
 }
 
-export function setFormStoreControlValue<
-	Schema extends StandardSchema,
-	Context = unknown,
-	Path extends FieldPath<FormInput<Schema>> = FieldPath<FormInput<Schema>>,
->(
-	store: FormStore<Schema, Context>,
-	path: Path,
-	value: PathValue<FormInput<Schema>, Path>,
+export function setFormStoreControlValue(
+	store: object,
+	path: PathInput,
+	value: unknown,
 ): void {
-	asCoreFormStore(store).setControlValue(path, value)
+	const core = asCoreFormStore(
+		store as FormStore<StandardSchema, unknown>,
+	) as unknown as {
+		setControlValue(path: PathInput, value: unknown): void
+	}
+	core.setControlValue(path, value)
 }
 
 export function getFormStoreFeatureCapability<
@@ -484,7 +512,7 @@ export function applyActionResult<
 }
 
 class CoreFormStore<Schema extends StandardSchema, Context> {
-	readonly definition: NormalizedFormDefinition<Schema>
+	readonly definition: RuntimeFormDefinition<Schema>
 	readonly schema: Schema
 
 	#model: FormModel<FormInput<Schema>, Context>
@@ -718,7 +746,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 
 	append<Path extends ArrayFieldPath<FormInput<Schema>>>(
 		path: Path,
-		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+		...value: [] | [ArrayItemValueAtPath<FormInput<Schema>, Path>]
 	): void {
 		this.#runArrayCommand(path, {
 			type: "append",
@@ -730,7 +758,7 @@ class CoreFormStore<Schema extends StandardSchema, Context> {
 	insert<Path extends ArrayFieldPath<FormInput<Schema>>>(
 		path: Path,
 		index: number,
-		...value: [] | [ArrayItemValue<FormInput<Schema>, Path>]
+		...value: [] | [ArrayItemValueAtPath<FormInput<Schema>, Path>]
 	): void {
 		this.#runArrayCommand(path, {
 			type: "insert",
@@ -2266,7 +2294,7 @@ function clonePublicValue<Value>(value: Value): Value {
 }
 
 function createInitialValuePolicyState<Schema extends StandardSchema, Context>(
-	definition: NormalizedFormDefinition<Schema>,
+	definition: RuntimeFormDefinition<Schema>,
 	values: FormInput<Schema>,
 	context: Context,
 	options: {

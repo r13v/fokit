@@ -109,7 +109,7 @@ const kit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm(createSchema(validateValues))({
+const definition = kit.defineForm(createSchema(validateValues), {
 	ui: [
 		{
 			kind: "field",
@@ -134,7 +134,7 @@ describe("React 19 ActionForm", () => {
 			return <output data-testid="action-preview">{name}</output>
 		}
 		const action = vi.fn((_formData: FormData) => undefined)
-		const renderDefinition = kit.defineForm(createSchema(validateValues))({
+		const renderDefinition = kit.defineForm(createSchema(validateValues), {
 			ui: [
 				{
 					kind: "render",
@@ -170,7 +170,7 @@ describe("React 19 ActionForm", () => {
 		const action = vi.fn((_formData: FormData) => undefined)
 		const submittedEvents: boolean[] = []
 		const form = kit.createForm(
-			kit.defineForm(createSchema(validate))({
+			kit.defineForm(createSchema(validate), {
 				ui: [
 					{
 						kind: "field",
@@ -282,16 +282,17 @@ describe("React 19 ActionForm", () => {
 		const action = vi.fn()
 		const hiddenDefinition = kit.defineForm(
 			createSchema(() => ({ value: defaultValues() })),
-		)({
-			ui: [
-				{
-					kind: "field",
-					path: "name",
-					control: "text",
-					visible: false,
-				},
-			],
-		})
+			{
+				ui: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						visible: false,
+					},
+				],
+			},
+		)
 		const formInstance = kit.createForm(hiddenDefinition, {
 			defaultValues: defaultValues(),
 		})
@@ -521,13 +522,13 @@ describe("React 19 ActionForm", () => {
 			slots: { Field: SiblingOwnedField },
 		})
 		const ownedSchema = createSchema(validateValues)
-		const baseDefinition = baseKit.defineForm(ownedSchema)({
+		const baseDefinition = baseKit.defineForm(ownedSchema, {
 			ui: [{ kind: "field", path: "name", control: "baseText" }],
 		})
-		const extendedDefinition = extendedKit.defineForm(ownedSchema)({
+		const extendedDefinition = extendedKit.defineForm(ownedSchema, {
 			ui: [{ kind: "field", path: "name", control: "extendedText" }],
 		})
-		const siblingDefinition = siblingKit.defineForm(ownedSchema)({
+		const siblingDefinition = siblingKit.defineForm(ownedSchema, {
 			ui: [{ kind: "field", path: "name", control: "siblingText" }],
 		})
 		const baseForm = baseKit.createForm(baseDefinition, {
@@ -561,7 +562,7 @@ describe("React 19 ActionForm", () => {
 
 	it("throws before dispatch when active controls cannot be represented in Action FormData", () => {
 		let snapshot: ReturnType<FormInstance<Schema>["getSnapshot"]> | undefined
-		const unavailableDefinition = kit.defineForm(createSchema(validateValues))({
+		const unavailableDefinition = kit.defineForm(createSchema(validateValues), {
 			ui: [
 				{
 					kind: "field",
@@ -594,7 +595,8 @@ describe("React 19 ActionForm", () => {
 	})
 
 	it("rejects preserved disabled native controls without serializers", () => {
-		const incompatibleDefinition = kit.defineForm(createSchema(validateValues))(
+		const incompatibleDefinition = kit.defineForm(
+			createSchema(validateValues),
 			{
 				ui: [
 					{
@@ -623,7 +625,7 @@ describe("React 19 ActionForm", () => {
 		const nestedSchema = createSchema<NestedValues>((value) => ({
 			value: value as NestedValues,
 		}))
-		const nestedDefinition = kit.defineForm(nestedSchema)({
+		const nestedDefinition = kit.defineForm(nestedSchema, {
 			ui: [
 				{
 					kind: "array",

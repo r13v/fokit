@@ -1,7 +1,7 @@
 import type {
 	NormalizedArrayNode,
-	NormalizedFormDefinition,
 	NormalizedRelativeUiNode,
+	RuntimeNormalizedFormDefinition,
 } from "./definition.js"
 import type { RowIdentityChange } from "./form-events.js"
 import {
@@ -57,7 +57,7 @@ export type ArrayCommandChange = {
 }
 
 export function createRowIdentityState<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
+	definition: RuntimeNormalizedFormDefinition<Schema>,
 	values: FormInput<Schema>,
 ): RowIdentityState {
 	const rowsByPath = Object.create(null) as Record<string, RowIdentityEntry>
@@ -244,7 +244,7 @@ export function cloneRowIdentityState(
 }
 
 export function reconcileRowIdentityState<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
+	definition: RuntimeNormalizedFormDefinition<Schema>,
 	values: FormInput<Schema>,
 	previous: RowIdentityState,
 ): RowIdentityState {
@@ -417,7 +417,7 @@ export function validateRowIdentity(
 }
 
 export function validateRestoredRowIdentity<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
+	definition: RuntimeNormalizedFormDefinition<Schema>,
 	values: FormInput<Schema>,
 	rowIdentity: RowIdentityState,
 ): void {
@@ -634,7 +634,7 @@ function reindexArrayPath(
 }
 
 export function isKnownArrayDescendantFieldPath<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
+	definition: RuntimeNormalizedFormDefinition<Schema>,
 	values: FormInput<Schema>,
 	path: PathInput,
 ): boolean {
@@ -673,7 +673,7 @@ export function isKnownArrayDescendantFieldPath<Schema extends StandardSchema>(
 }
 
 export function findArrayNodeForPath<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
+	definition: RuntimeNormalizedFormDefinition<Schema>,
 	path: PathInput,
 ): NormalizedArrayNode | undefined {
 	const segments = parsePath(path)

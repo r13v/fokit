@@ -10,7 +10,7 @@ import { z } from "zod"
 
 const schema = z.object({ note: z.string() })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [{ kind: "field", path: "note", control: "textarea", label: "Note" }],
 })
 const persistenceFeature = createPersistenceMiddleware({

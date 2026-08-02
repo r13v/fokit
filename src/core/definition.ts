@@ -16,7 +16,6 @@ import type {
 import { cloneValue } from "./value.js"
 
 type NodeKind = "array" | "field" | "render" | "section"
-type NoInferValue<Value> = [Value][Value extends unknown ? 0 : never]
 type NodeScope = {
 	readonly idPrefix: string
 	readonly pathScope: string
@@ -181,7 +180,7 @@ export type FormDefinition<
 > = {
 	readonly schema: Schema
 	readonly ui: readonly UiNode<
-		FormInput<NoInferValue<Schema>>,
+		FormInput<Schema>,
 		Controls,
 		Context,
 		RenderComponent,
@@ -200,6 +199,7 @@ export type NormalizeDefinitionInput<
 }
 
 declare const requiredControls: unique symbol
+declare const requiredContext: unique symbol
 declare const requiredPresentation: unique symbol
 
 type DefinitionControlRequirement<
@@ -219,7 +219,11 @@ type DefinitionPresentationRequirement<Presentation extends UiPresentation> = {
 	readonly [requiredPresentation]?: Presentation
 }
 
-export type NormalizedFormDefinition<
+type DefinitionContextRequirement<RequiredContext> = {
+	readonly [requiredContext]?: (context: RequiredContext) => void
+}
+
+export type RuntimeNormalizedFormDefinition<
 	Schema extends StandardSchema = StandardSchema,
 	RequiredControls extends ControlRegistry | undefined = undefined,
 	RenderComponent = unknown,
@@ -240,6 +244,20 @@ export type NormalizedFormDefinition<
 } & DefinitionControlRequirement<RequiredControls> &
 	DefinitionPresentationRequirement<Presentation>
 
+export type NormalizedFormDefinition<
+	Schema extends StandardSchema = StandardSchema,
+	RequiredControls extends ControlRegistry | undefined = undefined,
+	RenderComponent = unknown,
+	Presentation extends UiPresentation = AnyUiPresentation,
+	RequiredContext = unknown,
+> = RuntimeNormalizedFormDefinition<
+	Schema,
+	RequiredControls,
+	RenderComponent,
+	Presentation
+> &
+	DefinitionContextRequirement<RequiredContext>
+
 export function normalizeDefinition<
 	Schema extends StandardSchema,
 	Controls extends ControlRegistry,
@@ -254,7 +272,13 @@ export function normalizeDefinition<
 		RenderComponent,
 		Presentation
 	>,
-): NormalizedFormDefinition<Schema, Controls, RenderComponent, Presentation> {
+): NormalizedFormDefinition<
+	Schema,
+	Controls,
+	RenderComponent,
+	Presentation,
+	Context
+> {
 	const state: NormalizationState<RenderComponent, Presentation> = {
 		controls: input.controls,
 		nodeIds: new Set(),
@@ -291,7 +315,8 @@ export function normalizeDefinition<
 		Schema,
 		Controls,
 		RenderComponent,
-		Presentation
+		Presentation,
+		Context
 	>
 }
 

@@ -204,10 +204,15 @@ export type SectionNode<
 	>[]
 }
 
-export type ArrayItemValue<Input, Path extends ArrayFieldPath<Input>> =
+export type ArrayItemValueAtPath<Input, Path extends string> =
 	NonNullable<PathValue<Input, Path>> extends readonly (infer Item)[]
 		? Item
 		: never
+
+export type ArrayItemValue<
+	Input,
+	Path extends ArrayFieldPath<Input>,
+> = ArrayItemValueAtPath<Input, Path>
 
 type ArrayNodeForPath<
 	Input,
@@ -232,10 +237,10 @@ type ArrayNodeForPath<
 	readonly className?: string
 	readonly span?: GridSpan
 	readonly itemDefault:
-		| ArrayItemValue<Input, Path>
-		| (() => ArrayItemValue<Input, Path>)
+		| ArrayItemValueAtPath<Input, Path>
+		| (() => ArrayItemValueAtPath<Input, Path>)
 	readonly children: readonly RelativeUiNode<
-		ArrayItemValue<Input, Path>,
+		ArrayItemValueAtPath<Input, Path>,
 		Controls,
 		Context,
 		Presentation

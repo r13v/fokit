@@ -7,7 +7,7 @@ import { z } from "zod"
 
 const kit = createFormKit({ controls: nativeControls })
 const schema = z.object({ name: z.string() })
-const definition = kit.defineForm(schema)({ ui: [] })
+const definition = kit.defineForm(schema, { ui: [] })
 const defaultValues = { name: "" }
 declare const adapter: FormPersistenceAdapter
 

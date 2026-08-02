@@ -42,7 +42,7 @@ const schema = z.object({
 	name: z.string().min(1, "Name is required"),
 })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

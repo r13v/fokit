@@ -251,7 +251,7 @@ function GrantPreview() {
 	)
 }
 
-const grantDefinition = kit.defineForm(grantSchema)({
+const grantDefinition = kit.defineForm(grantSchema, {
 	ui: [
 		{
 			kind: "section",

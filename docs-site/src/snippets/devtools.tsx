@@ -7,7 +7,7 @@ import { z } from "zod"
 
 const schema = z.object({ title: z.string() })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [{ kind: "field", path: "title", control: "text", label: "Title" }],
 })
 const devToolsFeature = createDevToolsMiddleware({

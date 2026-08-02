@@ -11,7 +11,7 @@ import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({ ui: [] })
+const definition = kit.defineForm(schema, { ui: [] })
 const form = kit.createForm(definition, { defaultValues: { name: "" } })
 declare const permission: ResourceState<{ readonly canEdit: boolean }>
 

@@ -1,8 +1,8 @@
 import { getRowIdentityKeys, type RowIdentityState } from "./array-state.js"
 import type {
 	NormalizedArrayNode,
-	NormalizedFormDefinition,
 	NormalizedRelativeUiNode,
+	RuntimeNormalizedFormDefinition,
 } from "./definition.js"
 import type { FormDocument } from "./form-model.js"
 import {
@@ -53,7 +53,7 @@ export function addTouchedPath(
 }
 
 export function deriveFormMetadata<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
+	definition: RuntimeNormalizedFormDefinition<Schema>,
 	document: FormDocument<FormInput<Schema>>,
 	baselineDocument: FormDocument<FormInput<Schema>>,
 	touchedPaths: ReadonlySet<string>,

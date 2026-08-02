@@ -99,7 +99,7 @@ function createDefinition(
 		readonly kind: ProfileValues["kind"]
 	}) => TextOptions = () => ({ placeholder: "" }),
 ) {
-	return profileKit.defineForm(schema).withContext<ProfileContext>({
+	return profileKit.forContext<ProfileContext>().defineForm(schema, {
 		ui: [
 			{
 				kind: "section",
@@ -200,8 +200,8 @@ describe("kit.AutoForm and kit.Fields", () => {
 			return <output data-testid="name-preview">{name}</output>
 		}
 		const definition = profileKit
-			.defineForm(schema)
-			.withContext<ProfileContext>({
+			.forContext<ProfileContext>()
+			.defineForm(schema, {
 				ui: [
 					{
 						kind: "render",

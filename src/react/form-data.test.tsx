@@ -465,7 +465,7 @@ const nativeTextLikeKit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm(schema).withContext<Context>({
+const definition = kit.forContext<Context>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -554,7 +554,7 @@ const definition = kit.defineForm(schema).withContext<Context>({
 	],
 })
 
-const incompatibleDefinition = kit.defineForm(schema).withContext<Context>({
+const incompatibleDefinition = kit.forContext<Context>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -566,7 +566,7 @@ const incompatibleDefinition = kit.defineForm(schema).withContext<Context>({
 	],
 })
 
-const uploadDefinition = uploadKit.defineForm(uploadSchema)({
+const uploadDefinition = uploadKit.defineForm(uploadSchema, {
 	ui: [
 		{
 			kind: "field",
@@ -577,7 +577,7 @@ const uploadDefinition = uploadKit.defineForm(uploadSchema)({
 	],
 })
 
-const nestedDefinition = kit.defineForm(nestedSchema).withContext<Context>({
+const nestedDefinition = kit.forContext<Context>().defineForm(nestedSchema, {
 	ui: [
 		{
 			kind: "array",
@@ -613,164 +613,169 @@ const nestedDefinition = kit.defineForm(nestedSchema).withContext<Context>({
 
 const nativeTextLikeDefinition = nativeTextLikeKit.defineForm(
 	nativeTextLikeSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-			disabled: true,
-		},
-		{
-			kind: "field",
-			path: "note",
-			control: "textarea",
-			label: "Note",
-			visible: false,
-		},
-		{
-			kind: "field",
-			path: "openingTime",
-			control: "time",
-			label: "Opening time",
-			visible: false,
-		},
-		{
-			kind: "field",
-			path: "count",
-			control: "number",
-			label: "Count",
-			disabled: true,
-		},
-		{
-			kind: "field",
-			path: "birthday",
-			control: "date",
-			label: "Birthday",
-			visible: false,
-		},
-	],
-})
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: "Name",
+				disabled: true,
+			},
+			{
+				kind: "field",
+				path: "note",
+				control: "textarea",
+				label: "Note",
+				visible: false,
+			},
+			{
+				kind: "field",
+				path: "openingTime",
+				control: "time",
+				label: "Opening time",
+				visible: false,
+			},
+			{
+				kind: "field",
+				path: "count",
+				control: "number",
+				label: "Count",
+				disabled: true,
+			},
+			{
+				kind: "field",
+				path: "birthday",
+				control: "date",
+				label: "Birthday",
+				visible: false,
+			},
+		],
+	},
+)
 
 const nativeChoiceFileDefinition = nativeTextLikeKit.defineForm(
 	nativeChoiceFileSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "status",
-			control: "select",
-			label: "Status",
-			options: {
-				options: [
-					{ value: "draft", label: "Draft" },
-					{ value: "published", label: "Published" },
-				],
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "status",
+				control: "select",
+				label: "Status",
+				options: {
+					options: [
+						{ value: "draft", label: "Draft" },
+						{ value: "published", label: "Published" },
+					],
+				},
 			},
-		},
-		{
-			kind: "field",
-			path: "representation",
-			control: "select",
-			label: "Representation",
-			options: {
-				emptyOption: { label: "Choose a representation", disabled: true },
-				options: [
-					{ value: "registered", label: "Registered" },
-					{ value: "forming", label: "Forming" },
-				],
+			{
+				kind: "field",
+				path: "representation",
+				control: "select",
+				label: "Representation",
+				options: {
+					emptyOption: { label: "Choose a representation", disabled: true },
+					options: [
+						{ value: "registered", label: "Registered" },
+						{ value: "forming", label: "Forming" },
+					],
+				},
 			},
-		},
-		{
-			kind: "field",
-			path: "subscribed",
-			control: "checkbox",
-			label: "Subscribed",
-		},
-		{
-			kind: "field",
-			path: "avatar",
-			control: "file",
-			label: "Avatar",
-		},
-	],
-})
+			{
+				kind: "field",
+				path: "subscribed",
+				control: "checkbox",
+				label: "Subscribed",
+			},
+			{
+				kind: "field",
+				path: "avatar",
+				control: "file",
+				label: "Avatar",
+			},
+		],
+	},
+)
 
 const nativeChoicePreservationDefinition = nativeTextLikeKit.defineForm(
 	nativeChoiceFileSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "disabledStatus",
-			control: "select",
-			label: "Disabled status",
-			disabled: true,
-			options: {
-				options: [
-					{ value: "draft", label: "Draft" },
-					{ value: "published", label: "Published" },
-				],
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "disabledStatus",
+				control: "select",
+				label: "Disabled status",
+				disabled: true,
+				options: {
+					options: [
+						{ value: "draft", label: "Draft" },
+						{ value: "published", label: "Published" },
+					],
+				},
 			},
-		},
-		{
-			kind: "field",
-			path: "hiddenStatus",
-			control: "select",
-			label: "Hidden status",
-			visible: false,
-			options: {
-				options: [
-					{ value: "draft", label: "Draft" },
-					{ value: "published", label: "Published" },
-				],
+			{
+				kind: "field",
+				path: "hiddenStatus",
+				control: "select",
+				label: "Hidden status",
+				visible: false,
+				options: {
+					options: [
+						{ value: "draft", label: "Draft" },
+						{ value: "published", label: "Published" },
+					],
+				},
 			},
-		},
-		{
-			kind: "field",
-			path: "disabledSubscribed",
-			control: "checkbox",
-			label: "Disabled subscribed",
-			disabled: true,
-		},
-		{
-			kind: "field",
-			path: "hiddenSubscribed",
-			control: "checkbox",
-			label: "Hidden subscribed",
-			visible: false,
-		},
-	],
-})
+			{
+				kind: "field",
+				path: "disabledSubscribed",
+				control: "checkbox",
+				label: "Disabled subscribed",
+				disabled: true,
+			},
+			{
+				kind: "field",
+				path: "hiddenSubscribed",
+				control: "checkbox",
+				label: "Hidden subscribed",
+				visible: false,
+			},
+		],
+	},
+)
 
 const disabledNativeFileDefinition = nativeTextLikeKit.defineForm(
 	nativeChoiceFileSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "disabledAvatar",
-			control: "file",
-			label: "Disabled avatar",
-			disabled: true,
-		},
-	],
-})
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "disabledAvatar",
+				control: "file",
+				label: "Disabled avatar",
+				disabled: true,
+			},
+		],
+	},
+)
 
 const hiddenNativeFileDefinition = nativeTextLikeKit.defineForm(
 	nativeChoiceFileSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "hiddenAvatar",
-			control: "file",
-			label: "Hidden avatar",
-			visible: false,
-		},
-	],
-})
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "hiddenAvatar",
+				control: "file",
+				label: "Hidden avatar",
+				visible: false,
+			},
+		],
+	},
+)
 
 describe("native FormData serialization", () => {
 	beforeEach(() => {

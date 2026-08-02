@@ -151,7 +151,7 @@ function useCities(): Cities {
 	return cities
 }
 
-const definition = kit.defineForm(schema).withContext<Context>({
+const definition = kit.forContext<Context>().defineForm(schema, {
 	ui: [
 		{
 			kind: "section",

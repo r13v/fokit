@@ -11,7 +11,7 @@ sees, how fields are grouped, and which control edits each value. Keeping those
 decisions separate lets a domain schema evolve without silently redesigning the
 form.
 
-`kit.defineForm(schema)({ ui })` validates the tree once, freezes it, and keeps
+`kit.defineForm(schema, { ui })` validates the tree once, freezes it, and keeps
 the result reusable across form instances.
 
 ## Read the tree at a glance
@@ -58,15 +58,19 @@ belong to the selected control. For example, a number path accepts the shipped
 `required` does not add a validation rule. Generated forms use the Standard
 Schema as the source of truth, so required validation belongs in the schema.
 
-## Reuse object-scoped fragments
+## Split large definitions with typed arrays
 
-Use `define.fragment(scope, nodes)` when several fields belong to one nested
-object. Paths and resolver dependencies inside the fragment are relative to
-that object, while normalization still produces the ordinary four node kinds
-with absolute paths:
+Plain typed arrays are enough when a large definition needs local sections.
+Keep paths absolute so each extracted block has the same meaning where it is
+declared and where it is composed:
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "form-please"
+import {
+	createFormKit,
+	type FormInput,
+	nativeControls,
+	type UiNode,
+} from "form-please"
 import { z } from "zod"
 
 const schema = z.object({
@@ -76,36 +80,31 @@ const schema = z.object({
 	}),
 })
 const kit = createFormKit({ controls: nativeControls })
-const define = kit.defineForm(schema)
+type Input = FormInput<typeof schema>
 
-const billing = define.fragment("billing", [
+const billing = [
 	{
 		kind: "field",
-		path: "contact",
+		path: "billing.contact",
 		control: "text",
-		label: ({ contact }) => `Billing contact: ${contact}`,
+		label: ({ "billing.contact": contact }) =>
+			`Billing contact: ${contact}`,
 	},
 	{
 		kind: "field",
-		path: "invoiceNote",
+		path: "billing.invoiceNote",
 		control: "textarea",
 		label: "Invoice note",
 	},
-])
+] satisfies readonly UiNode<Input, typeof kit.controls>[]
 
-const definition = define({ ui: billing })
+const definition = kit.defineForm(schema, { ui: billing })
 ```
 
-The scope must be a definitely present, non-null object-valued schema path.
-Keep absolute nodes for optional or nullable objects so resolver and control
-types preserve the missing-parent possibility. Arrays keep their existing
-`children` contract and item-relative paths. A fragment may contain sections,
-fields, and arrays; put a section inside the fragment when the reused block
-needs structural grouping. Explicit section and render IDs remain global to
-the complete definition, including across fragment scopes. A context-free
-fragment works in a context-aware definition; use
-`define.fragment.withContext<Context>()` only when its resolvers read runtime
-context.
+Use `UiNode<Input, typeof kit.controls, Context>` when the form has a context
+contract. Arrays keep their existing item-relative `children` paths; all nodes
+outside an array use absolute form paths. Section and render IDs remain global
+to the complete definition.
 
 ## Compose structural copy
 
@@ -121,7 +120,7 @@ import { z } from "zod"
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({ controls: nativeControls })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -206,7 +205,7 @@ const kit = createFormKit({
 	slots: { Field: OverviewField },
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -267,7 +266,7 @@ function NamePreview({ disabled, readOnly }: RenderNodeProps) {
 	)
 }
 
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "render",

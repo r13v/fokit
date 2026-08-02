@@ -55,7 +55,7 @@ const controls = nativeControls
 const slots = createDefaultSlots()
 const ui = [] as const
 const kit = createFormKit({ controls })
-const definition = kit.defineForm(schema)({ ui })
+const definition = kit.defineForm(schema, { ui })
 const defaultValues = {
 	profile: { name: "Ada" },
 	contacts: [],
@@ -76,15 +76,16 @@ const customSlotKit = createFormKit({ controls, slots })
 // [!endregion create-form-kit]
 
 // [!region define-form]
-const profileDefinition = kit.defineForm(schema)({ ui })
-const contextualDefinition = kit.defineForm(schema).withContext<Context>({ ui })
-const profileFragment = kit.defineForm(schema).fragment("profile", [])
+const profileDefinition = kit.defineForm(schema, { ui })
+const contextualDefinition = kit
+	.forContext<Context>()
+	.defineForm(schema, { ui })
 // [!endregion define-form]
 
 // [!region create-form-options]
 type ProfileCreateFormOptions = {
 	defaultValues: Input
-	context?: Context
+	context: Context
 	disabled?: boolean
 	readOnly?: boolean
 	validation?: Partial<ValidationOptions>
@@ -110,7 +111,7 @@ function Editor() {
 
 // [!region runtime-options]
 type ProfileRuntimeOptions = {
-	context?: Context
+	context: Context
 	disabled?: boolean
 	readOnly?: boolean
 	validation?: Partial<ValidationOptions>
@@ -132,7 +133,7 @@ function ManualForm() {
 }
 
 function GeneratedForm() {
-	return <kit.AutoForm form={form} />
+	return <kit.AutoForm form={form} context={context} />
 }
 // [!endregion form-components]
 
@@ -365,7 +366,7 @@ import { ActionForm, ActionSubmit } from "form-please/react19"
 
 function ProfileActionForm() {
 	return (
-		<ActionForm form={form} action={action} result={result}>
+		<ActionForm form={form} context={context} action={action} result={result}>
 			<ActionSubmit>Save</ActionSubmit>
 		</ActionForm>
 	)

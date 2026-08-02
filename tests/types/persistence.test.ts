@@ -30,7 +30,7 @@ type Schema = StandardSchemaV1<Input>
 declare const schema: Schema
 declare const adapter: FormPersistenceAdapter
 const kit = createFormKit({ controls: {} })
-const definition = kit.defineForm(schema).withContext<Context>({ ui: [] })
+const definition = kit.forContext<Context>().defineForm(schema, { ui: [] })
 const history = createHistoryMiddleware()
 const documentPersistence = createPersistenceMiddleware({
 	adapter,

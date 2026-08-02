@@ -2,7 +2,7 @@ import type { ImperativeFormIssue } from "./issues.js"
 import type { PathInput } from "./path.js"
 import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
 import type { FormDeepPartial, OptionalFieldPath } from "./transaction.js"
-import type { ArrayItemValue } from "./ui-types.js"
+import type { ArrayItemValueAtPath } from "./ui-types.js"
 import type { ValidationOptions } from "./validation.js"
 
 export type SetValueCommand<Input> = {
@@ -28,7 +28,7 @@ export type ValueCommand<Input> =
 
 type ArrayValueCommand<Input> = {
 	readonly path: ArrayFieldPath<Input>
-	readonly value?: ArrayItemValue<Input, ArrayFieldPath<Input>>
+	readonly value?: ArrayItemValueAtPath<Input, ArrayFieldPath<Input>>
 }
 
 export type ArrayCommand<Input> =

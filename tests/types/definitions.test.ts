@@ -78,7 +78,7 @@ const partialSlotsKit = createFormKit({
 	},
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -107,7 +107,7 @@ kit.defineForm(schema)({
 	],
 })
 
-omittedSlotsKit.defineForm(schema)({
+omittedSlotsKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -118,7 +118,7 @@ omittedSlotsKit.defineForm(schema)({
 	],
 })
 
-partialSlotsKit.defineForm(schema)({
+partialSlotsKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -129,7 +129,7 @@ partialSlotsKit.defineForm(schema)({
 	],
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -141,7 +141,7 @@ kit.defineForm(schema)({
 	],
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

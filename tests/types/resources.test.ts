@@ -66,7 +66,7 @@ declare const context: ExampleContext
 
 const kit = createFormKit({ controls: nativeControls })
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -120,7 +120,7 @@ kit.defineForm(schema).withContext<ExampleContext>({
 	],
 })
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -178,7 +178,7 @@ declare const asyncPermission: UiResolver<
 	ExampleContext
 >
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

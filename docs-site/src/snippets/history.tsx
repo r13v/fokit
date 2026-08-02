@@ -18,7 +18,7 @@ const schema = z.object({ title: z.string().min(1, "Enter a title") })
 type Input = FormInput<typeof schema>
 
 const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [{ kind: "field", path: "title", control: "text", label: "Title" }],
 })
 const historyFeature = createHistoryMiddleware({ limit: 50 })

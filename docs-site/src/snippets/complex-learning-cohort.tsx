@@ -12,6 +12,7 @@ import {
 	type FormOutput,
 	matchResource,
 	nativeControls,
+	type UiNode,
 	useFormContext,
 	useFormState,
 	useValue,
@@ -207,8 +208,6 @@ const draft = {
 } satisfies CohortInput
 
 const kit = createFormKit({ controls: nativeControls })
-const defineCohort = kit.defineForm(cohortSchema)
-const cohortFragment = defineCohort.fragment
 
 function TitleSuggestions() {
 	const form = useFormContext<typeof cohortSchema>()
@@ -293,7 +292,7 @@ function CohortPreview() {
 	)
 }
 
-const cohortDefinition = defineCohort({
+const cohortDefinition = kit.defineForm(cohortSchema, {
 	ui: [
 		{
 			kind: "section",
@@ -455,7 +454,7 @@ const cohortDefinition = defineCohort({
 })
 
 function offerSections() {
-	return cohortFragment("offers", [
+	return [
 		{
 			kind: "section",
 			id: "offer-early",
@@ -464,25 +463,25 @@ function offerSections() {
 			children: [
 				{
 					kind: "field",
-					path: "earlyBird.enabled",
+					path: "offers.earlyBird.enabled",
 					control: "checkbox",
 					label: "Enabled",
 				},
 				{
 					kind: "field",
-					path: "earlyBird.percent",
+					path: "offers.earlyBird.percent",
 					control: "number",
 					label: "Reduction percent",
-					visible: ({ "earlyBird.enabled": enabled }) => enabled,
+					visible: ({ "offers.earlyBird.enabled": enabled }) => enabled,
 					valuePolicy: "unset",
 					options: { min: 1, max: 80, step: 1 },
 				},
 				{
 					kind: "field",
-					path: "earlyBird.deadline",
+					path: "offers.earlyBird.deadline",
 					control: "date",
 					label: "Deadline",
-					visible: ({ "earlyBird.enabled": enabled }) => enabled,
+					visible: ({ "offers.earlyBird.enabled": enabled }) => enabled,
 					valuePolicy: "unset",
 				},
 			],
@@ -495,25 +494,25 @@ function offerSections() {
 			children: [
 				{
 					kind: "field",
-					path: "team.enabled",
+					path: "offers.team.enabled",
 					control: "checkbox",
 					label: "Enabled",
 				},
 				{
 					kind: "field",
-					path: "team.minimumSeats",
+					path: "offers.team.minimumSeats",
 					control: "number",
 					label: "Minimum seats",
-					visible: ({ "team.enabled": enabled }) => enabled,
+					visible: ({ "offers.team.enabled": enabled }) => enabled,
 					valuePolicy: "unset",
 					options: { min: 2, step: 1 },
 				},
 				{
 					kind: "field",
-					path: "team.percent",
+					path: "offers.team.percent",
 					control: "number",
 					label: "Reduction percent",
-					visible: ({ "team.enabled": enabled }) => enabled,
+					visible: ({ "offers.team.enabled": enabled }) => enabled,
 					valuePolicy: "unset",
 					options: { min: 1, max: 80, step: 1 },
 				},
@@ -527,16 +526,16 @@ function offerSections() {
 			children: [
 				{
 					kind: "field",
-					path: "scholarship.enabled",
+					path: "offers.scholarship.enabled",
 					control: "checkbox",
 					label: "Enabled",
 				},
 				{
 					kind: "field",
-					path: "scholarship.reservedSeats",
+					path: "offers.scholarship.reservedSeats",
 					control: "number",
 					label: "Reserved seats",
-					visible: ({ "scholarship.enabled": enabled }) => enabled,
+					visible: ({ "offers.scholarship.enabled": enabled }) => enabled,
 					valuePolicy: "unset",
 					options: { min: 1, step: 1 },
 				},
@@ -550,22 +549,22 @@ function offerSections() {
 			children: [
 				{
 					kind: "field",
-					path: "alumni.enabled",
+					path: "offers.alumni.enabled",
 					control: "checkbox",
 					label: "Enabled",
 				},
 				{
 					kind: "field",
-					path: "alumni.percent",
+					path: "offers.alumni.percent",
 					control: "number",
 					label: "Reduction percent",
-					visible: ({ "alumni.enabled": enabled }) => enabled,
+					visible: ({ "offers.alumni.enabled": enabled }) => enabled,
 					valuePolicy: "unset",
 					options: { min: 1, max: 80, step: 1 },
 				},
 			],
 		},
-	])
+	] satisfies readonly UiNode<CohortInput, typeof kit.controls>[]
 }
 
 export function LearningCohortExample() {

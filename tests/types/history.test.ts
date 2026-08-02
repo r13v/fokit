@@ -28,7 +28,7 @@ type Schema = StandardSchemaV1<Input>
 
 declare const schema: Schema
 const kit = createFormKit({ controls: {} })
-const definition = kit.defineForm(schema).withContext<Context>({ ui: [] })
+const definition = kit.forContext<Context>().defineForm(schema, { ui: [] })
 const historyFeature = createHistoryMiddleware({ limit: 20, groupWindow: 0 })
 const middleware: FormMiddleware<Input, Context> = historyFeature
 const form = kit.createForm(definition, {

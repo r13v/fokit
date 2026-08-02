@@ -235,7 +235,7 @@ function LocalPreview({ disabled, readOnly }: RenderNodeProps) {
 	)
 }
 
-const extendedDefinition = extendedKit.defineForm(schema)({
+const extendedDefinition = extendedKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "render",
@@ -278,17 +278,18 @@ const ui = [
 	},
 ] satisfies readonly UiNode<ProfileInput, typeof kit.controls>[]
 
-const defineProfile = kit.defineForm(schema)
-const settingsFragment = defineProfile.fragment("settings", [
-	{
-		kind: "field",
-		path: "nickname",
-		control: "text",
-		label: "Nickname",
-	},
-])
-const definition = defineProfile({ ui: [...ui, ...settingsFragment] })
-const richDefinition = defineProfile({
+const definition = kit.defineForm(schema, {
+	ui: [
+		...ui,
+		{
+			kind: "field",
+			path: "settings.nickname",
+			control: "text",
+			label: "Nickname",
+		},
+	],
+})
+const richDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "section",

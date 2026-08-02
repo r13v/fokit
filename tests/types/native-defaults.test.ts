@@ -145,7 +145,7 @@ type _fileOptions = Expect<
 	Equal<ControlOptionsOf<typeof nativeControls.file>, NativeFileOptions>
 >
 
-const nativeDefinition = nativeKit.defineForm(schema)({
+const nativeDefinition = nativeKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -236,7 +236,7 @@ const nativeDefinition = nativeKit.defineForm(schema)({
 	],
 })
 
-nativeKit.defineForm(schema)({
+nativeKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -247,7 +247,7 @@ nativeKit.defineForm(schema)({
 	],
 })
 
-nativeKit.defineForm(schema)({
+nativeKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -258,7 +258,7 @@ nativeKit.defineForm(schema)({
 	],
 })
 
-nativeKit.defineForm(schema)({
+nativeKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -299,7 +299,7 @@ type _moneyOptions = Expect<
 	>
 >
 
-const mixedDefinition = mixedKit.defineForm(schema)({
+const mixedDefinition = mixedKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -320,7 +320,7 @@ const mixedDefinition = mixedKit.defineForm(schema)({
 	],
 })
 
-mixedKit.defineForm(schema)({
+mixedKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

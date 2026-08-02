@@ -68,7 +68,7 @@ const kit = createFormKit({
 	controls: nativeControls,
 })
 
-const editableDefinition = kit.defineForm(schema)({
+const editableDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -130,7 +130,7 @@ const editableDefinition = kit.defineForm(schema)({
 	],
 })
 
-const choiceDefinition = kit.defineForm(schema)({
+const choiceDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -181,7 +181,7 @@ const choiceDefinition = kit.defineForm(schema)({
 	],
 })
 
-const missingSelectOptionsDefinition = kit.defineForm(schema)({
+const missingSelectOptionsDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -192,7 +192,7 @@ const missingSelectOptionsDefinition = kit.defineForm(schema)({
 	],
 })
 
-const missingSelectEmptyOptionDefinition = kit.defineForm(schema)({
+const missingSelectEmptyOptionDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -209,7 +209,7 @@ const missingSelectEmptyOptionDefinition = kit.defineForm(schema)({
 	],
 })
 
-const conflictingSelectEmptyOptionDefinition = kit.defineForm(schema)({
+const conflictingSelectEmptyOptionDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -227,7 +227,7 @@ const conflictingSelectEmptyOptionDefinition = kit.defineForm(schema)({
 	],
 })
 
-const emptyStringSelectDefinition = kit.defineForm(schema)({
+const emptyStringSelectDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -244,7 +244,7 @@ const emptyStringSelectDefinition = kit.defineForm(schema)({
 	],
 })
 
-const preservationDefinition = kit.defineForm(schema)({
+const preservationDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -338,7 +338,7 @@ const preservationDefinition = kit.defineForm(schema)({
 	],
 })
 
-const readOnlyDefinition = kit.defineForm(schema)({
+const readOnlyDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

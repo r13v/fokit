@@ -26,7 +26,7 @@ const schema = z.object({
 })
 const kit = createFormKit({ controls: nativeControls })
 
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -109,9 +109,7 @@ type ProfileContext = {
 
 const kit = createFormKit({ controls: nativeControls })
 
-const definition = kit
-	.defineForm(schema)
-	.withContext<ProfileContext>({
+const definition = kit.forContext<ProfileContext>().defineForm(schema, {
 		ui: [
 		{
 			kind: "field",

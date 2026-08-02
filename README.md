@@ -41,7 +41,7 @@ const kit = createFormKit({
 	controls: nativeControls,
 })
 
-const contactForm = kit.defineForm(contactSchema)({
+const contactForm = kit.defineForm(contactSchema, {
 	ui: [
 		{
 			kind: "field",
@@ -79,11 +79,11 @@ export function ContactForm() {
 Form, Please validates the form with `contactSchema`. The submit handler receives the
 schema output after successful validation.
 
-Larger definitions can compose object-scoped nodes with
-`kit.defineForm(schema).fragment(...)`. Render nodes can derive visibility and
-receive inherited `disabled` and `readOnly` state. Imperative workflows can
-validate typed path groups with `validatePaths(...)` and focus the first
-displayed issue with `focusFirstError(...)` without adding a wizard engine.
+Larger definitions can compose typed `UiNode` arrays with absolute paths.
+Render nodes can derive visibility and receive inherited `disabled` and
+`readOnly` state. Imperative workflows can validate typed path groups with
+`validatePaths(...)` and focus the first displayed issue with
+`focusFirstError(...)` without adding a wizard engine.
 
 `onSubmit` can return `void` or `Promise<void>`. If it returns a promise, Form, Please
 waits for the promise and keeps the form in its submitting state. `kit.Submit`

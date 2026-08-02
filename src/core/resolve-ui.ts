@@ -204,7 +204,8 @@ type ResolveScope = {
 
 export function resolveUi<
 	Schema extends StandardSchema,
-	Context = unknown,
+	RequiredContext = unknown,
+	Context extends RequiredContext = RequiredContext,
 	RenderComponent = unknown,
 	Presentation extends UiPresentation = AnyUiPresentation,
 >(
@@ -212,7 +213,8 @@ export function resolveUi<
 		Schema,
 		undefined,
 		RenderComponent,
-		Presentation
+		Presentation,
+		RequiredContext
 	>,
 	values: FormInput<Schema>,
 	context: Context,

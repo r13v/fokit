@@ -391,7 +391,7 @@ const canonicalSnippets = [
 		include: "~/snippets/complex-studio-policies.tsx",
 		terms: [
 			"StudioPoliciesExample",
-			"withContext",
+			"forContext",
 			"equipment",
 			"fromResource",
 			"queryToResource",

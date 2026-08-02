@@ -84,7 +84,7 @@ const profileUi = [
 	},
 ] as const
 
-const definition = kit.defineForm(createSchema(validateProfile))({
+const definition = kit.defineForm(createSchema(validateProfile), {
 	ui: profileUi,
 })
 
@@ -161,7 +161,7 @@ describe("classic React submission", () => {
 		const validation = createDeferred<StandardSchemaV1.Result<ProfileOutput>>()
 		const schema = createSchema(() => validation.promise)
 		const onSubmit = vi.fn()
-		const localDefinition = kit.defineForm(schema)({ ui: profileUi })
+		const localDefinition = kit.defineForm(schema, { ui: profileUi })
 		const form = kit.createForm(localDefinition, {
 			defaultValues: defaultValues(),
 			onSubmit,
@@ -214,7 +214,7 @@ describe("classic React submission", () => {
 	it("skips disabled forms without validation or submit callbacks", async () => {
 		const validate = vi.fn(validateProfile)
 		const onSubmit = vi.fn()
-		const localDefinition = kit.defineForm(createSchema(validate))({
+		const localDefinition = kit.defineForm(createSchema(validate), {
 			ui: profileUi,
 		})
 		const form = kit.createForm(localDefinition, {
@@ -268,7 +268,8 @@ describe("classic React submission", () => {
 			createSchema(() => ({
 				issues: [{ message: "The profile cannot be saved" }],
 			})),
-		)({ ui: profileUi })
+			{ ui: profileUi },
+		)
 		const summaryForm = kit.createForm(summaryDefinition, {
 			defaultValues: defaultValues(),
 		})
@@ -299,7 +300,8 @@ describe("classic React submission", () => {
 						{ message: "The profile cannot be saved" },
 					],
 				})),
-			)({ ui: profileUi })
+				{ ui: profileUi },
+			)
 			const form = kit.createForm(duplicateDefinition, {
 				defaultValues: defaultValues(),
 			})
@@ -332,7 +334,7 @@ describe("classic React submission", () => {
 		const validation = createDeferred<StandardSchemaV1.Result<ProfileOutput>>()
 		const validate = vi.fn(() => validation.promise)
 		const onSubmit = vi.fn()
-		const localDefinition = kit.defineForm(createSchema(validate))({
+		const localDefinition = kit.defineForm(createSchema(validate), {
 			ui: profileUi,
 		})
 		const form = kit.createForm(localDefinition, {
@@ -376,7 +378,7 @@ describe("classic React submission", () => {
 		const validation = createDeferred<StandardSchemaV1.Result<ProfileOutput>>()
 		const validate = vi.fn(() => validation.promise)
 		const onSubmit = vi.fn(() => Promise.resolve())
-		const localDefinition = kit.defineForm(createSchema(validate))({
+		const localDefinition = kit.defineForm(createSchema(validate), {
 			ui: profileUi,
 		})
 		const form = kit.createForm(localDefinition, {

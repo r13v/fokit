@@ -42,7 +42,7 @@ const text = defineControl<string>({
 })
 const kit = createFormKit({ controls: { text } })
 const schema = createSchema()
-const definition = kit.defineForm(schema).withContext<Context>({
+const definition = kit.forContext<Context>().defineForm(schema, {
 	ui: [
 		{ kind: "field", path: "name", control: "text" },
 		{ kind: "field", path: "email", control: "text" },

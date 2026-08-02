@@ -28,7 +28,7 @@ export function useFormBinding<
 	Owner,
 >(
 	form: FormInstance<Schema, Context, Controls, Presentation, Owner>,
-	options: FormRuntimeOptions<Schema, Context>,
+	options: FormRuntimeOptions<Schema, NoInfer<Context>>,
 ): typeof form {
 	const ownerRef = useRef<object>({})
 	const runtimeOptionsRef = useRef(options)

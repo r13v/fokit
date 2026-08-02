@@ -80,7 +80,7 @@ export const kit = createFormKit({
 	}),
 })
 
-export const profileDefinition = kit.defineForm(profileSchema)({
+export const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [
 		{
 			kind: "section",

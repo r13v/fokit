@@ -73,7 +73,7 @@ const kit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

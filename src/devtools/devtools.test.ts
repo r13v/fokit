@@ -37,7 +37,7 @@ const schema: Schema = {
 		validate: (value) => ({ value: value as Values }),
 	},
 }
-const definition = kit.defineForm(schema).withContext<Context>({
+const definition = kit.forContext<Context>().defineForm(schema, {
 	ui: [
 		{ kind: "field", path: "name", control: "text" },
 		{

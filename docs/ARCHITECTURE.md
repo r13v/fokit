@@ -96,7 +96,7 @@ remain suitable for server-side use.
 | Area | Primary files | Responsibility |
 | --- | --- | --- |
 | Public exports | `src/index.ts`, `src/core/index.ts`, `src/react19/index.ts`, `src/server/index.ts`, and each optional `index.ts` | Define the supported package surface |
-| Definitions | `src/core/definition.ts`, `src/core/definition-fragment.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts` | Type, scope, validate, normalize, and index reusable UI definitions |
+| Definitions | `src/core/definition.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts` | Type, validate, normalize, and index reusable UI definitions |
 | Paths and values | `src/core/path.ts`, `src/core/path-types.ts`, `src/core/value.ts` | Canonical deep paths and immutable value operations |
 | Form model | `src/core/form-model.ts`, `src/core/form-reducer.ts`, `src/core/runtime-reducer.ts` | Own the atomic historical document and pure document/runtime transitions |
 | Commands and events | `src/core/form-commands.ts`, `src/core/form-transactions.ts`, `src/core/form-events.ts`, `src/core/transaction.ts` | Type commands, normalized transactions, immutable events, and value-change normalization |
@@ -124,17 +124,17 @@ A form has three independent inputs:
 3. A form kit provides named controls and structural slots.
 
 `createFormKit` freezes a control registry and a complete slot registry.
-`kit.defineForm(schema)(definition)` passes the schema, UI tree, and registry
+`kit.defineForm(schema, definition)` passes the schema, UI tree, and registry
 to `normalizeDefinition`.
 
-The schema-bound define function also exposes `fragment(scope, nodes)` for a
-definitely present object path. The React-free fragment transformer prefixes
-object-relative field and array paths and wraps resolvers so their relative
-reads track final absolute dependencies. Fragments are authoring-only: they are
-erased before `normalizeDefinition`, so runtime code still sees exactly four
-normalized node kinds. Their opaque brand models input, control, and context
-requirements contravariantly, allowing compatible richer definitions without
-admitting a weaker schema or runtime context.
+`kit.forContext<Context>()` is a type-only view of that same frozen kit and
+descriptor. It binds the minimum context contract across authoring, store
+creation, React binding, update hooks, derived UI, and submission. Extensions
+preserve the bound contract. A normalized definition models its context
+requirement contravariantly as a type-only minimum, so a context-free
+definition can enter a contextual lifecycle and a definition requiring a base
+context can run with a richer context, but neither can weaken a concrete
+requirement to `unknown`.
 
 Normalization is a one-time boundary. It canonicalizes paths and defaults,
 checks node IDs and control references, freezes the tree, and builds flat

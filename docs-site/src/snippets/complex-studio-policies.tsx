@@ -197,8 +197,8 @@ function PolicyBalance() {
 }
 
 const policyDefinition = kit
-	.defineForm(studioPolicySchema)
-	.withContext<PolicyContext>({
+	.forContext<PolicyContext>()
+	.defineForm(studioPolicySchema, {
 		ui: [
 			{
 				kind: "section",

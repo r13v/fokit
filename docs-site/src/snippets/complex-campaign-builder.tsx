@@ -364,8 +364,8 @@ function CampaignPreview() {
 }
 
 const campaignDefinition = kit
-	.defineForm(campaignSchema)
-	.withContext<CampaignContext>({
+	.forContext<CampaignContext>()
+	.defineForm(campaignSchema, {
 		ui: [
 			{
 				kind: "section",
@@ -760,13 +760,14 @@ export function CampaignBuilderExample() {
 
 function CampaignBuilderForm() {
 	const [mode, setMode] = useState<"create" | "edit">("edit")
+	const initialContext: CampaignContext = { segments: [] }
 	const createForm = kit.useCreateForm(campaignDefinition, {
 		defaultValues: newCampaign,
-		context: { segments: [] },
+		context: initialContext,
 	})
 	const editForm = kit.useCreateForm(campaignDefinition, {
 		defaultValues: savedCampaign,
-		context: { segments: [] },
+		context: initialContext,
 	})
 	const draft = useQuery({
 		queryKey: ["campaign-draft", "campaign-204"],

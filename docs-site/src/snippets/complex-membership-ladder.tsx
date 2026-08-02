@@ -13,6 +13,7 @@ import {
 	type FormInput,
 	type FormOutput,
 	nativeControls,
+	type UiNode,
 	useArrayField,
 	useFormContext,
 	useFormState,
@@ -132,9 +133,7 @@ const membershipDraft = {
 } satisfies MembershipInput
 
 const kit = createFormKit({ controls: nativeControls })
-const defineMembership = kit.defineForm(membershipSchema)
-const membershipFragment =
-	defineMembership.fragment.withContext<MembershipContext>()
+const contextualKit = kit.forContext<MembershipContext>()
 
 function LadderPreview() {
 	const form = useFormContext<typeof membershipSchema, MembershipContext>()
@@ -231,7 +230,7 @@ function WorkspaceConnection() {
 	)
 }
 
-const membershipDefinition = defineMembership.withContext<MembershipContext>({
+const membershipDefinition = contextualKit.defineForm(membershipSchema, {
 	ui: [
 		{
 			kind: "section",
@@ -300,7 +299,7 @@ const membershipDefinition = defineMembership.withContext<MembershipContext>({
 })
 
 function tierSections() {
-	return membershipFragment("tiers", [
+	return [
 		{
 			kind: "section",
 			id: "tier-seed",
@@ -308,14 +307,14 @@ function tierSections() {
 			children: [
 				{
 					kind: "field",
-					path: "seed.discountPercent",
+					path: "tiers.seed.discountPercent",
 					control: "number",
 					label: "Reduction percent",
 					options: { min: 0, max: 80, step: 1 },
 				},
 				{
 					kind: "array",
-					path: "seed.benefits",
+					path: "tiers.seed.benefits",
 					label: "Benefits",
 					itemDefault: { label: "", monthlyLimit: 0 },
 					children: [
@@ -343,14 +342,14 @@ function tierSections() {
 			children: [
 				{
 					kind: "field",
-					path: "sprout.discountPercent",
+					path: "tiers.sprout.discountPercent",
 					control: "number",
 					label: "Reduction percent",
 					options: { min: 0, max: 80, step: 1 },
 				},
 				{
 					kind: "array",
-					path: "sprout.benefits",
+					path: "tiers.sprout.benefits",
 					label: "Benefits",
 					itemDefault: { label: "", monthlyLimit: 0 },
 					children: [
@@ -373,14 +372,14 @@ function tierSections() {
 			children: [
 				{
 					kind: "field",
-					path: "canopy.discountPercent",
+					path: "tiers.canopy.discountPercent",
 					control: "number",
 					label: "Reduction percent",
 					options: { min: 0, max: 80, step: 1 },
 				},
 				{
 					kind: "array",
-					path: "canopy.benefits",
+					path: "tiers.canopy.benefits",
 					label: "Benefits",
 					itemDefault: { label: "", monthlyLimit: 0 },
 					children: [
@@ -403,14 +402,14 @@ function tierSections() {
 			children: [
 				{
 					kind: "field",
-					path: "founder.discountPercent",
+					path: "tiers.founder.discountPercent",
 					control: "number",
 					label: "Reduction percent",
 					options: { min: 0, max: 80, step: 1 },
 				},
 				{
 					kind: "array",
-					path: "founder.benefits",
+					path: "tiers.founder.benefits",
 					label: "Benefits",
 					itemDefault: { label: "", monthlyLimit: 0 },
 					children: [
@@ -426,7 +425,11 @@ function tierSections() {
 				},
 			],
 		},
-	])
+	] satisfies readonly UiNode<
+		MembershipInput,
+		typeof contextualKit.controls,
+		MembershipContext
+	>[]
 }
 
 export function MembershipLadderExample() {
@@ -441,9 +444,10 @@ export function MembershipLadderExample() {
 }
 
 function MembershipLadderForm() {
+	const initialContext: MembershipContext = { workspaces: [] }
 	const form = kit.useCreateForm(membershipDefinition, {
 		defaultValues: membershipDraft,
-		context: { workspaces: [] },
+		context: initialContext,
 	})
 	const loadedDraft = useQuery({
 		queryKey: ["membership-draft"],

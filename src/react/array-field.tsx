@@ -16,6 +16,7 @@ import type { RuntimeFormKitSlots } from "./create-form-kit.js"
 import { createDomId } from "./dom-id.js"
 import { useFormIdPrefix } from "./form-context.js"
 import { createIssueKey } from "./form-errors.js"
+import { getFormArrayActions } from "./form-instance.js"
 import { useArrayField, useFormState } from "./hooks.js"
 import {
 	createErrorMessageRootProps,
@@ -62,6 +63,7 @@ export function GeneratedArray<Schema extends StandardSchema, Context>({
 }: GeneratedArrayProps<Schema, Context>) {
 	const idPrefix = useFormIdPrefix()
 	const path = node.path as ArrayFieldPath<FormInput<Schema>>
+	const runtimePath = node.path
 	const array = useArrayField(form, path)
 	const items = useFormState(
 		form,
@@ -82,13 +84,14 @@ export function GeneratedArray<Schema extends StandardSchema, Context>({
 	)
 	const ArraySlotComponent = slots.Array
 	const canAdd = !node.disabled && !node.readOnly
+	const actions = getFormArrayActions(form)
 	const add = useCallback(() => {
 		if (!canAdd) {
 			return
 		}
 
-		form.append(path)
-	}, [canAdd, form, path])
+		actions.append(runtimePath)
+	}, [actions, canAdd, runtimePath])
 
 	return (
 		<ArraySlotComponent
@@ -162,19 +165,20 @@ const GeneratedArrayItem = memo(function GeneratedArrayItem<
 	children,
 	renderNode,
 }: GeneratedArrayItemProps<Schema, Context>) {
-	const path = node.path as ArrayFieldPath<FormInput<Schema>>
+	const runtimePath = node.path
 	const itemPath = `${node.path}.${item.index}`
 	const ArrayItem = slots.ArrayItem
 	const canMutate = !node.disabled && !node.readOnly
 	const canMoveUp = canMutate && item.index > 0
 	const canMoveDown = canMutate && item.index < itemCount - 1
+	const actions = getFormArrayActions(form)
 	const remove = useCallback(() => {
 		if (!canMutate) {
 			return
 		}
 
-		form.remove(path, item.index)
-	}, [canMutate, form, item.index, path])
+		actions.remove(runtimePath, item.index)
+	}, [actions, canMutate, item.index, runtimePath])
 	const move = useCallback(
 		(toIndex: number) => {
 			if (
@@ -186,9 +190,9 @@ const GeneratedArrayItem = memo(function GeneratedArrayItem<
 				return
 			}
 
-			form.move(path, item.index, toIndex)
+			actions.move(runtimePath, item.index, toIndex)
 		},
-		[canMutate, form, item.index, itemCountRef, path],
+		[actions, canMutate, item.index, itemCountRef, runtimePath],
 	)
 
 	return (

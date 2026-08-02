@@ -96,7 +96,7 @@ const kit = createFormKit({
 const schema = z.object({ name: z.string().optional() })
 
 // The registry key becomes the definition discriminator
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

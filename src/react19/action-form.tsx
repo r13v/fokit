@@ -26,6 +26,8 @@ import { FormProvider } from "../react/form-context.js"
 import { resetFormFromEvent, useGeneratedFormId } from "../react/form-dom.js"
 import { hasDisplayErrors } from "../react/form-errors.js"
 import {
+	type FormContextProp,
+	type FormContextSource,
 	type FormInstance,
 	getFormKitDescriptor,
 	getFormStore,
@@ -52,14 +54,21 @@ export type ActionFormProps<
 	Presentation extends AnyUiPresentation = AnyUiPresentation,
 	Owner = unknown,
 > = NativeFormProps &
-	Omit<FormRuntimeOptions<Schema, Context>, "onSubmit"> & {
-		readonly form: FormInstance<Schema, Context, Controls, Presentation, Owner>
+	Omit<FormRuntimeOptions<Schema, NoInfer<Context>>, "context" | "onSubmit"> &
+	FormContextProp<Context> & {
+		readonly form: FormInstance<
+			Schema,
+			NoInfer<Context>,
+			Controls,
+			Presentation,
+			Owner
+		> &
+			FormContextSource<Context>
 		readonly action: NonNullable<ComponentPropsWithoutRef<"form">["action"]>
 		readonly result?: FormResult | null
 		readonly children?: ReactNode
 		readonly style?: FormPleaseStyle
 	}
-
 export function ActionForm<
 	Schema extends StandardSchema,
 	Context = unknown,
@@ -97,7 +106,7 @@ export function ActionForm<
 		validation,
 		beforeUpdate,
 		afterUpdate,
-	})
+	} as FormRuntimeOptions<Schema, Context>)
 	const controls = descriptor.controls as Controls
 	const slots = descriptor.slots
 	const store = getFormStore(form)

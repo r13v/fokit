@@ -43,7 +43,7 @@ const collisionSchema = {} as CollisionSchema
 const richSchema = {} as RichSchema
 
 function createDefinition() {
-	return testKit.defineForm(schema)({
+	return testKit.defineForm(schema, {
 		ui: [
 			{
 				kind: "field",
@@ -74,6 +74,10 @@ describe("createFormKit", () => {
 		expect(testKit).not.toHaveProperty("useForm")
 	})
 
+	it("uses forContext as a type-only view of the same kit", () => {
+		expect(testKit.forContext<{ readonly locked: boolean }>()).toBe(testKit)
+	})
+
 	it("extends controls and resolved slots as an immutable add-only snapshot", () => {
 		const controls = {
 			text: textControl,
@@ -98,7 +102,7 @@ describe("createFormKit", () => {
 				secondaryText: textControl,
 			},
 		})
-		const definition = localKit.defineForm(schema)({
+		const definition = localKit.defineForm(schema, {
 			ui: [
 				{
 					kind: "field",
@@ -138,7 +142,7 @@ describe("createFormKit", () => {
 				localText: textControl,
 			},
 		})
-		const definition = baseKit.defineForm(schema)({
+		const definition = baseKit.defineForm(schema, {
 			ui: [
 				{
 					kind: "field",
@@ -161,7 +165,7 @@ describe("createFormKit", () => {
 
 	it("preserves in-progress values when useCreateForm inputs change", () => {
 		const firstDefinition = createDefinition()
-		const nextDefinition = testKit.defineForm(schema)({ ui: [] })
+		const nextDefinition = testKit.defineForm(schema, { ui: [] })
 		let currentForm:
 			| ReturnType<typeof testKit.createForm<TestSchema, unknown>>
 			| undefined
@@ -202,7 +206,7 @@ describe("createFormKit", () => {
 		const extendedKit = baseKit.extend({
 			controls: { localText: textControl },
 		})
-		const definition = extendedKit.defineForm(schema)({
+		const definition = extendedKit.defineForm(schema, {
 			ui: [{ kind: "field", path: "name", control: "localText" }],
 		})
 		const create = baseKit.createForm as (
@@ -247,7 +251,7 @@ describe("createFormKit", () => {
 			},
 		})
 
-		const definition = kit.defineForm(schema)({
+		const definition = kit.defineForm(schema, {
 			ui: [
 				{
 					kind: "field",
@@ -262,84 +266,6 @@ describe("createFormKit", () => {
 		expect(Object.isFrozen(kit.slots)).toBe(true)
 	})
 
-	it("scopes reusable object fragments while preserving relative resolver dependencies", () => {
-		type FragmentValues = {
-			readonly account: {
-				readonly name: string
-				readonly contacts: readonly { readonly value: string }[]
-			}
-			readonly unrelated: string
-		}
-		const fragmentSchema = {} as StandardSchemaV1<FragmentValues>
-		const define = testKit.defineForm(fragmentSchema)
-		const label = vi.fn(
-			({ name }: FragmentValues["account"]) => `Name: ${name}`,
-		)
-		const account = define.fragment("account", [
-			{
-				kind: "field",
-				path: "name",
-				control: "text",
-				label,
-			},
-			{
-				kind: "array",
-				path: "contacts",
-				itemDefault: { value: "" },
-				children: [{ kind: "field", path: "value", control: "text" }],
-			},
-		])
-		const definition = define({ ui: account })
-		const form = testKit.createForm(definition, {
-			defaultValues: {
-				account: { name: "Ada", contacts: [] },
-				unrelated: "same",
-			},
-		})
-		const initialCalls = label.mock.calls.length
-
-		expect(definition.fieldsByPath["account.name"].path).toBe("account.name")
-		expect(definition.arraysByPath["account.contacts"].path).toBe(
-			"account.contacts",
-		)
-		const contactChild = definition.arraysByPath["account.contacts"].children[0]
-		if (contactChild?.kind !== "field") {
-			throw new Error("Expected a relative contact field")
-		}
-		expect(contactChild.path).toBe("value")
-		expect(
-			form.getSnapshot().resolvedUi.fieldsByPath["account.name"].label,
-		).toBe("Name: Ada")
-
-		form.setValue("unrelated", "changed")
-		expect(label).toHaveBeenCalledTimes(initialCalls)
-
-		form.setValue("account.name", "Grace")
-		expect(label).toHaveBeenCalledTimes(initialCalls + 1)
-		expect(
-			form.getSnapshot().resolvedUi.fieldsByPath["account.name"].label,
-		).toBe("Name: Grace")
-	})
-
-	it("keeps explicit node IDs global across fragment scopes", () => {
-		type FragmentValues = {
-			readonly primary: { readonly name: string }
-			readonly secondary: { readonly name: string }
-		}
-		const fragmentSchema = {} as StandardSchemaV1<FragmentValues>
-		const define = testKit.defineForm(fragmentSchema)
-		const primary = define.fragment("primary", [
-			{ kind: "section", id: "contact", children: [] },
-		])
-		const secondary = define.fragment("secondary", [
-			{ kind: "section", id: "contact", children: [] },
-		])
-
-		expect(() => define({ ui: [...primary, ...secondary] })).toThrow(
-			'Duplicate node ID "contact"',
-		)
-	})
-
 	it("resolves render visibility and passes inherited interaction state", () => {
 		function Status({ disabled, readOnly }: RenderNodeProps) {
 			return (
@@ -352,7 +278,7 @@ describe("createFormKit", () => {
 				</button>
 			)
 		}
-		const definition = testKit.defineForm(schema)({
+		const definition = testKit.defineForm(schema, {
 			ui: [
 				{ kind: "field", path: "name", control: "text", label: "Name" },
 				{
@@ -389,7 +315,7 @@ describe("createFormKit", () => {
 
 	it("preserves custom kits while defaulting omitted slots", () => {
 		expect(() =>
-			testKit.defineForm(schema)({
+			testKit.defineForm(schema, {
 				ui: [
 					{
 						kind: "field",
@@ -401,7 +327,7 @@ describe("createFormKit", () => {
 		).not.toThrow()
 
 		expect(() =>
-			testKit.defineForm(schema).withContext<{ readonly locked: boolean }>({
+			testKit.forContext<{ readonly locked: boolean }>().defineForm(schema, {
 				ui: [
 					{
 						kind: "field",
@@ -427,7 +353,7 @@ describe("createFormKit", () => {
 				Field,
 			},
 		})
-		const definition = kit.defineForm(schema)({
+		const definition = kit.defineForm(schema, {
 			ui: [
 				{
 					kind: "field",
@@ -533,7 +459,7 @@ describe("createFormKit", () => {
 				Array: ArraySlot,
 			},
 		})
-		const definition = kit.defineForm(richSchema)({
+		const definition = kit.defineForm(richSchema, {
 			ui: [
 				{
 					kind: "section",
@@ -689,7 +615,7 @@ describe("createFormKit", () => {
 	})
 
 	it("keeps generated DOM IDs distinct for dashed and nested paths", () => {
-		const definition = testKit.defineForm(collisionSchema)({
+		const definition = testKit.defineForm(collisionSchema, {
 			ui: [
 				{
 					kind: "field",
@@ -730,7 +656,7 @@ describe("createFormKit", () => {
 		const base = createFormKit({ controls: { text: textControl } })
 		const extended = base.extend({ controls: { extra: textControl } })
 		const sibling = createFormKit({ controls: { text: textControl } })
-		const definition = base.defineForm(schema)({ ui: [] })
+		const definition = base.defineForm(schema, { ui: [] })
 		const form = base.createForm(definition, {
 			defaultValues: defaultValues(),
 		})

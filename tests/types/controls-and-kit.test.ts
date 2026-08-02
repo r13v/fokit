@@ -228,7 +228,7 @@ type _richSlotsResolve = Expect<
 
 declare const richContent: ReactElement
 
-const richDefinition = richKit.defineForm(schema)({
+const richDefinition = richKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "section",
@@ -255,7 +255,7 @@ const richDefinition = richKit.defineForm(schema)({
 	],
 })
 
-richKit.defineForm(schema)({
+richKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -269,7 +269,7 @@ richKit.defineForm(schema)({
 	],
 })
 
-richKit.defineForm(schema)({
+richKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "section",
@@ -380,7 +380,7 @@ basePresentationKit.extend({
 	},
 })
 
-const basePresentationDefinition = basePresentationKit.defineForm(schema)({
+const basePresentationDefinition = basePresentationKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "section",
@@ -403,21 +403,22 @@ const basePresentationDefinition = basePresentationKit.defineForm(schema)({
 })
 const extendedPresentationDefinition = extendedPresentationKit.defineForm(
 	schema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			slotOptions: {
-				tone: "strong",
-				labelTooltip: "Legal name",
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				slotOptions: {
+					tone: "strong",
+					labelTooltip: "Legal name",
+				},
 			},
-		},
-	],
-})
+		],
+	},
+)
 const _extendedSectionPresentationDefinition =
-	extendedPresentationKit.defineForm(schema)({
+	extendedPresentationKit.defineForm(schema, {
 		ui: [
 			{
 				kind: "section",
@@ -441,51 +442,53 @@ const _extendedSectionPresentationDefinition =
 	})
 const baseArrayPresentationDefinition = basePresentationKit.defineForm(
 	listSchema,
-)({
-	ui: [
-		{
-			kind: "array",
-			path: "items",
-			slotOptions: {
-				controls: "inline",
-			},
-			itemDefault: {
-				value: "",
-			},
-			children: [
-				{
-					kind: "field",
-					path: "value",
-					control: "text",
+	{
+		ui: [
+			{
+				kind: "array",
+				path: "items",
+				slotOptions: {
+					controls: "inline",
 				},
-			],
-		},
-	],
-})
+				itemDefault: {
+					value: "",
+				},
+				children: [
+					{
+						kind: "field",
+						path: "value",
+						control: "text",
+					},
+				],
+			},
+		],
+	},
+)
 const _extendedArrayPresentationDefinition = extendedPresentationKit.defineForm(
 	listSchema,
-)({
-	ui: [
-		{
-			kind: "array",
-			path: "items",
-			slotOptions: {
-				controls: "stacked",
-				addHint: "Add another item",
-			},
-			itemDefault: {
-				value: "",
-			},
-			children: [
-				{
-					kind: "field",
-					path: "value",
-					control: "text",
+	{
+		ui: [
+			{
+				kind: "array",
+				path: "items",
+				slotOptions: {
+					controls: "stacked",
+					addHint: "Add another item",
 				},
-			],
-		},
-	],
-})
+				itemDefault: {
+					value: "",
+				},
+				children: [
+					{
+						kind: "field",
+						path: "value",
+						control: "text",
+					},
+				],
+			},
+		],
+	},
+)
 declare const presentationDefaultValues: ExampleInput
 declare const listPresentationDefaultValues: ListInput
 
@@ -537,7 +540,7 @@ ActionForm({
 	action: (_formData: FormData) => undefined,
 })
 
-const exampleDefinition = kit.defineForm(schema).withContext<ExampleContext>({
+const exampleDefinition = kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -673,8 +676,8 @@ kit.extend({ controls: { text } })
 kit.extend({})
 
 const extendedDefinition = extendedKit
-	.defineForm(schema)
-	.withContext<ExampleContext>({
+	.forContext<ExampleContext>()
+	.defineForm(schema, {
 		ui: [
 			{
 				kind: "render",
@@ -700,7 +703,7 @@ const extendedDefinition = extendedKit
 		],
 	})
 
-extendedKit.defineForm(schema)({
+extendedKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "render",
@@ -722,6 +725,9 @@ const baseForm = kit.createForm(exampleDefinition, {
 		locked: false,
 	},
 })
+type _baseFormContext = Expect<
+	Equal<ReturnType<typeof baseForm.getSnapshot>["context"], ExampleContext>
+>
 extendedKit.AutoForm({
 	form: extendedBaseForm,
 	context: { locale: "en", locked: false },
@@ -742,6 +748,12 @@ ActionForm({
 		locale: "en",
 		locked: false,
 	},
+	action: (_formData: FormData) => undefined,
+})
+
+// @ts-expect-error ActionForm binds the form lifecycle and requires context
+ActionForm({
+	form: baseForm,
 	action: (_formData: FormData) => undefined,
 })
 
@@ -790,7 +802,7 @@ kit.Form({
 	form: extendedForm,
 })
 
-extendedKit.defineForm(listSchema)({
+extendedKit.defineForm(listSchema, {
 	ui: [
 		{
 			kind: "array",
@@ -837,7 +849,7 @@ kit.createForm(exampleDefinition, {
 	context: { locale: "en", locked: false },
 })
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -873,7 +885,7 @@ kit.defineForm(schema).withContext<ExampleContext>({
 	],
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -885,7 +897,7 @@ kit.defineForm(schema)({
 	],
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -897,7 +909,7 @@ kit.defineForm(schema)({
 	],
 })
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -908,7 +920,7 @@ kit.defineForm(schema).withContext<ExampleContext>({
 	],
 })
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -919,7 +931,7 @@ kit.defineForm(schema).withContext<ExampleContext>({
 	],
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -930,7 +942,7 @@ kit.defineForm(schema)({
 	],
 })
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

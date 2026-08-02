@@ -25,7 +25,7 @@ const scheduleSchema = z
 type ScheduleInput = FormInput<typeof scheduleSchema>
 
 const kit = createFormKit({ controls: nativeControls })
-const scheduleDefinition = kit.defineForm(scheduleSchema)({
+const scheduleDefinition = kit.defineForm(scheduleSchema, {
 	ui: [
 		{
 			kind: "field",

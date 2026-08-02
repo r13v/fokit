@@ -44,6 +44,18 @@ Control names are add-only. An extension can replace compatible slots, but it
 cannot replace an inherited control. Base, extended, and sibling kits are
 different owners.
 
+## kit.forContext
+
+`kit.forContext<Context>()` binds one context contract to the complete kit API.
+It is a type-only view: it returns the same frozen kit object and keeps the same
+controls, slots, descriptor, and ownership identity. `kit.extend(...)` preserves
+the bound context.
+
+Use that contextual view to define forms, create instances, and bind them to
+React. A concrete context is required at every creation and binding boundary.
+Runtime context may add fields to the authoring contract; those richer fields
+remain available through the resulting `FormInstance`.
+
 ## kit.defineForm
 
 ```ts

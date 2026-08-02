@@ -92,7 +92,7 @@ async function main() {
 	}
 
 	const featureKit = createFormKit({ controls: {} })
-	const featureDefinition = featureKit.defineForm(schema)({ ui: [] })
+	const featureDefinition = featureKit.defineForm(schema, { ui: [] })
 	const historyFeature = createHistoryMiddleware({ groupWindow: 0 })
 	const saves = []
 	const persistenceFeature = createPersistenceMiddleware({

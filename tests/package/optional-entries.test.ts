@@ -8,7 +8,8 @@ type RuntimeKit = Readonly<{
 	readonly useBindForm: unknown
 	defineForm(
 		schema: object,
-	): (definition: { readonly ui: readonly never[] }) => object
+		definition: { readonly ui: readonly never[] },
+	): object
 	createForm(
 		definition: object,
 		options: {
@@ -245,7 +246,7 @@ function createKitDefinition(root: RootModule) {
 		},
 	}
 	const kit = root.createFormKit({ controls: {} })
-	const definition = kit.defineForm(schema)({ ui: [] })
+	const definition = kit.defineForm(schema, { ui: [] })
 	return { kit, definition }
 }
 

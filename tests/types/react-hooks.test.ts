@@ -66,6 +66,13 @@ const kit = createFormKit({ controls: { text, kind } })
 const siblingKit = createFormKit({ controls: { text, kind } })
 const incompatibleKit = createFormKit({ controls: { text } })
 const extendedKit = kit.extend({ controls: { extra: text } })
+const contextualKit = kit.forContext<ExampleContext>()
+contextualKit.forContext<ExampleContext & { readonly actor: string }>()
+// @ts-expect-error a contextual kit can refine, but not weaken, its contract
+contextualKit.forContext<object>()
+const contextualExtendedKit = contextualKit.extend({
+	controls: { contextualExtra: text },
+})
 createFormKit({
 	controls: { text, kind },
 	// @ts-expect-error middleware belongs to each kit.createForm call
@@ -76,7 +83,7 @@ kit.extend({
 	controls: { extra: text },
 	middleware: [],
 })
-const definition = kit.defineForm(schema).withContext<ExampleContext>({
+const definition = kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{ kind: "field", path: "kind", control: "kind" },
 		{ kind: "field", path: "profile.first", control: "text" },
@@ -88,12 +95,31 @@ const definition = kit.defineForm(schema).withContext<ExampleContext>({
 		},
 	],
 })
+// @ts-expect-error defineForm now receives schema and definition together
+kit.defineForm(schema)
+
+const contextFreeDefinition = kit.defineForm(schema, { ui: [] })
+contextualExtendedKit.defineForm(schema, {
+	ui: [
+		{
+			kind: "section",
+			id: "contextual-section",
+			disabled: (_values, { context }) => {
+				type _extendedContext = Expect<
+					Equal<typeof context, Readonly<ExampleContext>>
+				>
+				return context.locked
+			},
+			children: [],
+		},
+	],
+})
 const extendedDefinition = extendedKit
-	.defineForm(schema)
-	.withContext<ExampleContext>({
+	.forContext<ExampleContext>()
+	.defineForm(schema, {
 		ui: [{ kind: "field", path: "profile.first", control: "extra" }],
 	})
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [],
 	// @ts-expect-error normalized definitions do not retain middleware
 	middleware: [],
@@ -104,6 +130,18 @@ const defaults: ExampleInput = {
 	profile: { first: "Grace", last: "Hopper" },
 	contacts: [],
 }
+type RichContext = ExampleContext & { readonly actor: string }
+const richDefinition = kit
+	.forContext<RichContext>()
+	.defineForm(schema, { ui: [] })
+const _baseDefinitionCanUseRichContext: typeof richDefinition = definition
+// @ts-expect-error a rich definition cannot weaken its context requirement
+const _richDefinitionCannotUseBaseContext: typeof definition = richDefinition
+
+// @ts-expect-error extending a contextual kit preserves its required context
+contextualExtendedKit.createForm(contextFreeDefinition, {
+	defaultValues: defaults,
+})
 
 const middleware: FormMiddleware<ExampleInput, ExampleContext> =
 	() => (next) => (transaction) =>
@@ -128,6 +166,28 @@ const form = kit.createForm(definition, {
 		])
 	},
 })
+
+// @ts-expect-error a contextual definition requires context at creation
+kit.createForm(definition, { defaultValues: defaults })
+
+kit.createForm(definition, {
+	defaultValues: defaults,
+	// @ts-expect-error runtime context must satisfy the definition contract
+	context: {},
+})
+
+const richForm = kit.createForm(definition, {
+	defaultValues: defaults,
+	context: { locked: false, actor: "Ada" },
+})
+type _richContext = Expect<
+	Equal<ReturnType<typeof richForm.getSnapshot>["context"]["actor"], string>
+>
+type _richContextRequirement = Expect<
+	ReturnType<typeof richForm.getSnapshot>["context"] extends ExampleContext
+		? true
+		: false
+>
 extendedKit.createForm(definition, {
 	defaultValues: defaults,
 	context: exampleContext,
@@ -178,9 +238,13 @@ function TypeHarness() {
 
 	const bound = kit.useBindForm(form, runtimeOptions)
 	type _sameForm = Expect<Equal<typeof bound, typeof form>>
+	// @ts-expect-error binding a contextual form requires context
+	kit.useBindForm(form, {})
 
 	kit.Form({ form })
 	kit.AutoForm({ form, context: exampleContext })
+	// @ts-expect-error AutoForm binds the form lifecycle and requires context
+	kit.AutoForm({ form })
 
 	// @ts-expect-error a kit with an incompatible control snapshot cannot bind this form
 	incompatibleKit.useBindForm(form, runtimeOptions)
@@ -223,6 +287,24 @@ createFormStore({
 	definition,
 	defaultValues: defaults,
 	context: exampleContext,
+})
+const contextualStore = createFormStore({
+	definition,
+	defaultValues: defaults,
+	context: exampleContext,
+})
+// @ts-expect-error a store preserves the definition's lifecycle context contract
+createFormStore({
+	definition: contextualStore.definition,
+	defaultValues: defaults,
+})
+// @ts-expect-error core creation enforces the definition's context contract
+createFormStore({ definition, defaultValues: defaults })
+createFormStore({
+	definition,
+	defaultValues: defaults,
+	// @ts-expect-error core context must satisfy the definition contract
+	context: {},
 })
 createFormStore({
 	definition,

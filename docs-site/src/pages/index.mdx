@@ -19,8 +19,9 @@ import { OverviewDemo } from "../components/overview-demo"
 # Build forms with ease
 
 <div className="form-please-overview-intro-text">
-Form, Please turns a Standard Schema and a UI definition into a working
-React form with typed output. It handles state, validation, and submission while
+Use Form, Please to build product forms quickly from an existing design system.
+Wrap product controls and structural slots once, then reuse them across generated or manually composed forms.
+It handles state, validation, and submission while
 your application keeps control of components, markup, styling, and product logic.
 <br />
 Start with native controls or bring your own design system.
@@ -64,7 +65,7 @@ const profileSchema = z.object({
 
 const kit = createFormKit({ controls: nativeControls })
 
-const profileDefinition = kit.defineForm(profileSchema)({
+const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [
 		{ kind: "field", path: "name", control: "text", label: "Name" },
 		{

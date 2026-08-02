@@ -26,7 +26,7 @@ type Schema = StandardSchemaV1<Input>
 
 declare const schema: Schema
 const kit = createFormKit({ controls: {} })
-const definition = kit.defineForm(schema).withContext<Context>({ ui: [] })
+const definition = kit.forContext<Context>().defineForm(schema, { ui: [] })
 const options = {
 	name: "Checkout",
 	latency: 0,

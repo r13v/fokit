@@ -37,11 +37,6 @@ Validation output never replaces editable values automatically.
 tree. `kit.defineForm` infers the useful version, checks field paths, and
 rejects incompatible controls.
 
-`DefinitionFragmentPath<Input>` selects definitely present, non-null,
-object-valued non-array scopes.
-`DefinitionFragmentNode` is the opaque schema-bound authoring result of
-`kit.defineForm(schema).fragment(...)`; normalization erases that boundary.
-
 The UI node families are:
 
 - `FieldNode` for one typed field path and control;
@@ -97,6 +92,14 @@ type ProfileForm = FormInstance<typeof schema, Context>
 type ProfileOptions = CreateFormOptions<typeof schema, Context>
 type ProfileRuntimeOptions = FormRuntimeOptions<typeof schema, Context>
 ```
+
+Bind the contract once with `kit.forContext<Context>()`. That view is the same
+runtime kit object, but its definition, creation, and binding APIs all agree on
+`Context`. A definition records its minimum context requirement. Therefore a
+concrete context is required by `createForm`, `useCreateForm`, `useBindForm`,
+`AutoForm`, and React 19 `ActionForm`; a runtime context may include additional
+fields and the created `FormInstance` preserves their type. Without
+`forContext`, the context contract is `unknown` and the option remains optional.
 
 Use context for loaded option lists, permissions, or product state that affects
 UI but must never become submitted form data.

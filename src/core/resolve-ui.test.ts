@@ -71,6 +71,11 @@ const controls = {
 	},
 } satisfies ExampleControls
 
+const exampleContext: ExampleContext = {
+	locked: false,
+	citiesByCountry: {},
+}
+
 function normalize(
 	ui: readonly UiNode<ExampleValues, ExampleControls, ExampleContext>[],
 ) {
@@ -629,7 +634,7 @@ describe("resolveUi", () => {
 			unrelated: "same",
 			address: { country: "GB" },
 		} satisfies ExampleValues
-		const context = {}
+		const context = exampleContext
 
 		const first = resolveUi(definition, values, context)
 		const changed = resolveUi(
@@ -654,9 +659,9 @@ describe("resolveUi", () => {
 			},
 		])
 
-		expect(() => resolveUi(enumeratingDefinition, values, {})).toThrow(
-			/cannot be enumerated/i,
-		)
+		expect(() =>
+			resolveUi(enumeratingDefinition, values, exampleContext),
+		).toThrow(/cannot be enumerated/i)
 	})
 
 	it("revokes resolver values after the synchronous resolver returns", () => {
@@ -682,7 +687,7 @@ describe("resolveUi", () => {
 				city: "nyc",
 				unrelated: "same",
 			},
-			{},
+			exampleContext,
 		)
 
 		expect(() => captured?.name).toThrow(/revoked/i)
@@ -712,7 +717,7 @@ describe("resolveUi", () => {
 					city: "nyc",
 					unrelated: "same",
 				},
-				{},
+				exampleContext,
 			),
 		).toThrow(/read-only/i)
 	})
@@ -742,7 +747,7 @@ describe("resolveUi", () => {
 					city: "nyc",
 					unrelated: "same",
 				},
-				{},
+				exampleContext,
 			),
 		).toThrow(/synchronous/i)
 	})

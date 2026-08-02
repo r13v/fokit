@@ -36,6 +36,9 @@ type NativeControlsModule = Readonly<{
 type PresetNativeModule = Readonly<{
 	readonly nativeFormKit: RuntimeKit
 }>
+type PresetMuiModule = Readonly<{
+	createMuiFormKit(options?: object): RuntimeKit
+}>
 type CoreModule = Readonly<{ createFormStore: unknown }>
 type HistoryHandle = Readonly<{
 	getSnapshot(): { readonly canUndo: boolean; readonly canRedo: boolean }
@@ -116,6 +119,23 @@ describe("built optional package entries", () => {
 		}
 	})
 
+	it("creates complete immutable MUI presets in ESM and CommonJS", async () => {
+		const esm = await loadEsmModules()
+		const commonJs = loadCommonJsModules()
+
+		for (const modules of [esm, commonJs]) {
+			expect(modules.presetMui).not.toHaveProperty("muiFormKit")
+			expect(modules.presetMui).not.toHaveProperty("createMuiControls")
+			const kit = modules.presetMui.createMuiFormKit()
+			expect(Object.isFrozen(kit)).toBe(true)
+			expect(Object.isFrozen(kit.controls)).toBe(true)
+			expect(Object.isFrozen(kit.slots)).toBe(true)
+			expect(kit.controls).toHaveProperty("autocomplete-multiple")
+			expect(kit.controls).toHaveProperty("range-slider")
+			expect(kit.slots).toHaveProperty("Section")
+		}
+	})
+
 	it("shares the Symbol.for capability across ESM and CommonJS", async () => {
 		const esm = await loadEsmModules()
 		const commonJs = loadCommonJsModules()
@@ -172,6 +192,7 @@ describe("built optional package entries", () => {
 				"createNativeControls",
 				"nativeControls",
 				"nativeFormKit",
+				"createMuiFormKit",
 				"KitForm",
 				"Submit",
 			]) {
@@ -205,6 +226,7 @@ describe("built optional package entries", () => {
 				"createNativeControls",
 				"nativeControls",
 				"nativeFormKit",
+				"createMuiFormKit",
 				"KitForm",
 				"Submit",
 				"UseFormOptions",
@@ -255,6 +277,7 @@ describe("built optional package entries", () => {
 				"default-slots",
 				"native-controls",
 				"preset-native",
+				"preset-mui",
 				"react19",
 				"server",
 			]) {
@@ -342,6 +365,7 @@ type LoadedModules = Readonly<{
 	nativeControls: NativeControlsModule
 	persistence: PersistenceModule
 	presetNative: PresetNativeModule
+	presetMui: PresetMuiModule
 	react19: React19Module
 }>
 
@@ -367,6 +391,9 @@ async function loadEsmModules(): Promise<LoadedModules> {
 		presetNative: (await import(
 			"../../dist/preset-native.js"
 		)) as unknown as PresetNativeModule,
+		presetMui: (await import(
+			"../../dist/preset-mui.js"
+		)) as unknown as PresetMuiModule,
 		react19: (await import(
 			"../../dist/react19.js"
 		)) as unknown as React19Module,
@@ -384,6 +411,7 @@ function loadCommonJsModules(): LoadedModules {
 			require("../../dist/native-controls.cjs") as NativeControlsModule,
 		persistence: require("../../dist/persistence.cjs") as PersistenceModule,
 		presetNative: require("../../dist/preset-native.cjs") as PresetNativeModule,
+		presetMui: require("../../dist/preset-mui.cjs") as PresetMuiModule,
 		react19: require("../../dist/react19.cjs") as React19Module,
 	}
 }

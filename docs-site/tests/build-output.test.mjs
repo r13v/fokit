@@ -54,6 +54,7 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/guides/devtools.md",
 		"assets/md/guides/core.md",
 		"assets/md/examples.md",
+		"assets/md/examples/mui-yup.md",
 		"assets/md/examples/research-grant.md",
 		"assets/md/examples/studio-policies.md",
 		"assets/md/examples/makerspace-launch.md",
@@ -249,6 +250,10 @@ test("generated Markdown links live demos to their canonical source files", asyn
 		{
 			file: "assets/md/examples/history.md",
 			path: "docs-site/src/snippets/history.tsx",
+		},
+		{
+			file: "assets/md/examples/mui-yup.md",
+			path: "docs-site/src/snippets/mui-yup-conference.tsx",
 		},
 		{
 			file: "assets/md/examples/persistence.md",

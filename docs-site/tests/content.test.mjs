@@ -10,9 +10,12 @@ const repositoryRoot = new URL("../", siteRoot)
 
 const requiredDependencies = {
 	"@base-ui/react": "1.6.0",
+	"@emotion/react": "11.14.0",
+	"@emotion/styled": "11.14.1",
 	"@floating-ui/react": "0.27.20",
 	"@fontsource-variable/newsreader": "5.3.0",
 	"@heroicons/react": "2.2.0",
+	"@mui/material": "9.2.0",
 	"@tanstack/react-query": "5.101.4",
 	"@types/node": "26.1.2",
 	"@types/react": "19.2.17",
@@ -35,6 +38,7 @@ const requiredDependencies = {
 	vite: "8.1.5",
 	vocs: "2.7.2",
 	waku: "1.0.0-beta.6",
+	yup: "1.7.1",
 	zod: "4.4.3",
 }
 
@@ -175,7 +179,14 @@ const canonicalPages = [
 		route: "/examples",
 		title: "Examples",
 		description:
-			"Explore production-shaped forms, an application-owned shadcn adapter, and live state workflows.",
+			"Explore an official Material UI preset, an application-owned shadcn adapter, production-shaped forms, and live state workflows.",
+	},
+	{
+		path: "src/pages/examples/mui-yup.mdx",
+		route: "/examples/mui-yup",
+		title: "Material UI with Yup",
+		description:
+			"Use the official Material UI preset to build and validate a conference proposal directly with Yup.",
 	},
 	{
 		path: "src/pages/examples/shadcn-valibot.mdx",
@@ -281,6 +292,7 @@ const publicApiTerms = [
 	"createFormKit",
 	"createDefaultSlots",
 	"createNativeControls",
+	"createMuiFormKit",
 	"nativeFormKit",
 	"defineControl",
 	"useCreateForm",
@@ -295,6 +307,17 @@ const publicApiTerms = [
 ]
 
 const canonicalSnippets = [
+	{
+		target: "src/snippets/mui-yup-conference.tsx",
+		include: "~/snippets/mui-yup-conference.tsx",
+		terms: [
+			"MuiYupConferenceExample",
+			'from "yup"',
+			"createMuiFormKit",
+			'control: "autocomplete-multiple"',
+			'control: "slider"',
+		],
+	},
 	{
 		target: "src/snippets/shadcn-valibot-workshop.tsx",
 		include: "~/snippets/shadcn-valibot-workshop.tsx",
@@ -651,6 +674,7 @@ const requiredCorePageContent = {
 			"Entry points",
 			"createFormKit",
 			"nativeFormKit",
+			"createMuiFormKit",
 			"kit.defineForm",
 			"kit.createForm",
 			"kit.useCreateForm",
@@ -679,6 +703,7 @@ const requiredCorePageContent = {
 			"form-please/persistence",
 			"form-please/devtools",
 			"form-please/preset-native",
+			"form-please/preset-mui",
 			"CreateFormOptions",
 			"FormRuntimeOptions",
 			"FormCommand",
@@ -1525,6 +1550,62 @@ test("shadcn registry example keeps the adapter application-owned and Valibot-ba
 	assert.match(page, /<ShadcnValibotWorkshopDemo \/>/)
 	assert.match(page, /~\/snippets\/shadcn-valibot-workshop\.tsx/)
 	assert.match(index, /\/examples\/shadcn-valibot/)
+})
+
+test("Material UI preset example uses the public factory and direct Yup Standard Schema", async () => {
+	const wrapper = await readText("src/components/mui-yup-conference-demo.tsx")
+	const client = await readText(
+		"src/components/mui-yup-conference-demo.client.tsx",
+	)
+	const snippet = await readText("src/snippets/mui-yup-conference.tsx")
+	const page = await readText("src/pages/examples/mui-yup.mdx")
+	const index = await readText("src/pages/examples/index.mdx")
+	const controls = [
+		"text",
+		"textarea",
+		"password",
+		"email",
+		"url",
+		"tel",
+		"search",
+		"number",
+		"date",
+		"time",
+		"datetime-local",
+		"select",
+		"select-multiple",
+		"radio",
+		"checkbox",
+		"switch",
+		"autocomplete",
+		"autocomplete-multiple",
+		"file",
+		"files",
+		"slider",
+		"range-slider",
+	]
+
+	assert.match(wrapper, /from "\.\/mui-yup-conference-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(wrapper, /docs-site\/src\/snippets\/mui-yup-conference\.tsx/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/mui-yup-conference"/)
+	assert.match(snippet, /from "form-please\/preset-mui"/)
+	assert.match(snippet, /import \* as yup from "yup"/)
+	assert.match(snippet, /createMuiFormKit\(\)/)
+	assert.match(snippet, /kit\.defineForm\(conferenceSchema/)
+	assert.match(snippet, /\.transform\(/)
+	assert.match(snippet, /workshop-experience/)
+	assert.match(snippet, /ThemeProvider/)
+	assert.match(snippet, /dataset\.vocsTheme/)
+	assert.doesNotMatch(snippet, /from "zod"/)
+	assert.doesNotMatch(snippet, /resolver/i)
+	assert.match(page, /<MuiYupConferenceDemo \/>/)
+	assert.match(page, /@mui\/material @emotion\/react @emotion\/styled yup/)
+	assert.match(index, /Material UI with Yup/)
+	for (const control of controls) {
+		assert.match(page, new RegExp(`\\b${control.replace("-", "\\-")}\\b`))
+	}
 })
 
 test("six complex examples stay public, documented, networked, and independent", async () => {

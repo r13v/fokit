@@ -21,6 +21,7 @@ const javaScriptEntrypoints = {
 	"./native-controls": "native-controls",
 	"./persistence": "persistence",
 	"./preset-native": "preset-native",
+	"./preset-mui": "preset-mui",
 	"./react19": "react19",
 	"./server": "server",
 } as const
@@ -104,6 +105,7 @@ describe("packed build output", () => {
 			"./default-slots",
 			"./native-controls",
 			"./preset-native",
+			"./preset-mui",
 			"./react19",
 		])
 
@@ -139,6 +141,7 @@ describe("packed build output", () => {
 			"./default-slots",
 			"./native-controls",
 			"./preset-native",
+			"./preset-mui",
 			"./react19",
 			"./server",
 		] as const) {
@@ -159,11 +162,13 @@ describe("packed build output", () => {
 		await expectGraphNotToContainRenderingSources(root.import.default, [
 			"default-slots",
 			"native-controls",
+			"preset-mui",
 			"preset-native",
 		])
 		await expectGraphNotToContainRenderingSources(root.require.default, [
 			"default-slots",
 			"native-controls",
+			"preset-mui",
 			"preset-native",
 		])
 	})
@@ -178,6 +183,7 @@ describe("packed build output", () => {
 		]) {
 			await expectGraphNotToContainRenderingSources(target, [
 				"native-controls",
+				"preset-mui",
 				"preset-native",
 			])
 		}
@@ -187,8 +193,20 @@ describe("packed build output", () => {
 		]) {
 			await expectGraphNotToContainRenderingSources(target, [
 				"default-slots",
+				"preset-mui",
 				"preset-native",
 			])
+		}
+	})
+
+	it("keeps Material UI imports isolated to the MUI preset", async () => {
+		for (const entrypoint of Object.keys(
+			javaScriptEntrypoints,
+		) as JavaScriptEntrypoint[]) {
+			if (entrypoint === "./preset-mui") continue
+			const exported = getJavaScriptExport(entrypoint)
+			await expectGraphNotToImportMui(exported.import.default)
+			await expectGraphNotToImportMui(exported.require.default)
 		}
 	})
 
@@ -364,6 +382,27 @@ async function expectGraphNotToImportRedux(
 		)
 		if (specifier.startsWith(".")) {
 			await expectGraphNotToImportRedux(
+				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				visited,
+			)
+		}
+	}
+}
+
+async function expectGraphNotToImportMui(
+	packagePath: string,
+	visited = new Set<string>(),
+): Promise<void> {
+	const absolutePath = packagePathToAbsolutePath(packagePath)
+	if (visited.has(absolutePath)) return
+	visited.add(absolutePath)
+
+	const source = await readFile(absolutePath, "utf8")
+	for (const specifier of collectRuntimeSpecifiers(source)) {
+		expect(specifier).not.toMatch(/^@mui\/material(?:\/|$)/)
+		expect(specifier).not.toMatch(/^@emotion\/(?:react|styled)(?:\/|$)/)
+		if (specifier.startsWith(".")) {
+			await expectGraphNotToImportMui(
 				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
 				visited,
 			)

@@ -24,6 +24,7 @@ export default defineConfig({
 						"src/default-slots/**/*.test.{ts,tsx}",
 						"src/native-controls/**/*.test.{ts,tsx}",
 						"src/preset-native/**/*.test.{ts,tsx}",
+						"src/preset-mui/**/*.test.{ts,tsx}",
 						"src/react/**/*.test.{ts,tsx}",
 						"src/react19/**/*.test.{ts,tsx}",
 					],

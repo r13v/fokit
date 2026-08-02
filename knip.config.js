@@ -27,6 +27,7 @@ export default {
 				"src/core/index.ts",
 				"src/history/index.ts",
 				"src/persistence/index.ts",
+				"src/preset-mui/index.ts",
 				"src/react19/index.ts",
 				"src/server/index.ts",
 			],

@@ -1,6 +1,7 @@
 import "form-please/layout.css"
 
 import type { StandardSchema } from "form-please"
+import { createMuiFormKit } from "form-please/preset-mui"
 import { nativeFormKit as kit } from "form-please/preset-native"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
@@ -9,6 +10,11 @@ import { createRoot } from "react-dom/client"
 
 type ProfileInput = {
 	readonly name: string
+}
+
+const muiKit = createMuiFormKit()
+if (!muiKit.controls.slider || muiKit.grid.at(-1) !== 12) {
+	throw new Error("Material UI preset did not initialize")
 }
 
 const schema: StandardSchema<ProfileInput> = {

@@ -10,6 +10,7 @@ export default defineConfig({
 		"native-controls": "src/native-controls/index.ts",
 		persistence: "src/persistence/index.ts",
 		"preset-native": "src/preset-native/index.ts",
+		"preset-mui": "src/preset-mui/index.ts",
 		react19: "src/react19/index.ts",
 		server: "src/server/index.ts",
 	},

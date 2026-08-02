@@ -36,6 +36,7 @@ import {
 } from "form-please"
 import { createFormStore } from "form-please/core"
 import { createDefaultSlots } from "form-please/default-slots"
+import { createMuiFormKit } from "form-please/preset-mui"
 import { nativeFormKit } from "form-please/preset-native"
 import type { ReactNode } from "react"
 import { StrictMode } from "react"
@@ -43,6 +44,11 @@ import { createRoot } from "react-dom/client"
 
 type MainExports = typeof import("form-please")
 type CoreExports = typeof import("form-please/core")
+
+const muiKit = createMuiFormKit()
+if (!muiKit.controls.autocomplete || muiKit.grid.at(-1) !== 12) {
+	throw new Error("Material UI preset did not initialize")
+}
 
 // @ts-expect-error React 19 Action APIs must stay isolated under form-please/react19.
 type _NoActionForm = MainExports["ActionForm"]

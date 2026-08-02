@@ -20,6 +20,7 @@ behavior. Import each optional feature from its own package entry.
 | `form-please/native-controls` | Native HTML control factory and option types |
 | `form-please/persistence` | Persistence, adapters, codecs, and migration |
 | `form-please/preset-native` | Ready-to-use native controls and accessible default slots |
+| `form-please/preset-mui` | Material UI 9 controls, slots, localization, and a 12-column grid |
 | `form-please/devtools` | Constrained Redux DevTools integration |
 | `form-please/react19` | `ActionForm` and `ActionSubmit` |
 | `form-please/server` | `parseFormData` and server result types |
@@ -75,6 +76,33 @@ The preset is a frozen `FormKit`. Extend it to add application controls or
 replace compatible slots. Use `createFormKit`, `createNativeControls`, and
 `createDefaultSlots` directly when localization or complete registry
 construction must be explicit.
+
+## createMuiFormKit
+
+Import `createMuiFormKit` from `form-please/preset-mui` after you install
+Material UI 9 and its Emotion peer dependencies:
+
+```sh
+npm install form-please @mui/material @emotion/react @emotion/styled
+```
+
+```tsx twoslash
+import { createMuiFormKit } from "form-please/preset-mui"
+
+const kit = createMuiFormKit({
+	i18n: {
+		addItem: "Add item",
+		chooseFile: "Choose file",
+	},
+})
+```
+
+Each call returns a new frozen kit with Material UI controls, six structural
+slots, and the `[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]` grid scale. The
+application owns `ThemeProvider`, `CssBaseline`, and theme configuration.
+Control options accept compatible Material UI props. Form, Please keeps
+control of values, names, IDs, refs, interaction state, errors, and ARIA
+relationships.
 
 ## kit.forContext
 

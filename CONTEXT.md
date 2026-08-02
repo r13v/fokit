@@ -23,6 +23,21 @@ returned by `createFormKit` or `kit.extend`. A base kit and each extension are
 different snapshots.
 _Avoid_: Kit configuration, mutable kit
 
+**TanStack form kit snapshot**: An immutable controls, slots, and grid-scale
+integration returned by `form-please/tanstack`. It owns only TanStack form
+definitions created through that exact snapshot.
+_Avoid_: Form kit snapshot, TanStack adapter configuration
+
+**TanStack form definition**: A schema and typed UI definition normalized by
+one exact TanStack form kit snapshot. It is not interchangeable with a form
+definition owned by the original runtime.
+_Avoid_: Portable form definition, Form instance
+
+**TanStack form API**: The React-bound TanStack Form object returned by a
+TanStack form kit snapshot. It remains the public runtime API instead of being
+hidden behind a Form Please form instance facade.
+_Avoid_: Form instance, TanStack form store
+
 **Shadcn form-kit adapter**: An application-owned Form, Please integration that
 maps the canonical form-kit control and slot contracts onto one supported
 shadcn component base.

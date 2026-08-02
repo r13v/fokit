@@ -901,6 +901,90 @@ test.describe("Form, Please documentation", () => {
 		expect(pageErrors).toEqual([])
 	})
 
+	test("runs the Material UI preset with direct Yup validation", async ({
+		page,
+	}) => {
+		const pageErrors = collectPageErrors(page)
+		await page.goto("./examples/mui-yup")
+
+		const proposal = page.getByRole("region", {
+			name: "Material UI with Yup conference example",
+		})
+		await expect(proposal).toBeVisible({ timeout: 15_000 })
+		await expect(proposal.getByLabel("Proposal title")).toHaveValue(
+			"Designing forms people can finish",
+		)
+		await expect(proposal.getByRole("slider")).toHaveAttribute(
+			"aria-valuenow",
+			"4",
+		)
+		await expect(proposal.getByText("Forms", { exact: true })).toBeVisible()
+		const agreement = proposal.getByLabel(
+			"I can attend at the selected date and time",
+		)
+		const agreementWidths = await agreement.evaluate((input) => ({
+			control: input.parentElement?.getBoundingClientRect().width ?? 0,
+			field:
+				input.closest('[data-fp-node="field"]')?.getBoundingClientRect()
+					.width ?? 0,
+		}))
+		expect(agreementWidths.control).toBeLessThan(agreementWidths.field / 2)
+		const sliderGap = await proposal.getByRole("slider").evaluate((input) => {
+			const slider = input.closest(".MuiSlider-root")
+			const field = input.closest('[data-fp-node="field"]')
+			const nextField = field?.nextElementSibling ?? null
+			if (slider === null || nextField === null) return 0
+			return (
+				nextField.getBoundingClientRect().left -
+				slider.getBoundingClientRect().right
+			)
+		})
+		expect(sliderGap).toBeGreaterThanOrEqual(12)
+		const duplicateIds = await proposal
+			.locator("[id]")
+			.evaluateAll((elements) => {
+				const counts = new Map<string, number>()
+				for (const element of elements) {
+					const id = element.id
+					counts.set(id, (counts.get(id) ?? 0) + 1)
+				}
+				return [...counts.entries()]
+					.filter(([, count]) => count > 1)
+					.map(([id]) => id)
+			})
+		expect(duplicateIds).toEqual([])
+
+		await proposal.getByRole("radio", { name: "Workshop" }).click()
+		const experience = proposal.getByRole("slider")
+		await experience.focus()
+		await page.keyboard.press("Home")
+		await expect(
+			proposal.getByText("Workshops need at least three years of experience"),
+		).toBeVisible()
+		await experience.focus()
+		await page.keyboard.press("End")
+		await proposal.getByRole("combobox", { name: "Topics" }).click()
+		await page.getByRole("option", { name: "Accessibility" }).click()
+		await expect(
+			proposal.getByText("Accessibility", { exact: true }),
+		).toBeVisible()
+
+		const title = proposal.getByLabel("Proposal title")
+		await title.fill("   A focused Material UI proposal   ")
+		await proposal.getByLabel("Draft slides").setInputFiles({
+			name: "slides.pdf",
+			mimeType: "application/pdf",
+			buffer: Buffer.from("slides"),
+		})
+		await proposal.getByRole("button", { name: "Submit proposal" }).click()
+		await expect(
+			proposal.getByText(
+				"A focused Material UI proposal is ready for review. Topics: Forms, Accessibility.",
+			),
+		).toBeVisible()
+		expect(pageErrors).toEqual([])
+	})
+
 	test("uses responsive Vocs navigation without horizontal scrolling", async ({
 		page,
 	}, testInfo) => {

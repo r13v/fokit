@@ -23,6 +23,12 @@ npm install form-please zod
 `react` and `react-dom` are peer dependencies. Form, Please accepts any Standard
 Schema implementation. This example uses Zod.
 
+To use the optional Material UI preset, install its peer dependencies:
+
+```sh
+npm install @mui/material @emotion/react @emotion/styled
+```
+
 ## Create a form
 
 ```tsx
@@ -108,6 +114,7 @@ registered controls by name. It does not embed a design system.
 | `form-please/default-slots` | Accessible structural slot factory and localization types |
 | `form-please/native-controls` | Native HTML control factory and option types |
 | `form-please/preset-native` | Ready native form kit with accessible English default slots |
+| `form-please/preset-mui` | Material UI 9 controls, structural slots, and a 12-column grid |
 | `form-please/server` | Bounded `FormData` parsing and Standard Schema validation |
 | `form-please/react19` | `ActionForm` and `ActionSubmit` for React 19 |
 | `form-please/history` | Optional history, event journals, and deterministic replay |

@@ -16,7 +16,7 @@ of behavior.
 
 ## Architectural shape
 
-Form, Please is one package with ten JavaScript entry points and one optional CSS
+Form, Please is one package with eleven JavaScript entry points and one optional CSS
 entry point:
 
 ```mermaid
@@ -28,6 +28,7 @@ flowchart TD
     DefaultSlots["form-please/default-slots<br/>Accessible structural slots"]
     NativeControls["form-please/native-controls<br/>Native HTML controls"]
     PresetNative["form-please/preset-native<br/>Ready native form kit"]
+    PresetMui["form-please/preset-mui<br/>Material UI form-kit factory"]
     React19["form-please/react19<br/>React 19 Actions adapter"]
     Server["form-please/server<br/>FormData parsing and validation"]
     History["form-please/history<br/>History and journals"]
@@ -43,6 +44,7 @@ flowchart TD
     App --> DefaultSlots
     App --> NativeControls
     App --> PresetNative
+    App --> PresetMui
     App --> React19
     App --> Server
     App --> History
@@ -57,6 +59,7 @@ flowchart TD
     PresetNative --> DefaultSlots
     PresetNative --> NativeControls
     PresetNative --> ReactLayer
+    PresetMui --> ReactLayer
     ReactLayer --> CoreLayer
     React19 --> ReactLayer
     React19 --> CoreLayer
@@ -91,7 +94,7 @@ React-free dependency boundary without maintaining a second UI tree.
 ## Execution environments
 
 The `form-please`, `form-please/default-slots`, `form-please/native-controls`,
-`form-please/preset-native`, and `form-please/react19` entries retain
+`form-please/preset-native`, `form-please/preset-mui`, and `form-please/react19` entries retain
 `"use client"` directives.
 Importing any of these entries from a React Server Component establishes a
 client boundary. `form-please/core` and `form-please/server` contain no
@@ -111,7 +114,7 @@ remain suitable for server-side use.
 
 | Area | Primary files | Responsibility |
 | --- | --- | --- |
-| Public exports | `src/index.ts`, `src/core/index.ts`, `src/default-slots/index.ts`, `src/native-controls/index.ts`, `src/preset-native/index.ts`, `src/react19/index.ts`, `src/server/index.ts`, and each optional `index.ts` | Define the supported package surface |
+| Public exports | `src/index.ts`, `src/core/index.ts`, `src/default-slots/index.ts`, `src/native-controls/index.ts`, `src/preset-native/index.ts`, `src/preset-mui/index.ts`, `src/react19/index.ts`, `src/server/index.ts`, and each optional `index.ts` | Define the supported package surface |
 | Definitions | `src/core/definition.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts`, `src/core/structural-presentation.ts` | Type, validate, normalize, and index reusable UI definitions |
 | Paths and values | `src/core/path.ts`, `src/core/path-types.ts`, `src/core/value.ts` | Canonical deep paths and immutable value operations |
 | Form model | `src/core/form-model.ts`, `src/core/form-reducer.ts`, `src/core/runtime-reducer.ts` | Own the atomic historical document and pure document/runtime transitions |
@@ -120,7 +123,7 @@ remain suitable for server-side use.
 | Middleware and features | `src/core/middleware.ts`, `src/core/commit-timeline.ts`, `src/core/feature-protocol.ts` | Run the synchronous chain and expose the package-private optional-feature capability |
 | Derived state | `src/core/resolve-ui.ts`, `src/core/resource.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, synchronous application-resource projection, dirty/touched state, issue exposure, and stable array rows |
 | Validation | `src/core/validation.ts`, `src/core/validation-lifecycle.ts`, `src/core/standard-schema.ts` | Standard Schema execution, attempt lifecycle, cancellation, and normalized results |
-| Form kits | `src/react/create-form-kit.tsx`, `src/default-slots/default-slots.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-native/index.ts` | Bind control and slot registries plus grid scales into rendering integrations and the native preset |
+| Form kits | `src/react/create-form-kit.tsx`, `src/default-slots/default-slots.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-native/index.ts`, `src/preset-mui/index.ts` | Bind control and slot registries plus grid scales into rendering integrations and the native and Material UI presets |
 | React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-snapshot.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to external stores |
 | Rendering | `src/react/fields.tsx`, `src/react/array-field.tsx`, `src/react/control.tsx`, `src/react/render-node.ts`, `src/react/slots.ts` | Turn resolved nodes into slots, controls, and explicit render components |
 | Native forms | `src/react/form.tsx`, `src/react/hidden-inputs.tsx`, `src/react/submission.ts` | Accessibility, `FormData`, reset, and classic submission |
@@ -329,6 +332,10 @@ appropriate DOM element. Form, Please supplies an unstyled accessible
 from separate entry points; neither is a visual theme.
 `form-please/preset-native` combines both factories into the immutable
 `nativeFormKit` baseline without adding them to the main entry graph.
+`form-please/preset-mui` exports `createMuiFormKit`. That factory owns Material
+UI controls, slots, and the 1–12 grid scale. Material UI and Emotion remain
+optional peers and stay outside every other package graph. The application
+owns the Material UI theme and baseline styles.
 
 The stable `data-fp-*` and CSS-variable protocol connects structural slots
 to the optional `layout.css`. That stylesheet implements only the default

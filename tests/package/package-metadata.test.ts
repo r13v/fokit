@@ -27,6 +27,7 @@ const javaScriptEntrypoints = {
 	"./native-controls": "native-controls",
 	"./persistence": "persistence",
 	"./preset-native": "preset-native",
+	"./preset-mui": "preset-mui",
 	"./react19": "react19",
 	"./server": "server",
 } as const
@@ -41,6 +42,9 @@ describe("package metadata", () => {
 			files: ["dist"],
 			sideEffects: ["**/*.css"],
 			peerDependencies: {
+				"@emotion/react": "^11.14.0",
+				"@emotion/styled": "^11.14.1",
+				"@mui/material": "^9.0.0",
 				react: "^18.0.0 || ^19.0.0",
 				"react-dom": "^18.0.0 || ^19.0.0",
 			},
@@ -58,6 +62,7 @@ describe("package metadata", () => {
 			"./native-controls",
 			"./persistence",
 			"./preset-native",
+			"./preset-mui",
 			"./react19",
 			"./server",
 			"./layout.css",
@@ -78,8 +83,16 @@ describe("package metadata", () => {
 
 	it("runs strict package analyzers against JavaScript entry points", () => {
 		expect(packageJson.scripts["package:check"]).toBe(
-			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./react19 ./server",
+			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./react19 ./server",
 		)
+	})
+
+	it("keeps Material UI peers optional for consumers of other entries", () => {
+		expect(packageJson.peerDependenciesMeta).toMatchObject({
+			"@emotion/react": { optional: true },
+			"@emotion/styled": { optional: true },
+			"@mui/material": { optional: true },
+		})
 	})
 
 	it("does not add Redux runtime dependencies for DevTools", () => {

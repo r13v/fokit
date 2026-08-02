@@ -102,6 +102,17 @@
 			},
 			"default": "./dist/preset-native.js"
 		},
+		"./preset-mui": {
+			"import": {
+				"types": "./dist/preset-mui.d.ts",
+				"default": "./dist/preset-mui.js"
+			},
+			"require": {
+				"types": "./dist/preset-mui.d.cts",
+				"default": "./dist/preset-mui.cjs"
+			},
+			"default": "./dist/preset-mui.js"
+		},
 		"./react19": {
 			"import": {
 				"types": "./dist/react19.d.ts",
@@ -147,7 +158,7 @@
 		"site:verify:preview": "npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/form-please npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
 		"site:verify:production": "BASE_PATH=/form-please npm run site:build && EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
 		"site:verify": "npm run site:verify:preview && npm run site:verify:production",
-		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./react19 ./server",
+		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./react19 ./server",
 		"knip": "knip --workspace . --workspace docs-site",
 		"verify": "npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:registry && npm run test:smoke && npm run package:check && npm run knip"
 	},
@@ -160,8 +171,22 @@
 	},
 	"homepage": "https://r13v.github.io/form-please/",
 	"peerDependencies": {
+		"@emotion/react": "^11.14.0",
+		"@emotion/styled": "^11.14.1",
+		"@mui/material": "^9.0.0",
 		"react": "^18.0.0 || ^19.0.0",
 		"react-dom": "^18.0.0 || ^19.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@emotion/react": {
+			"optional": true
+		},
+		"@emotion/styled": {
+			"optional": true
+		},
+		"@mui/material": {
+			"optional": true
+		}
 	},
 	"dependencies": {
 		"@standard-schema/spec": "1.1.0"
@@ -169,6 +194,9 @@
 	"devDependencies": {
 		"@arethetypeswrong/cli": "0.18.5",
 		"@biomejs/biome": "2.5.5",
+		"@emotion/react": "11.14.0",
+		"@emotion/styled": "11.14.1",
+		"@mui/material": "9.2.0",
 		"@playwright/test": "1.62.0",
 		"@testing-library/react": "16.3.2",
 		"@testing-library/user-event": "14.6.1",

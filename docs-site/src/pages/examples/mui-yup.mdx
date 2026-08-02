@@ -1,0 +1,69 @@
+---
+title: Material UI with Yup
+description: Use the official Material UI preset to build and validate a conference proposal directly with Yup.
+showAskAi: false
+---
+
+import { MuiYupConferenceDemo } from "../../components/mui-yup-conference-demo"
+
+# Material UI with Yup
+
+This example uses the official `form-please/preset-mui` entry. Material UI
+renders the controls and structural slots. Yup validates the form directly
+through Standard Schema, without a custom resolver.
+
+## Install the preset peers
+
+```bash
+npm install form-please @mui/material @emotion/react @emotion/styled yup
+```
+
+Create a kit in application code. Each call returns a new frozen registry, so
+you can provide local array and file labels:
+
+```tsx twoslash
+import { createMuiFormKit } from "form-please/preset-mui"
+
+const kit = createMuiFormKit({
+	i18n: { chooseFile: "Attach slides" },
+})
+```
+
+The application remains responsible for `ThemeProvider`, `CssBaseline`, and
+the theme. The live example keeps its local Material UI theme in sync with the
+site's light and dark modes.
+
+## Try the conference proposal
+
+Change the session to **Workshop** and move experience below three years to
+see the cross-field Yup rule. Edit the title or abstract to see Yup transforms
+trim the submitted output. The submit action stays in the browser and displays
+the typed result.
+
+<MuiYupConferenceDemo />
+
+## Preset controls
+
+The first preset contains these scenario-specific controls:
+
+- Text: `text`, `textarea`, `password`, `email`, `url`, `tel`, and `search`.
+- Numeric and date: `number`, `date`, `time`, and `datetime-local`.
+- Choice: `select`, `select-multiple`, `radio`, `checkbox`, `switch`,
+  `autocomplete`, and `autocomplete-multiple`.
+- Other: `file`, `files`, `slider`, and `range-slider`.
+
+Compatible Material UI props belong in each field's `options`. This includes
+`sx`. Autocomplete uses `textFieldProps`; file controls use `buttonProps` and
+`inputProps`; radio choices can use `radioProps` and `labelProps`. Form,
+Please keeps control of values, names, IDs, refs, interaction state, errors,
+and ARIA relationships.
+
+## Copy the example
+
+```tsx
+// [!include ~/snippets/mui-yup-conference.tsx]
+```
+
+Read [Controls and design systems](/guides/controls) for the control and
+FormData contracts. Read the [API reference](/api#createmuiformkit) for the
+preset factory and localization options.

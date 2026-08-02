@@ -12,6 +12,11 @@ import {
 	type ControlProps,
 	defineControl,
 } from "../react/control-definition.js"
+import {
+	serializeBoolean,
+	serializeOptionalNumber,
+	serializeOptionalString,
+} from "../react/control-form-data.js"
 
 export type NativeTextType =
 	| "text"
@@ -480,16 +485,7 @@ export function createNativeControls() {
 		component: NativeNumberControl,
 		formData: {
 			mode: "native",
-			serialize(value, details) {
-				return value === undefined || Number.isNaN(value)
-					? []
-					: [
-							{
-								name: details.name,
-								value: String(value),
-							},
-						]
-			},
+			serialize: serializeOptionalNumber,
 		},
 	})
 
@@ -521,14 +517,7 @@ export function createNativeControls() {
 		component: NativeCheckboxControl,
 		formData: {
 			mode: "native",
-			serialize(value, details) {
-				return [
-					{
-						name: details.name,
-						value: String(value),
-					},
-				]
-			},
+			serialize: serializeBoolean,
 		},
 	})
 
@@ -549,20 +538,6 @@ export function createNativeControls() {
 		time,
 		file,
 	})
-}
-
-function serializeOptionalString(
-	value: string | undefined,
-	details: { readonly name: string },
-) {
-	return value === undefined
-		? []
-		: [
-				{
-					name: details.name,
-					value,
-				},
-			]
 }
 
 function preventReadOnlyEvent(event: {

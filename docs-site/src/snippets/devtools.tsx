@@ -17,12 +17,10 @@ const devToolsFeature = createDevToolsMiddleware({
 })
 
 export function DevToolsExample() {
-	const [form] = useState(() =>
-		kit.createForm(definition, {
-			defaultValues: { title: "Draft" },
-			middleware: [devToolsFeature],
-		}),
-	)
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { title: "Draft" },
+		middleware: [devToolsFeature],
+	})
 	const [isDisconnected, setIsDisconnected] = useState(false)
 	const devTools = devToolsFeature.handle(form)
 

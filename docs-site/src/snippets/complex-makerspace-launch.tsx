@@ -589,12 +589,10 @@ export function MakerspaceLaunchExample() {
 }
 
 function MakerspaceLaunchForm() {
-	const [form] = useState(() =>
-		kit.createForm(launchDefinition, {
-			defaultValues,
-			context: { campuses: [], regions: [] },
-		}),
-	)
+	const form = kit.useCreateForm(launchDefinition, {
+		defaultValues,
+		context: { campuses: [], regions: [] },
+	})
 	const campuses = useQuery({
 		queryKey: ["maker-campuses"],
 		queryFn: () =>

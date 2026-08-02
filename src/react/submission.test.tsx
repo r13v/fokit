@@ -130,7 +130,7 @@ describe("classic React submission", () => {
 		})
 
 		function BoundForm() {
-			const boundForm = kit.useForm(form, {
+			const boundForm = kit.useBindForm(form, {
 				onSubmit: reactOnSubmit,
 			})
 			return (

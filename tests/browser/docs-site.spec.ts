@@ -321,10 +321,15 @@ test.describe("Form, Please documentation", () => {
 		).toHaveAttribute("data-copied", "true")
 
 		await page.goto("./api#parseformdata")
-		const twoslashTrigger = page.locator("[data-v-twoslash-trigger]").first()
+		const twoslashTrigger = page
+			.locator("[data-v-twoslash-trigger]")
+			.filter({ hasText: "createFormKit" })
+			.first()
 		await expect(twoslashTrigger).toBeVisible()
 		await twoslashTrigger.click()
-		await expect(page.getByText(/ParseResult|PromiseConstructor/)).toBeVisible()
+		await expect(
+			page.getByText(/function createFormKit<Controls/),
+		).toBeVisible()
 
 		const llmsResponse = await page.request.get("./llms.txt")
 		expect(llmsResponse.ok()).toBe(true)

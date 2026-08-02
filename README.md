@@ -18,8 +18,8 @@ compatibility aliases for the removed global creation and binding APIs.
 | Version 0 | Version 1 |
 | --- | --- |
 | Global `createForm` | `kit.createForm` |
-| Global `useForm` | `kit.useForm` |
-| Definition-based `AutoForm` | Create a form once and pass it to `kit.AutoForm` |
+| Global `useForm` | `kit.useBindForm` |
+| Definition-based `AutoForm` | Create a form with `kit.useCreateForm` and pass it to `kit.AutoForm` |
 | `ActionForm` with kit and definition props | Create a form once and pass it to `ActionForm` |
 | Root `KitForm` and `Submit` | `kit.Form` and `kit.Submit` |
 | Root `createFormStore` | Import it from `form-please/core` |
@@ -44,7 +44,6 @@ import {
 	type FormMiddleware,
 	nativeControls,
 } from "form-please"
-import { useState } from "react"
 import { z } from "zod"
 
 const contactSchema = z.object({
@@ -74,12 +73,10 @@ const logTransactions: FormMiddleware<{ email: string }, unknown> =
 }
 
 export function ContactForm() {
-	const [form] = useState(() =>
-		kit.createForm(contactForm, {
-			defaultValues: { email: "" },
-			middleware: [logTransactions],
-		}),
-	)
+	const form = kit.useCreateForm(contactForm, {
+		defaultValues: { email: "" },
+		middleware: [logTransactions],
+	})
 
 	return (
 		<kit.AutoForm

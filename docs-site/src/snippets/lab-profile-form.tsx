@@ -193,9 +193,7 @@ export const profileDefinition = kit.defineForm(profileSchema)({
 
 export function ProfileForm() {
 	const [saved, setSaved] = useState<ProfileOutput>()
-	const [form] = useState(() =>
-		kit.createForm(profileDefinition, { defaultValues }),
-	)
+	const form = kit.useCreateForm(profileDefinition, { defaultValues })
 	let output = "Submit the form to see typed output."
 	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
 

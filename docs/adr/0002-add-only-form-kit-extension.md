@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-30
+- Amended by: [ADR 0009](0009-explicit-react-form-lifetimes.md)
 
 ## Context
 
@@ -22,8 +23,11 @@ control name. Siblings with the same complete registry contract remain
 compatible.
 
 Forms created through `kit.createForm` carry the exact creating kit snapshot's
-runtime identity. `kit.useForm` accepts only forms created by that same snapshot
-and rejects forms from a base, extension, sibling, or structurally equal kit.
+runtime identity. `kit.useCreateForm` follows the same definition-compatibility
+rules as `kit.createForm`, and its retained form carries the invoking kit's
+exact snapshot. `kit.useBindForm` accepts only forms created by that same
+snapshot and rejects forms from a base, extension, sibling, or structurally
+equal kit.
 
 ## Considered Options
 

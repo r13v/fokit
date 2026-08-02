@@ -501,9 +501,7 @@ export function ResearchGrantExample() {
 
 function ResearchGrantForm() {
 	const [receipt, setReceipt] = useState("No application sent yet.")
-	const [form] = useState(() =>
-		kit.createForm(grantDefinition, { defaultValues }),
-	)
+	const form = kit.useCreateForm(grantDefinition, { defaultValues })
 	const preview = useMutation({
 		mutationFn: (value: GrantOutput) =>
 			fakeRequest({ revision: value.reviewKey, accepted: true }, 420),

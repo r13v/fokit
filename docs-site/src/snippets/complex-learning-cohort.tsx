@@ -580,9 +580,7 @@ export function LearningCohortExample() {
 }
 
 function LearningCohortForm() {
-	const [form] = useState(() =>
-		kit.createForm(cohortDefinition, { defaultValues: draft }),
-	)
+	const form = kit.useCreateForm(cohortDefinition, { defaultValues: draft })
 	const loadedDraft = useQuery({
 		queryKey: ["learning-cohort-draft", "cohort-41"],
 		queryFn: () => fakeRequest(draft, 410),

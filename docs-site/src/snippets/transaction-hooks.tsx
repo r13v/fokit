@@ -102,9 +102,7 @@ const defaultValues = {
 // [!region form]
 export function ScheduleEditor() {
 	const [lastUpdate, setLastUpdate] = useState("No update committed.")
-	const [form] = useState(() =>
-		kit.createForm(scheduleDefinition, { defaultValues }),
-	)
+	const form = kit.useCreateForm(scheduleDefinition, { defaultValues })
 
 	return (
 		<kit.AutoForm

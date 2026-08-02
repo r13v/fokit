@@ -19,12 +19,10 @@ const definition = kit.defineForm(schema)({
 const historyFeature = createHistoryMiddleware({ limit: 50 })
 
 export function HistoryExample() {
-	const [form] = useState(() =>
-		kit.createForm(definition, {
-			defaultValues: { title: "First draft" },
-			middleware: [historyFeature],
-		}),
-	)
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { title: "First draft" },
+		middleware: [historyFeature],
+	})
 	const history = historyFeature.handle(form)
 	const snapshot = useSyncExternalStore(
 		history.subscribe,

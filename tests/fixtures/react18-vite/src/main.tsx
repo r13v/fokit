@@ -37,7 +37,7 @@ import {
 } from "form-please"
 import { createFormStore } from "form-please/core"
 import type { ReactNode } from "react"
-import { StrictMode, useState } from "react"
+import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
 type MainExports = typeof import("form-please")
@@ -251,14 +251,12 @@ const extendedDefinition = extendedKit.defineForm(schema)({
 })
 
 function ExtendedFormProbe() {
-	const [form] = useState(() =>
-		extendedKit.createForm(extendedDefinition, {
-			defaultValues: {
-				name: "Ada Lovelace",
-				settings: { nickname: "Ada" },
-			},
-		}),
-	)
+	const form = extendedKit.useCreateForm(extendedDefinition, {
+		defaultValues: {
+			name: "Ada Lovelace",
+			settings: { nickname: "Ada" },
+		},
+	})
 	return <extendedKit.AutoForm form={form} />
 }
 
@@ -389,9 +387,9 @@ function defaultValues(): FormInput<typeof schema> {
 }
 
 function RichFormProbe() {
-	const [form] = useState(() =>
-		kit.createForm(richDefinition, { defaultValues: defaultValues() }),
-	)
+	const form = kit.useCreateForm(richDefinition, {
+		defaultValues: defaultValues(),
+	})
 	return <kit.AutoForm form={form} />
 }
 
@@ -413,7 +411,7 @@ function HookProbe() {
 }
 
 function App({ children }: { readonly children?: ReactNode }) {
-	const form = kit.useForm(externalForm, {
+	const form = kit.useBindForm(externalForm, {
 		onSubmit({ value }) {
 			void value.slug
 		},

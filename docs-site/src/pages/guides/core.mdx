@@ -1,0 +1,81 @@
+---
+title: React-free core
+description: Create, observe, validate, and update a Form, Please store without React rendering or React hooks.
+showAskAi: false
+---
+
+# React-free core
+
+Use `form-please/core` when form state must run outside React. The core store
+provides the same document, validation, array identity, metadata, and UI
+resolution model that the React form instance uses.
+
+## Choose the core boundary
+
+Use the core entry for a headless state service, a non-React renderer, or a
+focused state test. Use `createFormKit` when the application needs React
+controls, slots, form elements, focus wiring, or native `FormData` rendering.
+
+The core store does not render HTML. Your application reads each snapshot and
+maps its resolved UI nodes to its own view layer.
+
+## Create a definition and store
+
+`normalizeDefinition` needs schema-aware control metadata. The metadata states
+which values and options each control accepts. It does not provide a React
+component.
+
+`createFormStore` needs a normalized definition and complete editable default
+values. It can also receive context, interaction options, validation options,
+and update hooks.
+
+## Observe focused state
+
+`subscribe(selector, listener, options?)` calls the listener when the selected
+value changes. Select the smallest value that the consumer needs. Call the
+returned function when that consumer stops observing the store.
+
+Use `getSnapshot()` for the current immutable state. The snapshot contains
+values, dirty state, issues, validation state, metadata, context, and
+`resolvedUi`.
+
+## Update and validate
+
+The store exposes typed value, array, reset, issue, validation, context, and
+focus commands. Commands publish one coherent snapshot after a commit.
+`batch()` groups compatible value commands into one document commit.
+
+The complete example creates a store, observes one path, changes context,
+reads resolved UI state, and validates the schema:
+
+```ts
+// [!include ~/snippets/core-store.ts]
+```
+
+## Use the standalone helpers
+
+The core entry also exports focused helpers:
+
+| Need | Public helpers |
+| --- | --- |
+| Parse and compare paths | `parsePath`, `formatPath`, `isSamePath`, `isAncestorPath`, `isDescendantPath`, `pathsOverlap` |
+| Read and replace nested values | `getPathValue`, `setPathValue`, `unsetPathValue`, `mergePathValue`, `cloneValue` |
+| Resolve a normalized UI tree | `resolveUi` |
+| Project application resource state | `matchResource`, `fromResource` |
+| Keep typed dependent changes | `extendValueChanges` |
+
+These helpers are deterministic and do not require React.
+
+## Know the public limits
+
+The public `createFormStore` constructor does not configure the React
+middleware chain or first-party History, Persistence, and DevTools handles.
+Create a `FormInstance` through a form kit when the application needs those
+handles.
+
+The core entry does not submit native forms or serialize `FormData`. Use
+`form-please/server` to parse submitted `FormData` at a server boundary.
+
+Read the [API reference](/api#react-free-core) for the constructor boundary.
+Read [Production recipes](/advanced#test-the-public-experience) for test
+guidance.

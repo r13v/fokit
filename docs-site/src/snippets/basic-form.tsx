@@ -11,9 +11,7 @@ import {
 
 export function ProfileEditor() {
 	const [saved, setSaved] = useState<ProfileOutput>()
-	const [form] = useState(() =>
-		kit.createForm(profileDefinition, { defaultValues }),
-	)
+	const form = kit.useCreateForm(profileDefinition, { defaultValues })
 	let status = "Submit the form to see validated output."
 	if (saved !== undefined) {
 		status = `Saved ${saved.name} with ${saved.contactCount} contacts.`

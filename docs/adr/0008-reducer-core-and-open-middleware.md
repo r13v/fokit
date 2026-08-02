@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-01
+- Amended by: [ADR 0009](0009-explicit-react-form-lifetimes.md)
 
 ## Context
 
@@ -34,11 +35,12 @@ recorded document events to a checkpoint without effects. Its live restore
 still passes through the open chain, so exact visible restoration is guaranteed
 only when application middleware forwards the restore unchanged.
 
-Every public React `FormInstance` is created by `kit.createForm`. The main entry
-does not export global `createForm` or `useForm` functions. `kit.useForm` accepts
-only an existing form created by that exact immutable kit snapshot and binds
-runtime options to it. The React-free `createFormStore` constructor remains
-available only from `form-please/core`.
+Every public React `FormInstance` is created by `kit.createForm`, directly or
+through `kit.useCreateForm`. The main entry does not export global creation or
+binding functions. `kit.useBindForm` accepts only an existing form created by
+that exact immutable kit snapshot and binds runtime options to it. The
+React-free `createFormStore` constructor remains available only from
+`form-please/core`.
 
 Each form retains a package-private immutable reference to its kit identity,
 controls, and slots. `kit.Form` and `kit.AutoForm` accept only `form` and reject
@@ -78,9 +80,11 @@ context and state hooks remain public.
 - Keeping middleware-free global `createForm` and `useForm` functions would
   create a second construction and binding model that bypasses exact kit
   ownership.
-- Letting `useForm` or `kit.AutoForm` create a form from a definition would hide
-  form ownership inside React rendering. Adding `kit.useCreateForm` would make
-  that second lifecycle explicit but would still enlarge the public API.
+- Letting a binding hook or `kit.AutoForm` create a form from a definition would
+  hide form ownership inside React rendering. At the time of this decision,
+  `kit.useCreateForm` was rejected to keep the public API smaller. ADR 0009
+  supersedes that choice after repeated application code established an
+  explicit component-local creation lifecycle.
 - Passing both `kit` and `form` to `ActionForm` would permit contradictory
   owners. Binding `ActionForm` to a kit through another factory would add an
   unnecessary React 19 integration layer.
@@ -112,9 +116,9 @@ context and state hooks remain public.
 - A `FormInstance` has one immutable kit owner. A base kit, an extended kit, and
   sibling kits cannot create or bind interchangeable forms even when their
   controls and slots are structurally equal.
-- Component-local forms must create their instance once, for example with lazy
-  React state, and then pass that instance to form components. The library does
-  not provide a second definition-based creation hook.
+- Component-local forms use `kit.useCreateForm` and then pass the retained
+  instance to form components. The hook preserves explicit kit ownership and
+  does not bind runtime options.
 - `kit.Form`, `kit.AutoForm`, and `ActionForm` share one form-backed component
   model. Only `ActionForm` remains a separate component export because React 19
   stays outside the main package entry graph.

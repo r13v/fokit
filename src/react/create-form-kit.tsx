@@ -1,6 +1,12 @@
 "use client"
 
-import type { ComponentType, ElementType, ReactElement, ReactNode } from "react"
+import {
+	type ComponentType,
+	type ElementType,
+	type ReactElement,
+	type ReactNode,
+	useState,
+} from "react"
 import { scopeDefinitionFragment } from "../core/definition-fragment.js"
 import {
 	type FieldPath,
@@ -335,7 +341,7 @@ type CreateKitForm<
 	KitOwner<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
 >
 
-type UseKitForm<
+type UseBindKitForm<
 	Controls extends ControlDefinitionRegistry,
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
@@ -557,7 +563,13 @@ export interface FormKit<
 		SectionSlotOptions,
 		ArraySlotOptions
 	>
-	readonly useForm: UseKitForm<
+	readonly useCreateForm: CreateKitForm<
+		Controls,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions
+	>
+	readonly useBindForm: UseBindKitForm<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
@@ -599,7 +611,13 @@ type RuntimeFormKit = {
 		unknown,
 		unknown
 	>
-	readonly useForm: UseKitForm<
+	readonly useCreateForm: CreateKitForm<
+		ControlDefinitionRegistry,
+		unknown,
+		unknown,
+		unknown
+	>
+	readonly useBindForm: UseBindKitForm<
 		ControlDefinitionRegistry,
 		unknown,
 		unknown,
@@ -699,13 +717,25 @@ function assembleFormKit(
 		assertDefinitionControls(definition, controls)
 		return createFormInstance(definition, options, descriptor)
 	}) as RuntimeFormKit["createForm"]
-	const useForm = ((
+	const useCreateForm = ((
+		definition: NormalizedFormDefinition<
+			StandardSchema,
+			ControlDefinitionRegistry,
+			RenderNodeComponent,
+			KitPresentation<unknown, unknown, unknown>
+		>,
+		options: CreateFormOptions<StandardSchema, unknown>,
+	) => {
+		const [form] = useState(() => createForm(definition, options))
+		return form
+	}) as RuntimeFormKit["useCreateForm"]
+	const useBindForm = ((
 		form: FormInstance<StandardSchema>,
 		options: FormRuntimeOptions<StandardSchema, unknown>,
 	) => {
-		assertFormKitOwnership(form, descriptor, "kit.useForm")
+		assertFormKitOwnership(form, descriptor, "kit.useBindForm")
 		return useFormBinding(form as never, options) as unknown
-	}) as unknown as RuntimeFormKit["useForm"]
+	}) as unknown as RuntimeFormKit["useBindForm"]
 
 	return Object.freeze({
 		controls,
@@ -713,7 +743,8 @@ function assembleFormKit(
 		extend,
 		defineForm,
 		createForm,
-		useForm,
+		useCreateForm,
+		useBindForm,
 		Form: createFormComponent(controls, descriptor),
 		Submit,
 		Fields: createFieldsComponent(controls, slots),

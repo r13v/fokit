@@ -18,7 +18,7 @@ export const OverviewDemo = Object.assign(
 					type: "code",
 					lang: "tsx",
 					value:
-						'import { createFormKit, nativeControls } from "form-please"\nimport { useState } from "react"\n\nconst kit = createFormKit({ controls: nativeControls })\n\nconst [form] = useState(() => kit.createForm(profileDefinition, { defaultValues }))\n\n<kit.AutoForm form={form} onSubmit={({ value }) => saveProfile(value)} />',
+						'import { createFormKit, nativeControls } from "form-please"\n\nconst kit = createFormKit({ controls: nativeControls })\n\nfunction ProfileForm() {\n\tconst form = kit.useCreateForm(profileDefinition, { defaultValues })\n\treturn <kit.AutoForm form={form} onSubmit={({ value }) => saveProfile(value)} />\n}',
 				},
 			]
 		},

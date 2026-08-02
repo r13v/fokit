@@ -13,9 +13,7 @@ export function InteractiveLabClient() {
 	const [lastSubmit, setLastSubmit] = useState(
 		"Submit the form to see the result.",
 	)
-	const [form] = useState(() =>
-		kit.createForm(profileDefinition, { defaultValues }),
-	)
+	const form = kit.useCreateForm(profileDefinition, { defaultValues })
 
 	return (
 		<section

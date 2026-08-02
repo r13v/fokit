@@ -149,10 +149,13 @@ opaquely and the React renderer mounts it.
 
 ## Runtime state and ownership
 
-`kit.createForm` creates every public React `FormInstance`. The instance owns
-one core `FormStore` and one immutable reference to the exact kit snapshot.
-`kit.useForm` only binds runtime options to an existing instance from that
-same kit. `kit.Form` and `kit.AutoForm` enforce the same ownership rule.
+`kit.createForm` creates every public React `FormInstance`. `kit.useCreateForm`
+retains the first instance created through that operation for one mounted React
+component; later definition and creation-option arguments do not replace it.
+The instance owns one core `FormStore` and one immutable reference to the exact
+kit snapshot. `kit.useBindForm` only binds runtime options to an existing
+instance from that same kit. `kit.Form` and `kit.AutoForm` enforce the same
+ownership rule.
 
 The store owns one `FormModel`. Its `document` contains values and current
 array-row identity. Its `runtime` contains the clean baseline, touched paths,
@@ -271,8 +274,8 @@ field.
 `kit.AutoForm` is convenience composition:
 
 ```text
-kit.useForm binding
-  -> kit.Form
+runtime binding
+  -> kit.Form internals
      -> ErrorSummary
      -> FieldsRenderer
         -> structural slot
@@ -391,7 +394,8 @@ values that the Action client can reconcile.
 This makes a base definition usable by a compatible extended kit without
 allowing an extension to silently reinterpret an existing field.
 
-Application middleware is configured only in `kit.createForm`. Kits,
+Application middleware is configured only at form creation through
+`kit.createForm` or `kit.useCreateForm`. Kits,
 extensions, and definitions do not retain middleware. The open chain can
 observe, cancel, or replace transactions, but it cannot dispatch raw events.
 

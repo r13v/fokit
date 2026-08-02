@@ -441,12 +441,10 @@ export function MembershipLadderExample() {
 }
 
 function MembershipLadderForm() {
-	const [form] = useState(() =>
-		kit.createForm(membershipDefinition, {
-			defaultValues: membershipDraft,
-			context: { workspaces: [] },
-		}),
-	)
+	const form = kit.useCreateForm(membershipDefinition, {
+		defaultValues: membershipDraft,
+		context: { workspaces: [] },
+	})
 	const loadedDraft = useQuery({
 		queryKey: ["membership-draft"],
 		queryFn: () => fakeRequest(membershipDraft, 380),

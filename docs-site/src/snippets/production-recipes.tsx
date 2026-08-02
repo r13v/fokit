@@ -23,7 +23,6 @@ import {
 	useFormContext,
 	useFormState,
 } from "form-please"
-import { useState } from "react"
 
 const kit = createFormKit({ controls: nativeControls })
 
@@ -35,7 +34,7 @@ function DirtyStatus() {
 }
 
 function Editor() {
-	const [form] = useState(() => kit.createForm(definition, { defaultValues }))
+	const form = kit.useCreateForm(definition, { defaultValues })
 
 	return (
 		<kit.Form form={form}>
@@ -59,9 +58,9 @@ function ProfileScreen({ profile }: { profile: Profile | undefined }) {
 }
 
 function ProfileEditor({ profile }: { profile: Profile }) {
-	const [form] = useState(() =>
-		profileKit.createForm(profileDefinition, { defaultValues: profile }),
-	)
+	const form = profileKit.useCreateForm(profileDefinition, {
+		defaultValues: profile,
+	})
 	return <profileKit.AutoForm form={form} />
 }
 // [!endregion edit-baseline]

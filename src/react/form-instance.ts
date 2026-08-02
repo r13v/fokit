@@ -200,7 +200,7 @@ export class FormInstanceImpl<
 	bind(owner: object, options: FormRuntimeOptions<Schema, Context>): void {
 		if (this.#binding !== undefined && this.#binding.owner !== owner) {
 			throw new Error(
-				"A Form Please form instance cannot be bound by multiple useForm hooks at the same time",
+				"A Form Please form instance cannot have multiple active React bindings",
 			)
 		}
 
@@ -498,13 +498,13 @@ export function getFormInstanceImpl<
 		return form
 	}
 
-	throw new TypeError("useForm requires a form created by Form Please")
+	throw new TypeError("Expected a form created by Form Please")
 }
 
 export function assertFormKitOwnership(
 	form: object,
 	descriptor: FormKitDescriptor,
-	owner: "kit.useForm" | "kit.Form" | "kit.AutoForm",
+	owner: "kit.useBindForm" | "kit.Form" | "kit.AutoForm",
 ): void {
 	if (getFormInstanceImpl(form as never).getKitDescriptor() !== descriptor) {
 		throw new TypeError(

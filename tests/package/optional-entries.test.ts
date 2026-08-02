@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest"
 
 type RuntimeForm = object
 type RuntimeKit = Readonly<{
+	readonly useCreateForm: unknown
+	readonly useBindForm: unknown
 	defineForm(
 		schema: object,
 	): (definition: { readonly ui: readonly never[] }) => object
@@ -110,6 +112,8 @@ describe("built optional package entries", () => {
 		for (const modules of [esm, commonJs]) {
 			for (const name of [
 				"createForm",
+				"useCreateForm",
+				"useBindForm",
 				"useForm",
 				"createFormStore",
 				"KitForm",
@@ -120,6 +124,9 @@ describe("built optional package entries", () => {
 			expect(modules.core.createFormStore).toBeTypeOf("function")
 			expect(modules.react19.ActionForm).toBeTypeOf("function")
 			expect(modules.react19.ActionSubmit).toBeTypeOf("function")
+			const kit = modules.root.createFormKit({ controls: {} })
+			expect(kit.useCreateForm).toBeTypeOf("function")
+			expect(kit.useBindForm).toBeTypeOf("function")
 		}
 	})
 
@@ -131,6 +138,8 @@ describe("built optional package entries", () => {
 			const exports = collectDeclarationExports(declaration)
 			for (const name of [
 				"createForm",
+				"useCreateForm",
+				"useBindForm",
 				"useForm",
 				"createFormStore",
 				"KitForm",

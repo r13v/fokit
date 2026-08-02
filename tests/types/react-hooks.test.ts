@@ -27,6 +27,12 @@ type _noGlobalCreateForm = Expect<
 type _noGlobalUseForm = Expect<
 	Equal<"useForm" extends keyof typeof RootPublic ? true : false, false>
 >
+type _noGlobalUseCreateForm = Expect<
+	Equal<"useCreateForm" extends keyof typeof RootPublic ? true : false, false>
+>
+type _noGlobalUseBindForm = Expect<
+	Equal<"useBindForm" extends keyof typeof RootPublic ? true : false, false>
+>
 type _noGlobalKitForm = Expect<
 	Equal<"KitForm" extends keyof typeof RootPublic ? true : false, false>
 >
@@ -148,16 +154,40 @@ const runtimeOptions = {
 } satisfies FormRuntimeOptions<ExampleSchema, ExampleContext>
 
 function TypeHarness() {
-	const bound = kit.useForm(form, runtimeOptions)
+	const created = kit.useCreateForm(definition, {
+		defaultValues: defaults,
+		context: exampleContext,
+		middleware: [middleware],
+	})
+	type _createdForm = Expect<Equal<typeof created, typeof form>>
+	extendedKit.useCreateForm(definition, {
+		defaultValues: defaults,
+		context: exampleContext,
+	})
+	// @ts-expect-error a base kit cannot create a form from an extended-kit definition
+	kit.useCreateForm(extendedDefinition, {
+		defaultValues: defaults,
+		context: exampleContext,
+	})
+	kit.useCreateForm(definition, {
+		defaultValues: defaults,
+		context: exampleContext,
+		// @ts-expect-error middleware input must match the form schema input
+		middleware: [wrongMiddleware],
+	})
+
+	const bound = kit.useBindForm(form, runtimeOptions)
 	type _sameForm = Expect<Equal<typeof bound, typeof form>>
 
 	kit.Form({ form })
 	kit.AutoForm({ form, context: exampleContext })
 
 	// @ts-expect-error a kit with an incompatible control snapshot cannot bind this form
-	incompatibleKit.useForm(form, runtimeOptions)
+	incompatibleKit.useBindForm(form, runtimeOptions)
 	// Structurally equal sibling kits are rejected by the runtime identity check.
-	siblingKit.useForm(form, runtimeOptions)
+	siblingKit.useBindForm(form, runtimeOptions)
+	// @ts-expect-error kit.useForm was removed without an alias
+	kit.useForm(form, runtimeOptions)
 
 	const first = useValue(form, "profile.first")
 	type _value = Expect<Equal<typeof first, string>>

@@ -15,18 +15,21 @@ const definition = kit.defineForm(schema)({
 })
 const persistenceFeature = createPersistenceMiddleware({
 	adapter: createLocalStorageAdapter(() => window.localStorage),
-	key: "profile-draft",
+	key: "form-please-example-note-v1",
 	version: 1,
 	onError: (error) => console.error("Draft persistence failed", error),
 })
 
+function operationError(fallback: string, error: unknown): string {
+	if (error instanceof Error) return error.message
+	return fallback
+}
+
 export function LocalStoragePersistenceExample() {
-	const [form] = useState(() =>
-		kit.createForm(definition, {
-			defaultValues: { note: "" },
-			middleware: [persistenceFeature],
-		}),
-	)
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { note: "" },
+		middleware: [persistenceFeature],
+	})
 	const persistence = persistenceFeature.handle(form)
 	const snapshot = useSyncExternalStore(
 		persistence.subscribe,
@@ -38,6 +41,24 @@ export function LocalStoragePersistenceExample() {
 		ReturnType<typeof persistence.restore> | undefined
 	>(undefined)
 
+	async function saveNow() {
+		try {
+			await persistence.flush()
+			setMessage("Draft saved.")
+		} catch (error) {
+			setMessage(operationError("Save failed", error))
+		}
+	}
+
+	async function deleteSavedDraft() {
+		try {
+			await persistence.clear()
+			setMessage("Saved draft deleted.")
+		} catch (error) {
+			setMessage(operationError("Delete failed", error))
+		}
+	}
+
 	useEffect(() => {
 		let active = true
 		restorePromise.current ??= persistence.restore()
@@ -45,9 +66,7 @@ export function LocalStoragePersistenceExample() {
 			(result) => active && setMessage(`Restore result: ${result}`),
 			(error) => {
 				if (!active) return
-				let message = "Restore failed"
-				if (error instanceof Error) message = error.message
-				setMessage(message)
+				setMessage(operationError("Restore failed", error))
 				persistence.start()
 			},
 		)
@@ -59,13 +78,15 @@ export function LocalStoragePersistenceExample() {
 	return (
 		<kit.AutoForm form={form}>
 			<button
-				onClick={() => persistence.flush().catch(console.error)}
+				disabled={snapshot.phase !== "active"}
+				onClick={saveNow}
 				type="button"
 			>
 				Save now
 			</button>
 			<button
-				onClick={() => persistence.clear().catch(console.error)}
+				disabled={snapshot.phase === "restoring"}
+				onClick={deleteSavedDraft}
 				type="button"
 			>
 				Delete saved draft

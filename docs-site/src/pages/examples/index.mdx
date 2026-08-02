@@ -1,6 +1,6 @@
 ---
 title: Examples
-description: Explore six production-shaped forms and a live Redux DevTools workflow without hiding state from Form, Please.
+description: Explore six production-shaped forms and live workflows for History, Persistence, and Redux DevTools.
 showAskAi: false
 ---
 
@@ -31,8 +31,12 @@ It sends typed output through deterministic fake requests in TanStack Query.
 - [Campaign builder](/examples/campaign-builder) — seven payload variants that
   share audience, schedule, channel, payment, and create-or-edit behavior.
 
-## Developer workflow
+## State and developer workflows
 
+- [History workflow](/examples/history) — navigate committed document groups,
+  export a journal, replay it without effects, and validate an import.
+- [Persistent draft workflow](/examples/persistence) — restore, observe, save,
+  and delete a versioned browser draft.
 - [Redux DevTools workflow](/examples/devtools) — inspect committed events,
   restore known local documents, and disconnect the integration without
   stopping the form.
@@ -43,8 +47,11 @@ Change a discriminator and watch inactive values leave the form transaction.
 Reorder array rows and confirm their state moves with them. Trigger a fake
 request and keep editing while request state remains outside Form, Please.
 
-In the DevTools example, change the article title more than once. Inspect each
-committed event, and then restore an earlier document. The examples make
-ownership visible: Form, Please owns editable values and form semantics;
-TanStack Query owns remote lifecycle and cache state; Redux DevTools observes
-committed form events.
+In the History example, edit the title and navigate the retained groups. In the
+Persistence example, save a note and reload the page. In the DevTools example,
+inspect committed events and restore an earlier document.
+
+The examples make ownership visible. Form, Please owns editable values and
+form semantics. The optional features own their document history, draft
+encoding, or diagnostic connection. TanStack Query owns remote lifecycle and
+cache state.

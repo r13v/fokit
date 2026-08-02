@@ -2,7 +2,7 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
-import { StrictMode, useState } from "react"
+import { StrictMode } from "react"
 import { describe, expect, it, vi } from "vitest"
 import { formBindingFinalizer } from "../core/feature-protocol.js"
 import type {
@@ -67,6 +67,13 @@ function defaultValues(): FormInput<TestSchema> {
 }
 
 describe("createFormKit", () => {
+	it("exposes explicit creation and binding lifetimes without an alias", () => {
+		expect(testKit.createForm).toBeTypeOf("function")
+		expect(testKit.useCreateForm).toBeTypeOf("function")
+		expect(testKit.useBindForm).toBeTypeOf("function")
+		expect(testKit).not.toHaveProperty("useForm")
+	})
+
 	it("extends controls and resolved slots as an immutable add-only snapshot", () => {
 		const controls = {
 			text: textControl,
@@ -150,6 +157,44 @@ describe("createFormKit", () => {
 		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
 			"Ada",
 		)
+	})
+
+	it("preserves in-progress values when useCreateForm inputs change", () => {
+		const firstDefinition = createDefinition()
+		const nextDefinition = testKit.defineForm(schema)({ ui: [] })
+		let currentForm:
+			| ReturnType<typeof testKit.createForm<TestSchema, unknown>>
+			| undefined
+
+		function Editor({
+			definition,
+			initialName,
+		}: {
+			readonly definition: ReturnType<typeof createDefinition>
+			readonly initialName: string
+		}) {
+			const form = testKit.useCreateForm<TestSchema, unknown>(definition, {
+				defaultValues: { name: initialName },
+			})
+			currentForm = form
+			const name = useFormState(form, (snapshot) => snapshot.values.name)
+			return (
+				<button type="button" onClick={() => form.setValue("name", "Grace")}>
+					{name}
+				</button>
+			)
+		}
+
+		const { rerender } = render(
+			<Editor definition={firstDefinition} initialName="Ada" />,
+		)
+		const retainedForm = currentForm
+		fireEvent.click(screen.getByRole("button"))
+		rerender(<Editor definition={nextDefinition} initialName="Katherine" />)
+
+		expect(currentForm).toBe(retainedForm)
+		expect(currentForm?.definition).toBe(firstDefinition)
+		expect(screen.getByRole("button").textContent).toBe("Grace")
 	})
 
 	it("rejects a JavaScript-erased definition whose controls are missing", () => {
@@ -698,7 +743,7 @@ describe("createFormKit", () => {
 		)
 
 		function BindingMismatch() {
-			sibling.useForm(form as never, {})
+			sibling.useBindForm(form as never, {})
 			return null
 		}
 		expect(() => render(<BindingMismatch />)).toThrow(/exact form kit/i)
@@ -759,12 +804,10 @@ describe("createFormKit", () => {
 		expect(activated).not.toHaveBeenCalled()
 
 		function BoundForm() {
-			const [form] = useState(() =>
-				testKit.createForm<TestSchema, unknown>(definition, {
-					defaultValues: defaultValues(),
-					middleware: [pass],
-				}),
-			)
+			const form = testKit.useCreateForm<TestSchema, unknown>(definition, {
+				defaultValues: defaultValues(),
+				middleware: [pass],
+			})
 			return <testKit.AutoForm form={form} />
 		}
 
@@ -776,11 +819,12 @@ describe("createFormKit", () => {
 		expect(activated).toHaveBeenCalledTimes(1)
 	})
 
-	it("activates DevTools only for the form retained and bound by Strict Mode", () => {
+	it("keeps DevTools attached to the retained Strict Mode form until explicit disconnect", () => {
 		const listeners = new Set<(message: unknown) => void>()
+		const unsubscribeFromMessages = vi.fn(() => listeners.clear())
 		const subscribe = vi.fn((listener: (message: unknown) => void) => {
 			listeners.add(listener)
-			return () => listeners.delete(listener)
+			return unsubscribeFromMessages
 		})
 		const connect = vi.fn(() => ({
 			init: vi.fn(),
@@ -795,19 +839,21 @@ describe("createFormKit", () => {
 		})
 		const feature = createDevToolsMiddleware()
 		const definition = createDefinition()
+		let retainedForm:
+			| ReturnType<typeof testKit.createForm<TestSchema, unknown>>
+			| undefined
 
 		function BoundForm() {
-			const [form] = useState(() =>
-				testKit.createForm<TestSchema, unknown>(definition, {
-					defaultValues: defaultValues(),
-					middleware: [feature],
-				}),
-			)
+			const form = testKit.useCreateForm<TestSchema, unknown>(definition, {
+				defaultValues: defaultValues(),
+				middleware: [feature],
+			})
+			retainedForm = form
 			return <testKit.AutoForm form={form} />
 		}
 
 		try {
-			render(
+			const { unmount } = render(
 				<StrictMode>
 					<BoundForm />
 				</StrictMode>,
@@ -815,7 +861,22 @@ describe("createFormKit", () => {
 			expect(connect).toHaveBeenCalledOnce()
 			expect(subscribe).toHaveBeenCalledOnce()
 			expect(listeners.size).toBe(1)
+			expect(unsubscribeFromMessages).not.toHaveBeenCalled()
+
+			unmount()
+			expect(listeners.size).toBe(1)
+			expect(unsubscribeFromMessages).not.toHaveBeenCalled()
+
+			if (retainedForm === undefined) {
+				throw new Error("Expected Strict Mode to retain a form")
+			}
+			feature.handle(retainedForm).disconnect()
+			expect(unsubscribeFromMessages).toHaveBeenCalledOnce()
+			expect(listeners.size).toBe(0)
 		} finally {
+			if (retainedForm !== undefined) {
+				feature.handle(retainedForm).disconnect()
+			}
 			Reflect.deleteProperty(window, "__REDUX_DEVTOOLS_EXTENSION__")
 		}
 	})

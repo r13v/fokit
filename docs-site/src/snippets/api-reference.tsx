@@ -39,7 +39,6 @@ import {
 	type PersistenceMigration,
 } from "form-please/persistence"
 import type { FormResult } from "form-please/server"
-import { useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({
@@ -102,12 +101,12 @@ type ProfileCreateFormOptions = {
 const form = kit.createForm(definition, createOptions)
 // [!endregion create-form]
 
-// [!region editor]
+// [!region use-create-form]
 function Editor() {
-	const [form] = useState(() => kit.createForm(definition, { defaultValues }))
+	const form = kit.useCreateForm(definition, { defaultValues })
 	return <kit.AutoForm form={form} />
 }
-// [!endregion editor]
+// [!endregion use-create-form]
 
 // [!region runtime-options]
 type ProfileRuntimeOptions = {
@@ -121,11 +120,11 @@ type ProfileRuntimeOptions = {
 }
 // [!endregion runtime-options]
 
-// [!region use-form]
+// [!region use-bind-form]
 function useProfileForm() {
-	return kit.useForm(form, runtimeOptions)
+	return kit.useBindForm(form, runtimeOptions)
 }
-// [!endregion use-form]
+// [!endregion use-bind-form]
 
 // [!region form-components]
 function ManualForm() {

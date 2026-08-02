@@ -155,7 +155,7 @@ Map the resource at the narrowest boundary whose layout should change:
 | Keep layout stable | Section or field `disabled: true` while pending |
 | Avoid showing an irrelevant field | Field or section `visible: false` while pending |
 | Preserve the expected shape | Show a sibling render-node skeleton while pending and the field while successful |
-| Block the entire form | Derive `useForm` or `kit.AutoForm` `disabled` with `matchResource` |
+| Block the entire form | Derive `kit.useBindForm` or `kit.AutoForm` `disabled` with `matchResource` |
 
 For a skeleton, use complementary exhaustive resolvers instead of an implicit
 loading flag:

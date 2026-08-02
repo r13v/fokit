@@ -506,7 +506,7 @@ const queryClient = new QueryClient({
 
 export function AsyncMultiSelectExample() {
 	const [savedCityIds, setSavedCityIds] = useState<readonly string[]>()
-	const [form] = useState(() => kit.createForm(definition, { defaultValues }))
+	const form = kit.useCreateForm(definition, { defaultValues })
 	let output = "Submit to see the validated city IDs."
 	if (savedCityIds !== undefined) {
 		output = `Saved: ${savedCityIds.join(", ")}`

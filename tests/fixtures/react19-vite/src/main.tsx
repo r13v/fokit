@@ -3,7 +3,7 @@ import "form-please/layout.css"
 import { createFormKit, nativeControls, type StandardSchema } from "form-please"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
-import { StrictMode, useState } from "react"
+import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
 type ProfileInput = {
@@ -45,9 +45,9 @@ async function saveProfile(_formData: FormData): Promise<void> {
 }
 
 function App() {
-	const [form] = useState(() =>
-		kit.createForm(definition, { defaultValues: { name: "Ada" } }),
-	)
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { name: "Ada" },
+	})
 	return (
 		<ActionForm action={saveProfile} form={form} result={actionResult}>
 			<ActionSubmit>Save</ActionSubmit>

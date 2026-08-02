@@ -760,18 +760,14 @@ export function CampaignBuilderExample() {
 
 function CampaignBuilderForm() {
 	const [mode, setMode] = useState<"create" | "edit">("edit")
-	const [createForm] = useState(() =>
-		kit.createForm(campaignDefinition, {
-			defaultValues: newCampaign,
-			context: { segments: [] },
-		}),
-	)
-	const [editForm] = useState(() =>
-		kit.createForm(campaignDefinition, {
-			defaultValues: savedCampaign,
-			context: { segments: [] },
-		}),
-	)
+	const createForm = kit.useCreateForm(campaignDefinition, {
+		defaultValues: newCampaign,
+		context: { segments: [] },
+	})
+	const editForm = kit.useCreateForm(campaignDefinition, {
+		defaultValues: savedCampaign,
+		context: { segments: [] },
+	})
 	const draft = useQuery({
 		queryKey: ["campaign-draft", "campaign-204"],
 		queryFn: () => fakeRequest(savedCampaign, 390),

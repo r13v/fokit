@@ -35,7 +35,7 @@ the Action boundary from `form-please/react19`:
 import { createFormKit, nativeControls } from "form-please"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
-import { useActionState, useState } from "react"
+import { useActionState } from "react"
 import { z } from "zod"
 
 const schema = z.object({
@@ -65,9 +65,7 @@ function ProfileActionForm({
 	readonly saveProfile: SaveProfile
 }) {
 	const [result, action] = useActionState(saveProfile, undefined)
-	const [form] = useState(() =>
-		kit.createForm(definition, { defaultValues }),
-	)
+	const form = kit.useCreateForm(definition, { defaultValues })
 
 	return (
 		<ActionForm

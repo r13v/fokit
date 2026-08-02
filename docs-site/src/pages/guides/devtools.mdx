@@ -22,9 +22,9 @@ The feature is inert during SSR and when the extension is absent. One form can
 configure at most one DevTools feature.
 
 The feature connects only after the form completes its first retained React
-binding through `kit.useForm`, `kit.AutoForm`, or `ActionForm`. A form that is
+binding through `kit.useBindForm`, `kit.AutoForm`, or `ActionForm`. A form that is
 never bound does not open a listener. If you compose a manual `kit.Form`, call
-`kit.useForm(form, runtimeOptions)` in the component first.
+`kit.useBindForm(form, runtimeOptions)` in the component first.
 
 ## Visible state and events
 
@@ -87,6 +87,9 @@ an explicit disconnect action:
 Expected result: the extension shows form events and document state. Supported
 time-travel commands restore known local documents. The form continues to work
 when the extension is missing or after disconnect.
+
+Try the [live Redux DevTools workflow](/examples/devtools) to inspect the
+integration states and form behavior without leaving the site.
 
 ## Cleanup and failures
 

@@ -52,6 +52,7 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/guides/history.md",
 		"assets/md/guides/persistence.md",
 		"assets/md/guides/devtools.md",
+		"assets/md/guides/core.md",
 		"assets/md/examples.md",
 		"assets/md/examples/research-grant.md",
 		"assets/md/examples/studio-policies.md",
@@ -59,6 +60,8 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/examples/learning-cohort.md",
 		"assets/md/examples/membership-ladder.md",
 		"assets/md/examples/campaign-builder.md",
+		"assets/md/examples/history.md",
+		"assets/md/examples/persistence.md",
 		"assets/md/examples/devtools.md",
 		"llms.txt",
 		"llms-full.txt",
@@ -139,6 +142,27 @@ test("production output keeps Vocs skip links under the GitHub Pages base path",
 	}
 })
 
+test("configured static assets stay under the generated site base path", async () => {
+	const html = await readFile(new URL("index.html", publicRoot), "utf8")
+	const assetBasePath = /href="([^"]*)\/assets\//.exec(html)?.[1]
+
+	assert.equal(typeof assetBasePath, "string")
+	assert.match(
+		html,
+		new RegExp(
+			`<link rel="icon" href="${escapeRegExp(`${assetBasePath}/favicon.ico`)}"`,
+		),
+	)
+	assert.match(
+		html,
+		new RegExp(
+			`<img src="${escapeRegExp(`${assetBasePath}/brand/form-please-logo.png`)}"`,
+		),
+	)
+	assert.equal(await pathExists("favicon.ico"), true)
+	assert.equal(await pathExists("brand/form-please-logo.png"), true)
+})
+
 test("Interactive Lab has meaningful generated Markdown fallbacks", async () => {
 	const fallbackTerms = [
 		"Interactive Form, Please Lab",
@@ -175,9 +199,11 @@ test("Interactive Lab has meaningful generated Markdown fallbacks", async () => 
 	assert.match(full, /createHistoryMiddleware/)
 	assert.match(full, /createPersistenceMiddleware/)
 	assert.match(full, /createDevToolsMiddleware/)
+	assert.match(full, /createFormStore/)
 	assert.match(full, /form-please\/history/)
 	assert.match(full, /form-please\/persistence/)
 	assert.match(full, /form-please\/devtools/)
+	assert.match(full, /form-please\/core/)
 })
 
 test("overview demo has a meaningful generated Markdown fallback", async () => {
@@ -218,6 +244,14 @@ test("generated Markdown links live demos to their canonical source files", asyn
 		{
 			file: "assets/md/examples/devtools.md",
 			path: "docs-site/src/snippets/devtools.tsx",
+		},
+		{
+			file: "assets/md/examples/history.md",
+			path: "docs-site/src/snippets/history.tsx",
+		},
+		{
+			file: "assets/md/examples/persistence.md",
+			path: "docs-site/src/snippets/persistence-local-storage.tsx",
 		},
 		...[
 			"research-grant",

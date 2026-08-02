@@ -149,8 +149,9 @@ The complete example uses `beforeUpdate` for the date invariant. It uses
 ```
 
 Configure one `beforeUpdate` hook and one `afterUpdate` hook in
-`kit.createForm`, `kit.useForm`, or `kit.AutoForm`. Both hooks are synchronous.
-Use the form middleware chain when multiple independent policies must compose.
+`kit.createForm`, `kit.useCreateForm`, `kit.useBindForm`, or `kit.AutoForm`.
+Both hooks are synchronous. Use the form middleware chain when multiple
+independent policies must compose.
 
 Next, read [Validation and errors](/guides/validation) for schema and issue
 behavior. Read [Conditional fields](/guides/conditional-fields) for resolver

@@ -94,7 +94,7 @@ function createProfileForm(
 type ProfileForm = ReturnType<typeof createProfileForm>
 
 describe("React form hooks", () => {
-	it("keeps one useForm instance while using the latest option callbacks", () => {
+	it("keeps one bound form instance while using the latest option callbacks", () => {
 		const firstBeforeUpdate = vi.fn()
 		const latestBeforeUpdate = vi.fn(() => [
 			{ type: "set" as const, path: "name", value: "Katherine" },
@@ -115,7 +115,7 @@ describe("React form hooks", () => {
 			readonly beforeUpdate?: typeof firstBeforeUpdate
 			readonly afterUpdate?: typeof firstAfterUpdate
 		}) {
-			kit.useForm(form, {
+			kit.useBindForm(form, {
 				context: context(),
 				beforeUpdate,
 				afterUpdate,
@@ -154,7 +154,7 @@ describe("React form hooks", () => {
 		const seen: ProfileForm[] = []
 
 		function View({ locked }: { readonly locked: boolean }) {
-			kit.useForm(form, {
+			kit.useBindForm(form, {
 				context: context(locked),
 			})
 			seen.push(form)
@@ -188,7 +188,7 @@ describe("React form hooks", () => {
 			readonly disabled: boolean
 			readonly readOnly: boolean
 		}) {
-			kit.useForm(form, {
+			kit.useBindForm(form, {
 				context: context(),
 				disabled,
 				readOnly,
@@ -226,7 +226,7 @@ describe("React form hooks", () => {
 		let boundForm: ProfileForm | undefined
 
 		function View() {
-			boundForm = kit.useForm(form, {
+			boundForm = kit.useBindForm(form, {
 				context: context(true),
 				disabled: true,
 				beforeUpdate: reactBeforeUpdate,
@@ -300,7 +300,7 @@ describe("React form hooks", () => {
 		)
 
 		function View() {
-			kit.useForm(form, { context: context(false) })
+			kit.useBindForm(form, { context: context(false) })
 			return null
 		}
 
@@ -327,7 +327,7 @@ describe("React form hooks", () => {
 		form.subscribe((snapshot) => snapshot, listener)
 
 		function View() {
-			kit.useForm(form, {
+			kit.useBindForm(form, {
 				context: context(true),
 				disabled: true,
 			})
@@ -348,7 +348,7 @@ describe("React form hooks", () => {
 		})
 
 		function View() {
-			kit.useForm(form, {
+			kit.useBindForm(form, {
 				context: context(true),
 			})
 			return null
@@ -371,7 +371,7 @@ describe("React form hooks", () => {
 		})
 
 		function View() {
-			kit.useForm(form, {
+			kit.useBindForm(form, {
 				context: context(true),
 			})
 			return null
@@ -385,7 +385,7 @@ describe("React form hooks", () => {
 				</>,
 			),
 		).toThrow(
-			"A Form Please form instance cannot be bound by multiple useForm hooks at the same time",
+			"A Form Please form instance cannot have multiple active React bindings",
 		)
 	})
 

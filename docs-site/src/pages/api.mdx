@@ -21,16 +21,16 @@ behavior. Import each optional feature from its own package entry.
 | `form-please/react19` | `ActionForm` and `ActionSubmit` |
 | `form-please/server` | `parseFormData` and server result types |
 
-The main entry does not export global `createForm`, global `useForm`, or
-`createFormStore`. It also does not export `KitForm`, a root `Submit` value,
-`UseFormOptions`, or optional feature code.
+The main entry does not export global `createForm`, `useCreateForm`,
+`useBindForm`, `useForm`, or `createFormStore`. It also does not export
+`KitForm`, a root `Submit` value, `UseFormOptions`, or optional feature code.
 
 ### Migrate from version 0
 
 | Version 0 | Version 1 |
 | --- | --- |
 | `createForm(definition, options)` | `kit.createForm(definition, options)` |
-| `useForm(form, runtimeOptions)` | `kit.useForm(form, runtimeOptions)` |
+| `useForm(form, runtimeOptions)` | `kit.useBindForm(form, runtimeOptions)` |
 | Definition-based `AutoForm` | Create the form once, then pass `form` to `kit.AutoForm` |
 | `ActionForm` with `kit`, `definition`, and `defaultValues` | Create the form once, then pass `form` to `ActionForm` |
 | Root `KitForm` and `Submit` | `kit.Form` and `kit.Submit` |
@@ -91,14 +91,19 @@ Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
 // [!include ~/snippets/api-reference.tsx:create-form]
 ```
 
-Use lazy React state for a component-local form:
+Create a module-level form only when shared ownership and lifetime are
+intentional.
+
+## kit.useCreateForm
 
 ```tsx
-// [!include ~/snippets/api-reference.tsx:editor]
+// [!include ~/snippets/api-reference.tsx:use-create-form]
 ```
 
-Create a module-level form only when shared ownership and lifetime are
-intentional. A new `defaultValues` object does not reset an existing form.
+This hook creates a component-local form. It retains the first definition and
+creation options; later argument changes do not replace the instance or discard
+in-progress values. Reset the form explicitly or remount the owning component
+with a new key when the logical document changes.
 
 ## FormRuntimeOptions
 
@@ -110,14 +115,14 @@ Runtime options exclude `defaultValues` and `middleware`. A mounted binding
 temporarily owns these values. The base options become active again after
 unmount.
 
-## kit.useForm
+## kit.useBindForm
 
 ```ts
-// [!include ~/snippets/api-reference.tsx:use-form]
+// [!include ~/snippets/api-reference.tsx:use-bind-form]
 ```
 
 This hook binds an existing form. It never creates a form. One instance can
-have only one active `kit.useForm`, `kit.AutoForm`, or `ActionForm` binding.
+have only one active `kit.useBindForm`, `kit.AutoForm`, or `ActionForm` binding.
 The hook rejects a form from any other kit snapshot.
 
 ## Form and AutoForm
@@ -127,9 +132,9 @@ The hook rejects a form from any other kit snapshot.
 ```
 
 `kit.Form` renders native form behavior and its children. It accepts native
-form props and `form`. Call `kit.useForm(form, runtimeOptions)` separately when
-a manual form needs a runtime binding. `kit.AutoForm` accepts native form props
-and `FormRuntimeOptions`, and it renders the error summary and definition
+form props and `form`. Call `kit.useBindForm(form, runtimeOptions)` separately
+when a manual form needs a runtime binding. `kit.AutoForm` accepts native form
+props and `FormRuntimeOptions`, and it renders the error summary and definition
 fields. Both components reject a form from another exact kit.
 
 Use `kit.Fields` inside `kit.Form` for manual composition. Use `kit.Submit` for
@@ -166,12 +171,11 @@ issue or `clearErrors(path)` for one path.
 
 `onSubmit` can return `void` or `Promise<void>`. The form keeps
 `isSubmitting` true until the promise settles, and concurrent submissions use
-the same in-flight promise. A rejected promise is not converted into a form
-issue. Form, Please does not convert a rejected promise into a form issue.
-Catch expected request failures and call `form.setErrors(...)` when the
-user needs feedback. Call `form.reset(...)` after a save when the saved values
-must become the clean baseline. `form.submit()` uses the same lifecycle as a
-native classic submit.
+the same in-flight promise. A rejected promise does not become a form issue.
+Catch expected request failures. Call `form.setErrors(...)` when the user needs
+feedback. Call `form.reset(...)` after a save when the saved values must become
+the clean baseline. `form.submit()` uses the same lifecycle as a native classic
+submit.
 
 ## Commands
 
@@ -323,9 +327,9 @@ Create the optional integration with `createDevToolsMiddleware`:
 ```
 
 The feature connects only after the form completes its first retained React
-binding through `kit.useForm`, `kit.AutoForm`, or `ActionForm`. A form that is
+binding through `kit.useBindForm`, `kit.AutoForm`, or `ActionForm`. A form that is
 never bound does not open a DevTools listener. For manual `kit.Form`
-composition, call `kit.useForm(form, runtimeOptions)` in the component.
+composition, call `kit.useBindForm(form, runtimeOptions)` in the component.
 
 ```ts
 // [!include ~/snippets/api-reference.tsx:devtools-options]
@@ -411,4 +415,5 @@ selectors, validation, `resolveUi`, resource helpers such as `fromResource`
 and `matchResource`, the `ResourceState` type, and path helpers such as
 `FieldPath` and `ArrayFieldPath`. These resolver functions stay React-free.
 The public core constructor does not configure the React middleware chain or
-first-party optional feature handles.
+first-party optional feature handles. Read [React-free core](/guides/core) for
+a complete state and subscription example.

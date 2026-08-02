@@ -153,11 +153,18 @@ const canonicalPages = [
 			"Compose headless UI, load baselines, control middleware, protect FormData, preserve accessibility, and test the public form boundary.",
 	},
 	{
+		path: "src/pages/guides/core.mdx",
+		route: "/guides/core",
+		title: "React-free core",
+		description:
+			"Create, observe, validate, and update a Form, Please store without React rendering or React hooks.",
+	},
+	{
 		path: "src/pages/examples/index.mdx",
 		route: "/examples",
 		title: "Examples",
 		description:
-			"Explore six production-shaped forms and a live Redux DevTools workflow without hiding state from Form, Please.",
+			"Explore six production-shaped forms and live workflows for History, Persistence, and Redux DevTools.",
 	},
 	{
 		path: "src/pages/examples/research-grant.mdx",
@@ -206,6 +213,21 @@ const canonicalPages = [
 			"A create-or-edit campaign form with seven conditional templates, shared audience and scheduling, payment variants, transactional cleanup, and fake mutations.",
 	},
 	{
+		path: "src/pages/examples/history.mdx",
+		route: "/examples/history",
+		title: "History workflow",
+		description:
+			"Add undo, redo, seek, journal export, pure replay, and validated import to a live title editor.",
+	},
+	{
+		path: "src/pages/examples/persistence.mdx",
+		route: "/examples/persistence",
+		title: "Persistent draft workflow",
+		navText: "Persistent draft",
+		description:
+			"Restore, observe, save, and delete a versioned localStorage draft in a live note editor.",
+	},
+	{
 		path: "src/pages/examples/devtools.mdx",
 		route: "/examples/devtools",
 		title: "Redux DevTools workflow",
@@ -242,7 +264,8 @@ const publicApiTerms = [
 	"createDefaultSlots",
 	"nativeControls",
 	"defineControl",
-	"useForm",
+	"useCreateForm",
+	"useBindForm",
 	"FormInstance",
 	"parseFormData",
 	"ActionForm",
@@ -270,6 +293,17 @@ const canonicalSnippets = [
 			"FormCommand",
 			"createPersistenceMiddleware",
 			"createDevToolsMiddleware",
+		],
+	},
+	{
+		target: "src/snippets/core-store.ts",
+		include: "~/snippets/core-store.ts",
+		terms: [
+			"normalizeDefinition",
+			"createFormStore",
+			"store.subscribe",
+			"store.setValue",
+			"store.validate",
 		],
 	},
 	{
@@ -496,6 +530,32 @@ const complexExampleCases = [
 	},
 ]
 
+const stateWorkflowExampleCases = [
+	{
+		slug: "history",
+		component: "HistoryDemo",
+		client: "HistoryDemoClient",
+		snippet: "history.tsx",
+		exportName: "HistoryExample",
+		packageEntry: "history",
+		terms: ["createHistoryMiddleware", "replayJournal", "history.import"],
+	},
+	{
+		slug: "persistence",
+		component: "PersistenceDemo",
+		client: "PersistenceDemoClient",
+		snippet: "persistence-local-storage.tsx",
+		exportName: "LocalStoragePersistenceExample",
+		packageEntry: "persistence",
+		terms: [
+			"createPersistenceMiddleware",
+			"createLocalStorageAdapter",
+			"persistence.restore",
+			"persistence.flush",
+		],
+	},
+]
+
 const supersededRepositoryFiles = [
 	"docs/getting-started.md",
 	"docs/controls.md",
@@ -551,7 +611,8 @@ const requiredCorePageContent = {
 			"createFormKit",
 			"kit.defineForm",
 			"kit.createForm",
-			"kit.useForm",
+			"kit.useCreateForm",
+			"kit.useBindForm",
 			"Form and AutoForm",
 			"Hooks",
 			"FormInstance",
@@ -681,6 +742,23 @@ const requiredCorePageContent = {
 }
 
 const requiredGuidePageContent = {
+	"src/pages/guides/core.mdx": {
+		headings: [
+			"Choose the core boundary",
+			"Create a definition and store",
+			"Observe focused state",
+			"Update and validate",
+			"Use the standalone helpers",
+			"Know the public limits",
+		],
+		terms: [
+			"form-please/core",
+			"normalizeDefinition",
+			"createFormStore",
+			"resolvedUi",
+			"~/snippets/core-store.ts",
+		],
+	},
 	"src/pages/guides/history.mdx": {
 		headings: [
 			"First use",
@@ -698,6 +776,7 @@ const requiredGuidePageContent = {
 			'"cancelled"',
 			'"transformed"',
 			"~/snippets/history.tsx",
+			"/examples/history",
 		],
 	},
 	"src/pages/guides/persistence.mdx": {
@@ -722,6 +801,7 @@ const requiredGuidePageContent = {
 			"~/snippets/persistence-local-storage.tsx",
 			"~/snippets/persistence-nuqs.ts",
 			"~/snippets/persistence-tanstack-query.ts",
+			"/examples/persistence",
 		],
 	},
 	"src/pages/guides/devtools.mdx": {
@@ -740,6 +820,7 @@ const requiredGuidePageContent = {
 			"maxAge",
 			"disconnect()",
 			"~/snippets/devtools.tsx",
+			"/examples/devtools",
 		],
 	},
 	"src/pages/guides/ui-definitions.mdx": {
@@ -1229,6 +1310,7 @@ test("overview proves the public Form, Please loop with a live typed form", asyn
 	assert.match(wrapper, /toMarkdown/)
 	assert.match(wrapper, /live overview form runs only in a browser/i)
 	assert.match(wrapper, /from "\.\/markdown-fallback"/)
+	assert.match(wrapper, /function ProfileForm\(\).*kit\.useCreateForm/s)
 	assert.match(
 		wrapper,
 		/docs-site\/src\/components\/overview-demo\.client\.tsx/,
@@ -1236,6 +1318,7 @@ test("overview proves the public Form, Please loop with a live typed form", asyn
 	assert.match(client, /^"use client"/)
 	assert.match(client, /createFormKit/)
 	assert.match(client, /controls:\s*nativeControls/)
+	assert.match(client, /kit\.useCreateForm/)
 	assert.match(client, /type:\s*"email"/)
 	assert.match(client, /FormOutput<typeof profileSchema>/)
 	assert.match(client, /onSubmit=\{\(\{ value \}\) => setSaved\(value\)\}/)
@@ -1354,6 +1437,56 @@ test("Redux DevTools example runs the same public integration that it documents"
 	assert.match(page, /~\/snippets\/devtools\.tsx/)
 	assert.match(index, /\/examples\/devtools/)
 	assert.doesNotMatch(snippet, /from "(?:\.\.\/)+src\//)
+})
+
+test("History and Persistence examples run the public workflows that they document", async () => {
+	const index = await readText("src/pages/examples/index.mdx")
+
+	for (const example of stateWorkflowExampleCases) {
+		const wrapper = await readText(`src/components/${example.slug}-demo.tsx`)
+		const client = await readText(
+			`src/components/${example.slug}-demo.client.tsx`,
+		)
+		const snippet = await readText(`src/snippets/${example.snippet}`)
+		const page = await readText(`src/pages/examples/${example.slug}.mdx`)
+
+		assert.match(
+			wrapper,
+			new RegExp(`from "\\./${example.slug}-demo\\.client"`),
+		)
+		assert.match(wrapper, /toMarkdown/)
+		assert.match(wrapper, /from "\.\/markdown-fallback"/)
+		assert.match(
+			wrapper,
+			new RegExp(`docs-site/src/snippets/${escapeRegExp(example.snippet)}`),
+		)
+		assert.match(client, /^"use client"/)
+		assert.match(
+			client,
+			new RegExp(
+				`from "\\.\\./snippets/${escapeRegExp(example.snippet.replace(/\.tsx$/, ""))}"`,
+			),
+		)
+		assert.match(client, new RegExp(example.client))
+		assert.match(
+			snippet,
+			new RegExp(`from "form-please/${example.packageEntry}"`),
+		)
+		assert.match(snippet, new RegExp(`export function ${example.exportName}`))
+		assert.match(page, new RegExp(`<${example.component} />`))
+		assert.match(
+			page,
+			new RegExp(`~/snippets/${escapeRegExp(example.snippet)}`),
+		)
+		assert.match(index, new RegExp(`/examples/${example.slug}`))
+
+		for (const term of example.terms) {
+			assert.match(snippet, new RegExp(escapeRegExp(term)))
+		}
+
+		assert.doesNotMatch(snippet, /from "(?:\.\.\/)+src\//)
+		assert.doesNotMatch(`${wrapper}\n${client}\n${page}`, /[А-Яа-яЁё]/)
+	}
 })
 
 test("canonical TypeScript snippets are physical files covered by docs typecheck", async () => {
@@ -1497,7 +1630,12 @@ test("Vocs config defines the static English documentation shell", async () => {
 		source,
 		/baseUrl:\s*process\.env\.BASE_URL\s*\?\?\s*"https:\/\/r13v\.github\.io"/,
 	)
-	assert.match(source, /basePath:\s*process\.env\.BASE_PATH\s*\?\?\s*"\/"/)
+	assert.match(
+		source,
+		/const basePath\s*=\s*process\.env\.BASE_PATH\s*\?\?\s*"\/"/,
+	)
+	assert.match(source, /iconUrl:\s*`\$\{assetBasePath\}\/favicon\.ico`/)
+	assert.match(source, /\bbasePath,/)
 	assert.match(source, /renderStrategy:\s*"full-static"/)
 	assert.match(source, /checkDeadlinks:\s*true/)
 	assert.match(source, /socials:\s*\[\s*\{\s*icon:\s*"github"/)
@@ -1546,7 +1684,11 @@ test("sidebar follows the learning path before reference material", async () => 
 	const history = source.indexOf('link: "/guides/history"')
 	const persistence = source.indexOf('link: "/guides/persistence"')
 	const devtools = source.indexOf('link: "/guides/devtools"')
+	const core = source.indexOf('link: "/guides/core"')
 	const complexExamples = source.indexOf('link: "/examples"')
+	const historyExample = source.indexOf('link: "/examples/history"')
+	const persistenceExample = source.indexOf('link: "/examples/persistence"')
+	const devtoolsExample = source.indexOf('link: "/examples/devtools"')
 	const api = source.indexOf('link: "/api"')
 	const types = source.indexOf('link: "/types"')
 
@@ -1564,7 +1706,11 @@ test("sidebar follows the learning path before reference material", async () => 
 		history,
 		persistence,
 		devtools,
+		core,
 		complexExamples,
+		historyExample,
+		persistenceExample,
+		devtoolsExample,
 		api,
 		types,
 	]) {
@@ -1583,8 +1729,12 @@ test("sidebar follows the learning path before reference material", async () => 
 	assert.ok(asyncFields < history)
 	assert.ok(history < persistence)
 	assert.ok(persistence < devtools)
-	assert.ok(devtools < complexExamples)
-	assert.ok(complexExamples < api)
+	assert.ok(devtools < core)
+	assert.ok(core < complexExamples)
+	assert.ok(complexExamples < historyExample)
+	assert.ok(historyExample < persistenceExample)
+	assert.ok(persistenceExample < devtoolsExample)
+	assert.ok(devtoolsExample < api)
 	assert.ok(api < types)
 })
 
@@ -1643,7 +1793,7 @@ test("classic submit docs explain the async lifecycle", async () => {
 
 	assert.match(getStarted, /isSubmitting` set to `true`/)
 	assert.match(getStarted, /do not call `onSubmit` again/)
-	assert.match(api, /rejected promise into a form issue/)
+	assert.match(api, /rejected promise does not become a form issue/)
 	assert.match(api, /`form\.submit\(\)` uses the same lifecycle/)
 })
 

@@ -96,7 +96,6 @@ never becomes form data and never makes the form dirty.
 ```tsx twoslash
 // @jsx: react-jsx
 import { createFormKit, nativeControls } from "form-please"
-import { useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({ country: z.string() })
@@ -128,12 +127,10 @@ const definition = kit
 	})
 
 function ProfileForm({ countries, locked }: ProfileContext) {
-	const [form] = useState(() =>
-		kit.createForm(definition, {
-			defaultValues: { country: "" },
-			context: { countries, locked },
-		}),
-	)
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { country: "" },
+		context: { countries, locked },
+	})
 
 	return (
 		<kit.AutoForm

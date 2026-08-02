@@ -18,6 +18,7 @@ the form and one explicit boundary for side effects.
 - [Redux DevTools](/guides/devtools) covers inspection and constrained time
   travel.
 - [React 19 Actions](/guides/react-19-actions) covers server-owned submission.
+- [React-free core](/guides/core) covers state outside React rendering.
 
 ## Compose generated and bespoke UI
 
@@ -46,7 +47,9 @@ document as the new baseline. A prop identity change does not reset a form.
 
 ## Middleware protocol
 
-Configure middleware only in `kit.createForm`:
+Configure middleware when you create a form. Pass the middleware array to
+`kit.createForm` or `kit.useCreateForm`. The next example defines one middleware
+that records the snapshots before and after each transaction:
 
 ```ts
 // [!include ~/snippets/production-recipes.tsx:middleware]
@@ -161,4 +164,5 @@ Test through package imports and visible behavior:
 
 Do not test private reducer objects through deep imports. Use the public
 `form-please/core` entry only when the product intentionally uses the
-React-free `createFormStore` API.
+React-free `createFormStore` API. Read [React-free core](/guides/core) for the
+complete store boundary.

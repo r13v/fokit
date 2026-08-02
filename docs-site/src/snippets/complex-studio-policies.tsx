@@ -468,15 +468,13 @@ export function StudioPoliciesExample() {
 }
 
 function StudioPoliciesForm() {
-	const [form] = useState(() =>
-		kit.createForm(policyDefinition, {
-			defaultValues: baseline,
-			context: {
-				equipment: { status: "pending", fetchStatus: "idle" },
-				savedEquipmentOptions,
-			},
-		}),
-	)
+	const form = kit.useCreateForm(policyDefinition, {
+		defaultValues: baseline,
+		context: {
+			equipment: { status: "pending", fetchStatus: "idle" },
+			savedEquipmentOptions,
+		},
+	})
 	const policies = useQuery({
 		queryKey: ["studio-policy-baseline"],
 		queryFn: () => fakeRequest(baseline, 360),

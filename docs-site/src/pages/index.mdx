@@ -9,7 +9,7 @@ import { OverviewDemo } from "../components/overview-demo"
 <div className="form-please-overview-hero">
 
 <img
-	src="/brand/form-please-logo.png"
+	src={`${import.meta.env.BASE_URL}brand/form-please-logo.png`}
 	alt="Form, Please mascot holding a coffee mug"
 	className="form-please-overview-logo"
 />
@@ -54,7 +54,6 @@ definition for structure, and a kit for rendering.
 ```tsx twoslash
 // @jsx: react-jsx
 import { createFormKit, nativeControls, type FormInput } from "form-please"
-import { useState } from "react"
 import { z } from "zod"
 
 const profileSchema = z.object({
@@ -91,9 +90,7 @@ const defaultValues = {
 } satisfies FormInput<typeof profileSchema>
 
 export function ProfileForm() {
-	const [form] = useState(() =>
-		kit.createForm(profileDefinition, { defaultValues }),
-	)
+	const form = kit.useCreateForm(profileDefinition, { defaultValues })
 
 	return (
 		<kit.AutoForm
@@ -136,7 +133,7 @@ Use the same definition with `kit.AutoForm`. You can also compose it manually
 with `kit.Form`, `kit.Fields`, and granular hooks.
 
 Create each form through its exact kit. Bind an existing form with
-`kit.useForm`. A base kit, an extended kit, and two sibling kits have distinct
+`kit.useBindForm`. A base kit, an extended kit, and two sibling kits have distinct
 owners, even when their controls have the same structure.
 
 ## When to reach for Form, Please
@@ -164,6 +161,7 @@ you add production features.
 - [History and journals](/guides/history) to add undo, redo, and replay.
 - [Persistence](/guides/persistence) to hydrate and save a document or journal.
 - [Redux DevTools](/guides/devtools) to inspect committed events and time travel.
+- [React-free core](/guides/core) when form state must run outside React.
 
 ## Kudos
 

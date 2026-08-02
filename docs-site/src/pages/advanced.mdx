@@ -81,6 +81,18 @@ runs that command only after the current transaction and its publication
 finish. This rule prevents a nested command from changing state while the
 current middleware stack is unwinding.
 
+The next middleware marks `name` as touched after a transaction commits a
+change to that path:
+
+```ts
+// [!include ~/snippets/production-recipes.tsx:nested-dispatch]
+```
+
+The `field/touch` command enters the middleware chain only after the document
+transaction is published. Check the committed event before you dispatch a
+follow-up command. This check prevents a cancelled transaction from causing
+the follow-up command.
+
 ### Understand errors and finalized delivery
 
 An error before the core commit aborts the transaction. An error after a core

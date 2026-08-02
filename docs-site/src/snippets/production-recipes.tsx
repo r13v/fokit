@@ -82,6 +82,21 @@ const audit: FormMiddleware<Input, Context> =
 	}
 // [!endregion middleware]
 
+// [!region nested-dispatch]
+const touchChangedName: FormMiddleware<Input, Context> =
+	(api) => (next) => (transaction) => {
+		const result = next(transaction)
+		if (
+			result.status === "committed" &&
+			result.event.type === "document/committed" &&
+			result.event.changes.some((change) => change.path === "name")
+		) {
+			api.dispatch({ type: "field/touch", path: "name" })
+		}
+		return result
+	}
+// [!endregion nested-dispatch]
+
 const serverSchema = z.object({ name: z.string() })
 const formData = new FormData()
 

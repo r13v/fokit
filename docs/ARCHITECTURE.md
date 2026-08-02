@@ -2,7 +2,7 @@
 
 - Status: Descriptive
 - Audience: Maintainers and contributors
-- Last updated: 2026-08-01
+- Last updated: 2026-08-02
 
 This document is a map of the current implementation. It explains where
 responsibilities live, how data moves through the library, and which
@@ -105,7 +105,7 @@ remain suitable for server-side use.
 | Derived state | `src/core/resolve-ui.ts`, `src/core/resource.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, synchronous application-resource projection, dirty/touched state, issue exposure, and stable array rows |
 | Validation | `src/core/validation.ts`, `src/core/validation-lifecycle.ts`, `src/core/standard-schema.ts` | Standard Schema execution, attempt lifecycle, cancellation, and normalized results |
 | Form kits | `src/react/create-form-kit.tsx`, `src/react/default-slots.tsx`, `src/react/native-controls.tsx` | Bind control and slot registries into a rendering integration |
-| React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to the external store |
+| React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-snapshot.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to external stores |
 | Rendering | `src/react/fields.tsx`, `src/react/array-field.tsx`, `src/react/control.tsx`, `src/react/render-node.ts`, `src/react/slots.ts` | Turn resolved nodes into slots, controls, and explicit render components |
 | Native forms | `src/react/form.tsx`, `src/react/hidden-inputs.tsx`, `src/react/submission.ts` | Accessibility, `FormData`, reset, and classic submission |
 | React 19 Actions | `src/react19/action-form.tsx`, `src/react19/result-sync.ts`, `src/react19/action-submit.tsx` | Action submission state and server-result reconciliation |
@@ -267,7 +267,8 @@ React hooks bridge the store through `useSyncExternalStore`. `useFormState`
 accepts a selector and equality function; `useField`, `useValue`, and
 `useArrayField` build narrow selectors on top. Rendering code should subscribe
 to the smallest slice it needs instead of reading the full snapshot into every
-field.
+field. `useSnapshot` bridges history, persistence, and other compatible handles
+that expose `subscribe` and `getSnapshot`.
 
 ## Rendering boundary
 

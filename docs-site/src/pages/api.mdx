@@ -131,12 +131,16 @@ the kit-owned submit button.
 | --- | --- |
 | `useFormContext()` | The nearest `FormInstance` from `FormProvider` or a form component |
 | `useFormState(form, selector, options?)` | A selected snapshot value |
+| `useSnapshot(handle)` | The current snapshot from a history or persistence handle |
 | `useValue(form, path, options?)` | The typed value at a path |
 | `useField(form, path)` | Value, issues, metadata, and field commands |
 | `useArrayField(form, path)` | Stable rows and typed array commands |
 
 `FormProvider` and `useFormContext` remain public for headless composition.
-Subscribe to the smallest state slice that a component needs.
+Get a history or persistence handle with `feature.handle(form)`. Use
+`useSnapshot(handle)` to subscribe a React component to that handle. Use
+`useFormState` for a form, and subscribe to the smallest state slice that the
+component needs.
 
 ## FormInstance
 

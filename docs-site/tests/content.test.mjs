@@ -266,6 +266,7 @@ const publicApiTerms = [
 	"defineControl",
 	"useCreateForm",
 	"useBindForm",
+	"useSnapshot",
 	"FormInstance",
 	"parseFormData",
 	"ActionForm",
@@ -284,6 +285,11 @@ const canonicalSnippets = [
 		target: "src/snippets/form-kit.tsx",
 		include: "~/snippets/form-kit.tsx",
 		terms: ["createFormKit", "visible:", "profileSchema"],
+	},
+	{
+		target: "src/snippets/zod-error-messages.ts",
+		include: "~/snippets/zod-error-messages.ts",
+		terms: ["z.config", "customError", "return undefined"],
 	},
 	{
 		target: "src/snippets/api-reference.tsx",
@@ -863,6 +869,7 @@ const requiredGuidePageContent = {
 	"src/pages/guides/validation.mdx": {
 		headings: [
 			"Start with the default",
+			"Set default Zod messages",
 			"Understand error visibility",
 			"Install server errors",
 			"Validate deliberately",
@@ -871,6 +878,8 @@ const requiredGuidePageContent = {
 		terms: [
 			'revalidateMode: "change"',
 			"asyncDebounceMs",
+			"~/snippets/zod-error-messages.ts",
+			"https://zod.dev/error-customization",
 			"setErrors",
 			"clearErrors",
 			"meta.displayErrors",
@@ -1149,7 +1158,7 @@ test("docs package uses the Vocs shell scripts and dependencies", async () => {
 	const packageJson = await readJson("package.json")
 
 	assert.deepEqual(packageJson.scripts, {
-		dev: "vocs dev",
+		dev: `portless fp sh -c 'vocs dev --port "$PORT" --host "$HOST"'`,
 		build: "vocs build",
 		postbuild: "node ../scripts/fix-vocs-skip-links.mjs",
 		preview: "vocs preview",

@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vocs dev",
+		"dev": "portless fp sh -c 'vocs dev --port \"$PORT\" --host \"$HOST\"'",
 		"build": "vocs build",
 		"postbuild": "node ../scripts/fix-vocs-skip-links.mjs",
 		"preview": "vocs preview",

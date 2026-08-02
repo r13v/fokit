@@ -75,6 +75,25 @@ function EmailForm() {
 Blur, imperative validation, and submit always run immediately. Newer
 validation wins over stale async results.
 
+## Set default Zod messages
+
+Form, Please displays the message that the schema returns in each Standard
+Schema issue. To set your own default Zod messages, configure a global error
+map once, before any form validation runs:
+
+```ts
+// [!include ~/snippets/zod-error-messages.ts]
+```
+
+Return `undefined` for issue types that must keep the Zod default. A message
+set with a schema-level `error` option has priority over `customError`. Do not
+call `z.config()` during a component render because it changes the global Zod
+configuration.
+
+See the [Zod error customization guide](https://zod.dev/error-customization)
+for schema-level messages, per-parse error maps, precedence, and locales. Form,
+Please does not need separate message configuration.
+
 ## Understand error visibility
 
 Form, Please may know about an issue before it shows that issue. This keeps raw schema

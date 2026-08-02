@@ -114,13 +114,25 @@ accepted by `matchResource` and `fromResource`:
 ```ts twoslash
 import type { ResourceState } from "form-please"
 
-type Cities = ResourceState<
-	readonly { readonly value: string; readonly label: string }[],
-	Error
->
+type City = { readonly value: string; readonly label: string }
+type Cities = ResourceState<readonly City[], Error>
+
+const pendingCities: Cities = { status: "pending" }
+
+const loadedCities: Cities = {
+	status: "success",
+	value: [{ value: "samara", label: "Samara" }],
+}
+
+const failedCities: Cities = {
+	status: "error",
+	error: new Error("Could not load cities"),
+}
 ```
 
-It is a discriminated union of `{ status: "pending" }`,
+There is no constructor or factory: create a resource state as one of these
+plain objects and keep the current one in application state. It is a
+discriminated union of `{ status: "pending" }`,
 `{ status: "success", value }`, and `{ status: "error", error }`. Applications
 may add properties to those branches. For example, a successful query resource
 can add a nested discriminated `refresh` state; the active branch remains fully

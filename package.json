@@ -145,6 +145,7 @@
 		"jsdom": "30.0.0",
 		"knip": "6.29.0",
 		"lefthook": "2.1.10",
+		"portless": "^0.15.5",
 		"publint": "0.3.22",
 		"react": "19.2.8",
 		"react-dom": "19.2.8",

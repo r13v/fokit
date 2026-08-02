@@ -261,6 +261,33 @@ a {
 	margin: 0;
 }
 
+:is(.form-please-lab, .form-please-async-demo, .form-please-complex)
+	[data-fp-node="field"] {
+	position: relative;
+}
+
+:is(.form-please-lab, .form-please-async-demo, .form-please-complex)
+	[data-fp-node="field"]::after {
+	block-size: 2.5rem;
+	content: "";
+	display: block;
+}
+
+:is(.form-please-lab, .form-please-async-demo, .form-please-complex)
+	[data-fp-node="field"]
+	> [data-fp-node="error-message"] {
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	block-size: 2.5rem;
+	display: -webkit-box;
+	inset-block-end: 0;
+	inset-inline: 0;
+	line-height: 1.25rem;
+	overflow: hidden;
+	position: absolute;
+	text-overflow: ellipsis;
+}
+
 .form-please-lab button,
 .form-please-lab__primary,
 .form-please-lab__secondary {

@@ -123,14 +123,25 @@ test.describe("Form, Please documentation", () => {
 		await expect(demo.getByTestId("overview-output")).toContainText(
 			'"email": "ada@example.com"',
 		)
+		const saveButton = demo.getByRole("button", { name: "Save profile" })
+		const saveButtonTopBeforeError = await saveButton.evaluate(
+			(element) => element.getBoundingClientRect().top + window.scrollY,
+		)
 
 		await demo.getByLabel("Email").fill("not-an-email")
-		await demo.getByRole("button", { name: "Save profile" }).click()
-		await expect(
-			demo.locator("[data-fp-node='error-message']", {
-				hasText: "Enter a valid email",
-			}),
-		).toBeVisible()
+		await saveButton.click()
+		const emailError = demo.locator("[data-fp-node='error-message']", {
+			hasText: "Enter a valid email",
+		})
+		await expect(emailError).toBeVisible()
+		await expect(emailError).toHaveCSS("-webkit-line-clamp", "2")
+		await expect(emailError).toHaveCSS("overflow", "hidden")
+		const saveButtonTopWithError = await saveButton.evaluate(
+			(element) => element.getBoundingClientRect().top + window.scrollY,
+		)
+		expect(
+			Math.abs(saveButtonTopWithError - saveButtonTopBeforeError),
+		).toBeLessThanOrEqual(0.5)
 
 		await page.evaluate(() => {
 			document.documentElement.setAttribute("data-vocs-theme", "dark")

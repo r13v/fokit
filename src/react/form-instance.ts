@@ -73,6 +73,7 @@ export type FormRuntimeOptions<
 
 export type FormKitDescriptor = Readonly<{
 	controls: ControlRegistry
+	grid: readonly number[]
 	slots: RuntimeFormKitSlots
 }>
 

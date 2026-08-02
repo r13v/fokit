@@ -177,6 +177,7 @@ type ResolveState<
 > = {
 	readonly values: unknown
 	readonly context: Context
+	readonly grid: readonly number[]
 	readonly previousCache: ResolvedComputedCache
 	readonly computedCache: Record<string, ResolvedComputedEntry>
 	readonly nodes: ResolvedUiNode<Context, RenderComponent, Presentation>[]
@@ -230,6 +231,7 @@ export function resolveUi<
 	const state: ResolveState<Context, RenderComponent, Presentation> = {
 		values,
 		context,
+		grid: definition.grid,
 		previousCache: options.previous?.computedCache ?? {},
 		computedCache: Object.create(null) as Record<string, ResolvedComputedEntry>,
 		nodes: [],
@@ -379,6 +381,7 @@ function resolveSection<
 			state,
 			scope,
 		),
+		state.grid,
 	)
 	const children = resolveNodes(
 		node.children,
@@ -565,7 +568,9 @@ function resolveParent<
 		className:
 			className === undefined ? undefined : validateClassName(className),
 		span:
-			span === undefined ? undefined : validateGridSpan(span, parent.columns),
+			span === undefined
+				? undefined
+				: validateGridSpan(span, state.grid, parent.columns),
 		visible:
 			parent.visible &&
 			resolveWithDefault(`${id}:visible`, node.visible, true, state, scope),

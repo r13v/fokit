@@ -35,8 +35,10 @@ optional feature code.
 // [!include ~/snippets/api-reference.tsx:create-form-kit]
 ```
 
-The function freezes one controls-and-slots snapshot. `kit.extend` creates a
-new snapshot. A form belongs to the exact snapshot that created it.
+The function freezes one controls, slots, and grid-scale snapshot. The default
+grid is `[1, 2, 3, 4]`. `kit.grid` exposes the sorted frozen scale, and
+`kit.extend` creates a new snapshot. A form belongs to the exact snapshot that
+created it.
 
 ```tsx twoslash
 import { createFormKit } from "form-please"
@@ -50,8 +52,15 @@ const kit = createFormKit({
 ```
 
 Control names are add-only. An extension can replace compatible slots, but it
-cannot replace an inherited control. Base, extended, and sibling kits are
-different owners.
+cannot replace an inherited control. Grid values are also add-only:
+`kit.extend({ grid: [6, 12] })` adds values without removing the inherited
+scale. Base, extended, and sibling kits are different owners.
+
+A grid must be a non-empty set of unique positive integers and include `1`.
+The same scale types section `columns` and numeric `span`; `"full"` remains a
+universal span. Definitions retain their complete authoring scale, so a base
+definition works with a grid-superset extension while an extended definition
+cannot run through a base kit missing one of its values.
 
 ## nativeFormKit
 
@@ -71,8 +80,8 @@ construction must be explicit.
 
 `kit.forContext<Context>()` binds one context contract to the complete kit API.
 It is a type-only view: it returns the same frozen kit object and keeps the same
-controls, slots, descriptor, and ownership identity. `kit.extend(...)` preserves
-the bound context.
+controls, grid, slots, descriptor, and ownership identity. `kit.extend(...)`
+preserves the bound context.
 
 Use that contextual view to define forms, create instances, and bind them to
 React. A concrete context is required at every creation and binding boundary.
@@ -85,8 +94,9 @@ remain available through the resulting `FormInstance`.
 // [!include ~/snippets/api-reference.tsx:define-form]
 ```
 
-Normalization checks paths, IDs, controls, slots, and array defaults. Resolver
-functions are synchronous. They can read values and runtime context.
+Normalization checks paths, IDs, controls, the kit grid, slots, and array
+defaults. Resolver functions are synchronous. They can read values and runtime
+context.
 
 Nodes use `kind: "field"`, `"section"`, `"array"`, or `"render"`. Field
 options include `visible`, `disabled`, `readOnly`, and `valuePolicy`. An array

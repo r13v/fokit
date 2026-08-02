@@ -73,6 +73,12 @@ const runtimeOptions = {
 // [!region create-form-kit]
 const defaultKit = createFormKit({ controls, slots: createDefaultSlots() })
 const customSlotKit = createFormKit({ controls, slots })
+const designSystemKit = createFormKit({
+	controls,
+	grid: [1, 2, 6, 12],
+	slots,
+})
+const extendedGridKit = defaultKit.extend({ grid: [6, 12] })
 // [!endregion create-form-kit]
 
 // [!region define-form]

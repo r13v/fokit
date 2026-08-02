@@ -100,6 +100,17 @@ function normalizeWithRender(ui: readonly unknown[]) {
 	})
 }
 
+function normalizeWithGrid(grid: readonly number[], ui: readonly unknown[]) {
+	const normalizeCustom = normalizeDefinition as (input: {
+		readonly schema: typeof schema
+		readonly controls: ExampleControls
+		readonly grid: readonly number[]
+		readonly ui: readonly unknown[]
+	}) => NormalizedFormDefinition<typeof schema, ExampleControls>
+
+	return normalizeCustom({ schema, controls, grid, ui })
+}
+
 describe("resolveUi", () => {
 	it("transports opaque render components without invoking them", () => {
 		const Summary = vi.fn(() => null)
@@ -548,6 +559,58 @@ describe("resolveUi", () => {
 		)
 		expect(() => resolveUi(oversizedSpan, values, exampleContext)).toThrow(
 			/Layout span 3 exceeds parent columns 2/,
+		)
+	})
+
+	it("resolves dynamic layout against the definition's custom grid scale", () => {
+		const definition = normalizeWithGrid(
+			[1, 6, 12],
+			[
+				{
+					kind: "section",
+					id: "account",
+					columns: () => 12,
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							span: () => 6,
+						},
+					],
+				},
+			],
+		)
+		const values = {
+			name: "Ada",
+			kind: "person",
+			country: "us",
+			city: "nyc",
+			unrelated: "same",
+		} satisfies ExampleValues
+
+		const resolved = resolveUi(definition, values, exampleContext)
+		const account = resolved.nodesById.account
+		expect(account.kind).toBe("section")
+		if (account.kind !== "section") {
+			throw new Error("Expected a section")
+		}
+		expect(account.columns).toBe(12)
+		expect(resolved.fieldsByPath.name.span).toBe(6)
+
+		const invalidDefinition = normalizeWithGrid(
+			[1, 6, 12],
+			[
+				{
+					kind: "section",
+					id: "account",
+					columns: () => 4,
+					children: [],
+				},
+			],
+		)
+		expect(() => resolveUi(invalidDefinition, values, exampleContext)).toThrow(
+			/columns must be 1, 6, or 12/i,
 		)
 	})
 

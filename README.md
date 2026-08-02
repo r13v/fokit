@@ -125,6 +125,9 @@ import "form-please/layout.css"
 ## Stable defaults
 
 - `createFormKit` requires a complete slot registry.
+- Form kits default to the finite `[1, 2, 3, 4]` grid scale. Pass `grid` to
+  integrate another design-system vocabulary; custom values need
+  application-owned structural CSS or slots.
 - `createDefaultSlots()` provides unstyled semantic markup and English array
   action labels.
 - Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and

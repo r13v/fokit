@@ -37,12 +37,34 @@ control of their own styling.
 The stylesheet provides:
 
 - stacked form, field, section, and array structure;
-- one to four section columns through container queries;
+- the default `[1, 2, 3, 4]` section grid through container queries;
 - `span` support, including `span: "full"`;
 - independent nested layout containers;
 - four spacing custom properties.
 
 It does not set colors, fonts, borders, shadows, or control appearance.
+
+## Match a design-system grid
+
+Give a form kit the finite layout values that the design system supports:
+
+```tsx twoslash
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
+
+const designSystemKit = createFormKit({
+	controls: createNativeControls(),
+	grid: [1, 2, 6, 12],
+	slots: createDefaultSlots(),
+})
+```
+
+The grid types both `columns` and numeric `span`, while `"full"` always means
+the complete row. The shipped `layout.css` guarantees behavior only for the
+default scale. For values such as `6` and `12`, map the forwarded
+`data-fp-columns` and `data-fp-span` attributes in application CSS or implement
+that mapping inside custom structural slots.
 
 ## Add a product class
 

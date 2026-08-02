@@ -207,6 +207,9 @@ type _partialSlotsResolve = Expect<
 >
 
 type _customSlotsResolve = Expect<Equal<typeof kit.slots, FormKitSlots>>
+type _defaultGridResolve = Expect<
+	Equal<typeof kit.grid, readonly (1 | 2 | 3 | 4)[]>
+>
 
 type RichFieldOptions = {
 	readonly tone?: "quiet" | "strong"
@@ -607,6 +610,54 @@ const exampleDefaultValues: ExampleInput = {
 	},
 }
 
+const gridExtendedKit = kit.extend({
+	grid: [6, 12],
+})
+type _extendedGridResolve = Expect<
+	Equal<typeof gridExtendedKit.grid, readonly (1 | 2 | 3 | 4 | 6 | 12)[]>
+>
+const gridAndControlKit = kit.extend({
+	controls: { wideText: text },
+	grid: [6],
+})
+const gridAndSlotsKit = kit.extend({
+	grid: [6],
+	slots: { Field },
+})
+type _gridAndControlResolve = Expect<
+	Equal<typeof gridAndControlKit.grid, readonly (1 | 2 | 3 | 4 | 6)[]>
+>
+type _gridAndSlotsResolve = Expect<
+	Equal<typeof gridAndSlotsKit.grid, readonly (1 | 2 | 3 | 4 | 6)[]>
+>
+const baseGridDefinition = kit.defineForm(schema, { ui: [] })
+const extendedGridDefinition = gridExtendedKit.defineForm(schema, {
+	ui: [
+		{
+			kind: "section",
+			id: "wide-layout",
+			columns: 12,
+			children: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					span: 6,
+				},
+			],
+		},
+	],
+})
+
+gridExtendedKit.createForm(baseGridDefinition, {
+	defaultValues: exampleDefaultValues,
+})
+kit.createForm(
+	// @ts-expect-error a definition requires a kit whose grid is a superset
+	extendedGridDefinition,
+	{ defaultValues: exampleDefaultValues },
+)
+
 const extendedKit = kit.extend({
 	controls: {
 		extraText: text,
@@ -693,7 +744,7 @@ void broadExtendedKit
 // @ts-expect-error extensions must add controls instead of replacing them
 kit.extend({ controls: { text } })
 
-// @ts-expect-error an extension must provide controls or slots
+// @ts-expect-error an extension must provide controls, grid, or slots
 kit.extend({})
 
 const extendedDefinition = extendedKit

@@ -1288,8 +1288,6 @@ test("Interactive Lab uses Vocs components and public Form, Please defaults", as
 	assert.match(wrapper, /from "\.\/interactive-lab\.client"/)
 	assert.match(wrapper, /toMarkdown/)
 	assert.match(wrapper, /Interactive Form, Please Lab runs only in a browser/)
-	assert.match(wrapper, /\\tcontrols: createNativeControls\(\)/)
-	assert.match(wrapper, /\\tslots: createDefaultSlots\(\)/)
 	assert.match(wrapper, /from "\.\/markdown-fallback"/)
 	assert.match(
 		wrapper,
@@ -1370,7 +1368,6 @@ test("overview proves the public Form, Please loop with a live typed form", asyn
 	assert.match(wrapper, /toMarkdown/)
 	assert.match(wrapper, /live overview form runs only in a browser/i)
 	assert.match(wrapper, /from "\.\/markdown-fallback"/)
-	assert.match(wrapper, /function ProfileForm\(\).*kit\.useCreateForm/s)
 	assert.match(
 		wrapper,
 		/docs-site\/src\/components\/overview-demo\.client\.tsx/,

@@ -18,10 +18,14 @@ resolver dependencies are bound to one definitely present object schema path
 and erased during definition normalization.
 _Avoid_: Subform, nested form, fragment node
 
-**Form kit snapshot**: An immutable controls-and-slots integration returned by
-`createFormKit` or `kit.extend`. A base kit and each extension are different
-snapshots.
+**Form kit snapshot**: An immutable controls, slots, and grid-scale integration
+returned by `createFormKit` or `kit.extend`. A base kit and each extension are
+different snapshots.
 _Avoid_: Kit configuration, mutable kit
+
+**Form kit grid scale**: The finite numeric layout vocabulary owned by one form
+kit snapshot and shared by section column counts and numeric child spans.
+_Avoid_: Grid capability, global column range, CSS grid settings
 
 **Form instance**: The imperative state and command owner created by one exact
 form kit snapshot.

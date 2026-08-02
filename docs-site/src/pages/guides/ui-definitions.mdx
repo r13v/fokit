@@ -320,12 +320,15 @@ cannot cross a serializable React Server Components boundary.
 ## Group fields and describe layout
 
 A section has a required `id`, optional `title` and `description`, and a
-`children` array. Set `columns` to `1`, `2`, `3`, or `4`; the default is `1`.
+`children` array. Set `columns` to a value from the form kit's finite grid
+scale; the default is `1`. Kits use `[1, 2, 3, 4]` unless `createFormKit`
+receives a custom scale such as `grid: [1, 2, 6, 12]`.
 
-Direct children can set `span` to a column count or `"full"`. Inside a section,
-fields default to one column while nested sections and arrays default to the
-full row. Import `form-please/layout.css` for the shipped responsive grid, or forward
-the same layout props through a custom `Section` slot.
+Direct children can set `span` to a value from the same scale or `"full"`.
+Inside a section, fields default to one column while nested sections and arrays
+default to the full row. Import `form-please/layout.css` for the shipped
+responsive default grid. Custom scales remain portable through structural slot
+props and require application-owned slot styling or CSS for their extra values.
 
 `className`, `span`, and `columns` can also be resolvers. A section resolves its
 column count before resolving child spans, so a child span is checked against

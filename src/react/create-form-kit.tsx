@@ -13,6 +13,11 @@ import {
 	type StandardSchema,
 	type UiNode,
 } from "../core/index.js"
+import {
+	extendGridScale,
+	normalizeGridScale,
+} from "../core/structural-presentation.js"
+import type { DefaultGridValue } from "../core/ui-types.js"
 import { createAutoFormComponent } from "./auto-form.js"
 import type { ControlDefinitionRegistry } from "./control-definition.js"
 import { createFieldsComponent } from "./fields.js"
@@ -76,8 +81,10 @@ export type CreateFormKitOptions<
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
+	Grid extends number = DefaultGridValue,
 > = {
 	readonly controls: Controls
+	readonly grid?: readonly Grid[]
 	readonly slots: FormKitSlots<
 		FieldSlotOptions,
 		SectionSlotOptions,
@@ -92,13 +99,15 @@ type FormDefinitionInput<
 	FieldSlotOptions,
 	SectionSlotOptions,
 	ArraySlotOptions,
+	Grid extends number,
 > = {
 	readonly ui: readonly UiNode<
 		Input,
 		Controls,
 		Context,
 		RenderNodeComponent,
-		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+		Grid
 	>[]
 }
 
@@ -108,6 +117,7 @@ export type DefineForm<
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
 	Context = unknown,
+	Grid extends number = DefaultGridValue,
 > = <Input, Output, Schema extends StandardSchema<Input, Output>>(
 	schema: Schema & StandardSchema<Input, Output>,
 	definition: FormDefinitionInput<
@@ -116,14 +126,16 @@ export type DefineForm<
 		Context,
 		FieldSlotOptions,
 		SectionSlotOptions,
-		ArraySlotOptions
+		ArraySlotOptions,
+		Grid
 	>,
 ) => NormalizedFormDefinition<
 	Schema,
 	Controls,
 	RenderNodeComponent,
 	ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
-	Context
+	Context,
+	Grid
 >
 
 export type FieldsProps = {
@@ -185,6 +197,7 @@ type CreateKitForm<
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
 	KitContext = unknown,
+	Grid extends number = DefaultGridValue,
 > = <
 	Schema extends StandardSchema,
 	RequiredContext = unknown,
@@ -195,7 +208,8 @@ type CreateKitForm<
 		Controls,
 		RenderNodeComponent,
 		KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
-		RequiredContext
+		RequiredContext,
+		Grid
 	>,
 	options: Omit<CreateFormOptions<Schema, Context>, "context"> &
 		CreateFormContextProp<Context, KitContext & RequiredContext>,
@@ -338,8 +352,10 @@ type ExtendWithControlsOptions<
 	SectionSlotOptions,
 	ArraySlotOptions,
 	Overrides extends FormKitSlotOverrides,
+	GridAdditions extends number,
 > = {
 	readonly controls: WithoutControlCollisions<Base, Additions>
+	readonly grid?: readonly GridAdditions[]
 	readonly slots?: CompatibleSlotOverrides<
 		FieldSlotOptions,
 		SectionSlotOptions,
@@ -353,9 +369,28 @@ type ExtendWithSlotsOptions<
 	SectionSlotOptions,
 	ArraySlotOptions,
 	Overrides extends FormKitSlotOverrides,
+	GridAdditions extends number,
 > = {
 	readonly controls?: never
+	readonly grid?: readonly GridAdditions[]
 	readonly slots: CompatibleSlotOverrides<
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions,
+		Overrides
+	>
+}
+
+type ExtendWithGridOptions<
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+	Overrides extends FormKitSlotOverrides,
+	GridAdditions extends number,
+> = {
+	readonly controls?: never
+	readonly grid: readonly GridAdditions[]
+	readonly slots?: CompatibleSlotOverrides<
 		FieldSlotOptions,
 		SectionSlotOptions,
 		ArraySlotOptions,
@@ -369,10 +404,12 @@ export type ExtendFormKit<
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
 	Context = unknown,
+	Grid extends number = DefaultGridValue,
 > = {
 	<
 		const Additions extends ControlDefinitionRegistry,
 		const Overrides extends FormKitSlotOverrides = Record<never, never>,
+		const GridAdditions extends number = never,
 	>(
 		options: ExtendWithControlsOptions<
 			Controls,
@@ -380,28 +417,54 @@ export type ExtendFormKit<
 			FieldSlotOptions,
 			SectionSlotOptions,
 			ArraySlotOptions,
-			Overrides
+			Overrides,
+			GridAdditions
 		>,
 	): FormKit<
 		Controls & Additions,
 		NextFieldSlotOptions<FieldSlotOptions, Overrides>,
 		NextSectionSlotOptions<SectionSlotOptions, Overrides>,
 		NextArraySlotOptions<ArraySlotOptions, Overrides>,
-		Context
+		Context,
+		Grid | GridAdditions
 	>
-	<const Overrides extends FormKitSlotOverrides>(
+	<
+		const Overrides extends FormKitSlotOverrides,
+		const GridAdditions extends number = never,
+	>(
 		options: ExtendWithSlotsOptions<
 			FieldSlotOptions,
 			SectionSlotOptions,
 			ArraySlotOptions,
-			Overrides
+			Overrides,
+			GridAdditions
 		>,
 	): FormKit<
 		Controls,
 		NextFieldSlotOptions<FieldSlotOptions, Overrides>,
 		NextSectionSlotOptions<SectionSlotOptions, Overrides>,
 		NextArraySlotOptions<ArraySlotOptions, Overrides>,
-		Context
+		Context,
+		Grid | GridAdditions
+	>
+	<
+		const GridAdditions extends number,
+		const Overrides extends FormKitSlotOverrides = Record<never, never>,
+	>(
+		options: ExtendWithGridOptions<
+			FieldSlotOptions,
+			SectionSlotOptions,
+			ArraySlotOptions,
+			Overrides,
+			GridAdditions
+		>,
+	): FormKit<
+		Controls,
+		NextFieldSlotOptions<FieldSlotOptions, Overrides>,
+		NextSectionSlotOptions<SectionSlotOptions, Overrides>,
+		NextArraySlotOptions<ArraySlotOptions, Overrides>,
+		Context,
+		Grid | GridAdditions
 	>
 }
 
@@ -411,8 +474,10 @@ export interface FormKit<
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
 	Context = unknown,
+	Grid extends number = DefaultGridValue,
 > {
 	readonly controls: Controls
+	readonly grid: readonly Grid[]
 	readonly slots: FormKitSlots<
 		FieldSlotOptions,
 		SectionSlotOptions,
@@ -423,35 +488,40 @@ export interface FormKit<
 		FieldSlotOptions,
 		SectionSlotOptions,
 		ArraySlotOptions,
-		Context
+		Context,
+		Grid
 	>
 	readonly forContext: <NextContext extends Context>() => FormKit<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
 		ArraySlotOptions,
-		NextContext
+		NextContext,
+		Grid
 	>
 	readonly defineForm: DefineForm<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
 		ArraySlotOptions,
-		Context
+		Context,
+		Grid
 	>
 	readonly createForm: CreateKitForm<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
 		ArraySlotOptions,
-		Context
+		Context,
+		Grid
 	>
 	readonly useCreateForm: CreateKitForm<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
 		ArraySlotOptions,
-		Context
+		Context,
+		Grid
 	>
 	readonly useBindForm: UseBindKitForm<
 		Controls,
@@ -479,6 +549,7 @@ export interface FormKit<
 
 type RuntimeExtendOptions = {
 	readonly controls?: ControlDefinitionRegistry
+	readonly grid?: readonly number[]
 	readonly slots?: Partial<RuntimeFormKitSlots>
 }
 
@@ -492,6 +563,7 @@ type RuntimeKitDefinition<RequiredContext = never> = NormalizedFormDefinition<
 
 type RuntimeFormKit = {
 	readonly controls: ControlDefinitionRegistry
+	readonly grid: readonly number[]
 	readonly slots: RuntimeFormKitSlots
 	readonly extend: (options: RuntimeExtendOptions) => RuntimeFormKit
 	readonly forContext: <_Context>() => RuntimeFormKit
@@ -499,19 +571,25 @@ type RuntimeFormKit = {
 		ControlDefinitionRegistry,
 		unknown,
 		unknown,
-		unknown
+		unknown,
+		unknown,
+		number
 	>
 	readonly createForm: CreateKitForm<
 		ControlDefinitionRegistry,
 		unknown,
 		unknown,
-		unknown
+		unknown,
+		unknown,
+		number
 	>
 	readonly useCreateForm: CreateKitForm<
 		ControlDefinitionRegistry,
 		unknown,
 		unknown,
-		unknown
+		unknown,
+		unknown,
+		number
 	>
 	readonly useBindForm: UseBindKitForm<
 		ControlDefinitionRegistry,
@@ -535,39 +613,57 @@ export function createFormKit<
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
+	const Grid extends number = DefaultGridValue,
 >(
 	options: CreateFormKitOptions<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
-		ArraySlotOptions
+		ArraySlotOptions,
+		Grid
 	>,
-): FormKit<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions> {
+): FormKit<
+	Controls,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+	unknown,
+	Grid
+> {
 	const slots = Object.freeze({
 		...options.slots,
 	}) as unknown as Partial<RuntimeFormKitSlots>
 	assertSlots(slots, "createFormKit")
 	const controls = Object.freeze({ ...options.controls }) as Controls
+	const grid = normalizeGridScale(options.grid, "createFormKit")
 
-	return assembleFormKit(controls, slots) as unknown as FormKit<
+	return assembleFormKit(controls, grid, slots) as unknown as FormKit<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
-		ArraySlotOptions
+		ArraySlotOptions,
+		unknown,
+		Grid
 	>
 }
 
 function assembleFormKit(
 	controls: ControlDefinitionRegistry,
+	grid: readonly number[],
 	slots: RuntimeFormKitSlots,
 ): RuntimeFormKit {
 	const descriptor = Object.freeze({
 		controls,
+		grid,
 		slots,
 	}) satisfies FormKitDescriptor
 	const extend = (options: RuntimeExtendOptions) => {
-		if (options.controls === undefined && options.slots === undefined) {
-			throw new TypeError("kit.extend requires controls or slots")
+		if (
+			options.controls === undefined &&
+			options.grid === undefined &&
+			options.slots === undefined
+		) {
+			throw new TypeError("kit.extend requires controls, grid, or slots")
 		}
 
 		for (const name of Object.keys(options.controls ?? {})) {
@@ -580,27 +676,32 @@ function assembleFormKit(
 			...controls,
 			...options.controls,
 		})
+		const extendedGrid =
+			options.grid === undefined ? grid : extendGridScale(grid, options.grid)
 		const extendedSlots = Object.freeze({
 			...slots,
 			...options.slots,
 		})
 		assertSlots(extendedSlots, "kit.extend")
 
-		return assembleFormKit(extendedControls, extendedSlots)
+		return assembleFormKit(extendedControls, extendedGrid, extendedSlots)
 	}
 
 	const defineForm = ((schema: unknown, definition: unknown) =>
-		normalizeKitDefinition(schema, definition, controls)) as DefineForm<
+		normalizeKitDefinition(schema, definition, controls, grid)) as DefineForm<
 		ControlDefinitionRegistry,
 		unknown,
 		unknown,
-		unknown
+		unknown,
+		unknown,
+		number
 	>
 	const createRuntimeForm = <RequiredContext, Context extends RequiredContext>(
 		definition: RuntimeKitDefinition<RequiredContext>,
 		options: CreateFormOptions<StandardSchema, Context>,
 	) => {
 		assertDefinitionControls(definition, controls)
+		assertDefinitionGrid(definition, grid)
 		return createFormInstance<
 			StandardSchema,
 			RequiredContext,
@@ -630,6 +731,7 @@ function assembleFormKit(
 	const forContext = () => kit
 	kit = Object.freeze({
 		controls,
+		grid,
 		slots,
 		extend,
 		forContext,
@@ -649,6 +751,7 @@ function normalizeKitDefinition(
 	schema: unknown,
 	definitionSource: unknown,
 	controls: ControlDefinitionRegistry,
+	grid: readonly number[],
 ): NormalizedFormDefinition<
 	StandardSchema,
 	ControlDefinitionRegistry,
@@ -662,6 +765,7 @@ function normalizeKitDefinition(
 		readonly schema: StandardSchema
 		readonly ui: readonly unknown[]
 		readonly controls: ControlDefinitionRegistry
+		readonly grid: readonly number[]
 	}) => NormalizedFormDefinition<
 		StandardSchema,
 		ControlDefinitionRegistry,
@@ -673,6 +777,7 @@ function normalizeKitDefinition(
 		schema: schema as StandardSchema,
 		ui: input.ui,
 		controls,
+		grid,
 	})
 }
 
@@ -702,6 +807,19 @@ function assertDefinitionControls(
 		if (node.kind === "field" && !Object.hasOwn(controls, node.control)) {
 			throw new TypeError(
 				`kit.createForm requires control "${node.control}" used by the definition`,
+			)
+		}
+	}
+}
+
+function assertDefinitionGrid(
+	definition: RuntimeKitDefinition,
+	grid: readonly number[],
+): void {
+	for (const value of definition.grid) {
+		if (!grid.includes(value)) {
+			throw new TypeError(
+				`kit.createForm requires grid value ${value} required by the definition`,
 			)
 		}
 	}

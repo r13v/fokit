@@ -72,11 +72,89 @@ describe("createFormKit", () => {
 		expect(testKit.createForm).toBeTypeOf("function")
 		expect(testKit.useCreateForm).toBeTypeOf("function")
 		expect(testKit.useBindForm).toBeTypeOf("function")
+		expect(testKit.grid).toEqual([1, 2, 3, 4])
+		expect(Object.isFrozen(testKit.grid)).toBe(true)
 		expect(testKit).not.toHaveProperty("useForm")
 	})
 
 	it("uses forContext as a type-only view of the same kit", () => {
 		expect(testKit.forContext<{ readonly locked: boolean }>()).toBe(testKit)
+	})
+
+	it("extends the kit grid as an immutable add-only design-system scale", () => {
+		const base = createFormKit({
+			controls: { text: textControl },
+			grid: [6, 1],
+			slots: createDefaultSlots(),
+		})
+		const extended = base.extend({ grid: [12] })
+		const baseDefinition = base.defineForm(schema, {
+			ui: [
+				{
+					kind: "section",
+					id: "base-layout",
+					columns: 6,
+					children: [],
+				},
+			],
+		})
+		const extendedDefinition = extended.defineForm(schema, {
+			ui: [
+				{
+					kind: "section",
+					id: "extended-layout",
+					columns: 12,
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							span: "full",
+						},
+					],
+				},
+			],
+		})
+
+		expect(base.grid).toEqual([1, 6])
+		expect(extended.grid).toEqual([1, 6, 12])
+		expect(baseDefinition.grid).toEqual([1, 6])
+		expect(extendedDefinition.grid).toEqual([1, 6, 12])
+		expect(Object.isFrozen(extended.grid)).toBe(true)
+		expect(() =>
+			extended.createForm(baseDefinition, {
+				defaultValues: defaultValues(),
+			}),
+		).not.toThrow()
+
+		const createWithBase = base.createForm as (
+			definition: unknown,
+			options: { defaultValues: TestValues },
+		) => unknown
+		expect(() =>
+			createWithBase(extendedDefinition, {
+				defaultValues: defaultValues(),
+			}),
+		).toThrow(/requires grid value 12/i)
+	})
+
+	it("rejects invalid kit grids and grid extensions at the public boundary", () => {
+		const create = (grid: readonly number[]) =>
+			createFormKit({
+				controls: { text: textControl },
+				grid,
+				slots: createDefaultSlots(),
+			})
+
+		for (const grid of [[], [2, 6], [1, 2, 2], [1, -2], [1, 1.5]]) {
+			expect(() => create(grid), JSON.stringify(grid)).toThrow(
+				/createFormKit grid/i,
+			)
+		}
+
+		const extend = testKit.extend as (options: unknown) => unknown
+		expect(() => extend({ grid: [] })).toThrow(/non-empty array/i)
+		expect(() => extend({ grid: [2] })).toThrow(/duplicate 2/i)
 	})
 
 	it("extends controls and resolved slots as an immutable add-only snapshot", () => {
@@ -236,7 +314,7 @@ describe("createFormKit", () => {
 		})
 		const extend = kit.extend as (options: unknown) => unknown
 
-		expect(() => extend({})).toThrow(/requires controls or slots/i)
+		expect(() => extend({})).toThrow(/requires controls, grid, or slots/i)
 		expect(() =>
 			extend({
 				controls: {

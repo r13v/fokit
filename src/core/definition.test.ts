@@ -77,6 +77,17 @@ function normalizeWithRender(ui: readonly unknown[]) {
 	})
 }
 
+function normalizeWithGrid(grid: readonly number[], ui: readonly unknown[]) {
+	const normalizeCustom = normalizeDefinition as (input: {
+		readonly schema: typeof schema
+		readonly controls: ExampleControls
+		readonly grid: readonly number[]
+		readonly ui: readonly unknown[]
+	}) => NormalizedFormDefinition<typeof schema, ExampleControls>
+
+	return normalizeCustom({ schema, controls, grid, ui })
+}
+
 describe("form definition normalization", () => {
 	it("preserves opaque render components in the ordered UI tree", () => {
 		const Summary = () => null
@@ -204,6 +215,8 @@ describe("form definition normalization", () => {
 		])
 
 		expect(definition.schema).toBe(schema)
+		expect(definition.grid).toEqual([1, 2, 3, 4])
+		expect(Object.isFrozen(definition.grid)).toBe(true)
 		expect(definition.ui).toHaveLength(2)
 		expect(definition.nodes).toHaveLength(6)
 		expect(definition.nodesById.account.kind).toBe("section")
@@ -226,6 +239,44 @@ describe("form definition normalization", () => {
 		expect(Object.isFrozen(definition.fieldsByPath)).toBe(true)
 		expect(Object.isFrozen(definition.arraysByPath)).toBe(true)
 		expect(Object.isFrozen(definition.fieldsByPath.name)).toBe(true)
+	})
+
+	it("normalizes a custom finite grid scale without mutating its author order", () => {
+		const sourceGrid = [12, 1, 6, 2]
+		const definition = normalizeWithGrid(sourceGrid, [
+			{
+				kind: "section",
+				id: "account",
+				columns: 12,
+				children: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						span: 6,
+					},
+				],
+			},
+		])
+
+		expect(sourceGrid).toEqual([12, 1, 6, 2])
+		expect(definition.grid).toEqual([1, 2, 6, 12])
+		expect(Object.isFrozen(definition.grid)).toBe(true)
+		const account = definition.nodesById.account
+		expect(account.kind).toBe("section")
+		if (account.kind !== "section") {
+			throw new Error("Expected a section")
+		}
+		expect(account.columns).toBe(12)
+		expect(definition.fieldsByPath.name.span).toBe(6)
+	})
+
+	it("rejects grid scales that cannot be a stable design-system vocabulary", () => {
+		for (const grid of [[], [2, 6], [1, 2, 2], [1, 0], [1, 1.5]]) {
+			expect(() => normalizeWithGrid(grid, []), JSON.stringify(grid)).toThrow(
+				/normalizeDefinition grid/i,
+			)
+		}
 	})
 
 	it("rejects duplicate paths and node IDs before rendering can become ambiguous", () => {

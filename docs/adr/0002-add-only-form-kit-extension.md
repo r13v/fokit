@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-30
-- Amended by: [ADR 0009](0009-explicit-react-form-lifetimes.md)
+- Amended by: [ADR 0009](0009-explicit-react-form-lifetimes.md), [ADR 0011](0011-kit-owned-grid-scale.md)
 
 ## Context
 

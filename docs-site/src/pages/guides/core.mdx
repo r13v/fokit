@@ -23,7 +23,9 @@ maps its resolved UI nodes to its own view layer.
 
 `normalizeDefinition` needs schema-aware control metadata. The metadata states
 which values and options each control accepts. It does not provide a React
-component.
+component. Its optional `grid` input constrains section `columns` and numeric
+`span` values; it defaults to `[1, 2, 3, 4]`, and `"full"` remains available
+outside that scale.
 
 `createFormStore` needs a normalized definition and complete editable default
 values. It can also receive context, interaction options, validation options,

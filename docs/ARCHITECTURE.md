@@ -120,7 +120,7 @@ remain suitable for server-side use.
 | Middleware and features | `src/core/middleware.ts`, `src/core/commit-timeline.ts`, `src/core/feature-protocol.ts` | Run the synchronous chain and expose the package-private optional-feature capability |
 | Derived state | `src/core/resolve-ui.ts`, `src/core/resource.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, synchronous application-resource projection, dirty/touched state, issue exposure, and stable array rows |
 | Validation | `src/core/validation.ts`, `src/core/validation-lifecycle.ts`, `src/core/standard-schema.ts` | Standard Schema execution, attempt lifecycle, cancellation, and normalized results |
-| Form kits | `src/react/create-form-kit.tsx`, `src/default-slots/default-slots.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-native/index.ts` | Bind control and slot registries into rendering integrations and the native preset |
+| Form kits | `src/react/create-form-kit.tsx`, `src/default-slots/default-slots.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-native/index.ts` | Bind control and slot registries plus grid scales into rendering integrations and the native preset |
 | React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-snapshot.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to external stores |
 | Rendering | `src/react/fields.tsx`, `src/react/array-field.tsx`, `src/react/control.tsx`, `src/react/render-node.ts`, `src/react/slots.ts` | Turn resolved nodes into slots, controls, and explicit render components |
 | Native forms | `src/react/form.tsx`, `src/react/hidden-inputs.tsx`, `src/react/submission.ts` | Accessibility, `FormData`, reset, and classic submission |
@@ -137,12 +137,14 @@ A form has three independent inputs:
 1. A Standard Schema defines valid data and transforms input into submission
    output.
 2. A UI definition selects paths, structure, and derived presentation.
-3. A form kit provides named controls and structural slots.
+3. A form kit provides named controls, structural slots, and a finite grid
+   scale.
 
 `createFormKit` requires and freezes an explicit control registry and a complete
-slot registry. It does not import either shipped rendering default.
-`kit.defineForm(schema, definition)` passes the schema, UI tree, and registry
-to `normalizeDefinition`.
+slot registry. It also freezes a finite grid scale, defaulting to
+`[1, 2, 3, 4]`. It does not import either shipped rendering default.
+`kit.defineForm(schema, definition)` passes the schema, UI tree, registry, and
+grid scale to `normalizeDefinition`.
 
 `kit.forContext<Context>()` is a type-only view of that same frozen kit and
 descriptor. It binds the minimum context contract across authoring, store
@@ -155,9 +157,12 @@ requirement to `unknown`.
 
 Normalization is a one-time authoring boundary. It canonicalizes paths and
 defaults, checks node IDs, control references, and static presentation values,
-freezes the tree, and builds flat indexes such as `nodesById`, `fieldsByPath`,
-and `arraysByPath`. Runtime UI resolution validates the results of presentation
-resolvers such as `className`, `columns`, and `span` before React receives them.
+freezes the tree and its complete authoring grid scale, and builds flat indexes
+such as `nodesById`, `fieldsByPath`, and `arraysByPath`. Numeric `columns` and
+`span` values must belong to that scale; `"full"` is a scale-independent span.
+Runtime UI resolution validates resolver results against the same scale before
+React receives them, including the rule that a numeric span cannot exceed its
+resolved parent columns.
 
 Definitions contain control names, not control components. Structural
 presentation is similarly mediated by slots. A `render` node is the explicit
@@ -326,8 +331,10 @@ from separate entry points; neither is a visual theme.
 `nativeFormKit` baseline without adding them to the main entry graph.
 
 The stable `data-fp-*` and CSS-variable protocol connects structural slots
-to the optional `layout.css`. Application controls, typography, color, and
-component styling remain outside the library.
+to the optional `layout.css`. That stylesheet implements only the default
+`[1, 2, 3, 4]` scale; a kit with custom grid values needs application-owned
+slot styling or CSS for those values. Application controls, typography, color,
+and component styling remain outside the library.
 
 ## Validation and issues
 
@@ -412,13 +419,16 @@ values that the Action client can reconcile.
 `kit.extend` creates a new immutable snapshot:
 
 - control names are add-only; replacing an inherited control is rejected;
+- grid values are add-only; inherited values cannot be removed or redefined;
 - slots may replace inherited slots if their option contracts remain
   compatible;
-- definitions retain the complete registry and presentation requirements of
-  the kit that created them.
+- definitions retain the complete registry, grid, and presentation requirements
+  of the kit that created them.
 
 This makes a base definition usable by a compatible extended kit without
-allowing an extension to silently reinterpret an existing field.
+allowing an extension to silently reinterpret an existing field or layout
+value. A kit can create a form only when its grid is a superset of the
+definition's complete authoring scale.
 
 Application middleware is configured only at form creation through
 `kit.createForm` or `kit.useCreateForm`. Kits,

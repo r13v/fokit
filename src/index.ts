@@ -225,3 +225,4 @@ export type {
 	FormInstance,
 	FormRuntimeOptions,
 } from "./react/use-form.js"
+export { useSnapshot } from "./react/use-snapshot.js"

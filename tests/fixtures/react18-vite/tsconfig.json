@@ -11,6 +11,8 @@
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
 		"paths": {
+			"react": ["./node_modules/@types/react/index.d.ts"],
+			"react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"],
 			"form-please": [
 				"../../../src/index.ts",
 				"./node_modules/form-please/dist/index.d.ts"

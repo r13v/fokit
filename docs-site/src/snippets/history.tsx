@@ -1,12 +1,17 @@
 "use client"
 
-import { createFormKit, type FormInput, nativeControls } from "form-please"
+import {
+	createFormKit,
+	type FormInput,
+	nativeControls,
+	useSnapshot,
+} from "form-please"
 import {
 	createHistoryMiddleware,
 	type FormJournal,
 	replayJournal,
 } from "form-please/history"
-import { useState, useSyncExternalStore } from "react"
+import { useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({ title: z.string().min(1, "Enter a title") })
@@ -24,11 +29,7 @@ export function HistoryExample() {
 		middleware: [historyFeature],
 	})
 	const history = historyFeature.handle(form)
-	const snapshot = useSyncExternalStore(
-		history.subscribe,
-		history.getSnapshot,
-		history.getSnapshot,
-	)
+	const snapshot = useSnapshot(history)
 	const [exported, setExported] = useState<FormJournal<Input>>()
 	const [message, setMessage] = useState("Edit the title to create history.")
 

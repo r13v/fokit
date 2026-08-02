@@ -12,19 +12,6 @@ Start with native controls or bring your own design system.
 
 Form, Please supports React 18 and React 19.
 
-Version 1 is a breaking reducer-based redesign. It does not provide
-compatibility aliases for the removed global creation and binding APIs.
-
-| Version 0 | Version 1 |
-| --- | --- |
-| Global `createForm` | `kit.createForm` |
-| Global `useForm` | `kit.useBindForm` |
-| Definition-based `AutoForm` | Create a form with `kit.useCreateForm` and pass it to `kit.AutoForm` |
-| `ActionForm` with kit and definition props | Create a form once and pass it to `ActionForm` |
-| Root `KitForm` and `Submit` | `kit.Form` and `kit.Submit` |
-| Root `createFormStore` | Import it from `form-please/core` |
-| `UseFormOptions` | `CreateFormOptions` or `FormRuntimeOptions` |
-
 ## Install
 
 Install `form-please` in an existing React application:

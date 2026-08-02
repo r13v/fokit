@@ -1,11 +1,11 @@
 "use client"
 
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit, nativeControls, useSnapshot } from "form-please"
 import {
 	createLocalStorageAdapter,
 	createPersistenceMiddleware,
 } from "form-please/persistence"
-import { useEffect, useRef, useState, useSyncExternalStore } from "react"
+import { useEffect, useRef, useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({ note: z.string() })
@@ -31,11 +31,7 @@ export function LocalStoragePersistenceExample() {
 		middleware: [persistenceFeature],
 	})
 	const persistence = persistenceFeature.handle(form)
-	const snapshot = useSyncExternalStore(
-		persistence.subscribe,
-		persistence.getSnapshot,
-		persistence.getSnapshot,
-	)
+	const snapshot = useSnapshot(persistence)
 	const [message, setMessage] = useState("Loading the saved draft…")
 	const restorePromise = useRef<
 		ReturnType<typeof persistence.restore> | undefined

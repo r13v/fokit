@@ -25,21 +25,6 @@ The main entry does not export global `createForm`, `useCreateForm`,
 `useBindForm`, `useForm`, or `createFormStore`. It also does not export
 `KitForm`, a root `Submit` value, `UseFormOptions`, or optional feature code.
 
-### Migrate from version 0
-
-| Version 0 | Version 1 |
-| --- | --- |
-| `createForm(definition, options)` | `kit.createForm(definition, options)` |
-| `useForm(form, runtimeOptions)` | `kit.useBindForm(form, runtimeOptions)` |
-| Definition-based `AutoForm` | Create the form once, then pass `form` to `kit.AutoForm` |
-| `ActionForm` with `kit`, `definition`, and `defaultValues` | Create the form once, then pass `form` to `ActionForm` |
-| Root `KitForm` and `Submit` | `kit.Form` and `kit.Submit` |
-| Root `createFormStore` | Import `createFormStore` from `form-please/core` |
-| `UseFormOptions` | `CreateFormOptions` for creation and `FormRuntimeOptions` for binding |
-
-Every configured first-party feature uses `feature.handle(form)` to return its
-stable per-form handle.
-
 ## createFormKit
 
 ```ts

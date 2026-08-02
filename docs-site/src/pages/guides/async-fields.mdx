@@ -90,7 +90,8 @@ in form context and map all three outcomes with `fromResource`. The selector
 and active case stay synchronous, so ordinary resolver dependency tracking
 still applies:
 
-```ts twoslash
+```tsx twoslash
+// @jsx: react-jsx
 import {
 	createFormKit,
 	fromResource,
@@ -98,16 +99,59 @@ import {
 	type NativeSelectOption,
 	type ResourceState,
 } from "form-please"
+import { useEffect, useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({ city: z.string() })
 const kit = createFormKit({ controls: nativeControls })
 
+type Cities = ResourceState<readonly NativeSelectOption[], Error>
 type Context = {
-	readonly cities: ResourceState<readonly NativeSelectOption[], Error>
+	readonly cities: Cities
 }
 
-kit.defineForm(schema).withContext<Context>({
+function useCities(): Cities {
+	const [cities, setCities] = useState<Cities>({ status: "pending" })
+
+	useEffect(() => {
+		const controller = new AbortController()
+
+		async function loadCities() {
+			try {
+				const response = await fetch("/api/cities", {
+					signal: controller.signal,
+				})
+				if (!response.ok) {
+					throw new Error(`Could not load cities (${response.status})`)
+				}
+
+				const value =
+					(await response.json()) as readonly NativeSelectOption[]
+				if (!controller.signal.aborted) {
+					setCities({ status: "success", value })
+				}
+			} catch (error) {
+				if (!controller.signal.aborted) {
+					let resourceError = new Error("Could not load cities")
+					if (error instanceof Error) {
+						resourceError = error
+					}
+					setCities({
+						status: "error",
+						error: resourceError,
+					})
+				}
+			}
+		}
+
+		void loadCities()
+		return () => controller.abort()
+	}, [])
+
+	return cities
+}
+
+const definition = kit.defineForm(schema).withContext<Context>({
 	ui: [
 		{
 			kind: "section",
@@ -138,7 +182,22 @@ kit.defineForm(schema).withContext<Context>({
 		},
 	],
 })
+
+function CityForm() {
+	const cities = useCities()
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { city: "" },
+		context: { cities },
+	})
+
+	return <kit.AutoForm context={{ cities }} form={form} />
+}
 ```
+
+`useCities` owns the request and cancellation lifecycle. The form receives only
+the current plain `ResourceState`, so changing from pending to success or error
+recomputes the resource-backed properties without putting request state in form
+values.
 
 Use the same helper for `visible`, `readOnly`, labels, descriptions, control
 options, and typed `slotOptions`. It does not fetch anything and does not accept

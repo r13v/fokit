@@ -1,21 +1,16 @@
 "use client"
 
-import { createFormKit, nativeControls, useSnapshot } from "form-please"
+import { useSnapshot } from "form-please"
 import {
 	createLocalStorageAdapter,
 	createPersistenceMiddleware,
 } from "form-please/persistence"
 import { useEffect, useRef, useState } from "react"
-import { z } from "zod"
+import { defaultValues, kit, profileDefinition } from "./lab-profile-form"
 
-const schema = z.object({ note: z.string() })
-const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema, {
-	ui: [{ kind: "field", path: "note", control: "textarea", label: "Note" }],
-})
 const persistenceFeature = createPersistenceMiddleware({
 	adapter: createLocalStorageAdapter(() => window.localStorage),
-	key: "form-please-example-note-v1",
+	key: "form-please-example-profile-v1",
 	version: 1,
 	onError: (error) => console.error("Draft persistence failed", error),
 })
@@ -26,8 +21,8 @@ function operationError(fallback: string, error: unknown): string {
 }
 
 export function LocalStoragePersistenceExample() {
-	const form = kit.useCreateForm(definition, {
-		defaultValues: { note: "" },
+	const form = kit.useCreateForm(profileDefinition, {
+		defaultValues,
 		middleware: [persistenceFeature],
 	})
 	const persistence = persistenceFeature.handle(form)
@@ -72,24 +67,32 @@ export function LocalStoragePersistenceExample() {
 	}, [persistence])
 
 	return (
-		<kit.AutoForm form={form}>
-			<button
-				disabled={snapshot.phase !== "active"}
-				onClick={saveNow}
-				type="button"
-			>
-				Save now
-			</button>
-			<button
-				disabled={snapshot.phase === "restoring"}
-				onClick={deleteSavedDraft}
-				type="button"
-			>
-				Delete saved draft
-			</button>
-			<output aria-live="polite">
-				{message} Phase: {snapshot.phase}. Save: {snapshot.save.status}.
-			</output>
-		</kit.AutoForm>
+		<section className="form-please-lab">
+			<p className="form-please-lab__kicker">Persistence</p>
+			<p className="form-please-lab__summary">
+				Change the profile, then reload this page to restore the saved draft.
+			</p>
+			<kit.AutoForm className="form-please-lab__form" form={form}>
+				<div className="form-please-lab__actions">
+					<button
+						disabled={snapshot.phase !== "active"}
+						onClick={saveNow}
+						type="button"
+					>
+						Save now
+					</button>
+					<button
+						disabled={snapshot.phase === "restoring"}
+						onClick={deleteSavedDraft}
+						type="button"
+					>
+						Delete saved draft
+					</button>
+				</div>
+				<output aria-live="polite">
+					{message} Phase: {snapshot.phase}. Save: {snapshot.save.status}.
+				</output>
+			</kit.AutoForm>
+		</section>
 	)
 }

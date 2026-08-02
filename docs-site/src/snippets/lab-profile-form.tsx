@@ -52,6 +52,7 @@ const profileSchema = z
 		contactCount: value.contacts.length,
 	}))
 
+export type ProfileInput = FormInput<typeof profileSchema>
 export type ProfileOutput = FormOutput<typeof profileSchema>
 
 export const defaultValues = {
@@ -60,7 +61,7 @@ export const defaultValues = {
 	country: "GB",
 	newsletter: true,
 	contacts: [{ email: "ada@example.com", label: "primary" }],
-} satisfies FormInput<typeof profileSchema>
+} satisfies ProfileInput
 
 const countryOptions = [
 	{ value: "GB", label: "United Kingdom" },

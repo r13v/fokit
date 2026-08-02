@@ -217,7 +217,7 @@ const canonicalPages = [
 		route: "/examples/history",
 		title: "History workflow",
 		description:
-			"Add undo, redo, seek, journal export, pure replay, and validated import to a live title editor.",
+			"Add undo, redo, seek, journal export, pure replay, and validated import to the profile form from get-started.",
 	},
 	{
 		path: "src/pages/examples/persistence.mdx",
@@ -225,7 +225,7 @@ const canonicalPages = [
 		title: "Persistent draft workflow",
 		navText: "Persistent draft",
 		description:
-			"Restore, observe, save, and delete a versioned localStorage draft in a live note editor.",
+			"Restore, observe, save, and delete a versioned localStorage draft for the profile form from get-started.",
 	},
 	{
 		path: "src/pages/examples/devtools.mdx",
@@ -443,7 +443,12 @@ const canonicalSnippets = [
 	{
 		target: "src/snippets/history.tsx",
 		include: "~/snippets/history.tsx",
-		terms: ["createHistoryMiddleware", "replayJournal", "history.import"],
+		terms: [
+			"createHistoryMiddleware",
+			"replayJournal",
+			"history.import",
+			'from "./lab-profile-form"',
+		],
 	},
 	{
 		target: "src/snippets/persistence-local-storage.tsx",
@@ -558,6 +563,7 @@ const stateWorkflowExampleCases = [
 			"createLocalStorageAdapter",
 			"persistence.restore",
 			"persistence.flush",
+			'from "./lab-profile-form"',
 		],
 	},
 ]
@@ -1493,6 +1499,7 @@ test("History and Persistence examples run the public workflows that they docume
 			assert.match(snippet, new RegExp(escapeRegExp(term)))
 		}
 
+		assert.doesNotMatch(snippet, /kit\.defineForm|createFormKit|from "zod"/)
 		assert.doesNotMatch(snippet, /from "(?:\.\.\/)+src\//)
 		assert.doesNotMatch(`${wrapper}\n${client}\n${page}`, /[А-Яа-яЁё]/)
 	}

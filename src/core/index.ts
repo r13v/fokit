@@ -1,10 +1,4 @@
 export type {
-	ArrayCommand,
-	ArrayCommandChange,
-	ArrayRowState,
-	ArrayRowsState,
-} from "./array-state.js"
-export type {
 	AnyControlMetadata,
 	ControlContextOf,
 	ControlFormData,
@@ -30,6 +24,41 @@ export type {
 } from "./definition.js"
 export { normalizeDefinition } from "./definition.js"
 export type {
+	ArrayCommand,
+	FormCommand,
+	IssuesCommand,
+	ReplaceRuntimeCommand,
+	ResetCommand,
+	SetValueCommand,
+	SetValuesCommand,
+	TouchCommand,
+	UnsetValueCommand,
+	ValidationCommand,
+	ValueCommand,
+} from "./form-commands.js"
+export type {
+	BaselineDisposition,
+	DocumentCommittedEvent,
+	DocumentRestoredEvent,
+	FieldBlurredEvent,
+	FieldTouchedEvent,
+	FormDocumentEvent,
+	FormEvent,
+	FormRuntimeEvent,
+	IssuesChange,
+	IssuesChangedEvent,
+	RestoreOrigin,
+	RowIdentityChange,
+	RuntimeReplacedEvent,
+	RuntimeResetEvent,
+	SubmissionFinishedEvent,
+	SubmissionStartedEvent,
+	ValidationFailedEvent,
+	ValidationResolvedEvent,
+	ValidationStartedEvent,
+} from "./form-events.js"
+export type { FormDocument } from "./form-model.js"
+export type {
 	DisplayFormErrors,
 	FormErrors,
 	FormIssue,
@@ -54,11 +83,20 @@ export type {
 } from "./form-store.js"
 export { createFormStore } from "./form-store.js"
 export type {
+	DocumentTransaction,
+	FormDispatchResult,
+	FormTransaction,
+	FormTransactionDispatch,
+	RestoreTransaction,
+	RuntimeTransaction,
+} from "./form-transactions.js"
+export type {
 	ArrayItemMetadata,
 	ArrayMetadata,
 	FieldMetadata,
 	FormMetadata,
 } from "./metadata.js"
+export type { FormMiddleware, FormMiddlewareApi } from "./middleware.js"
 export type {
 	ParsePathOptions,
 	PathInput,

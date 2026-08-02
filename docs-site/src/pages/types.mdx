@@ -37,11 +37,6 @@ Validation output never replaces editable values automatically.
 tree. `kit.defineForm` infers the useful version, checks field paths, and
 rejects incompatible controls.
 
-`DefinitionFragmentPath<Input>` selects definitely present, non-null,
-object-valued non-array scopes.
-`DefinitionFragmentNode` is the opaque schema-bound authoring result of
-`kit.defineForm(schema).fragment(...)`; normalization erases that boundary.
-
 The UI node families are:
 
 - `FieldNode` for one typed field path and control;
@@ -75,16 +70,16 @@ React render components accept `RenderNodeProps`, containing effective
 ## Form instances and context
 
 `FormInstance<Schema, Context>` carries schema and runtime context through
-commands, selectors, and derived UI. `UseFormOptions<Schema, Context>`
-describes creation options. `FormRuntimeOptions<Schema, Context>` omits the
-fixed `defaultValues` and is accepted when an existing instance is bound to
-React.
+commands, selectors, and derived UI. `CreateFormOptions<Schema, Context>`
+describes `kit.createForm` options. `FormRuntimeOptions<Schema, Context>` omits
+the fixed `defaultValues` and `middleware` values and is accepted when an
+existing instance is bound to React.
 
 ```ts twoslash
 import type {
 	FormInstance,
 	FormRuntimeOptions,
-	UseFormOptions,
+	CreateFormOptions,
 } from "form-please"
 import { z } from "zod"
 
@@ -94,9 +89,17 @@ type Context = {
 }
 
 type ProfileForm = FormInstance<typeof schema, Context>
-type ProfileOptions = UseFormOptions<typeof schema, Context>
+type ProfileOptions = CreateFormOptions<typeof schema, Context>
 type ProfileRuntimeOptions = FormRuntimeOptions<typeof schema, Context>
 ```
+
+Bind the contract once with `kit.forContext<Context>()`. That view is the same
+runtime kit object, but its definition, creation, and binding APIs all agree on
+`Context`. A definition records its minimum context requirement. Therefore a
+concrete context is required by `createForm`, `useCreateForm`, `useBindForm`,
+`AutoForm`, and React 19 `ActionForm`; a runtime context may include additional
+fields and the created `FormInstance` preserves their type. Without
+`forContext`, the context contract is `unknown` and the option remains optional.
 
 Use context for loaded option lists, permissions, or product state that affects
 UI but must never become submitted form data.
@@ -146,7 +149,8 @@ The main control types are:
 | `ControlContextOf` | Extract context requirements |
 | `IsValidControlValue` | Reject values outside the supported Form, Please data model |
 
-The shipped controls expose `NativeTextOptions`, `NativeTextareaOptions`,
+Import the shipped control option types from `form-please/native-controls`.
+They include `NativeTextOptions`, `NativeTextareaOptions`,
 `NativeSelectOptions`, `NativeSelectEmptyOption`, `NativeNumberOptions`,
 `NativeDateOptions`, `NativeTimeOptions`, and `NativeFileOptions`.
 
@@ -177,18 +181,21 @@ directly.
 
 ## Structural slot props
 
-Design-system adapters usually need one of five contracts:
+Design-system adapters usually need one of six contracts:
 
 - `FieldSlotProps`;
 - `SectionSlotProps`;
 - `ArraySlotProps`;
 - `ArrayItemSlotProps`;
-- `ErrorMessageSlotProps`.
+- `ErrorMessageSlotProps`;
+- `SubmitSlotProps`.
 
-Each contract carries root props that preserve the Form, Please DOM protocol and
-accessible relationships. The default-slot message contract is described by
+Structural contracts carry root props that preserve the Form, Please DOM
+protocol and accessible relationships. `SubmitSlotProps` carries owned button
+props, current input values, and submission state. The default-slot message contract is described by
 `DefaultSlotsI18n`, `DefaultArrayAddI18nData`,
-`DefaultArrayItemI18nData`, and `DefaultSlotI18nValue`.
+`DefaultArrayItemI18nData`, and `DefaultSlotI18nValue`; import those types from
+`form-please/default-slots`.
 
 ## Server results
 

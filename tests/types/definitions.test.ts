@@ -7,13 +7,16 @@ import {
 	defineControl,
 	type ErrorMessageSlotProps,
 	type FieldSlotProps,
+	normalizeDefinition,
 	type SectionSlotProps,
+	type SubmitSlotProps,
 } from "../../src/index.js"
 
 type ExampleInput = {
 	requiredName: string
 	optionalName?: string
 	unionWithUndefined: string | undefined
+	contacts: { label?: string }[]
 	nested?: {
 		child: string
 	}
@@ -28,6 +31,7 @@ const Section = (_props: SectionSlotProps) => null
 const ArraySlotComponent = (_props: ArraySlotProps) => null
 const ArrayItem = (_props: ArrayItemSlotProps) => null
 const ErrorMessage = (_props: ErrorMessageSlotProps) => null
+const Submit = (_props: SubmitSlotProps) => null
 
 const text = defineControl<string | undefined>({
 	component(_props) {
@@ -58,9 +62,111 @@ const kit = createFormKit({
 		Array: ArraySlotComponent,
 		ArrayItem,
 		ErrorMessage,
+		Submit,
 	},
 })
 
+const customGridKit = createFormKit({
+	controls: {
+		optionalObject,
+		text,
+	},
+	grid: [1, 6, 12],
+	slots: {
+		Field,
+		Section,
+		Array: ArraySlotComponent,
+		ArrayItem,
+		ErrorMessage,
+		Submit,
+	},
+})
+
+customGridKit.defineForm(schema, {
+	ui: [
+		{
+			kind: "section",
+			id: "custom-grid",
+			columns: ({ requiredName }) => (requiredName.length > 0 ? 12 : 1),
+			children: [
+				{
+					kind: "field",
+					path: "requiredName",
+					control: "text",
+					span: ({ requiredName }) => (requiredName.length > 0 ? 6 : "full"),
+				},
+			],
+		},
+	],
+})
+
+customGridKit.defineForm(schema, {
+	ui: [
+		{
+			kind: "section",
+			id: "unsupported-custom-grid-value",
+			// @ts-expect-error custom kit layouts are limited to their grid scale
+			columns: 2,
+			children: [],
+		},
+	],
+})
+
+kit.defineForm(schema, {
+	ui: [
+		{
+			kind: "section",
+			id: "unsupported-default-grid-value",
+			// @ts-expect-error the default grid scale remains 1, 2, 3, or 4
+			columns: 6,
+			children: [],
+		},
+	],
+})
+
+normalizeDefinition({
+	schema,
+	controls: {
+		optionalObject,
+		text,
+	},
+	grid: [1, 6, 12],
+	ui: [
+		{
+			kind: "section",
+			id: "core-custom-grid",
+			columns: 12,
+			children: [
+				{
+					kind: "field",
+					path: "requiredName",
+					control: "text",
+					span: 6,
+				},
+			],
+		},
+	],
+})
+
+normalizeDefinition({
+	schema,
+	controls: {
+		optionalObject,
+		text,
+	},
+	ui: [
+		{
+			kind: "section",
+			id: "core-default-grid",
+			// @ts-expect-error core authoring defaults to the 1, 2, 3, 4 scale
+			columns: 6,
+			children: [],
+		},
+	],
+})
+
+// Complete slots are explicit so custom design systems do not bundle defaults.
+// @ts-expect-error createFormKit requires a complete slot registry
 const omittedSlotsKit = createFormKit({
 	controls: {
 		optionalObject,
@@ -73,12 +179,13 @@ const partialSlotsKit = createFormKit({
 		optionalObject,
 		text,
 	},
+	// @ts-expect-error partial slots must be completed before creating a kit
 	slots: {
 		Field,
 	},
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -107,7 +214,60 @@ kit.defineForm(schema)({
 	],
 })
 
-omittedSlotsKit.defineForm(schema)({
+kit.defineForm(schema, {
+	ui: [
+		{
+			kind: "section",
+			id: "dynamic-layout",
+			className: ({ requiredName }) =>
+				requiredName.length > 0 ? "complete" : "incomplete",
+			columns: ({ requiredName }) => (requiredName.length > 0 ? 2 : 1),
+			span: ({ requiredName }) => (requiredName.length > 0 ? 2 : 1),
+			children: [
+				{
+					kind: "field",
+					path: "requiredName",
+					control: "text",
+					className: ({ optionalName }) => optionalName ?? "empty",
+					span: ({ requiredName }) => (requiredName.length > 0 ? 2 : 1),
+				},
+			],
+		},
+		{
+			kind: "array",
+			path: "contacts",
+			className: ({ contacts }) =>
+				contacts.length > 0 ? "has-contacts" : "empty",
+			span: ({ contacts }) => (contacts.length > 0 ? "full" : 1),
+			itemDefault: { label: "" },
+			children: [
+				{
+					kind: "field",
+					path: "label",
+					control: "text",
+				},
+			],
+		},
+	],
+})
+
+kit.defineForm(schema, {
+	ui: [
+		{
+			kind: "section",
+			id: "invalid-resolvers",
+			// @ts-expect-error className resolvers must return strings
+			className: () => 1,
+			// @ts-expect-error columns resolvers must return a supported column count
+			columns: () => 5,
+			// @ts-expect-error span resolvers must return a supported span
+			span: () => "wide",
+			children: [],
+		},
+	],
+})
+
+omittedSlotsKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -118,7 +278,7 @@ omittedSlotsKit.defineForm(schema)({
 	],
 })
 
-partialSlotsKit.defineForm(schema)({
+partialSlotsKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -129,7 +289,7 @@ partialSlotsKit.defineForm(schema)({
 	],
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -141,7 +301,7 @@ kit.defineForm(schema)({
 	],
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

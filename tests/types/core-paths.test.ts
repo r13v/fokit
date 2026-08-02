@@ -2,6 +2,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 
 import type {
 	ArrayFieldPath,
+	ArrayItemValue,
 	FieldPath,
 	FormInput,
 	FormOutput,
@@ -101,6 +102,15 @@ type _nestedArrayValue = Expect<
 type _arrayPrimitiveItemValue = Expect<
 	Equal<PathValue<ExampleInput, typeof primitiveArrayItemPath>, string>
 >
+type _arrayItem = Expect<
+	Equal<
+		ArrayItemValue<ExampleInput, "contacts">,
+		ExampleInput["contacts"][number]
+	>
+>
+
+// @ts-expect-error array item paths must name an array field
+type _invalidArrayItemPath = ArrayItemValue<ExampleInput, "name">
 
 // @ts-expect-error bracket syntax is never a canonical path
 const _bracketPath: FieldPath<ExampleInput> = "contacts[0].value"

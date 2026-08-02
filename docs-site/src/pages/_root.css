@@ -1,4 +1,44 @@
 @import "@fontsource-variable/newsreader";
+@import "tailwindcss/theme.css" layer(fp-tailwind-theme);
+@import "tailwindcss/utilities.css" layer(fp-tailwind-utilities);
+@import "tw-animate-css";
+
+@theme inline {
+	--color-accent: var(--fp-brand-panel);
+	--color-accent-foreground: var(--fp-brand-ink);
+	--color-background: var(--fp-brand-surface);
+	--color-border: var(--fp-brand-border);
+	--color-destructive: var(--fp-brand-rust);
+	--color-foreground: var(--fp-brand-ink);
+	--color-input: var(--fp-brand-border);
+	--color-muted: var(--fp-brand-panel);
+	--color-muted-foreground: var(--fp-brand-muted);
+	--color-popover: var(--fp-brand-surface);
+	--color-popover-foreground: var(--fp-brand-ink);
+	--color-primary: var(--fp-brand-green);
+	--color-primary-foreground: var(--fp-brand-on-accent);
+	--color-ring: var(--fp-brand-green);
+	--color-secondary: var(--fp-brand-panel);
+	--color-secondary-foreground: var(--fp-brand-ink);
+	--radius-md: 0.375rem;
+	--radius-lg: 0.5rem;
+}
+
+@custom-variant dark (
+	&:where([data-vocs-theme="dark"], [data-vocs-theme="dark"] *)
+);
+
+@custom-variant data-horizontal {
+	&:where([data-orientation="horizontal"]) {
+		@slot;
+	}
+}
+
+@custom-variant data-vertical {
+	&:where([data-orientation="vertical"]) {
+		@slot;
+	}
+}
 
 :root {
 	--fp-brand-green: #3c7967;
@@ -259,6 +299,33 @@ a {
 	font-size: 0.9rem;
 	font-weight: 700;
 	margin: 0;
+}
+
+:is(.form-please-lab, .form-please-async-demo, .form-please-complex)
+	[data-fp-node="field"] {
+	position: relative;
+}
+
+:is(.form-please-lab, .form-please-async-demo, .form-please-complex)
+	[data-fp-node="field"]::after {
+	block-size: 2.5rem;
+	content: "";
+	display: block;
+}
+
+:is(.form-please-lab, .form-please-async-demo, .form-please-complex)
+	[data-fp-node="field"]
+	> [data-fp-node="error-message"] {
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	block-size: 2.5rem;
+	display: -webkit-box;
+	inset-block-end: 0;
+	inset-inline: 0;
+	line-height: 1.25rem;
+	overflow: hidden;
+	position: absolute;
+	text-overflow: ellipsis;
 }
 
 .form-please-lab button,

@@ -4,89 +4,28 @@ import { type ComponentType, createElement } from "react"
 
 import {
 	type AnyUiPresentation,
-	type ControlFormData,
-	type ControlMetadata,
 	type FieldPath,
 	type FormInput,
-	type FormIssue,
 	formatPath,
-	type IsValidControlValue,
 	type PathValue,
 	type ResolvedFieldNode,
 	type StandardSchema,
 } from "../core/index.js"
+import type {
+	ControlDefinitionRegistry,
+	ControlProps,
+} from "./control-definition.js"
 import { createDomId } from "./dom-id.js"
 import { useFormIdPrefix } from "./form-context.js"
 import { type FieldBinding, useField, useFormState } from "./hooks.js"
 import { joinIds } from "./structural-props.js"
 import type { AnyFormInstance } from "./use-form.js"
 
-export type ControlProps<
-	Value,
-	Options = Record<string, never>,
-	Context = unknown,
-> = {
-	readonly path: string
-	readonly value: Value
-	setValue(value: Value): void
-	blur(): void
-	readonly input: {
-		readonly id: string
-		readonly name: string
-		ref(element: HTMLElement | null): void
-		readonly "aria-describedby"?: string
-	}
-	readonly meta: {
-		readonly dirty: boolean
-		readonly touched: boolean
-		readonly validating: boolean
-		readonly errors: readonly FormIssue[]
-		readonly displayErrors: readonly FormIssue[]
-		readonly invalid: boolean
-	}
-	readonly options: Options
-	readonly context: Readonly<Context>
-	readonly disabled: boolean
-	readonly readOnly: boolean
-	readonly required: boolean
-}
-
-export type ControlDefinition<
-	Value,
-	Options = Record<string, never>,
-	Context = unknown,
-> = ControlMetadata<Value, Options, Context> & {
-	readonly component: ComponentType<ControlProps<Value, Options, Context>>
-}
-
-export type AnyControlDefinition = ControlMetadata<never, never, never> & {
-	readonly component: unknown
-}
-
-export type ControlDefinitionRegistry = Readonly<
-	Record<string, AnyControlDefinition>
->
-
-export type DefineControlInput<Value, Options, Context> =
-	IsValidControlValue<Value> extends true
-		? {
-				readonly component: ComponentType<ControlProps<Value, Options, Context>>
-				readonly formData: ControlFormData<Value, Options, Context>
-			}
-		: never
-
-export function defineControl<
-	Value,
-	Options = Record<string, never>,
-	Context = unknown,
->(
-	input: DefineControlInput<Value, Options, Context>,
-): ControlDefinition<Value, Options, Context> {
-	return Object.freeze({
-		component: input.component,
-		formData: input.formData,
-	}) as ControlDefinition<Value, Options, Context>
-}
+export type {
+	ControlDefinitionRegistry,
+	ControlProps,
+} from "./control-definition.js"
+export { defineControl } from "./control-definition.js"
 
 export type FieldControlProps<
 	Schema extends StandardSchema,

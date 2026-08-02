@@ -24,6 +24,7 @@ type AccountValues = {
 }
 
 type GroupValues = {
+	note?: string
 	groups: {
 		name: string
 		members: {
@@ -290,6 +291,20 @@ describe("array commands and row metadata", () => {
 		])
 	})
 
+	it("restores the stored baseline row identity when reset restores baseline values", () => {
+		const form = createAccountStore()
+		const initialKeys = contactKeys(form)
+
+		form.move("contacts", 0, 1)
+		expect(contactKeys(form)).toEqual([initialKeys[1], initialKeys[0]])
+
+		form.reset()
+
+		expect(form.getValues()).toEqual(defaultValues)
+		expect(contactKeys(form)).toEqual(initialKeys)
+		expect(form.getSnapshot().isDirty).toBe(false)
+	})
+
 	it("keeps nested array descendants clean when a parent row moves first", () => {
 		const form = createGroupStore()
 		const originalMemberKey =
@@ -357,6 +372,139 @@ describe("array commands and row metadata", () => {
 		form.remove("groups.1.members", 0)
 
 		expect(form.getValues().groups[1]?.members).toEqual([{ name: "Grace" }])
+	})
+
+	it("keeps generated nested row keys globally unique after parent reindexing", () => {
+		const form = createGroupStore()
+		form.append("groups.1.members", { name: "Existing" })
+
+		form.remove("groups", 0)
+		form.append("groups")
+		form.append("groups.1.members", { name: "New" })
+
+		const preservedKey =
+			form.getSnapshot().metadata.arraysByPath["groups.0.members"].items[0]?.key
+		const newKey =
+			form.getSnapshot().metadata.arraysByPath["groups.1.members"].items[0]?.key
+		expect(preservedKey).toBe("groups.1.members:0")
+		expect(newKey).toBe("groups.1.members:1")
+		expect(newKey).not.toBe(preservedKey)
+	})
+
+	it("publishes values and nested row keys coherently for every value command shape", () => {
+		const form = createGroupStore()
+		let notificationCount = 0
+
+		form.subscribe(
+			(snapshot) => snapshot,
+			(snapshot) => {
+				notificationCount += 1
+				const groupItems = snapshot.metadata.arraysByPath.groups.items
+				expect(groupItems).toHaveLength(snapshot.values.groups.length)
+				expect(new Set(groupItems.map((item) => item.key)).size).toBe(
+					groupItems.length,
+				)
+
+				for (const [index, group] of snapshot.values.groups.entries()) {
+					const memberItems =
+						snapshot.metadata.arraysByPath[`groups.${index}.members`].items
+					expect(memberItems).toHaveLength(group.members.length)
+					expect(new Set(memberItems.map((item) => item.key)).size).toBe(
+						memberItems.length,
+					)
+				}
+			},
+		)
+
+		const initialMemberKey =
+			form.getSnapshot().metadata.arraysByPath["groups.0.members"].items[0]?.key
+
+		form.append("groups.0.members", { name: "Grace" })
+		const appendedKeys = form
+			.getSnapshot()
+			.metadata.arraysByPath["groups.0.members"].items.map((item) => item.key)
+		expect(appendedKeys[0]).toBe(initialMemberKey)
+
+		form.insert("groups.0.members", 1, { name: "Katherine" })
+		const insertedKeys = form
+			.getSnapshot()
+			.metadata.arraysByPath["groups.0.members"].items.map((item) => item.key)
+		expect(insertedKeys).toEqual([
+			initialMemberKey,
+			expect.any(String),
+			appendedKeys[1],
+		])
+
+		form.move("groups.0.members", 2, 0)
+		expect(
+			form
+				.getSnapshot()
+				.metadata.arraysByPath["groups.0.members"].items.map(
+					(item) => item.key,
+				),
+		).toEqual([appendedKeys[1], initialMemberKey, insertedKeys[1]])
+
+		form.remove("groups.0.members", 1)
+		expect(
+			form
+				.getSnapshot()
+				.metadata.arraysByPath["groups.0.members"].items.map(
+					(item) => item.key,
+				),
+		).toEqual([appendedKeys[1], insertedKeys[1]])
+
+		form.setValues({
+			note: "prepared",
+			groups: [
+				{
+					name: "Core",
+					members: [{ name: "Grace" }, { name: "Katherine" }],
+				},
+				{ name: "Docs", members: [] },
+			],
+		})
+		const keysBeforeUnset = form
+			.getSnapshot()
+			.metadata.arraysByPath["groups.0.members"].items.map((item) => item.key)
+
+		form.unsetValue("note")
+		expect(Object.hasOwn(form.getValues(), "note")).toBe(false)
+		expect(
+			form
+				.getSnapshot()
+				.metadata.arraysByPath["groups.0.members"].items.map(
+					(item) => item.key,
+				),
+		).toEqual(keysBeforeUnset)
+
+		const beforeBatchNotifications = notificationCount
+		form.batch(() => {
+			form.move("groups", 1, 0)
+			form.append("groups.0.members", { name: "Edsger" })
+		})
+		expect(notificationCount).toBe(beforeBatchNotifications + 1)
+		expect(form.getValues().groups[0]).toEqual({
+			name: "Docs",
+			members: [{ name: "Edsger" }],
+		})
+
+		form.reset({
+			groups: [
+				{
+					name: "Fresh",
+					members: [{ name: "Margaret" }],
+				},
+			],
+		})
+		expect(form.getValues()).toEqual({
+			groups: [
+				{
+					name: "Fresh",
+					members: [{ name: "Margaret" }],
+				},
+			],
+		})
+		expect(notificationCount).toBe(8)
 	})
 
 	it("discards array reindex metadata when beforeUpdate replaces an array command", () => {

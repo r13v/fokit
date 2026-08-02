@@ -11,10 +11,11 @@ form state and native form behavior. Your application owns its visual system.
 
 ## Why use Form, Please instead of a smaller form hook?
 
-Use Form, Please when a product needs one state model for:
+Use Form, Please to build product forms quickly from an existing design system.
+Wrap product controls and structural slots once, then reuse them across generated
+or manually composed forms. A single typed state model also handles:
 
 - schema-owned validation and typed transformations;
-- generated or manual rendering;
 - stable arrays;
 - safe server `FormData`;
 - React 19 support.
@@ -81,7 +82,7 @@ Blur, imperative validation, and submit are never debounced. Read
 Yes. Wrap each product input with `defineControl`. Replace a structural slot
 when it needs design-system markup.
 
-Start with `nativeControls`, then replace only the product-specific parts.
+Start with `createNativeControls()`, then replace only the product-specific parts.
 
 ## Why is there no built-in theme?
 

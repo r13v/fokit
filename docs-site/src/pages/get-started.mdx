@@ -94,12 +94,14 @@ therefore cannot silently change the product UI.
 
 ### The kit owns rendering
 
-`createFormKit({ controls: nativeControls })` maps control names to the shipped
-native renderers. It also supplies accessible structural slots.
+The example constructs a kit explicitly because it localizes the default array
+actions. For the English baseline, import `nativeFormKit` from
+`form-please/preset-native`; it combines the shipped native renderers and
+accessible structural slots.
 
-`kit.AutoForm` creates the form instance and renders the definition. You can
-later render the same definition with `kit.Form`, `kit.Fields`, and granular
-hooks.
+`kit.createForm` creates the form instance. `kit.AutoForm` binds and renders
+that existing form. You can render the same form manually with `kit.Form`,
+`kit.Fields`, and granular hooks.
 
 ## Try the production loop
 
@@ -121,10 +123,11 @@ submission payload.
 - Granular subscriptions for manual rendering.
 - Native names and `FormData` coordination for classic submission.
 - An isolated `form-please/react19` entry for React 19 Actions.
+- Optional history, persistence, and Redux DevTools package entries.
 
 ## Make it yours
 
-`nativeControls` and the default slots are a working baseline. They are not a
+Native controls and the default slots are a working baseline. They are not a
 design system. Use `defineControl` to replace controls. Override structural
 slots when their markup must change. Use `createDefaultSlots({ i18n })` to
 change the default action labels.
@@ -172,5 +175,8 @@ after successful validation.
   baseline.
 - [React 19 Actions](/guides/react-19-actions) for Action submission and
   serializable results.
+- [History and journals](/guides/history) for undo, replay, and journal transfer.
+- [Persistence](/guides/persistence) for hydration and storage adapters.
+- [Redux DevTools](/guides/devtools) for constrained document time travel.
 - [Production recipes](/advanced) for manual composition, loaded edit forms,
   server safety, and testing.

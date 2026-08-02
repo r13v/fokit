@@ -20,6 +20,7 @@ export function syncActionResult<
 	attempt?.finish()
 	applyActionResult(form, result, {
 		input: attempt?.input,
+		document: attempt?.document,
 		changedPaths: attempt === undefined ? undefined : [...attempt.changedPaths],
 		recordSubmit: attempt === undefined && result.status === "error",
 	})

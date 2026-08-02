@@ -1,9 +1,3 @@
-import type {
-	DefaultSlotsI18n,
-	NativeSelectOptions,
-	NativeTextOptions,
-} from "form-please"
-import { createDefaultSlots, nativeControls } from "form-please"
 import {
 	type ControlMetadata,
 	createFormStore,
@@ -13,6 +7,24 @@ import {
 	type StandardSchema,
 	type UiNode,
 } from "form-please/core"
+import type { DefaultSlotsI18n } from "form-please/default-slots"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createDevToolsMiddleware } from "form-please/devtools"
+import {
+	createHistoryMiddleware,
+	type FormJournal,
+	replayJournal,
+} from "form-please/history"
+import type {
+	NativeSelectOptions,
+	NativeTextOptions,
+} from "form-please/native-controls"
+import { createNativeControls } from "form-please/native-controls"
+import {
+	createPersistenceMiddleware,
+	type FormPersistenceAdapter,
+} from "form-please/persistence"
+import { nativeFormKit } from "form-please/preset-native"
 import { type ParseResult, parseFormData } from "form-please/server"
 
 type ProfileInput = {
@@ -92,9 +104,23 @@ const slotI18n = {
 } satisfies Partial<DefaultSlotsI18n>
 
 const defaultSlots = createDefaultSlots()
+const historyFeature = createHistoryMiddleware()
+const adapter: FormPersistenceAdapter = {
+	load: async () => undefined,
+	save: async () => {},
+	remove: async () => {},
+}
+const persistenceFeature = createPersistenceMiddleware({
+	adapter,
+	key: "type-smoke",
+	version: 1,
+})
+const devToolsFeature = createDevToolsMiddleware()
+declare const journal: FormJournal<ProfileInput>
+const replayed = replayJournal(journal, journal.cursor)
 
-if (nativeControls.text.formData.mode !== "native") {
-	throw new Error("CommonJS declarations did not expose nativeControls values")
+if (createNativeControls().text.formData.mode !== "native") {
+	throw new Error("CommonJS declarations did not expose native control values")
 }
 
 void store
@@ -103,3 +129,8 @@ void textOptions
 void selectOptions
 void slotI18n
 void defaultSlots
+void historyFeature
+void persistenceFeature
+void devToolsFeature
+void replayed
+void nativeFormKit

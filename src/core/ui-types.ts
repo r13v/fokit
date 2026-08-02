@@ -9,8 +9,9 @@ import type {
 import type { ArrayFieldPath, FieldPath, PathValue } from "./path-types.js"
 import type { OptionalFieldPath } from "./transaction.js"
 
-export type GridColumns = 1 | 2 | 3 | 4
-export type GridSpan = 1 | 2 | 3 | 4 | "full"
+export type DefaultGridValue = 1 | 2 | 3 | 4
+export type GridColumns = number
+export type GridSpan = number | "full"
 export type ValuePolicy = "preserve" | "unset"
 
 export type UiPresentation<
@@ -51,7 +52,12 @@ export type Resolvable<Value, Input = unknown, Context = unknown> =
 	| StaticResolvableValue<Value>
 	| UiResolver<Value, Input, Context>
 
-type FieldNodeBase<Input, Context, Presentation extends UiPresentation> = {
+type FieldNodeBase<
+	Input,
+	Context,
+	Presentation extends UiPresentation,
+	Grid extends number,
+> = {
 	readonly kind: "field"
 	readonly id?: string
 	readonly label?: Resolvable<Presentation["content"], Input, Context>
@@ -65,8 +71,8 @@ type FieldNodeBase<Input, Context, Presentation extends UiPresentation> = {
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
 	readonly visible?: Resolvable<boolean, Input, Context>
-	readonly className?: string
-	readonly span?: GridSpan
+	readonly className?: Resolvable<string, Input, Context>
+	readonly span?: Resolvable<Grid | "full", Input, Context>
 }
 
 type FieldValuePolicy<Input, Path extends FieldPath<Input>> =
@@ -131,7 +137,8 @@ type FieldNodeForPath<
 	Context,
 	Path extends FieldPath<Input>,
 	Presentation extends UiPresentation,
-> = FieldNodeBase<Input, Context, Presentation> & {
+	Grid extends number,
+> = FieldNodeBase<Input, Context, Presentation, Grid> & {
 	readonly path: Path
 	readonly valuePolicy?: FieldValuePolicy<Input, Path>
 } & {
@@ -150,13 +157,15 @@ export type FieldNode<
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
 	Presentation extends UiPresentation = CoreUiPresentation,
+	Grid extends number = DefaultGridValue,
 > = {
 	[Path in FieldPath<Input>]: FieldNodeForPath<
 		Input,
 		Controls,
 		Context,
 		Path,
-		Presentation
+		Presentation,
+		Grid
 	>
 }[FieldPath<Input>]
 
@@ -179,6 +188,7 @@ export type SectionNode<
 	Context = unknown,
 	RenderComponent = never,
 	Presentation extends UiPresentation = CoreUiPresentation,
+	Grid extends number = DefaultGridValue,
 > = {
 	readonly kind: "section"
 	readonly id: string
@@ -192,22 +202,28 @@ export type SectionNode<
 	readonly visible?: Resolvable<boolean, Input, Context>
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
-	readonly className?: string
-	readonly columns?: GridColumns
-	readonly span?: GridSpan
+	readonly className?: Resolvable<string, Input, Context>
+	readonly columns?: Resolvable<Grid, Input, Context>
+	readonly span?: Resolvable<Grid | "full", Input, Context>
 	readonly children: readonly UiNode<
 		Input,
 		Controls,
 		Context,
 		RenderComponent,
-		Presentation
+		Presentation,
+		Grid
 	>[]
 }
 
-export type ArrayItemValue<Input, Path extends ArrayFieldPath<Input>> =
+export type ArrayItemValueAtPath<Input, Path extends string> =
 	NonNullable<PathValue<Input, Path>> extends readonly (infer Item)[]
 		? Item
 		: never
+
+export type ArrayItemValue<
+	Input,
+	Path extends ArrayFieldPath<Input>,
+> = ArrayItemValueAtPath<Input, Path>
 
 type ArrayNodeForPath<
 	Input,
@@ -215,6 +231,7 @@ type ArrayNodeForPath<
 	Context,
 	Path extends ArrayFieldPath<Input>,
 	Presentation extends UiPresentation,
+	Grid extends number,
 > = {
 	readonly kind: "array"
 	readonly id?: string
@@ -229,16 +246,17 @@ type ArrayNodeForPath<
 	readonly visible?: Resolvable<boolean, Input, Context>
 	readonly disabled?: Resolvable<boolean, Input, Context>
 	readonly readOnly?: Resolvable<boolean, Input, Context>
-	readonly className?: string
-	readonly span?: GridSpan
+	readonly className?: Resolvable<string, Input, Context>
+	readonly span?: Resolvable<Grid | "full", Input, Context>
 	readonly itemDefault:
-		| ArrayItemValue<Input, Path>
-		| (() => ArrayItemValue<Input, Path>)
+		| ArrayItemValueAtPath<Input, Path>
+		| (() => ArrayItemValueAtPath<Input, Path>)
 	readonly children: readonly RelativeUiNode<
-		ArrayItemValue<Input, Path>,
+		ArrayItemValueAtPath<Input, Path>,
 		Controls,
 		Context,
-		Presentation
+		Presentation,
+		Grid
 	>[]
 }
 
@@ -247,13 +265,15 @@ export type ArrayNode<
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
 	Presentation extends UiPresentation = CoreUiPresentation,
+	Grid extends number = DefaultGridValue,
 > = {
 	[Path in ArrayFieldPath<Input>]: ArrayNodeForPath<
 		Input,
 		Controls,
 		Context,
 		Path,
-		Presentation
+		Presentation,
+		Grid
 	>
 }[ArrayFieldPath<Input>]
 
@@ -263,20 +283,22 @@ export type UiNode<
 	Context = unknown,
 	RenderComponent = never,
 	Presentation extends UiPresentation = CoreUiPresentation,
+	Grid extends number = DefaultGridValue,
 > =
-	| FieldNode<Input, Controls, Context, Presentation>
+	| FieldNode<Input, Controls, Context, Presentation, Grid>
 	| ([RenderComponent] extends [never]
 			? never
 			: RenderNode<RenderComponent, Input, Context>)
-	| SectionNode<Input, Controls, Context, RenderComponent, Presentation>
-	| ArrayNode<Input, Controls, Context, Presentation>
+	| SectionNode<Input, Controls, Context, RenderComponent, Presentation, Grid>
+	| ArrayNode<Input, Controls, Context, Presentation, Grid>
 
 export type RelativeUiNode<
 	Input,
 	Controls extends ControlRegistry = ControlRegistry,
 	Context = unknown,
 	Presentation extends UiPresentation = CoreUiPresentation,
+	Grid extends number = DefaultGridValue,
 > =
-	| ArrayNode<Input, Controls, Context, Presentation>
-	| FieldNode<Input, Controls, Context, Presentation>
-	| SectionNode<Input, Controls, Context, never, Presentation>
+	| ArrayNode<Input, Controls, Context, Presentation, Grid>
+	| FieldNode<Input, Controls, Context, Presentation, Grid>
+	| SectionNode<Input, Controls, Context, never, Presentation, Grid>

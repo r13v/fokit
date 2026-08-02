@@ -1,6 +1,7 @@
 "use client"
 
 import type {
+	ComponentPropsWithoutRef,
 	CSSProperties,
 	HTMLAttributes,
 	LabelHTMLAttributes,
@@ -116,4 +117,18 @@ export type ArrayItemSlotProps = {
 export type ErrorMessageSlotProps = {
 	readonly rootProps: StructuralRootProps
 	readonly issue: FormIssue
+}
+
+type SubmitButtonProps = Omit<
+	ComponentPropsWithoutRef<"button">,
+	"disabled" | "type"
+> & {
+	readonly disabled: boolean
+	readonly type: "submit"
+}
+
+export type SubmitSlotProps = {
+	readonly buttonProps: SubmitButtonProps
+	readonly values: Readonly<Record<string, unknown>>
+	readonly isSubmitting: boolean
 }

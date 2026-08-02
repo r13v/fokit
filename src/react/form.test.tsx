@@ -3,15 +3,14 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
+import type { SubmitSlotProps } from "./slots.js"
 import { type TestValues, testKit } from "./test-kit.js"
-import type { FormInstance } from "./use-form.js"
-import { useForm } from "./use-form.js"
 
 type TestSchema = StandardSchemaV1<TestValues>
 
 const schema = {} as TestSchema
 
-const definition = testKit.defineForm(schema)({
+const definition = testKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -29,22 +28,24 @@ function defaultValues(): TestValues {
 
 describe("kit.Form and kit.Submit", () => {
 	it("renders a native noValidate form with safe passthrough props and state data", () => {
+		const createdForm = testKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 		function View() {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
-			})
-
 			return (
 				<testKit.Form
 					aria-label="Profile"
 					className="profile-form"
 					data-custom="consumer"
 					data-fp-node="consumer"
-					form={form}
+					form={createdForm}
 					id="profile"
 					style={{ "--fp-row-gap": "12px" }}
 				>
-					<button type="button" onClick={() => form.setValue("name", "Grace")}>
+					<button
+						type="button"
+						onClick={() => createdForm.setValue("name", "Grace")}
+					>
 						Change
 					</button>
 				</testKit.Form>
@@ -71,10 +72,10 @@ describe("kit.Form and kit.Submit", () => {
 	it.each(["action", "onSubmit", "onReset", "noValidate"] as const)(
 		"rejects attempts to replace owned %s",
 		(prop) => {
+			const form = testKit.createForm(definition, {
+				defaultValues: defaultValues(),
+			})
 			function View() {
-				const form = useForm(definition, {
-					defaultValues: defaultValues(),
-				})
 				const forbiddenProps = {
 					[prop]: prop === "noValidate" ? false : () => undefined,
 				}
@@ -89,14 +90,13 @@ describe("kit.Form and kit.Submit", () => {
 	)
 
 	it("keeps kit.Submit disabled for disabled or submitting forms", () => {
+		const createdForm = testKit.createForm(definition, {
+			defaultValues: defaultValues(),
+			disabled: true,
+		})
 		function View() {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
-				disabled: true,
-			})
-
 			return (
-				<testKit.Form form={form}>
+				<testKit.Form form={createdForm}>
 					<testKit.Submit disabled={false}>Save</testKit.Submit>
 				</testKit.Form>
 			)
@@ -110,15 +110,66 @@ describe("kit.Form and kit.Submit", () => {
 		).toBe(true)
 	})
 
-	it("guards custom submit buttons through the owned form handler", () => {
-		function View() {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
-				disabled: true,
-			})
-
+	it("renders the configured Submit slot with live values and owned button props", () => {
+		function DesignSystemSubmit({
+			buttonProps,
+			values,
+			isSubmitting,
+		}: SubmitSlotProps) {
 			return (
-				<testKit.Form aria-label="Profile" form={form}>
+				<button
+					{...buttonProps}
+					data-current-name={String(values.name)}
+					data-design-system=""
+					data-submitting={String(isSubmitting)}
+				/>
+			)
+		}
+		const kit = testKit.extend({
+			slots: {
+				Submit: DesignSystemSubmit,
+			},
+		})
+		const createdForm = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
+
+		render(
+			<kit.Form form={createdForm}>
+				<button
+					type="button"
+					onClick={() => createdForm.setValue("name", "Grace")}
+				>
+					Change
+				</button>
+				<kit.Submit name="intent" value="save">
+					Save
+				</kit.Submit>
+			</kit.Form>,
+		)
+
+		const submit = screen.getByRole("button", {
+			name: "Save",
+		}) as HTMLButtonElement
+		expect(submit.getAttribute("data-design-system")).toBe("")
+		expect(submit.getAttribute("data-current-name")).toBe("Ada")
+		expect(submit.getAttribute("data-submitting")).toBe("false")
+		expect(submit.type).toBe("submit")
+		expect(submit.name).toBe("intent")
+		expect(submit.value).toBe("save")
+
+		fireEvent.click(screen.getByRole("button", { name: "Change" }))
+		expect(submit.getAttribute("data-current-name")).toBe("Grace")
+	})
+
+	it("guards custom submit buttons through the owned form handler", () => {
+		const createdForm = testKit.createForm(definition, {
+			defaultValues: defaultValues(),
+			disabled: true,
+		})
+		function View() {
+			return (
+				<testKit.Form aria-label="Profile" form={createdForm}>
 					<button type="submit">Design-system submit</button>
 				</testKit.Form>
 			)
@@ -137,22 +188,15 @@ describe("kit.Form and kit.Submit", () => {
 	})
 
 	it("prevents native submission before rethrowing compatibility errors", () => {
-		let mountedForm: FormInstance<TestSchema> | undefined
+		const mountedForm = testKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
 		function View() {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
-			})
-			mountedForm = form
-
-			return <testKit.Form aria-label="Profile" form={form} />
+			return <testKit.Form aria-label="Profile" form={mountedForm} />
 		}
 
 		render(<View />)
-
-		if (mountedForm === undefined) {
-			throw new Error("Expected form to mount")
-		}
 
 		const snapshot = mountedForm.getSnapshot()
 		const nameField = snapshot.resolvedUi.fieldsByPath.name

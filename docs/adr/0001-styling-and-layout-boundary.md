@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-28
+- Amended by: [ADR 0011](0011-kit-owned-grid-scale.md)
 
 ## Context
 

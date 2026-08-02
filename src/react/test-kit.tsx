@@ -1,6 +1,7 @@
 "use client"
 
 import type { FormIssue } from "../core/index.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
 import type {
@@ -135,6 +136,7 @@ export const testKit = createFormKit({
 		text: textControl,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,

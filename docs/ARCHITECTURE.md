@@ -2,21 +2,21 @@
 
 - Status: Descriptive
 - Audience: Maintainers and contributors
-- Last updated: 2026-07-31
+- Last updated: 2026-08-02
 
 This document is a map of the current implementation. It explains where
 responsibilities live, how data moves through the library, and which
 boundaries changes must preserve.
 
-The [specification](docs/SPEC.md) is the normative product contract. The
-[architecture decision records](docs/adr/) explain why selected boundaries
-exist. When this document disagrees with either the code or the specification,
+[Architecture decision records](docs/adr/) explain why selected boundaries
+exist. Public API documentation describes shipped behavior. When this document
+disagrees with the code, an accepted ADR, or public API documentation,
 investigate the difference instead of treating this document as a new source
 of behavior.
 
 ## Architectural shape
 
-Form, Please is one package with four JavaScript entry points and one optional CSS
+Form, Please is one package with eleven JavaScript entry points and one optional CSS
 entry point:
 
 ```mermaid
@@ -25,8 +25,15 @@ flowchart TD
 
     Main["form-please<br/>React 18 and 19 API"]
     Core["form-please/core<br/>React-free form engine"]
+    DefaultSlots["form-please/default-slots<br/>Accessible structural slots"]
+    NativeControls["form-please/native-controls<br/>Native HTML controls"]
+    PresetNative["form-please/preset-native<br/>Ready native form kit"]
+    PresetMui["form-please/preset-mui<br/>Material UI form-kit factory"]
     React19["form-please/react19<br/>React 19 Actions adapter"]
     Server["form-please/server<br/>FormData parsing and validation"]
+    History["form-please/history<br/>History and journals"]
+    Persistence["form-please/persistence<br/>Encoding and storage"]
+    DevTools["form-please/devtools<br/>Redux DevTools transport"]
     CSS["form-please/layout.css<br/>Optional structural layout"]
 
     ReactLayer["src/react"]
@@ -34,27 +41,50 @@ flowchart TD
 
     App --> Main
     App --> Core
+    App --> DefaultSlots
+    App --> NativeControls
+    App --> PresetNative
+    App --> PresetMui
     App --> React19
     App --> Server
+    App --> History
+    App --> Persistence
+    App --> DevTools
     App -. explicit import .-> CSS
 
     Main --> ReactLayer
     Main --> CoreLayer
+    DefaultSlots --> ReactLayer
+    NativeControls --> ReactLayer
+    PresetNative --> DefaultSlots
+    PresetNative --> NativeControls
+    PresetNative --> ReactLayer
+    PresetMui --> ReactLayer
     ReactLayer --> CoreLayer
     React19 --> ReactLayer
     React19 --> CoreLayer
     Server --> CoreLayer
+    History --> CoreLayer
+    Persistence --> CoreLayer
+    Persistence --> History
+    DevTools --> CoreLayer
 ```
 
 Dependencies point inward:
 
 - `src/core` owns the form model and never imports React or DOM APIs.
 - `src/react` adapts the core store to React 18-compatible components and
-  hooks.
+  hooks. The main entry is headless: applications import the optional native
+  controls and default structural slots explicitly, or opt into a preset that
+  combines them.
 - `src/react19` adds Action-specific behavior and may depend on both core and
   React modules. Nothing in the main entry point depends on it.
 - `src/server` reuses path, result, and Standard Schema logic from core but
   never imports React.
+- `src/history`, `src/persistence`, and `src/devtools` own optional features.
+  Existing main, core, React 19, and server graphs do not import them.
+- `src/persistence` can import the history protocol for history-mode storage.
+  History and DevTools do not import persistence.
 - `src/layout.css` is independent. No JavaScript entry point imports it.
 
 The core can carry a render component or rich presentation value as an opaque
@@ -63,10 +93,13 @@ React-free dependency boundary without maintaining a second UI tree.
 
 ## Execution environments
 
-The main `form-please` and `form-please/react19` entries retain `"use client"` directives.
-Importing either entry from a React Server Component establishes a client
-boundary. `form-please/core` and `form-please/server` contain no client directive or React
-runtime import and may be used independently in server-side code.
+The `form-please`, `form-please/default-slots`, `form-please/native-controls`,
+`form-please/preset-native`, `form-please/preset-mui`, and `form-please/react19` entries retain
+`"use client"` directives.
+Importing any of these entries from a React Server Component establishes a
+client boundary. `form-please/core` and `form-please/server` contain no
+client directive or React runtime import and may be used independently in
+server-side code.
 
 Client components can still participate in SSR. React subscriptions pass the
 store's stable server snapshot to `useSyncExternalStore`, and hidden
@@ -81,18 +114,24 @@ remain suitable for server-side use.
 
 | Area | Primary files | Responsibility |
 | --- | --- | --- |
-| Public exports | `src/index.ts`, `src/core/index.ts`, `src/react19/index.ts`, `src/server/index.ts` | Define the supported package surface |
-| Definitions | `src/core/definition.ts`, `src/core/definition-fragment.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts` | Type, scope, validate, normalize, and index reusable UI definitions |
+| Public exports | `src/index.ts`, `src/core/index.ts`, `src/default-slots/index.ts`, `src/native-controls/index.ts`, `src/preset-native/index.ts`, `src/preset-mui/index.ts`, `src/react19/index.ts`, `src/server/index.ts`, and each optional `index.ts` | Define the supported package surface |
+| Definitions | `src/core/definition.ts`, `src/core/ui-types.ts`, `src/core/control-types.ts`, `src/core/structural-presentation.ts` | Type, validate, normalize, and index reusable UI definitions |
 | Paths and values | `src/core/path.ts`, `src/core/path-types.ts`, `src/core/value.ts` | Canonical deep paths and immutable value operations |
-| Runtime store | `src/core/form-store.ts`, `src/core/form-state.ts`, `src/core/transaction.ts` | Transactions, snapshots, subscriptions, reset, focus, and runtime options |
+| Form model | `src/core/form-model.ts`, `src/core/form-reducer.ts`, `src/core/runtime-reducer.ts` | Own the atomic historical document and pure document/runtime transitions |
+| Commands and events | `src/core/form-commands.ts`, `src/core/form-transactions.ts`, `src/core/form-events.ts`, `src/core/transaction.ts` | Type commands, normalized transactions, immutable events, and value-change normalization |
+| Runtime store | `src/core/form-store.ts`, `src/core/form-state.ts`, `src/core/publication.ts`, `src/core/focus.ts` | Coordinate reducers, effects, snapshots, subscriptions, reset, focus, and runtime options |
+| Middleware and features | `src/core/middleware.ts`, `src/core/commit-timeline.ts`, `src/core/feature-protocol.ts` | Run the synchronous chain and expose the package-private optional-feature capability |
 | Derived state | `src/core/resolve-ui.ts`, `src/core/resource.ts`, `src/core/metadata.ts`, `src/core/issues.ts`, `src/core/array-state.ts` | Resolved UI, synchronous application-resource projection, dirty/touched state, issue exposure, and stable array rows |
-| Validation | `src/core/validation.ts`, `src/core/standard-schema.ts` | Standard Schema execution and normalized results |
-| Form kits | `src/react/create-form-kit.tsx`, `src/react/default-slots.tsx`, `src/react/native-controls.tsx` | Bind control and slot registries into a rendering integration |
-| React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to the external store |
+| Validation | `src/core/validation.ts`, `src/core/validation-lifecycle.ts`, `src/core/standard-schema.ts` | Standard Schema execution, attempt lifecycle, cancellation, and normalized results |
+| Form kits | `src/react/create-form-kit.tsx`, `src/default-slots/default-slots.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-native/index.ts`, `src/preset-mui/index.ts` | Bind control and slot registries plus grid scales into rendering integrations and the native and Material UI presets |
+| React runtime | `src/react/form-instance.ts`, `src/react/use-form.ts`, `src/react/hooks.ts`, `src/react/use-snapshot.ts`, `src/react/use-external-selector.ts` | Wrap and subscribe to external stores |
 | Rendering | `src/react/fields.tsx`, `src/react/array-field.tsx`, `src/react/control.tsx`, `src/react/render-node.ts`, `src/react/slots.ts` | Turn resolved nodes into slots, controls, and explicit render components |
 | Native forms | `src/react/form.tsx`, `src/react/hidden-inputs.tsx`, `src/react/submission.ts` | Accessibility, `FormData`, reset, and classic submission |
 | React 19 Actions | `src/react19/action-form.tsx`, `src/react19/result-sync.ts`, `src/react19/action-submit.tsx` | Action submission state and server-result reconciliation |
 | Server parsing | `src/server/normalize-form-data.ts`, `src/server/parse-form-data.ts`, `src/server/protocol.ts` | Bounded untrusted input normalization and validation |
+| History | `src/history/history.ts`, `src/history/journal.ts` | Retain checkpoints and committed document events, navigate groups, import, export, and replay |
+| Persistence | `src/persistence/persistence.ts`, `src/persistence/encoding.ts`, `src/persistence/codecs.ts`, `src/persistence/local-storage.ts` | Hydrate, encode, migrate, validate, schedule, and store documents or journals |
+| Redux DevTools | `src/devtools/devtools.ts` | Project committed events and bounded document tokens to the browser extension |
 
 ## Definition lifecycle
 
@@ -101,26 +140,32 @@ A form has three independent inputs:
 1. A Standard Schema defines valid data and transforms input into submission
    output.
 2. A UI definition selects paths, structure, and derived presentation.
-3. A form kit provides named controls and structural slots.
+3. A form kit provides named controls, structural slots, and a finite grid
+   scale.
 
-`createFormKit` freezes a control registry and a complete slot registry.
-`kit.defineForm(schema)(definition)` passes the schema, UI tree, and registry
-to `normalizeDefinition`.
+`createFormKit` requires and freezes an explicit control registry and a complete
+slot registry. It also freezes a finite grid scale, defaulting to
+`[1, 2, 3, 4]`. It does not import either shipped rendering default.
+`kit.defineForm(schema, definition)` passes the schema, UI tree, registry, and
+grid scale to `normalizeDefinition`.
 
-The schema-bound define function also exposes `fragment(scope, nodes)` for a
-definitely present object path. The React-free fragment transformer prefixes
-object-relative field and array paths and wraps resolvers so their relative
-reads track final absolute dependencies. Fragments are authoring-only: they are
-erased before `normalizeDefinition`, so runtime code still sees exactly four
-normalized node kinds. Their opaque brand models input, control, and context
-requirements contravariantly, allowing compatible richer definitions without
-admitting a weaker schema or runtime context.
+`kit.forContext<Context>()` is a type-only view of that same frozen kit and
+descriptor. It binds the minimum context contract across authoring, store
+creation, React binding, update hooks, derived UI, and submission. Extensions
+preserve the bound contract. A normalized definition models its context
+requirement contravariantly as a type-only minimum, so a context-free
+definition can enter a contextual lifecycle and a definition requiring a base
+context can run with a richer context, but neither can weaken a concrete
+requirement to `unknown`.
 
-Normalization is a one-time boundary. It canonicalizes paths and defaults,
-checks node IDs and control references, freezes the tree, and builds flat
-indexes such as `nodesById`, `fieldsByPath`, and `arraysByPath`. Runtime code
-consumes this normalized definition; it does not repeatedly validate the
-authoring shape.
+Normalization is a one-time authoring boundary. It canonicalizes paths and
+defaults, checks node IDs, control references, and static presentation values,
+freezes the tree and its complete authoring grid scale, and builds flat indexes
+such as `nodesById`, `fieldsByPath`, and `arraysByPath`. Numeric `columns` and
+`span` values must belong to that scale; `"full"` is a scale-independent span.
+Runtime UI resolution validates resolver results against the same scale before
+React receives them, including the rule that a numeric span cannot exceed its
+resolved parent columns.
 
 Definitions contain control names, not control components. Structural
 presentation is similarly mediated by slots. A `render` node is the explicit
@@ -129,12 +174,19 @@ opaquely and the React renderer mounts it.
 
 ## Runtime state and ownership
 
-`createForm` creates a `FormInstance`, which owns one core `FormStore`.
-`useForm` either creates that instance once or temporarily binds runtime
-options to an existing instance. It does not create a second React state
-model.
+`kit.createForm` creates every public React `FormInstance`. `kit.useCreateForm`
+retains the first instance created through that operation for one mounted React
+component; later definition and creation-option arguments do not replace it.
+The instance owns one core `FormStore` and one immutable reference to the exact
+kit snapshot. `kit.useBindForm` only binds runtime options to an existing
+instance from that same kit. `kit.Form` and `kit.AutoForm` enforce the same
+ownership rule.
 
-The store is the single source of runtime truth. Each immutable
+The store owns one `FormModel`. Its `document` contains values and current
+array-row identity. Its `runtime` contains the clean baseline, touched paths,
+issues, validation, submission, context, runtime options, and resolved UI.
+Focus targets, subscriptions, timers, abort controllers, and callbacks remain
+effects outside both reducer states. Each immutable
 `FormSnapshot` contains:
 
 - input `values` and `isDirty`, derived from the store's private baseline;
@@ -148,10 +200,9 @@ The store holds `FormInput<Schema>`. Successful validation and submission
 produce `FormOutput<Schema>`. Schema transforms never overwrite the input
 state.
 
-The baseline is fixed at instance creation until an explicit reset replaces
-it. Loaded forms therefore mount after data is available, remount by product
-identity, or call `reset(loadedValues)` deliberately; a new `defaultValues`
-object identity is never an implicit reset signal.
+The baseline is fixed at instance creation until an explicit reset or
+successful persistence hydration replaces it. Restore navigation does not
+replace the baseline or touched state.
 
 Runtime context is read-only input to resolvers and controls. It is not copied
 into values, validated, marked dirty, or serialized.
@@ -170,12 +221,14 @@ For a normal update the store:
    proposal converges;
 4. calls the single `beforeUpdate` hook, which may accept, cancel, or replace
    the complete change set;
-5. atomically commits values, array metadata, issue cleanup, and validation
-   state;
-6. derives a new snapshot and notifies only subscriptions whose selected value
+5. creates a frozen `DocumentTransaction` and sends it through the synchronous
+   middleware chain;
+6. reduces one `DocumentCommittedEvent` into the atomic `FormDocument` and
+   reduces related runtime events into ephemeral state;
+7. derives one snapshot and notifies only subscriptions whose selected value
    changed;
-7. calls `afterUpdate` and schedules validation when the configured lifecycle
-   requires it.
+8. delivers the finalized event, calls `afterUpdate`, and schedules validation
+   when the configured lifecycle requires it.
 
 Array commands additionally preserve stable row keys and reindex touched paths
 and issues before the atomic commit. A batch accumulates changes and commits
@@ -193,6 +246,20 @@ preserving an incoming proposal while appending dependent changes.
 
 Public values and snapshots are cloned or frozen at the store boundary.
 Consumers must use commands instead of mutating returned objects.
+
+Middleware uses the Redux shape `api => next => transaction`. Declaration
+order is outer-to-inner. A handler must call `next` synchronously, at most once,
+and return its result unchanged. It can cancel by not calling `next` or replace
+the frozen transaction before forwarding it. Nested `api.dispatch` commands
+run FIFO after the current transaction finishes. The coordinator captures the
+effective committed event independently of wrapper return values, so optional
+features observe each commit exactly once even when later middleware throws.
+
+A restore transaction contains a complete immutable `FormDocument`. Restore
+bypasses value policies, lifecycle hooks, item defaults, schema transforms,
+automatic validation, and application mutation callbacks. It still passes
+through application middleware. A committed restore invalidates captured
+validation and server work, reconciles runtime paths, and publishes once.
 
 ## UI resolution and subscriptions
 
@@ -225,15 +292,16 @@ React hooks bridge the store through `useSyncExternalStore`. `useFormState`
 accepts a selector and equality function; `useField`, `useValue`, and
 `useArrayField` build narrow selectors on top. Rendering code should subscribe
 to the smallest slice it needs instead of reading the full snapshot into every
-field.
+field. `useSnapshot` bridges history, persistence, and other compatible handles
+that expose `subscribe` and `getSnapshot`.
 
 ## Rendering boundary
 
 `kit.AutoForm` is convenience composition:
 
 ```text
-useForm
-  -> kit.Form
+runtime binding
+  -> kit.Form internals
      -> ErrorSummary
      -> FieldsRenderer
         -> structural slot
@@ -252,14 +320,28 @@ The renderer maps resolved nodes as follows:
 - `render` mounts the opaque component with effective `disabled` and
   `readOnly` props.
 
+`kit.Submit` subscribes to the current input values and submission state, then
+renders the kit's `Submit` slot. The wrapper owns the final disabled state and
+native `type="submit"`; the slot receives those button props, the immutable
+current input values, and `isSubmitting` for product-specific presentation.
+
 Slots own semantic structure. Controls own only the interactive value editor
 and must attach the supplied name, ID, ref, and ARIA relationships to the
-appropriate DOM element. Form, Please supplies unstyled accessible default slots and
-an explicit `nativeControls` registry; neither is a visual theme.
+appropriate DOM element. Form, Please supplies an unstyled accessible
+`createDefaultSlots()` factory and an explicit `createNativeControls()` factory
+from separate entry points; neither is a visual theme.
+`form-please/preset-native` combines both factories into the immutable
+`nativeFormKit` baseline without adding them to the main entry graph.
+`form-please/preset-mui` exports `createMuiFormKit`. That factory owns Material
+UI controls, slots, and the 1–12 grid scale. Material UI and Emotion remain
+optional peers and stay outside every other package graph. The application
+owns the Material UI theme and baseline styles.
 
 The stable `data-fp-*` and CSS-variable protocol connects structural slots
-to the optional `layout.css`. Application controls, typography, color, and
-component styling remain outside the library.
+to the optional `layout.css`. That stylesheet implements only the default
+`[1, 2, 3, 4]` scale; a kit with custom grid values needs application-owned
+slot styling or CSS for those values. Application controls, typography, color,
+and component styling remain outside the library.
 
 ## Validation and issues
 
@@ -344,22 +426,45 @@ values that the Action client can reconcile.
 `kit.extend` creates a new immutable snapshot:
 
 - control names are add-only; replacing an inherited control is rejected;
+- grid values are add-only; inherited values cannot be removed or redefined;
 - slots may replace inherited slots if their option contracts remain
   compatible;
-- definitions retain the complete registry and presentation requirements of
-  the kit that created them.
+- definitions retain the complete registry, grid, and presentation requirements
+  of the kit that created them.
 
 This makes a base definition usable by a compatible extended kit without
-allowing an extension to silently reinterpret an existing field.
+allowing an extension to silently reinterpret an existing field or layout
+value. A kit can create a form only when its grid is a superset of the
+definition's complete authoring scale.
 
-New behavior should normally fit one of the existing boundaries: a control, a
-slot, a derived UI property, or an application-level concern. Form, Please does not
-provide a middleware chain, schema inference, remote UI language, visual form
-builder, theme, wizard engine, or application persistence layer.
+Application middleware is configured only at form creation through
+`kit.createForm` or `kit.useCreateForm`. Kits,
+extensions, and definitions do not retain middleware. The open chain can
+observe, cancel, or replace transactions, but it cannot dispatch raw events.
+
+Optional first-party features use protocol version `1` through
+`Symbol.for("form-please.feature-capability")`. The capability is
+package-private and validated structurally, which lets ESM and CommonJS copies
+share feature identity. Each feature exposes a stable `feature.handle(form)`.
+One form can have at most one history, one persistence owner, and one DevTools
+connection. Persistence in history mode requires the exact configured history
+feature in the same chain.
+
+History retains immutable checkpoints and committed document events only when
+configured. Pure replay uses `reduceFormDocument`; live undo, redo, seek,
+import, and replay each submit one restore transaction. Persistence stores a
+versioned canonical document or journal envelope through an application-owned
+adapter. Redux DevTools sends finalized events and restores only documents
+that resolve through its bounded local revision-token table.
+
+New behavior should normally fit one existing boundary: a control, a slot, a
+derived UI property, application middleware, or an isolated optional entry.
+Form, Please does not provide schema inference, a remote UI language, a visual
+form builder, a theme, a wizard engine, or storage infrastructure.
 
 ## Build and verification
 
-`tsdown.config.ts` builds the four explicit entries as ESM and CommonJS with
+`tsdown.config.ts` builds the seven explicit entries as ESM and CommonJS with
 declarations and source maps. Dependencies are never bundled, entry signatures
 are preserved, and `layout.css` is copied separately. `package.json` exposes
 only the supported subpaths, so internal deep imports are closed.
@@ -382,7 +487,7 @@ and smoke verification described in `package.json`.
 
 When a change crosses a boundary:
 
-1. update the normative specification if public behavior changes;
+1. update the public API documentation if public behavior changes;
 2. add or supersede an ADR when the dependency or ownership decision changes;
 3. update this map when responsibility moves between modules;
 4. test the boundary at its narrowest layer and at the affected public entry

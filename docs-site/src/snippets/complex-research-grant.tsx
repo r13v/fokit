@@ -12,11 +12,12 @@ import {
 	extendValueChanges,
 	type FormInput,
 	type FormOutput,
-	nativeControls,
 	useFormContext,
 	useFormState,
 	type ValueChange,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -172,7 +173,10 @@ const defaultValues = {
 	confirmAccuracy: false,
 } satisfies GrantInput
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 function OrganizationFinder() {
 	const form = useFormContext<typeof grantSchema>()
@@ -251,7 +255,7 @@ function GrantPreview() {
 	)
 }
 
-const grantDefinition = kit.defineForm(grantSchema)({
+const grantDefinition = kit.defineForm(grantSchema, {
 	ui: [
 		{
 			kind: "section",
@@ -501,6 +505,7 @@ export function ResearchGrantExample() {
 
 function ResearchGrantForm() {
 	const [receipt, setReceipt] = useState("No application sent yet.")
+	const form = kit.useCreateForm(grantDefinition, { defaultValues })
 	const preview = useMutation({
 		mutationFn: (value: GrantOutput) =>
 			fakeRequest({ revision: value.reviewKey, accepted: true }, 420),
@@ -526,8 +531,7 @@ function ResearchGrantForm() {
 			<kit.AutoForm
 				beforeUpdate={preserveGrantInvariants}
 				className="form-please-complex__form"
-				defaultValues={defaultValues}
-				definition={grantDefinition}
+				form={form}
 				onSubmit={async ({ value, form }) => {
 					try {
 						form.clearErrors()

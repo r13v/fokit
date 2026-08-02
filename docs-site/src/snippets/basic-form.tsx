@@ -11,6 +11,7 @@ import {
 
 export function ProfileEditor() {
 	const [saved, setSaved] = useState<ProfileOutput>()
+	const form = kit.useCreateForm(profileDefinition, { defaultValues })
 	let status = "Submit the form to see validated output."
 	if (saved !== undefined) {
 		status = `Saved ${saved.name} with ${saved.contactCount} contacts.`
@@ -20,8 +21,7 @@ export function ProfileEditor() {
 		<>
 			<kit.AutoForm
 				className="profile-form"
-				definition={profileDefinition}
-				defaultValues={defaultValues}
+				form={form}
 				validation={{
 					mode: "blur",
 					revalidateMode: "change",

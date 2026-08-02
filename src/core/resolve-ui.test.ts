@@ -71,6 +71,11 @@ const controls = {
 	},
 } satisfies ExampleControls
 
+const exampleContext: ExampleContext = {
+	locked: false,
+	citiesByCountry: {},
+}
+
 function normalize(
 	ui: readonly UiNode<ExampleValues, ExampleControls, ExampleContext>[],
 ) {
@@ -93,6 +98,17 @@ function normalizeWithRender(ui: readonly unknown[]) {
 		controls,
 		ui,
 	})
+}
+
+function normalizeWithGrid(grid: readonly number[], ui: readonly unknown[]) {
+	const normalizeCustom = normalizeDefinition as (input: {
+		readonly schema: typeof schema
+		readonly controls: ExampleControls
+		readonly grid: readonly number[]
+		readonly ui: readonly unknown[]
+	}) => NormalizedFormDefinition<typeof schema, ExampleControls>
+
+	return normalizeCustom({ schema, controls, grid, ui })
 }
 
 describe("resolveUi", () => {
@@ -336,6 +352,266 @@ describe("resolveUi", () => {
 			unrelatedChange.fieldsByPath.city.options,
 		)
 		expect(contextChange.fieldsByPath.name.label).toBe("Name: Ada")
+	})
+
+	it("resolves and caches presentation structure from tracked values", () => {
+		const className = vi.fn(({ kind }: ExampleValues) =>
+			kind === "company" ? "company-card" : "person-card",
+		)
+		const columns = vi.fn(({ kind }: ExampleValues) =>
+			kind === "company" ? (2 as const) : (1 as const),
+		)
+		const span = vi.fn(({ kind }: ExampleValues) =>
+			kind === "company" ? (2 as const) : (1 as const),
+		)
+		const definition = normalize([
+			{
+				kind: "section",
+				id: "account",
+				className,
+				columns,
+				children: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						span,
+					},
+				],
+			},
+		])
+		const values = {
+			name: "Ada",
+			kind: "person",
+			country: "us",
+			city: "nyc",
+			unrelated: "same",
+		} satisfies ExampleValues
+
+		const first = resolveUi(definition, values, exampleContext)
+		const unrelatedChange = resolveUi(
+			definition,
+			{ ...values, unrelated: "changed" },
+			exampleContext,
+			{ previous: first },
+		)
+		const company = resolveUi(
+			definition,
+			{ ...values, kind: "company" },
+			exampleContext,
+			{ previous: unrelatedChange },
+		)
+		const firstAccount = first.nodesById.account
+		const companyAccount = company.nodesById.account
+		if (firstAccount.kind !== "section" || companyAccount.kind !== "section") {
+			throw new Error("Expected account sections")
+		}
+
+		expect(firstAccount.className).toBe("person-card")
+		expect(firstAccount.columns).toBe(1)
+		expect(first.fieldsByPath.name.span).toBe(1)
+		expect(unrelatedChange.computedCache["account:columns"]).toBe(
+			first.computedCache["account:columns"],
+		)
+		expect(companyAccount.className).toBe("company-card")
+		expect(companyAccount.columns).toBe(2)
+		expect(company.fieldsByPath.name.span).toBe(2)
+		expect(className).toHaveBeenCalledTimes(2)
+		expect(columns).toHaveBeenCalledTimes(2)
+		expect(span).toHaveBeenCalledTimes(2)
+	})
+
+	it("resolves presentation structure only inside concrete array item scopes", () => {
+		const className = vi.fn(({ value }: { readonly value: string }) =>
+			value.length > 0 ? "filled-contact" : "empty-contact",
+		)
+		const columns = vi.fn(({ value }: { readonly value: string }) =>
+			value.length > 3 ? (2 as const) : (1 as const),
+		)
+		const span = vi.fn(({ value }: { readonly value: string }) =>
+			value.length > 3 ? (2 as const) : (1 as const),
+		)
+		const definition = normalize([
+			{
+				kind: "array",
+				path: "contacts",
+				itemDefault: { value: "" },
+				children: [
+					{
+						kind: "section",
+						id: "contact",
+						className,
+						columns,
+						children: [
+							{
+								kind: "field",
+								path: "value",
+								control: "text",
+								span,
+							},
+						],
+					},
+				],
+			},
+		])
+		const values = {
+			name: "Ada",
+			kind: "person",
+			country: "us",
+			city: "nyc",
+			unrelated: "same",
+			contacts: [{ value: "Ada" }, { value: "Grace" }],
+		} satisfies ExampleValues
+
+		const first = resolveUi(definition, values, exampleContext)
+		const changed = resolveUi(
+			definition,
+			{
+				...values,
+				contacts: [{ value: "Ada" }, { value: "Linus" }],
+			},
+			exampleContext,
+			{ previous: first },
+		)
+		const template = first.arraysByPath.contacts.children[0]
+		const firstItem = first.arraysByPath.contacts.itemChildren[0]?.[0]
+		const secondItem = first.arraysByPath.contacts.itemChildren[1]?.[0]
+		const changedSecondItem = changed.arraysByPath.contacts.itemChildren[1]?.[0]
+
+		if (
+			template?.kind !== "section" ||
+			firstItem?.kind !== "section" ||
+			secondItem?.kind !== "section" ||
+			changedSecondItem?.kind !== "section"
+		) {
+			throw new Error("Expected contact sections")
+		}
+
+		expect(template.className).toBeUndefined()
+		expect(template.columns).toBe(1)
+		expect(firstItem.className).toBe("filled-contact")
+		expect(firstItem.columns).toBe(1)
+		expect(firstItem.children[0]?.span).toBe(1)
+		expect(secondItem.columns).toBe(2)
+		expect(secondItem.children[0]?.span).toBe(2)
+		expect(changedSecondItem.columns).toBe(2)
+		expect(className).toHaveBeenCalledTimes(3)
+		expect(columns).toHaveBeenCalledTimes(3)
+		expect(span).toHaveBeenCalledTimes(3)
+	})
+
+	it("rejects invalid resolved presentation structure at the runtime boundary", () => {
+		const values = {
+			name: "Ada",
+			kind: "person",
+			country: "us",
+			city: "nyc",
+			unrelated: "same",
+		} satisfies ExampleValues
+		const invalidClassName = normalize([
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				className: () => 42 as unknown as string,
+			},
+		])
+		const invalidColumns = normalize([
+			{
+				kind: "section",
+				id: "account",
+				columns: () => 5 as 2,
+				children: [],
+			},
+		])
+		const invalidSpan = normalize([
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				span: () => "wide" as unknown as 1,
+			},
+		])
+		const oversizedSpan = normalize([
+			{
+				kind: "section",
+				id: "account",
+				columns: () => 2,
+				children: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						span: () => 3,
+					},
+				],
+			},
+		])
+
+		expect(() => resolveUi(invalidClassName, values, exampleContext)).toThrow(
+			/className must be a string/,
+		)
+		expect(() => resolveUi(invalidColumns, values, exampleContext)).toThrow(
+			/columns must be 1, 2, 3, or 4/,
+		)
+		expect(() => resolveUi(invalidSpan, values, exampleContext)).toThrow(
+			/Layout span must be 1, 2, 3, 4, or full/,
+		)
+		expect(() => resolveUi(oversizedSpan, values, exampleContext)).toThrow(
+			/Layout span 3 exceeds parent columns 2/,
+		)
+	})
+
+	it("resolves dynamic layout against the definition's custom grid scale", () => {
+		const definition = normalizeWithGrid(
+			[1, 6, 12],
+			[
+				{
+					kind: "section",
+					id: "account",
+					columns: () => 12,
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							span: () => 6,
+						},
+					],
+				},
+			],
+		)
+		const values = {
+			name: "Ada",
+			kind: "person",
+			country: "us",
+			city: "nyc",
+			unrelated: "same",
+		} satisfies ExampleValues
+
+		const resolved = resolveUi(definition, values, exampleContext)
+		const account = resolved.nodesById.account
+		expect(account.kind).toBe("section")
+		if (account.kind !== "section") {
+			throw new Error("Expected a section")
+		}
+		expect(account.columns).toBe(12)
+		expect(resolved.fieldsByPath.name.span).toBe(6)
+
+		const invalidDefinition = normalizeWithGrid(
+			[1, 6, 12],
+			[
+				{
+					kind: "section",
+					id: "account",
+					columns: () => 4,
+					children: [],
+				},
+			],
+		)
+		expect(() => resolveUi(invalidDefinition, values, exampleContext)).toThrow(
+			/columns must be 1, 6, or 12/i,
+		)
 	})
 
 	it("tracks path reads from both resource selection and branch mapping", () => {
@@ -629,7 +905,7 @@ describe("resolveUi", () => {
 			unrelated: "same",
 			address: { country: "GB" },
 		} satisfies ExampleValues
-		const context = {}
+		const context = exampleContext
 
 		const first = resolveUi(definition, values, context)
 		const changed = resolveUi(
@@ -654,9 +930,9 @@ describe("resolveUi", () => {
 			},
 		])
 
-		expect(() => resolveUi(enumeratingDefinition, values, {})).toThrow(
-			/cannot be enumerated/i,
-		)
+		expect(() =>
+			resolveUi(enumeratingDefinition, values, exampleContext),
+		).toThrow(/cannot be enumerated/i)
 	})
 
 	it("revokes resolver values after the synchronous resolver returns", () => {
@@ -682,7 +958,7 @@ describe("resolveUi", () => {
 				city: "nyc",
 				unrelated: "same",
 			},
-			{},
+			exampleContext,
 		)
 
 		expect(() => captured?.name).toThrow(/revoked/i)
@@ -712,7 +988,7 @@ describe("resolveUi", () => {
 					city: "nyc",
 					unrelated: "same",
 				},
-				{},
+				exampleContext,
 			),
 		).toThrow(/read-only/i)
 	})
@@ -742,7 +1018,7 @@ describe("resolveUi", () => {
 					city: "nyc",
 					unrelated: "same",
 				},
-				{},
+				exampleContext,
 			),
 		).toThrow(/synchronous/i)
 	})

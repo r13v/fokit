@@ -1,17 +1,27 @@
 ---
-title: Complex examples
-description: Explore six production-shaped forms that stress branching, arrays, workflows, custom UI, and fake TanStack Query requests without hiding state from Form, Please.
+title: Examples
+description: Explore an official Material UI preset, an application-owned shadcn adapter, production-shaped forms, and live state workflows.
 showAskAi: false
 ---
 
-# Complex form examples
+# Examples
 
-These examples are deliberately larger than a feature sampler. Each one owns a
-coherent product workflow, uses a complete Standard Schema, and sends typed
-output through deterministic fake requests in TanStack Query. No remote server
-or private application code is required.
+Use these examples to inspect complete product workflows and development tools.
+All examples use public Form, Please APIs and run without a remote server.
 
-## Choose a stress case
+## Design-system integration
+
+- [Material UI with Yup](/examples/mui-yup) — use the official Material UI 9
+  preset, its 22 scenario-specific controls, and direct Standard Schema
+  validation with Yup.
+- [Shadcn with Valibot](/examples/shadcn-valibot) — install an
+  application-owned Base UI adapter, exercise all 18 controls, and validate a
+  workshop proposal through Standard Schema without Zod.
+
+## Complex product workflows
+
+Each product example owns a complete Standard Schema and a coherent workflow.
+It sends typed output through deterministic fake requests in TanStack Query.
 
 - [Research grant application](/examples/research-grant) — conditional
   applicant identity, an asynchronous registry, cascade cleanup, live preview,
@@ -30,10 +40,27 @@ or private application code is required.
 - [Campaign builder](/examples/campaign-builder) — seven payload variants that
   share audience, schedule, channel, payment, and create-or-edit behavior.
 
+## State and developer workflows
+
+- [History workflow](/examples/history) — navigate committed document groups,
+  export a journal, replay it without effects, and validate an import.
+- [Persistent draft workflow](/examples/persistence) — restore, observe, save,
+  and delete a versioned browser draft.
+- [Redux DevTools workflow](/examples/devtools) — inspect committed events,
+  restore known local documents, and disconnect the integration without
+  stopping the form.
+
 ## What to look for
 
 Change a discriminator and watch inactive values leave the form transaction.
 Reorder array rows and confirm their state moves with them. Trigger a fake
-request and keep editing while request state remains outside Form, Please. The examples
-are designed to make ownership visible: Form, Please owns editable values and form
-semantics; TanStack Query owns remote lifecycle and cache state.
+request and keep editing while request state remains outside Form, Please.
+
+In the History example, edit the title and navigate the retained groups. In the
+Persistence example, save a note and reload the page. In the DevTools example,
+inspect committed events and restore an earlier document.
+
+The examples make ownership visible. Form, Please owns editable values and
+form semantics. The optional features own their document history, draft
+encoding, or diagnostic connection. TanStack Query owns remote lifecycle and
+cache state.

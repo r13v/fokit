@@ -123,14 +123,25 @@ test.describe("Form, Please documentation", () => {
 		await expect(demo.getByTestId("overview-output")).toContainText(
 			'"email": "ada@example.com"',
 		)
+		const saveButton = demo.getByRole("button", { name: "Save profile" })
+		const saveButtonTopBeforeError = await saveButton.evaluate(
+			(element) => element.getBoundingClientRect().top + window.scrollY,
+		)
 
 		await demo.getByLabel("Email").fill("not-an-email")
-		await demo.getByRole("button", { name: "Save profile" }).click()
-		await expect(
-			demo.locator("[data-fp-node='error-message']", {
-				hasText: "Enter a valid email",
-			}),
-		).toBeVisible()
+		await saveButton.click()
+		const emailError = demo.locator("[data-fp-node='error-message']", {
+			hasText: "Enter a valid email",
+		})
+		await expect(emailError).toBeVisible()
+		await expect(emailError).toHaveCSS("-webkit-line-clamp", "2")
+		await expect(emailError).toHaveCSS("overflow", "hidden")
+		const saveButtonTopWithError = await saveButton.evaluate(
+			(element) => element.getBoundingClientRect().top + window.scrollY,
+		)
+		expect(
+			Math.abs(saveButtonTopWithError - saveButtonTopBeforeError),
+		).toBeLessThanOrEqual(0.5)
 
 		await page.evaluate(() => {
 			document.documentElement.setAttribute("data-vocs-theme", "dark")
@@ -321,10 +332,15 @@ test.describe("Form, Please documentation", () => {
 		).toHaveAttribute("data-copied", "true")
 
 		await page.goto("./api#parseformdata")
-		const twoslashTrigger = page.locator("[data-v-twoslash-trigger]").first()
+		const twoslashTrigger = page
+			.locator("[data-v-twoslash-trigger]")
+			.filter({ hasText: "createFormKit" })
+			.first()
 		await expect(twoslashTrigger).toBeVisible()
 		await twoslashTrigger.click()
-		await expect(page.getByText(/ParseResult|PromiseConstructor/)).toBeVisible()
+		await expect(
+			page.getByText(/function createFormKit<Controls/),
+		).toBeVisible()
 
 		const llmsResponse = await page.request.get("./llms.txt")
 		expect(llmsResponse.ok()).toBe(true)
@@ -345,13 +361,15 @@ test.describe("Form, Please documentation", () => {
 			.click()
 		const dialog = page.getByRole("dialog")
 		await expect(dialog).toBeVisible()
-		await dialog.getByRole("combobox").fill("nativeControls")
+		await dialog.getByRole("combobox").fill("createNativeControls")
 
-		const nativeControlsResult = dialog.locator(
+		const createNativeControlsResult = dialog.locator(
 			'a[href="/form-please/guides/controls#native-controls"]',
 		)
-		await expect(nativeControlsResult).toContainText("nativeControls")
-		await nativeControlsResult.click()
+		await expect(createNativeControlsResult).toContainText(
+			"createNativeControls",
+		)
+		await createNativeControlsResult.click()
 		await expect(page).toHaveURL(
 			/\/form-please\/guides\/controls#native-controls$/,
 		)
@@ -450,6 +468,38 @@ test.describe("Form, Please documentation", () => {
 		await expect(lab.getByTestId("lab-form-data")).not.toContainText(
 			"contacts.1.email",
 		)
+	})
+
+	test("resolves Tailwind classes in the live shared profile form", async ({
+		page,
+	}, testInfo) => {
+		await page.setViewportSize({ width: 1280, height: 920 })
+		await page.goto(
+			"./guides/styling#resolve-tailwind-classes-from-form-values",
+		)
+
+		const demo = page.getByRole("region", {
+			name: "Tailwind resolver profile form",
+		})
+		const account = demo.locator('[data-fp-node="section"]')
+		await expect(demo).toBeVisible()
+		await expect(account).toHaveClass(/border-emerald-300/)
+		await expect(account).toHaveCSS(
+			"background-color",
+			"oklch(0.979 0.021 166.113)",
+		)
+
+		await demo.getByLabel("Account type").selectOption("company")
+		await expect(demo.getByLabel("Company name")).toBeVisible()
+		await expect(account).toHaveClass(/border-amber-300/)
+		await expect(account).not.toHaveClass(/border-emerald-300/)
+		await expect(account).toHaveCSS(
+			"background-color",
+			"oklch(0.987 0.022 95.277)",
+		)
+		await page.screenshot({
+			path: testInfo.outputPath("form-please-tailwind-resolver.png"),
+		})
 	})
 
 	test("searches, toggles, and submits the async multiselect", async ({
@@ -713,6 +763,225 @@ test.describe("Form, Please documentation", () => {
 				campaign.getByRole("heading", { level: 2, name: heading }),
 			).toBeVisible()
 		}
+		expect(pageErrors).toEqual([])
+	})
+
+	test("runs the shadcn registry adapter with Valibot and explicit FormData shapes", async ({
+		page,
+	}) => {
+		const pageErrors = collectPageErrors(page)
+		await page.goto("./examples/shadcn-valibot")
+
+		const workshop = page.getByRole("region", {
+			name: "Shadcn with Valibot workshop example",
+		})
+		await expect(workshop).toBeVisible({ timeout: 15_000 })
+		await expect(workshop.getByRole("slider")).toHaveCount(6)
+		await expect(workshop.getByRole("combobox")).toHaveCount(3)
+		await expect(workshop.getByLabel("Invite code")).toHaveValue("104729")
+		await expect(workshop.getByLabel("Venue")).toHaveValue("North studio")
+		const checkboxSize = await workshop
+			.getByRole("checkbox", { name: "Request an accessibility review" })
+			.evaluate((element) => {
+				const rectangle = element.getBoundingClientRect()
+				return { height: rectangle.height, width: rectangle.width }
+			})
+		expect(checkboxSize).toEqual({ height: 16, width: 16 })
+		const sliderTrackSizes = await workshop
+			.locator('[data-slot="slider-track"]')
+			.evaluateAll((elements) =>
+				elements.map((element) => {
+					const rectangle = element.getBoundingClientRect()
+					return { height: rectangle.height, width: rectangle.width }
+				}),
+			)
+		expect(sliderTrackSizes).toHaveLength(3)
+		for (const size of sliderTrackSizes) {
+			expect(size.height).toBe(4)
+			expect(size.width).toBeGreaterThan(100)
+		}
+		const durationSlider = workshop.getByRole("slider", { name: "Duration" })
+		const durationTrack = workshop.locator('[data-slot="slider-track"]').first()
+		const durationTrackSize = await durationTrack.boundingBox()
+		expect(durationTrackSize).not.toBeNull()
+		await durationTrack.click({
+			position: {
+				x: (durationTrackSize?.width ?? 0) * 0.8,
+				y: (durationTrackSize?.height ?? 0) / 2,
+			},
+		})
+		await expect(durationSlider).toHaveAttribute("aria-valuenow", "150")
+		await expect
+			.poll(() =>
+				workshop
+					.locator("form")
+					.evaluate((form) =>
+						new FormData(form as HTMLFormElement).get("duration"),
+					),
+			)
+			.toBe("150")
+		await expect
+			.poll(() =>
+				workshop
+					.locator("form")
+					.evaluate((form) =>
+						new FormData(form as HTMLFormElement).get("recordingAllowed"),
+					),
+			)
+			.toBe("false")
+
+		await workshop.getByLabel("Venue").click()
+		await page.getByRole("option", { name: "Library lab" }).click()
+		await expect(workshop.getByLabel("Venue")).toHaveValue("Library lab")
+		await workshop.getByLabel("Topics").click()
+		await page.getByRole("option", { name: "Systems thinking" }).click()
+		await page.keyboard.press("Escape")
+		await workshop.getByLabel("Workshop date").click()
+		await page.getByRole("button", { name: "Autumn lab" }).click()
+		await durationSlider.focus()
+		await page.keyboard.press("ArrowRight")
+		await workshop
+			.getByRole("slider", { name: "Audience experience range" })
+			.first()
+			.focus()
+		await page.keyboard.press("ArrowRight")
+		await workshop
+			.getByRole("slider", { name: "Agenda checkpoints" })
+			.first()
+			.focus()
+		await page.keyboard.press("ArrowRight")
+		await workshop.getByText("Remote", { exact: true }).click()
+		await workshop.getByRole("switch", { name: "Allow a recording" }).click()
+		const inviteCode = workshop.getByLabel("Invite code")
+		await inviteCode.click()
+		await inviteCode.press("ControlOrMeta+A")
+		await inviteCode.press("Backspace")
+		await expect(inviteCode).toHaveValue("")
+		await inviteCode.pressSequentially("654321")
+		await expect(inviteCode).toHaveValue("654321")
+
+		const formData = await workshop.locator("form").evaluate((form) => {
+			const entries = new FormData(form as HTMLFormElement)
+			return {
+				format: entries.get("format"),
+				recording: entries.get("recordingAllowed"),
+				duration: entries.get("duration"),
+				audienceRange: entries.getAll("audienceRange"),
+				agendaCheckpoints: entries.getAll("agendaCheckpoints"),
+				topics: entries.getAll("topics"),
+				venue: entries.get("venue"),
+				date: entries.get("workshopDate"),
+				range: [
+					entries.get("availability.from"),
+					entries.get("availability.to"),
+				],
+				code: entries.get("inviteCode"),
+				arrays: entries.getAll("__fp.array"),
+			}
+		})
+
+		expect(formData).toEqual({
+			format: "remote",
+			recording: "true",
+			duration: "165",
+			audienceRange: ["3", "7"],
+			agendaCheckpoints: ["25", "50", "80"],
+			topics: ["research", "prototyping", "systems"],
+			venue: "library-lab",
+			date: "2027-09-17",
+			range: ["2027-04-07", "2027-04-11"],
+			code: "654321",
+			arrays: ["audienceRange", "agendaCheckpoints", "topics"],
+		})
+
+		await workshop.getByRole("button", { name: "Submit proposal" }).click()
+		await expect(
+			workshop.getByText(/is ready for 24 participants/),
+		).toBeVisible()
+		expect(pageErrors).toEqual([])
+	})
+
+	test("runs the Material UI preset with direct Yup validation", async ({
+		page,
+	}) => {
+		const pageErrors = collectPageErrors(page)
+		await page.goto("./examples/mui-yup")
+
+		const proposal = page.getByRole("region", {
+			name: "Material UI with Yup conference example",
+		})
+		await expect(proposal).toBeVisible({ timeout: 15_000 })
+		await expect(proposal.getByLabel("Proposal title")).toHaveValue(
+			"Designing forms people can finish",
+		)
+		await expect(proposal.getByRole("slider")).toHaveAttribute(
+			"aria-valuenow",
+			"4",
+		)
+		await expect(proposal.getByText("Forms", { exact: true })).toBeVisible()
+		const agreement = proposal.getByLabel(
+			"I can attend at the selected date and time",
+		)
+		const agreementWidths = await agreement.evaluate((input) => ({
+			control: input.parentElement?.getBoundingClientRect().width ?? 0,
+			field:
+				input.closest('[data-fp-node="field"]')?.getBoundingClientRect()
+					.width ?? 0,
+		}))
+		expect(agreementWidths.control).toBeLessThan(agreementWidths.field / 2)
+		const sliderGap = await proposal.getByRole("slider").evaluate((input) => {
+			const slider = input.closest(".MuiSlider-root")
+			const field = input.closest('[data-fp-node="field"]')
+			const nextField = field?.nextElementSibling ?? null
+			if (slider === null || nextField === null) return 0
+			return (
+				nextField.getBoundingClientRect().left -
+				slider.getBoundingClientRect().right
+			)
+		})
+		expect(sliderGap).toBeGreaterThanOrEqual(12)
+		const duplicateIds = await proposal
+			.locator("[id]")
+			.evaluateAll((elements) => {
+				const counts = new Map<string, number>()
+				for (const element of elements) {
+					const id = element.id
+					counts.set(id, (counts.get(id) ?? 0) + 1)
+				}
+				return [...counts.entries()]
+					.filter(([, count]) => count > 1)
+					.map(([id]) => id)
+			})
+		expect(duplicateIds).toEqual([])
+
+		await proposal.getByRole("radio", { name: "Workshop" }).click()
+		const experience = proposal.getByRole("slider")
+		await experience.focus()
+		await page.keyboard.press("Home")
+		await expect(
+			proposal.getByText("Workshops need at least three years of experience"),
+		).toBeVisible()
+		await experience.focus()
+		await page.keyboard.press("End")
+		await proposal.getByRole("combobox", { name: "Topics" }).click()
+		await page.getByRole("option", { name: "Accessibility" }).click()
+		await expect(
+			proposal.getByText("Accessibility", { exact: true }),
+		).toBeVisible()
+
+		const title = proposal.getByLabel("Proposal title")
+		await title.fill("   A focused Material UI proposal   ")
+		await proposal.getByLabel("Draft slides").setInputFiles({
+			name: "slides.pdf",
+			mimeType: "application/pdf",
+			buffer: Buffer.from("slides"),
+		})
+		await proposal.getByRole("button", { name: "Submit proposal" }).click()
+		await expect(
+			proposal.getByText(
+				"A focused Material UI proposal is ready for review. Topics: Forms, Accessibility.",
+			),
+		).toBeVisible()
 		expect(pageErrors).toEqual([])
 	})
 

@@ -1,0 +1,174 @@
+import {
+	cloneRowIdentityState,
+	createRowIdentityChanges,
+	reduceRowIdentity,
+	validateRowIdentity,
+} from "./array-state.js"
+import type {
+	DocumentCommitGrouping,
+	DocumentCommittedEvent,
+	DocumentRestoredEvent,
+	FormDocumentEvent,
+	RowIdentityChange,
+} from "./form-events.js"
+import type { FormDocument } from "./form-model.js"
+import { cloneAndFreezeValue, freezeFormValue } from "./form-state.js"
+import {
+	applyValueChanges,
+	createSetChange,
+	createUnsetChange,
+	type NormalizedValueChange,
+	type ValueChange,
+} from "./transaction.js"
+import { cloneValue, isDirtyEqual } from "./value.js"
+
+export function createFormDocument<Input>(
+	values: Input,
+	rowIdentity: FormDocument<Input>["rowIdentity"],
+): FormDocument<Input> {
+	const document = Object.freeze({
+		values: cloneAndFreezeValue(values),
+		rowIdentity: cloneRowIdentityState(rowIdentity),
+	})
+	validateRowIdentity(document.rowIdentity, document.values)
+	return document
+}
+
+export function createDocumentCommittedEvent<Input>(options: {
+	readonly sequence: number
+	readonly source: DocumentCommittedEvent<Input>["source"]
+	readonly grouping?: DocumentCommitGrouping
+	readonly changes: readonly ValueChange<Input>[]
+	readonly rowIdentityChanges?: readonly RowIdentityChange[]
+	readonly baseline?: DocumentCommittedEvent<Input>["baseline"]
+}): DocumentCommittedEvent<Input> {
+	assertSequence(options.sequence)
+	return Object.freeze({
+		type: "document/committed",
+		sequence: options.sequence,
+		source: options.source,
+		grouping: freezeDocumentCommitGrouping(
+			options.grouping ?? { type: "single" },
+		),
+		changes: freezeValueChanges(options.changes),
+		rowIdentityChanges: freezeRowIdentityChanges(
+			options.rowIdentityChanges ?? [],
+		),
+		baseline: options.baseline ?? "preserved",
+	})
+}
+
+function freezeDocumentCommitGrouping(
+	grouping: DocumentCommitGrouping,
+): DocumentCommitGrouping {
+	if (grouping.type === "control") {
+		return Object.freeze({ type: "control", path: grouping.path })
+	}
+	return Object.freeze({ type: grouping.type })
+}
+
+export function createDocumentRestoredEvent<Input>(options: {
+	readonly sequence: number
+	readonly document: FormDocument<Input>
+	readonly origin: DocumentRestoredEvent<Input>["origin"]
+	readonly history: DocumentRestoredEvent<Input>["history"]
+}): DocumentRestoredEvent<Input> {
+	assertSequence(options.sequence)
+	return Object.freeze({
+		type: "document/restored",
+		sequence: options.sequence,
+		document: createFormDocument(
+			options.document.values,
+			options.document.rowIdentity,
+		),
+		origin: options.origin,
+		history: options.history,
+	})
+}
+
+export function reduceFormDocument<Input>(
+	document: FormDocument<Input>,
+	event: FormDocumentEvent<Input>,
+): FormDocument<Input> {
+	if (event.type === "document/restored") {
+		return createFormDocument(event.document.values, event.document.rowIdentity)
+	}
+
+	const result = applyValueChanges(document.values, event.changes)
+	const rowIdentity = reduceRowIdentity(
+		document.rowIdentity,
+		event.rowIdentityChanges,
+	)
+	const nextDocument = Object.freeze({
+		values: freezeFormValue(result.values),
+		rowIdentity,
+	})
+	validateRowIdentity(nextDocument.rowIdentity, nextDocument.values)
+	return nextDocument
+}
+
+export function areFormDocumentsEqual<Input>(
+	left: FormDocument<Input>,
+	right: FormDocument<Input>,
+): boolean {
+	return (
+		isDirtyEqual(left.values, right.values) &&
+		createRowIdentityChanges(left.rowIdentity, right.rowIdentity).length === 0
+	)
+}
+
+function freezeValueChanges<Input>(
+	changes: readonly ValueChange<Input>[],
+): readonly ValueChange<Input>[] {
+	if (!Array.isArray(changes)) {
+		throw new TypeError("Document changes must be an array")
+	}
+
+	return Object.freeze(
+		changes.map((change) => {
+			const normalized: NormalizedValueChange =
+				change.type === "set"
+					? createSetChange(change.path, cloneValue(change.value))
+					: createUnsetChange(change.path)
+			return freezeFormValue(normalized) as ValueChange<Input>
+		}),
+	)
+}
+
+function freezeRowIdentityChanges(
+	changes: readonly RowIdentityChange[],
+): readonly RowIdentityChange[] {
+	if (!Array.isArray(changes)) {
+		throw new TypeError("Row identity changes must be an array")
+	}
+
+	return Object.freeze(
+		changes.map((change) => {
+			if ("keys" in change) {
+				return Object.freeze({
+					...change,
+					keys: Object.freeze([...change.keys]),
+				})
+			}
+			if (change.type === "array/paths-reindexed") {
+				return Object.freeze({
+					...change,
+					paths: Object.freeze(
+						change.paths.map((pathChange: (typeof change.paths)[number]) =>
+							Object.freeze({ ...pathChange }),
+						),
+					),
+				})
+			}
+			return Object.freeze({ ...change })
+		}),
+	)
+}
+
+function assertSequence(sequence: number): void {
+	if (!Number.isSafeInteger(sequence) || sequence < 0) {
+		throw new TypeError(
+			"Document event sequence must be a non-negative integer",
+		)
+	}
+}

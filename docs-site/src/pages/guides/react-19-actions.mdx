@@ -32,7 +32,9 @@ the Action boundary from `form-please/react19`:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
 import { useActionState } from "react"
@@ -41,8 +43,11 @@ import { z } from "zod"
 const schema = z.object({
 	name: z.string().min(1, "Name is required"),
 })
-const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -65,13 +70,12 @@ function ProfileActionForm({
 	readonly saveProfile: SaveProfile
 }) {
 	const [result, action] = useActionState(saveProfile, undefined)
+	const form = kit.useCreateForm(definition, { defaultValues })
 
 	return (
 		<ActionForm
 			action={action}
-			defaultValues={defaultValues}
-			definition={definition}
-			kit={kit}
+			form={form}
 			result={result}
 		>
 			<ActionSubmit>Save profile</ActionSubmit>
@@ -80,9 +84,12 @@ function ProfileActionForm({
 }
 ```
 
-`ActionForm` keeps the supplied Action on the native form, renders the same
-definition as `AutoForm`, emits hidden serializer inputs when needed, and
-applies the returned `FormResult` after hydration.
+`ActionForm` gets the controls, slots, definition, and default values from the
+supplied form. It keeps the Action on the native form, emits hidden serializer
+inputs when needed, and applies the returned `FormResult` after hydration.
+
+`ActionForm` does not accept `kit`, `definition`, or `defaultValues` props.
+Create the form through `kit.createForm`, then pass that form to `ActionForm`.
 
 `ActionSubmit` is an unstyled native button. It combines React Action pending
 status with the disabled and submitting state from Form, Please.

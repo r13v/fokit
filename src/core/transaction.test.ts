@@ -464,6 +464,24 @@ describe("form value transactions", () => {
 			}),
 		).toThrow(/array/i)
 		expect(commandThrows.getValues()).toEqual(defaultValues)
+
+		for (const thrownValue of [undefined, null]) {
+			const nonErrorThrows = createAccountStore()
+			let caught = false
+			let caughtValue: unknown
+			try {
+				nonErrorThrows.batch(() => {
+					nonErrorThrows.setValue("profile.first", "Grace")
+					throw thrownValue
+				})
+			} catch (error) {
+				caught = true
+				caughtValue = error
+			}
+			expect(caught).toBe(true)
+			expect(caughtValue).toBe(thrownValue)
+			expect(nonErrorThrows.getValues()).toEqual(defaultValues)
+		}
 	})
 
 	it("rejects numeric-looking setValues patch keys without side effects", () => {

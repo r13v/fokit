@@ -1,11 +1,8 @@
 "use client"
 
-import {
-	createFormKit,
-	type FormInput,
-	type FormOutput,
-	nativeControls,
-} from "form-please"
+import { createFormKit, type FormInput, type FormOutput } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 // [!region schema]
@@ -48,12 +45,13 @@ export type ProfileOutput = FormOutput<typeof profileSchema>
 
 // [!region kit]
 export const kit = createFormKit({
-	controls: nativeControls,
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
 })
 // [!endregion kit]
 
 // [!region definition]
-export const profileDefinition = kit.defineForm(profileSchema)({
+export const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [
 		{
 			kind: "section",

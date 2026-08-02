@@ -1,0 +1,106 @@
+---
+title: Redux DevTools
+description: Inspect committed form events and use constrained local document time travel without adding Redux to the application.
+showAskAi: false
+---
+
+# Redux DevTools
+
+Use this optional feature to inspect committed form events during development.
+Form, Please connects directly to the Redux DevTools browser extension. It does
+not depend on Redux or `@redux-devtools/extension`.
+
+## First use
+
+Create the optional middleware with `createDevToolsMiddleware`:
+
+```ts
+// [!include ~/snippets/devtools-basics.tsx:first-use]
+```
+
+The feature is inert during SSR and when the extension is absent. One form can
+configure at most one DevTools feature.
+
+The feature connects only after the form completes its first retained React
+binding through `kit.useBindForm`, `kit.AutoForm`, or `ActionForm`. A form that is
+never bound does not open a listener. If you compose a manual `kit.Form`, call
+`kit.useBindForm(form, runtimeOptions)` in the component first.
+
+## Visible state and events
+
+The monitor receives every finalized `FormEvent`. Visible state contains the
+current values and logical row identity. An internal opaque revision token
+selects the exact immutable document from a bounded per-form table.
+
+`maxAge` controls the token table and defaults to `50`. It must be an integer
+greater than `1`. An expired token cannot restore a document. The feature
+reports the failure through the DevTools connection and keeps the live form
+unchanged.
+
+The feature supports the standard connection options `name`, `latency`,
+`maxAge`, `trace`, `traceLimit`, `serialize`, `actionSanitizer`,
+`stateSanitizer`, `actionsAllowlist`, `actionsDenylist`, `predicate`, and
+`autoPause`. The `autoPause` option defaults to `true`. `actionSanitizer`
+receives `(action, id)`. `stateSanitizer` receives the visible `(state, index)`.
+`predicate` receives `(state, action)`. The integration adds its protected
+revision token after `stateSanitizer` returns. Use `onError` to report
+connection, sanitizer, serialization, send, subscription, and message failures.
+
+## Constrained time travel
+
+The integration supports:
+
+- `JUMP_TO_STATE` and `JUMP_TO_ACTION`;
+- `RESET` to the initial document;
+- `ROLLBACK` to the last committed monitor baseline;
+- `COMMIT` to make the current monitor document the new monitor baseline.
+
+Each navigation command resolves a local token and submits one
+`document/restored` transaction. Application middleware can cancel or replace
+the restore. History records a successful DevTools restore as one group, and
+active persistence observes the committed document.
+
+The integration does not support arbitrary dispatch, skip, reorder, lifted
+state import, lock, persisted monitor state, or generated tests. It never
+trusts edited, sanitized, or serialized monitor state as form input.
+
+## Restore behavior
+
+A successful restore changes values and row identity together. It does not
+restore the dirty baseline, touched paths, issues, validation, submission,
+context, runtime options, or focus state. It bypasses value policies, hooks,
+schemas, automatic validation, and mutation callbacks.
+
+If middleware cancels a restore, the monitor returns to the actual live
+document. If middleware transforms a restore, the monitor accepts and displays
+the effective committed document.
+
+## Complete example
+
+This example configures the connection, reports integration errors, and offers
+an explicit disconnect action:
+
+```tsx
+// [!include ~/snippets/devtools.tsx]
+```
+
+Expected result: the extension shows form events and document state. Supported
+time-travel commands restore known local documents. The form continues to work
+when the extension is missing or after disconnect.
+
+Try the [live Redux DevTools workflow](/examples/devtools) to inspect the
+integration states and form behavior without leaving the site.
+
+## Cleanup and failures
+
+Call `devTools.disconnect()` only when the form's real owner ends its lifetime.
+The operation is idempotent and permanently removes the extension listener and
+form event listener for that form. Do not call it from an ordinary React effect
+cleanup because development Strict Mode replays effects. Form, Please does not
+expose a general form-disposal or middleware-cleanup lifecycle.
+
+`onError` is diagnostic. DevTools failures do not roll back form commits. Keep
+the form available and disable the integration after a transport failure.
+
+Read [History and journals](/guides/history) for user-facing navigation. Read
+[Persistence](/guides/persistence) when a document must survive a reload.

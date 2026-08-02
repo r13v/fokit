@@ -50,9 +50,10 @@ Create `basic-form.tsx` next to `form-kit.tsx`. Add this component:
 // [!include ~/snippets/basic-form.tsx]
 ```
 
-Render `<ProfileEditor />` in your application. `kit.AutoForm` creates the form
-instance and renders the definition. It also runs the selected validation
-lifecycle and passes `ProfileOutput` to `onSubmit`.
+Render `<ProfileEditor />` in your application. The component creates one local
+form with `kit.useCreateForm`. `kit.AutoForm` binds and renders that form. It
+also runs the selected validation lifecycle and passes `ProfileOutput` to
+`onSubmit`.
 
 ## Verify the completed form
 

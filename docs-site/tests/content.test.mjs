@@ -9,20 +9,36 @@ const siteRoot = new URL("../", import.meta.url)
 const repositoryRoot = new URL("../", siteRoot)
 
 const requiredDependencies = {
+	"@base-ui/react": "1.6.0",
+	"@emotion/react": "11.14.0",
+	"@emotion/styled": "11.14.1",
 	"@floating-ui/react": "0.27.20",
 	"@fontsource-variable/newsreader": "5.3.0",
 	"@heroicons/react": "2.2.0",
+	"@mui/material": "9.2.0",
 	"@tanstack/react-query": "5.101.4",
 	"@types/node": "26.1.2",
 	"@types/react": "19.2.17",
 	"@types/react-dom": "19.2.3",
+	"class-variance-authority": "0.7.1",
+	clsx: "2.1.1",
+	"date-fns": "4.4.0",
 	"form-please": "file:..",
+	"input-otp": "1.4.2",
+	"lucide-react": "1.28.0",
+	nuqs: "2.9.2",
 	react: "19.2.8",
+	"react-day-picker": "10.0.1",
 	"react-dom": "19.2.8",
+	tailwindcss: "4.3.3",
+	"tailwind-merge": "3.6.0",
+	"tw-animate-css": "1.4.0",
 	typescript: "6.0.3",
+	valibot: "1.4.2",
 	vite: "8.1.5",
 	vocs: "2.7.2",
 	waku: "1.0.0-beta.6",
+	yup: "1.7.1",
 	zod: "4.4.3",
 }
 
@@ -123,18 +139,61 @@ const canonicalPages = [
 			"Connect a Form, Please definition to a React 19 Action with safe FormData parsing, pending state, and serializable server errors.",
 	},
 	{
+		path: "src/pages/guides/history.mdx",
+		route: "/guides/history",
+		title: "History and journals",
+		description:
+			"Add undo, redo, seek, deterministic replay, and validated journal import and export to one form.",
+		navText: "History & journals",
+	},
+	{
+		path: "src/pages/guides/persistence.mdx",
+		route: "/guides/persistence",
+		title: "Persistence",
+		description:
+			"Hydrate and save a form document or history journal with versioned encoding, migration, codecs, and application-owned storage.",
+	},
+	{
+		path: "src/pages/guides/devtools.mdx",
+		route: "/guides/devtools",
+		title: "Redux DevTools",
+		description:
+			"Inspect committed form events and use constrained local document time travel without adding Redux to the application.",
+	},
+	{
 		path: "src/pages/advanced.mdx",
 		route: "/advanced",
 		title: "Production recipes",
 		description:
-			"Focused Form, Please patterns for manual composition, loaded edit forms, server safety, accessibility, and public-boundary tests.",
+			"Compose headless UI, load baselines, control middleware, protect FormData, preserve accessibility, and test the public form boundary.",
+	},
+	{
+		path: "src/pages/guides/core.mdx",
+		route: "/guides/core",
+		title: "React-free core",
+		description:
+			"Create, observe, validate, and update a Form, Please store without React rendering or React hooks.",
 	},
 	{
 		path: "src/pages/examples/index.mdx",
 		route: "/examples",
-		title: "Complex examples",
+		title: "Examples",
 		description:
-			"Explore six production-shaped forms that stress branching, arrays, workflows, custom UI, and fake TanStack Query requests without hiding state from Form, Please.",
+			"Explore an official Material UI preset, an application-owned shadcn adapter, production-shaped forms, and live state workflows.",
+	},
+	{
+		path: "src/pages/examples/mui-yup.mdx",
+		route: "/examples/mui-yup",
+		title: "Material UI with Yup",
+		description:
+			"Use the official Material UI preset to build and validate a conference proposal directly with Yup.",
+	},
+	{
+		path: "src/pages/examples/shadcn-valibot.mdx",
+		route: "/examples/shadcn-valibot",
+		title: "Shadcn with Valibot",
+		description:
+			"Install an application-owned Base UI adapter from the shadcn registry and validate a complete workshop proposal with Valibot.",
 	},
 	{
 		path: "src/pages/examples/research-grant.mdx",
@@ -183,11 +242,34 @@ const canonicalPages = [
 			"A create-or-edit campaign form with seven conditional templates, shared audience and scheduling, payment variants, transactional cleanup, and fake mutations.",
 	},
 	{
+		path: "src/pages/examples/history.mdx",
+		route: "/examples/history",
+		title: "History workflow",
+		description:
+			"Add undo, redo, seek, journal export, pure replay, and validated import to the profile form from get-started.",
+	},
+	{
+		path: "src/pages/examples/persistence.mdx",
+		route: "/examples/persistence",
+		title: "Persistent draft workflow",
+		navText: "Persistent draft",
+		description:
+			"Restore, observe, save, and delete a versioned localStorage draft for the profile form from get-started.",
+	},
+	{
+		path: "src/pages/examples/devtools.mdx",
+		route: "/examples/devtools",
+		title: "Redux DevTools workflow",
+		navText: "DevTools workflow",
+		description:
+			"Use Redux DevTools to inspect committed form events and restore known local documents in the profile form from get-started.",
+	},
+	{
 		path: "src/pages/api.mdx",
 		route: "/api",
 		title: "API",
 		description:
-			"Signatures, defaults, and entry-point boundaries for the public React, core, server, and React 19 APIs in Form, Please.",
+			"Signatures, defaults, results, and entry-point boundaries for React forms, core transactions, history, persistence, Redux DevTools, and server parsing.",
 	},
 	{
 		path: "src/pages/types.mdx",
@@ -209,15 +291,44 @@ const canonicalPages = [
 const publicApiTerms = [
 	"createFormKit",
 	"createDefaultSlots",
-	"nativeControls",
+	"createNativeControls",
+	"createMuiFormKit",
+	"nativeFormKit",
 	"defineControl",
-	"useForm",
+	"useCreateForm",
+	"useBindForm",
+	"useSnapshot",
 	"FormInstance",
 	"parseFormData",
 	"ActionForm",
+	"createHistoryMiddleware",
+	"createPersistenceMiddleware",
+	"createDevToolsMiddleware",
 ]
 
 const canonicalSnippets = [
+	{
+		target: "src/snippets/mui-yup-conference.tsx",
+		include: "~/snippets/mui-yup-conference.tsx",
+		terms: [
+			"MuiYupConferenceExample",
+			'from "yup"',
+			"createMuiFormKit",
+			'control: "autocomplete-multiple"',
+			'control: "slider"',
+		],
+	},
+	{
+		target: "src/snippets/shadcn-valibot-workshop.tsx",
+		include: "~/snippets/shadcn-valibot-workshop.tsx",
+		terms: [
+			"ShadcnValibotWorkshopExample",
+			'from "valibot"',
+			'control: "rangeSlider"',
+			'control: "dateRangePicker"',
+			'control: "inputOtp"',
+		],
+	},
 	{
 		target: "src/snippets/lab-profile-form.tsx",
 		include: "~/snippets/lab-profile-form.tsx",
@@ -227,6 +338,61 @@ const canonicalSnippets = [
 		target: "src/snippets/form-kit.tsx",
 		include: "~/snippets/form-kit.tsx",
 		terms: ["createFormKit", "visible:", "profileSchema"],
+	},
+	{
+		target: "src/snippets/zod-error-messages.ts",
+		include: "~/snippets/zod-error-messages.ts",
+		terms: ["z.config", "customError", "return undefined"],
+	},
+	{
+		target: "src/snippets/api-reference.tsx",
+		include: "~/snippets/api-reference.tsx",
+		terms: [
+			"createFormKit",
+			"FormCommand",
+			"createPersistenceMiddleware",
+			"createDevToolsMiddleware",
+		],
+	},
+	{
+		target: "src/snippets/core-store.ts",
+		include: "~/snippets/core-store.ts",
+		terms: [
+			"normalizeDefinition",
+			"createFormStore",
+			"store.subscribe",
+			"store.setValue",
+			"store.validate",
+		],
+	},
+	{
+		target: "src/snippets/production-recipes.tsx",
+		include: "~/snippets/production-recipes.tsx",
+		terms: ["DirtyStatus", "ProfileEditor", "FormMiddleware", "parseFormData"],
+	},
+	{
+		target: "src/snippets/async-fields-permission.tsx",
+		include: "~/snippets/async-fields-permission.tsx",
+		terms: ["PermissionForm", "matchResource", "ResourceState"],
+	},
+	{
+		target: "src/snippets/history-basics.tsx",
+		include: "~/snippets/history-basics.tsx",
+		terms: ["createHistoryMiddleware", "replayJournal", "history.import"],
+	},
+	{
+		target: "src/snippets/persistence-basics.tsx",
+		include: "~/snippets/persistence-basics.tsx",
+		terms: [
+			"createPersistenceMiddleware",
+			"createLocalStorageAdapter",
+			"historyPersistenceFeature",
+		],
+	},
+	{
+		target: "src/snippets/devtools-basics.tsx",
+		include: "~/snippets/devtools-basics.tsx",
+		terms: ["createDevToolsMiddleware", "devToolsFeature.handle"],
 	},
 	{
 		target: "src/snippets/basic-form.tsx",
@@ -278,7 +444,7 @@ const canonicalSnippets = [
 		include: "~/snippets/complex-studio-policies.tsx",
 		terms: [
 			"StudioPoliciesExample",
-			"withContext",
+			"forContext",
 			"equipment",
 			"fromResource",
 			"queryToResource",
@@ -326,6 +492,36 @@ const canonicalSnippets = [
 			"clearInactiveTemplate",
 			"createCampaign",
 		],
+	},
+	{
+		target: "src/snippets/history.tsx",
+		include: "~/snippets/history.tsx",
+		terms: [
+			"createHistoryMiddleware",
+			"replayJournal",
+			"history.import",
+			'from "./lab-profile-form"',
+		],
+	},
+	{
+		target: "src/snippets/persistence-local-storage.tsx",
+		include: "~/snippets/persistence-local-storage.tsx",
+		terms: ["createLocalStorageAdapter", "persistence.restore", "flush"],
+	},
+	{
+		target: "src/snippets/persistence-nuqs.ts",
+		include: "~/snippets/persistence-nuqs.ts",
+		terms: ["useQueryState", "FormPersistenceAdapter", "parseAsJson"],
+	},
+	{
+		target: "src/snippets/persistence-tanstack-query.ts",
+		include: "~/snippets/persistence-tanstack-query.ts",
+		terms: ["QueryClient", "FormPersistenceAdapter", "fetchQuery"],
+	},
+	{
+		target: "src/snippets/devtools.tsx",
+		include: "~/snippets/devtools.tsx",
+		terms: ["createDevToolsMiddleware", "disconnect", "maxAge"],
 	},
 ]
 
@@ -398,6 +594,33 @@ const complexExampleCases = [
 	},
 ]
 
+const stateWorkflowExampleCases = [
+	{
+		slug: "history",
+		component: "HistoryDemo",
+		client: "HistoryDemoClient",
+		snippet: "history.tsx",
+		exportName: "HistoryExample",
+		packageEntry: "history",
+		terms: ["createHistoryMiddleware", "replayJournal", "history.import"],
+	},
+	{
+		slug: "persistence",
+		component: "PersistenceDemo",
+		client: "PersistenceDemoClient",
+		snippet: "persistence-local-storage.tsx",
+		exportName: "LocalStoragePersistenceExample",
+		packageEntry: "persistence",
+		terms: [
+			"createPersistenceMiddleware",
+			"createLocalStorageAdapter",
+			"persistence.restore",
+			"persistence.flush",
+			'from "./lab-profile-form"',
+		],
+	},
+]
+
 const supersededRepositoryFiles = [
 	"docs/getting-started.md",
 	"docs/controls.md",
@@ -424,7 +647,7 @@ const requiredCorePageContent = {
 			"UI definition owns structure",
 			"Your kit owns rendering",
 			"OverviewDemo",
-			"nativeControls",
+			"nativeFormKit",
 			"kit.AutoForm",
 		],
 	},
@@ -439,8 +662,7 @@ const requiredCorePageContent = {
 			"Choose your next step",
 		],
 		terms: [
-			"createFormKit",
-			"nativeControls",
+			"nativeFormKit",
 			"createDefaultSlots",
 			"kit.AutoForm",
 			"Standard Schema",
@@ -451,11 +673,22 @@ const requiredCorePageContent = {
 		headings: [
 			"Entry points",
 			"createFormKit",
+			"nativeFormKit",
+			"createMuiFormKit",
 			"kit.defineForm",
-			"AutoForm",
-			"useForm",
+			"kit.createForm",
+			"kit.useCreateForm",
+			"kit.useBindForm",
+			"Form and AutoForm",
 			"Hooks",
 			"FormInstance",
+			"Commands",
+			"Transactions",
+			"Events",
+			"Middleware",
+			"History",
+			"Persistence",
+			"Redux DevTools",
 			"defineControl",
 			"createDefaultSlots",
 			"parseFormData",
@@ -466,6 +699,17 @@ const requiredCorePageContent = {
 			"form-please/core",
 			"form-please/server",
 			"form-please/react19",
+			"form-please/history",
+			"form-please/persistence",
+			"form-please/devtools",
+			"form-please/preset-native",
+			"form-please/preset-mui",
+			"CreateFormOptions",
+			"FormRuntimeOptions",
+			"FormCommand",
+			"FormTransaction",
+			"FormEvent",
+			"feature.handle(form)",
 			"kit.defineForm",
 			"kit.AutoForm",
 			"kit.Fields",
@@ -517,6 +761,9 @@ const requiredCorePageContent = {
 			"Choose a focused guide",
 			"Compose generated and bespoke UI",
 			"Load an edit-form baseline",
+			"Middleware protocol",
+			"Restore boundary",
+			"Preserve application-owned immutable values",
 			"Treat FormData as untrusted",
 			"Preserve the accessibility contract",
 			"Test the public experience",
@@ -528,6 +775,9 @@ const requiredCorePageContent = {
 			"form.reset(profile)",
 			"parseFormData",
 			"FormResult",
+			"field/blurred",
+			"api.dispatch",
+			"File",
 		],
 	},
 	"src/pages/faqs.mdx": {
@@ -548,7 +798,7 @@ const requiredCorePageContent = {
 			"Does Form, Please provide wizards or autosave?",
 		],
 		terms: [
-			"nativeControls",
+			"createNativeControls",
 			"createDefaultSlots",
 			"defineControl",
 			"Standard Schema",
@@ -560,6 +810,87 @@ const requiredCorePageContent = {
 }
 
 const requiredGuidePageContent = {
+	"src/pages/guides/core.mdx": {
+		headings: [
+			"Choose the core boundary",
+			"Create a definition and store",
+			"Observe focused state",
+			"Update and validate",
+			"Use the standalone helpers",
+			"Know the public limits",
+		],
+		terms: [
+			"form-please/core",
+			"normalizeDefinition",
+			"createFormStore",
+			"resolvedUi",
+			"~/snippets/core-store.ts",
+		],
+	},
+	"src/pages/guides/history.mdx": {
+		headings: [
+			"First use",
+			"State ownership",
+			"Groups and retention",
+			"Undo, redo, and seek",
+			"Replay, export, and import",
+			"Complete example",
+			"Interactions and limits",
+		],
+		terms: [
+			"createHistoryMiddleware",
+			"historyFeature.handle(form)",
+			"replayJournal",
+			'"cancelled"',
+			'"transformed"',
+			"~/snippets/history.tsx",
+			"/examples/history",
+		],
+	},
+	"src/pages/guides/persistence.mdx": {
+		headings: [
+			"First use with localStorage",
+			"Hydration lifecycle",
+			"Save state and operations",
+			"Document mode and history mode",
+			"Encoding, codecs, and migration",
+			"Complete localStorage example",
+			"nuqs query-string transport",
+			"TanStack Query server transport",
+			"What persistence does not restore",
+		],
+		terms: [
+			"createPersistenceMiddleware",
+			"createLocalStorageAdapter",
+			"saveDelay",
+			"migrate",
+			"createDateCodec",
+			"createFileCodec",
+			"~/snippets/persistence-local-storage.tsx",
+			"~/snippets/persistence-nuqs.ts",
+			"~/snippets/persistence-tanstack-query.ts",
+			"/examples/persistence",
+		],
+	},
+	"src/pages/guides/devtools.mdx": {
+		headings: [
+			"First use",
+			"Visible state and events",
+			"Constrained time travel",
+			"Restore behavior",
+			"Complete example",
+			"Cleanup and failures",
+		],
+		terms: [
+			"createDevToolsMiddleware",
+			"JUMP_TO_STATE",
+			"ROLLBACK",
+			"maxAge",
+			"disconnect()",
+			"~/snippets/devtools.tsx",
+			"/examples/devtools",
+		],
+	},
 	"src/pages/guides/ui-definitions.mdx": {
 		headings: [
 			"Read the tree at a glance",
@@ -572,6 +903,8 @@ const requiredGuidePageContent = {
 			"Know the generated boundary",
 		],
 		terms: [
+			"data-testid",
+			"testId",
 			"relative child paths",
 			"itemDefault",
 			"resolver function",
@@ -600,6 +933,7 @@ const requiredGuidePageContent = {
 	"src/pages/guides/validation.mdx": {
 		headings: [
 			"Start with the default",
+			"Set default Zod messages",
 			"Understand error visibility",
 			"Install server errors",
 			"Validate deliberately",
@@ -608,6 +942,8 @@ const requiredGuidePageContent = {
 		terms: [
 			'revalidateMode: "change"',
 			"asyncDebounceMs",
+			"~/snippets/zod-error-messages.ts",
+			"https://zod.dev/error-customization",
 			"setErrors",
 			"clearErrors",
 			"meta.displayErrors",
@@ -668,12 +1004,13 @@ const requiredGuidePageContent = {
 			"Choose the smallest integration",
 			"Wrap a product input",
 			"Preserve the control contract",
+			"Keep access to the control element",
 			"Choose a FormData mode",
 			"Native controls",
 			"Replace structural slots",
 		],
 		terms: [
-			"nativeControls",
+			"createNativeControls",
 			"defineControl",
 			'mode: "native"',
 			"createDefaultSlots",
@@ -729,11 +1066,14 @@ const requiredGuidePageContent = {
 		headings: [
 			"Import responsive structure",
 			"Add a product class",
+			"Resolve Tailwind classes from form values",
 			"Copy a visual baseline",
 			"Style public states",
 			"Replace markup when selectors are not enough",
 		],
 		terms: [
+			"TailwindProfileDemo",
+			"tailwind-class-name",
 			"form-please/layout.css",
 			"--fp-column-gap",
 			"data-fp-node",
@@ -886,7 +1226,7 @@ test("docs package uses the Vocs shell scripts and dependencies", async () => {
 	const packageJson = await readJson("package.json")
 
 	assert.deepEqual(packageJson.scripts, {
-		dev: "vocs dev",
+		dev: `portless fp sh -c 'vocs dev --port "$PORT" --host "$HOST"'`,
 		build: "vocs build",
 		postbuild: "node ../scripts/fix-vocs-skip-links.mjs",
 		preview: "vocs preview",
@@ -951,8 +1291,12 @@ test("docs TypeScript and verification gates are wired", async () => {
 		"npm run site:verify:preview && npm run site:verify:production",
 	)
 	assert.equal(
+		rootPackageJson.scripts["test:registry"],
+		"node scripts/verify-shadcn-registry.mjs",
+	)
+	assert.equal(
 		rootPackageJson.scripts.verify,
-		"npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:smoke && npm run package:check && npm run knip",
+		"npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:registry && npm run test:smoke && npm run package:check && npm run knip",
 	)
 	assert.equal(rootPackageJson.scripts.verify.includes("test:docs"), false)
 	assert.deepEqual(knipConfig.workspaces["docs-site"].entry, [
@@ -967,6 +1311,10 @@ test("docs TypeScript and verification gates are wired", async () => {
 		"src/**/*.{js,jsx,mjs,ts,tsx,mdx,css}",
 	])
 	assert.equal(typeof knipConfig.compilers.css, "function")
+	assert.match(
+		knipConfig.compilers.css('@import "tailwindcss/utilities.css";'),
+		/import "tailwindcss"/,
+	)
 	assert.equal(knipConfig.compilers.mdx, true)
 	assert.deepEqual(knipConfig.ignoreFiles, [])
 	assert.match(gitignore, /^docs-site\/\.vocs\/$/m)
@@ -997,7 +1345,6 @@ test("Interactive Lab uses Vocs components and public Form, Please defaults", as
 	assert.match(wrapper, /from "\.\/interactive-lab\.client"/)
 	assert.match(wrapper, /toMarkdown/)
 	assert.match(wrapper, /Interactive Form, Please Lab runs only in a browser/)
-	assert.match(wrapper, /createFormKit\(\{ controls: nativeControls \}\)/)
 	assert.match(wrapper, /from "\.\/markdown-fallback"/)
 	assert.match(
 		wrapper,
@@ -1019,7 +1366,8 @@ test("Interactive Lab uses Vocs components and public Form, Please defaults", as
 	assert.match(snippet, /^"use client"/)
 	assert.match(snippet, /createDefaultSlots/)
 	assert.match(snippet, /createFormKit/)
-	assert.match(snippet, /controls:\s*nativeControls/)
+	assert.match(snippet, /controls:\s*createNativeControls\(\)/)
+	assert.match(snippet, /slots:\s*createDefaultSlots\(/)
 	assert.match(snippet, /arrayAdd:\s*"Add contact"/)
 	assert.match(snippet, /Move contact \$\{position\} up/)
 	assert.match(snippet, /Move contact \$\{position\} down/)
@@ -1038,6 +1386,36 @@ test("Interactive Lab uses Vocs components and public Form, Please defaults", as
 	assert.match(getStarted, /<InteractiveLab \/>/)
 })
 
+test("styling shows a live Tailwind resolver on the shared profile form", async () => {
+	const wrapper = await readText("src/components/tailwind-profile-demo.tsx")
+	const client = await readText(
+		"src/components/tailwind-profile-demo.client.tsx",
+	)
+	const snippet = await readText("src/snippets/lab-profile-form.tsx")
+	const styling = await readText("src/pages/guides/styling.mdx")
+	const rootCss = await readText("src/pages/_root.css")
+
+	assert.match(wrapper, /from "\.\/tailwind-profile-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(wrapper, /from "\.\/markdown-fallback"/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/lab-profile-form"/)
+	assert.match(client, /profileDefinition/)
+	assert.doesNotMatch(client, /kit\.defineForm/)
+	assert.match(snippet, /className:\s*\(\{ accountType \}\) =>/)
+	assert.match(snippet, /return "rounded-2xl border border-amber-300/)
+	assert.match(snippet, /return "rounded-2xl border border-emerald-300/)
+	assert.match(styling, /<TailwindProfileDemo \/>/)
+	assert.match(
+		styling,
+		/~\/snippets\/lab-profile-form\.tsx:tailwind-class-name/,
+	)
+	assert.match(rootCss, /tailwindcss\/theme\.css/)
+	assert.match(rootCss, /tailwindcss\/utilities\.css/)
+	assert.match(rootCss, /@custom-variant dark/)
+	assert.doesNotMatch(rootCss, /tailwindcss\/preflight\.css/)
+})
+
 test("overview proves the public Form, Please loop with a live typed form", async () => {
 	const wrapper = await readText("src/components/overview-demo.tsx")
 	const client = await readText("src/components/overview-demo.client.tsx")
@@ -1052,8 +1430,9 @@ test("overview proves the public Form, Please loop with a live typed form", asyn
 		/docs-site\/src\/components\/overview-demo\.client\.tsx/,
 	)
 	assert.match(client, /^"use client"/)
-	assert.match(client, /createFormKit/)
-	assert.match(client, /controls:\s*nativeControls/)
+	assert.match(client, /nativeFormKit as kit/)
+	assert.match(client, /form-please\/preset-native/)
+	assert.match(client, /kit\.useCreateForm/)
 	assert.match(client, /type:\s*"email"/)
 	assert.match(client, /FormOutput<typeof profileSchema>/)
 	assert.match(client, /onSubmit=\{\(\{ value \}\) => setSaved\(value\)\}/)
@@ -1093,6 +1472,140 @@ test("async multiselect guide runs the same typed Floating UI and TanStack Query
 	assert.match(snippet, /QueryClientProvider/)
 	assert.match(guide, /<AsyncMultiSelectDemo \/>/)
 	assert.match(guide, /~\/snippets\/async-multiselect\.tsx/)
+})
+
+test("shadcn registry example keeps the adapter application-owned and Valibot-backed", async () => {
+	const registry = await readRepositoryJson("registry.json")
+	const adapter = await readText(
+		"src/components/ui/form-please/shadcn-form-kit.tsx",
+	)
+	const wrapper = await readText(
+		"src/components/shadcn-valibot-workshop-demo.tsx",
+	)
+	const client = await readText(
+		"src/components/shadcn-valibot-workshop-demo.client.tsx",
+	)
+	const snippet = await readText("src/snippets/shadcn-valibot-workshop.tsx")
+	const page = await readText("src/pages/examples/shadcn-valibot.mdx")
+	const index = await readText("src/pages/examples/index.mdx")
+	const rootCss = await readText("src/pages/_root.css")
+	const [item] = registry.items
+	const controls = [
+		"text",
+		"textarea",
+		"select",
+		"checkbox",
+		"number",
+		"date",
+		"time",
+		"file",
+		"radio",
+		"switch",
+		"slider",
+		"rangeSlider",
+		"multiSlider",
+		"combobox",
+		"multiCombobox",
+		"datePicker",
+		"dateRangePicker",
+		"inputOtp",
+	]
+
+	assert.equal(registry.name, "form-please")
+	assert.equal(item.name, "shadcn-form-kit")
+	assert.equal(item.type, "registry:item")
+	assert.deepEqual(item.files, [
+		{
+			path: "docs-site/src/components/ui/form-please/shadcn-form-kit.tsx",
+			type: "registry:component",
+			target: "@ui/form-please/shadcn-form-kit.tsx",
+		},
+	])
+	assert.equal(item.dependencies.includes("form-please@1.1.0"), true)
+	assert.equal(item.registryDependencies.includes("utils"), true)
+	assert.match(item.docs, /Base UI/)
+	for (const control of controls) {
+		assert.match(adapter, new RegExp(`\\n\\t${control}: defineControl<`))
+		assert.match(page, new RegExp(`\\b${control}\\b`))
+	}
+
+	assert.match(wrapper, /from "\.\/shadcn-valibot-workshop-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/shadcn-valibot-workshop"/)
+	assert.match(snippet, /import \* as v from "valibot"/)
+	assert.match(snippet, /kit\.defineForm\(workshopSchema/)
+	assert.match(snippet, /kit\.AutoForm/)
+	assert.doesNotMatch(snippet, /from "zod"/)
+	assert.match(adapter, /className="!size-4 self-start"/)
+	assert.match(adapter, /itemToStringLabel=/)
+	assert.match(rootCss, /@custom-variant data-horizontal/)
+	assert.match(rootCss, /@custom-variant data-vertical/)
+	assert.match(
+		page,
+		/npx shadcn@latest add r13v\/form-please\/shadcn-form-kit#v1\.1\.0/,
+	)
+	assert.match(page, /application-owned/)
+	assert.match(page, /Base UI/)
+	assert.match(page, /<ShadcnValibotWorkshopDemo \/>/)
+	assert.match(page, /~\/snippets\/shadcn-valibot-workshop\.tsx/)
+	assert.match(index, /\/examples\/shadcn-valibot/)
+})
+
+test("Material UI preset example uses the public factory and direct Yup Standard Schema", async () => {
+	const wrapper = await readText("src/components/mui-yup-conference-demo.tsx")
+	const client = await readText(
+		"src/components/mui-yup-conference-demo.client.tsx",
+	)
+	const snippet = await readText("src/snippets/mui-yup-conference.tsx")
+	const page = await readText("src/pages/examples/mui-yup.mdx")
+	const index = await readText("src/pages/examples/index.mdx")
+	const controls = [
+		"text",
+		"textarea",
+		"password",
+		"email",
+		"url",
+		"tel",
+		"search",
+		"number",
+		"date",
+		"time",
+		"datetime-local",
+		"select",
+		"select-multiple",
+		"radio",
+		"checkbox",
+		"switch",
+		"autocomplete",
+		"autocomplete-multiple",
+		"file",
+		"files",
+		"slider",
+		"range-slider",
+	]
+
+	assert.match(wrapper, /from "\.\/mui-yup-conference-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(wrapper, /docs-site\/src\/snippets\/mui-yup-conference\.tsx/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/mui-yup-conference"/)
+	assert.match(snippet, /from "form-please\/preset-mui"/)
+	assert.match(snippet, /import \* as yup from "yup"/)
+	assert.match(snippet, /createMuiFormKit\(\)/)
+	assert.match(snippet, /kit\.defineForm\(conferenceSchema/)
+	assert.match(snippet, /\.transform\(/)
+	assert.match(snippet, /workshop-experience/)
+	assert.match(snippet, /ThemeProvider/)
+	assert.match(snippet, /dataset\.vocsTheme/)
+	assert.doesNotMatch(snippet, /from "zod"/)
+	assert.doesNotMatch(snippet, /resolver/i)
+	assert.match(page, /<MuiYupConferenceDemo \/>/)
+	assert.match(page, /@mui\/material @emotion\/react @emotion\/styled yup/)
+	assert.match(index, /Material UI with Yup/)
+	for (const control of controls) {
+		assert.match(page, new RegExp(`\\b${control.replace("-", "\\-")}\\b`))
+	}
 })
 
 test("six complex examples stay public, documented, networked, and independent", async () => {
@@ -1148,6 +1661,82 @@ test("six complex examples stay public, documented, networked, and independent",
 	const index = await readText("src/pages/examples/index.mdx")
 	for (const example of complexExampleCases) {
 		assert.match(index, new RegExp(`\\/examples\\/${example.slug}`))
+	}
+})
+
+test("Redux DevTools example runs the same public integration that it documents", async () => {
+	const wrapper = await readText("src/components/devtools-demo.tsx")
+	const client = await readText("src/components/devtools-demo.client.tsx")
+	const snippet = await readText("src/snippets/devtools.tsx")
+	const page = await readText("src/pages/examples/devtools.mdx")
+	const index = await readText("src/pages/examples/index.mdx")
+
+	assert.match(wrapper, /from "\.\/devtools-demo\.client"/)
+	assert.match(wrapper, /toMarkdown/)
+	assert.match(wrapper, /from "\.\/markdown-fallback"/)
+	assert.match(wrapper, /docs-site\/src\/snippets\/devtools\.tsx/)
+	assert.match(client, /^"use client"/)
+	assert.match(client, /from "\.\.\/snippets\/devtools"/)
+	assert.match(snippet, /from "form-please\/devtools"/)
+	assert.match(snippet, /createDevToolsMiddleware/)
+	assert.match(snippet, /middleware:\s*\[devToolsFeature\]/)
+	assert.match(snippet, /devTools\.disconnect\(\)/)
+	assert.match(snippet, /from "\.\/lab-profile-form"/)
+	assert.doesNotMatch(snippet, /kit\.defineForm|createFormKit|from "zod"/)
+	assert.match(page, /<DevToolsDemo \/>/)
+	assert.match(page, /~\/snippets\/devtools\.tsx/)
+	assert.match(index, /\/examples\/devtools/)
+	assert.doesNotMatch(snippet, /from "(?:\.\.\/)+src\//)
+})
+
+test("History and Persistence examples run the public workflows that they document", async () => {
+	const index = await readText("src/pages/examples/index.mdx")
+
+	for (const example of stateWorkflowExampleCases) {
+		const wrapper = await readText(`src/components/${example.slug}-demo.tsx`)
+		const client = await readText(
+			`src/components/${example.slug}-demo.client.tsx`,
+		)
+		const snippet = await readText(`src/snippets/${example.snippet}`)
+		const page = await readText(`src/pages/examples/${example.slug}.mdx`)
+
+		assert.match(
+			wrapper,
+			new RegExp(`from "\\./${example.slug}-demo\\.client"`),
+		)
+		assert.match(wrapper, /toMarkdown/)
+		assert.match(wrapper, /from "\.\/markdown-fallback"/)
+		assert.match(
+			wrapper,
+			new RegExp(`docs-site/src/snippets/${escapeRegExp(example.snippet)}`),
+		)
+		assert.match(client, /^"use client"/)
+		assert.match(
+			client,
+			new RegExp(
+				`from "\\.\\./snippets/${escapeRegExp(example.snippet.replace(/\.tsx$/, ""))}"`,
+			),
+		)
+		assert.match(client, new RegExp(example.client))
+		assert.match(
+			snippet,
+			new RegExp(`from "form-please/${example.packageEntry}"`),
+		)
+		assert.match(snippet, new RegExp(`export function ${example.exportName}`))
+		assert.match(page, new RegExp(`<${example.component} />`))
+		assert.match(
+			page,
+			new RegExp(`~/snippets/${escapeRegExp(example.snippet)}`),
+		)
+		assert.match(index, new RegExp(`/examples/${example.slug}`))
+
+		for (const term of example.terms) {
+			assert.match(snippet, new RegExp(escapeRegExp(term)))
+		}
+
+		assert.doesNotMatch(snippet, /kit\.defineForm|createFormKit|from "zod"/)
+		assert.doesNotMatch(snippet, /from "(?:\.\.\/)+src\//)
+		assert.doesNotMatch(`${wrapper}\n${client}\n${page}`, /[А-Яа-яЁё]/)
 	}
 })
 
@@ -1234,6 +1823,7 @@ test("published code examples use explicit branches instead of ternaries", async
 		...(await listFiles("src/snippets/")),
 		"src/components/interactive-lab.client.tsx",
 		"src/components/overview-demo.client.tsx",
+		"src/components/tailwind-profile-demo.client.tsx",
 	].filter((file) => /\.[jt]sx?$/.test(file))
 
 	for (const file of sourceFiles) {
@@ -1292,7 +1882,12 @@ test("Vocs config defines the static English documentation shell", async () => {
 		source,
 		/baseUrl:\s*process\.env\.BASE_URL\s*\?\?\s*"https:\/\/r13v\.github\.io"/,
 	)
-	assert.match(source, /basePath:\s*process\.env\.BASE_PATH\s*\?\?\s*"\/"/)
+	assert.match(
+		source,
+		/const basePath\s*=\s*process\.env\.BASE_PATH\s*\?\?\s*"\/"/,
+	)
+	assert.match(source, /iconUrl:\s*`\$\{assetBasePath\}\/favicon\.ico`/)
+	assert.match(source, /\bbasePath,/)
 	assert.match(source, /renderStrategy:\s*"full-static"/)
 	assert.match(source, /checkDeadlinks:\s*true/)
 	assert.match(source, /socials:\s*\[\s*\{\s*icon:\s*"github"/)
@@ -1338,7 +1933,14 @@ test("sidebar follows the learning path before reference material", async () => 
 	const controls = source.indexOf('link: "/guides/controls"')
 	const asyncMultiselect = source.indexOf('link: "/guides/async-multiselect"')
 	const asyncFields = source.indexOf('link: "/guides/async-fields"')
+	const history = source.indexOf('link: "/guides/history"')
+	const persistence = source.indexOf('link: "/guides/persistence"')
+	const devtools = source.indexOf('link: "/guides/devtools"')
+	const core = source.indexOf('link: "/guides/core"')
 	const complexExamples = source.indexOf('link: "/examples"')
+	const historyExample = source.indexOf('link: "/examples/history"')
+	const persistenceExample = source.indexOf('link: "/examples/persistence"')
+	const devtoolsExample = source.indexOf('link: "/examples/devtools"')
 	const api = source.indexOf('link: "/api"')
 	const types = source.indexOf('link: "/types"')
 
@@ -1353,7 +1955,14 @@ test("sidebar follows the learning path before reference material", async () => 
 		controls,
 		asyncMultiselect,
 		asyncFields,
+		history,
+		persistence,
+		devtools,
+		core,
 		complexExamples,
+		historyExample,
+		persistenceExample,
+		devtoolsExample,
 		api,
 		types,
 	]) {
@@ -1369,8 +1978,15 @@ test("sidebar follows the learning path before reference material", async () => 
 	assert.ok(arrays < controls)
 	assert.ok(controls < asyncMultiselect)
 	assert.ok(asyncMultiselect < asyncFields)
-	assert.ok(asyncFields < complexExamples)
-	assert.ok(complexExamples < api)
+	assert.ok(asyncFields < history)
+	assert.ok(history < persistence)
+	assert.ok(persistence < devtools)
+	assert.ok(devtools < core)
+	assert.ok(core < complexExamples)
+	assert.ok(complexExamples < historyExample)
+	assert.ok(historyExample < persistenceExample)
+	assert.ok(persistenceExample < devtoolsExample)
+	assert.ok(devtoolsExample < api)
 	assert.ok(api < types)
 })
 
@@ -1419,18 +2035,17 @@ test("API shell keeps public exports discoverable", async () => {
 
 test("classic submit docs explain the async lifecycle", async () => {
 	const readme = await readRepositoryText("README.md")
-	const tutorial = await readRepositoryText("docs/tutorial.ru.md")
 	const getStarted = await readText("src/pages/get-started.mdx")
 	const api = await readText("src/pages/api.mdx")
 
-	for (const source of [readme, tutorial, getStarted, api]) {
+	for (const source of [readme, getStarted, api]) {
 		assert.match(source, /Promise<void>/)
 		assert.match(source, /form\.reset\(\.\.\.\)/)
 	}
 
 	assert.match(getStarted, /isSubmitting` set to `true`/)
 	assert.match(getStarted, /do not call `onSubmit` again/)
-	assert.match(api, /rejected promise into a form issue/)
+	assert.match(api, /rejected promise does not become a form issue/)
 	assert.match(api, /`form\.submit\(\)` uses the same lifecycle/)
 })
 
@@ -1547,7 +2162,8 @@ test("Vocs root page and root CSS replace the custom app shell", async () => {
 	assert.match(page, /^---\ntitle: Form, Please\ndescription: /)
 	assert.match(page, /# Build forms with ease/)
 	assert.match(page, /<OverviewDemo \/>/)
-	assert.match(page, /createFormKit\(\{\s*controls: nativeControls/)
+	assert.match(page, /nativeFormKit as kit/)
+	assert.match(page, /form-please\/preset-native/)
 	assert.match(page, /kit\.AutoForm/)
 	assert.match(
 		page,
@@ -1586,7 +2202,7 @@ test("bespoke SPA files and temporary migration content are removed", async () =
 		const source = await readText(file)
 		assert.doesNotMatch(
 			source,
-			/content\.js|LOCALES|#\/|locale-switch|form-please\.docs\.locale|localStorage/,
+			/content\.js|LOCALES|#\/|locale-switch|form-please\.docs\.locale/,
 		)
 		assert.doesNotMatch(source, /@phosphor-icons\/react|syntaxPattern/)
 	}
@@ -1594,7 +2210,6 @@ test("bespoke SPA files and temporary migration content are removed", async () =
 
 test("superseded public guides and example copies are deleted", async () => {
 	const readme = await readRepositoryText("README.md")
-	const tutorial = await readRepositoryText("docs/tutorial.ru.md")
 
 	for (const file of supersededRepositoryFiles) {
 		assert.equal(
@@ -1603,7 +2218,6 @@ test("superseded public guides and example copies are deleted", async () => {
 			`${file} should be removed after Vocs parity passes`,
 		)
 		assert.doesNotMatch(readme, new RegExp(escapeRegExp(file)))
-		assert.doesNotMatch(tutorial, new RegExp(escapeRegExp(file)))
 	}
 
 	assert.match(readme, /https:\/\/r13v\.github\.io\/form-please\/get-started/)
@@ -1617,12 +2231,12 @@ test("superseded public guides and example copies are deleted", async () => {
 		/Kudos to \[Evgeniy Ivaha\]\(https:\/\/github\.com\/ivahaev\) for the idea and the\s+example implementation\./,
 	)
 	assert.match(
-		tutorial,
+		readme,
 		/https:\/\/r13v\.github\.io\/form-please\/guides\/tutorial/,
 	)
-	assert.match(tutorial, /docs-site\/src\/snippets\/form-kit\.tsx/)
-	assert.match(tutorial, /docs-site\/src\/snippets\/basic-form\.tsx/)
-	assert.match(tutorial, /docs-site\/src\/snippets\/server-action\.ts/)
+	assert.match(readme, /docs-site\/src\/snippets\/form-kit\.tsx/)
+	assert.match(readme, /docs-site\/src\/snippets\/basic-form\.tsx/)
+	assert.match(readme, /docs-site\/src\/snippets\/server-action\.ts/)
 })
 
 test("docs-site instructions describe the English-only Vocs boundary", async () => {

@@ -90,24 +90,74 @@ in form context and map all three outcomes with `fromResource`. The selector
 and active case stay synchronous, so ordinary resolver dependency tracking
 still applies:
 
-```ts twoslash
+```tsx twoslash
+// @jsx: react-jsx
 import {
 	createFormKit,
 	fromResource,
-	nativeControls,
-	type NativeSelectOption,
 	type ResourceState,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import {
+	createNativeControls,
+	type NativeSelectOption,
+} from "form-please/native-controls"
+import { useEffect, useState } from "react"
 import { z } from "zod"
 
 const schema = z.object({ city: z.string() })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
+type Cities = ResourceState<readonly NativeSelectOption[], Error>
 type Context = {
-	readonly cities: ResourceState<readonly NativeSelectOption[], Error>
+	readonly cities: Cities
 }
 
-kit.defineForm(schema).withContext<Context>({
+function useCities(): Cities {
+	const [cities, setCities] = useState<Cities>({ status: "pending" })
+
+	useEffect(() => {
+		const controller = new AbortController()
+
+		async function loadCities() {
+			try {
+				const response = await fetch("/api/cities", {
+					signal: controller.signal,
+				})
+				if (!response.ok) {
+					throw new Error(`Could not load cities (${response.status})`)
+				}
+
+				const value =
+					(await response.json()) as readonly NativeSelectOption[]
+				if (!controller.signal.aborted) {
+					setCities({ status: "success", value })
+				}
+			} catch (error) {
+				if (!controller.signal.aborted) {
+					let resourceError = new Error("Could not load cities")
+					if (error instanceof Error) {
+						resourceError = error
+					}
+					setCities({
+						status: "error",
+						error: resourceError,
+					})
+				}
+			}
+		}
+
+		void loadCities()
+		return () => controller.abort()
+	}, [])
+
+	return cities
+}
+
+const definition = kit.forContext<Context>().defineForm(schema, {
 	ui: [
 		{
 			kind: "section",
@@ -138,7 +188,22 @@ kit.defineForm(schema).withContext<Context>({
 		},
 	],
 })
+
+function CityForm() {
+	const cities = useCities()
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { city: "" },
+		context: { cities },
+	})
+
+	return <kit.AutoForm context={{ cities }} form={form} />
+}
 ```
+
+`useCities` owns the request and cancellation lifecycle. The form receives only
+the current plain `ResourceState`, so changing from pending to success or error
+recomputes the resource-backed properties without putting request state in form
+values.
 
 Use the same helper for `visible`, `readOnly`, labels, descriptions, control
 options, and typed `slotOptions`. It does not fetch anything and does not accept
@@ -155,7 +220,7 @@ Map the resource at the narrowest boundary whose layout should change:
 | Keep layout stable | Section or field `disabled: true` while pending |
 | Avoid showing an irrelevant field | Field or section `visible: false` while pending |
 | Preserve the expected shape | Show a sibling render-node skeleton while pending and the field while successful |
-| Block the entire form | Derive `useForm` or `kit.AutoForm` `disabled` with `matchResource` |
+| Block the entire form | Derive `kit.useBindForm` or `kit.AutoForm` `disabled` with `matchResource` |
 
 For a skeleton, use complementary exhaustive resolvers instead of an implicit
 loading flag:
@@ -189,14 +254,8 @@ when loading must not discard an existing edit value.
 
 For the complete form, match before rendering:
 
-```text
-const disabled = matchResource(permission, {
-  pending: () => true,
-  success: ({ value }) => !value.canEdit,
-  error: () => true,
-})
-
-return <kit.AutoForm definition={definition} disabled={disabled} {...props} />
+```tsx
+// [!include ~/snippets/async-fields-permission.tsx:form]
 ```
 
 `matchResource` can also choose between a page skeleton, an error state, and

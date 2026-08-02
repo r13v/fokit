@@ -44,6 +44,35 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["docs-site/src/components/ui/**/*.tsx"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noNestedTernary": "off",
+						"noTernary": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["docs-site/src/components/ui/*.tsx"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"noLabelWithoutControl": "off",
+						"useAriaPropsForRole": "off",
+						"useFocusableInteractive": "off",
+						"useKeyWithClickEvents": "off",
+						"useSemanticElements": "off"
+					},
+					"suspicious": {
+						"noArrayIndexKey": "off",
+						"noDoubleEquals": "off"
+					}
+				}
+			}
 		}
 	],
 	"javascript": {
@@ -52,6 +81,11 @@
 			"arrowParentheses": "always",
 			"semicolons": "asNeeded",
 			"trailingCommas": "all"
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
 		}
 	},
 	"assist": {

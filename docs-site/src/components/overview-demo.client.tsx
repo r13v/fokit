@@ -1,11 +1,7 @@
 "use client"
 
-import {
-	createFormKit,
-	type FormInput,
-	type FormOutput,
-	nativeControls,
-} from "form-please"
+import type { FormInput, FormOutput } from "form-please"
+import { nativeFormKit as kit } from "form-please/preset-native"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -21,11 +17,7 @@ const defaultValues = {
 	newsletter: true,
 } satisfies FormInput<typeof profileSchema>
 
-const kit = createFormKit({
-	controls: nativeControls,
-})
-
-const profileDefinition = kit.defineForm(profileSchema)({
+const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [
 		{
 			kind: "field",
@@ -61,6 +53,7 @@ const profileDefinition = kit.defineForm(profileSchema)({
 
 export function OverviewDemoClient() {
 	const [saved, setSaved] = useState<FormOutput<typeof profileSchema>>()
+	const form = kit.useCreateForm(profileDefinition, { defaultValues })
 	let output = "Submit the form to see typed output."
 	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
 
@@ -76,8 +69,7 @@ export function OverviewDemoClient() {
 			</p>
 			<kit.AutoForm
 				className="form-please-overview-demo__form"
-				defaultValues={defaultValues}
-				definition={profileDefinition}
+				form={form}
 				onSubmit={({ value }) => setSaved(value)}
 			>
 				<kit.Submit className="form-please-lab__primary">

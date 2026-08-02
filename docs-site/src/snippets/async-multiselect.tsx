@@ -31,8 +31,9 @@ import {
 	createFormKit,
 	defineControl,
 	type FormInput,
-	nativeControls,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { z } from "zod"
 
@@ -470,12 +471,13 @@ const defaultValues = {
 
 const kit = createFormKit({
 	controls: {
-		...nativeControls,
+		...createNativeControls(),
 		asyncMultiSelect,
 	},
+	slots: createDefaultSlots(),
 })
 
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -506,6 +508,7 @@ const queryClient = new QueryClient({
 
 export function AsyncMultiSelectExample() {
 	const [savedCityIds, setSavedCityIds] = useState<readonly string[]>()
+	const form = kit.useCreateForm(definition, { defaultValues })
 	let output = "Submit to see the validated city IDs."
 	if (savedCityIds !== undefined) {
 		output = `Saved: ${savedCityIds.join(", ")}`
@@ -524,8 +527,7 @@ export function AsyncMultiSelectExample() {
 					cache.
 				</p>
 				<kit.AutoForm
-					defaultValues={defaultValues}
-					definition={definition}
+					form={form}
 					onSubmit={({ value }) => setSavedCityIds(value.cityIds)}
 				>
 					<kit.Submit>Save selection</kit.Submit>

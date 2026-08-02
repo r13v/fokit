@@ -7,11 +7,12 @@ import { renderToString } from "react-dom/server"
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { createFormStore } from "../core/index.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
+import { createNativeControls } from "../native-controls/native-controls.js"
 import { assertActionFormCompatible } from "../react19/action-form.js"
 import { parseFormData } from "../server/index.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
-import { nativeControls } from "./native-controls.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -19,7 +20,6 @@ import type {
 	FieldSlotProps,
 	SectionSlotProps,
 } from "./slots.js"
-import { useForm } from "./use-form.js"
 
 type Contact = {
 	readonly email: string
@@ -88,6 +88,8 @@ type NativeChoiceFileValues = {
 type Context = {
 	readonly prefix: string
 }
+
+const nativeControls = createNativeControls()
 
 type TextOptions = {
 	readonly suffix?: string
@@ -434,6 +436,7 @@ const kit = createFormKit({
 		unavailable: unavailableControl,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,
@@ -447,6 +450,7 @@ const uploadKit = createFormKit({
 		file: fileControl,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,
@@ -458,6 +462,7 @@ const uploadKit = createFormKit({
 const nativeTextLikeKit = createFormKit({
 	controls: nativeControls,
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,
@@ -466,7 +471,7 @@ const nativeTextLikeKit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm(schema).withContext<Context>({
+const definition = kit.forContext<Context>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -555,7 +560,7 @@ const definition = kit.defineForm(schema).withContext<Context>({
 	],
 })
 
-const incompatibleDefinition = kit.defineForm(schema).withContext<Context>({
+const incompatibleDefinition = kit.forContext<Context>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -567,7 +572,7 @@ const incompatibleDefinition = kit.defineForm(schema).withContext<Context>({
 	],
 })
 
-const uploadDefinition = uploadKit.defineForm(uploadSchema)({
+const uploadDefinition = uploadKit.defineForm(uploadSchema, {
 	ui: [
 		{
 			kind: "field",
@@ -578,7 +583,7 @@ const uploadDefinition = uploadKit.defineForm(uploadSchema)({
 	],
 })
 
-const nestedDefinition = kit.defineForm(nestedSchema).withContext<Context>({
+const nestedDefinition = kit.forContext<Context>().defineForm(nestedSchema, {
 	ui: [
 		{
 			kind: "array",
@@ -614,164 +619,169 @@ const nestedDefinition = kit.defineForm(nestedSchema).withContext<Context>({
 
 const nativeTextLikeDefinition = nativeTextLikeKit.defineForm(
 	nativeTextLikeSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-			disabled: true,
-		},
-		{
-			kind: "field",
-			path: "note",
-			control: "textarea",
-			label: "Note",
-			visible: false,
-		},
-		{
-			kind: "field",
-			path: "openingTime",
-			control: "time",
-			label: "Opening time",
-			visible: false,
-		},
-		{
-			kind: "field",
-			path: "count",
-			control: "number",
-			label: "Count",
-			disabled: true,
-		},
-		{
-			kind: "field",
-			path: "birthday",
-			control: "date",
-			label: "Birthday",
-			visible: false,
-		},
-	],
-})
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "name",
+				control: "text",
+				label: "Name",
+				disabled: true,
+			},
+			{
+				kind: "field",
+				path: "note",
+				control: "textarea",
+				label: "Note",
+				visible: false,
+			},
+			{
+				kind: "field",
+				path: "openingTime",
+				control: "time",
+				label: "Opening time",
+				visible: false,
+			},
+			{
+				kind: "field",
+				path: "count",
+				control: "number",
+				label: "Count",
+				disabled: true,
+			},
+			{
+				kind: "field",
+				path: "birthday",
+				control: "date",
+				label: "Birthday",
+				visible: false,
+			},
+		],
+	},
+)
 
 const nativeChoiceFileDefinition = nativeTextLikeKit.defineForm(
 	nativeChoiceFileSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "status",
-			control: "select",
-			label: "Status",
-			options: {
-				options: [
-					{ value: "draft", label: "Draft" },
-					{ value: "published", label: "Published" },
-				],
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "status",
+				control: "select",
+				label: "Status",
+				options: {
+					options: [
+						{ value: "draft", label: "Draft" },
+						{ value: "published", label: "Published" },
+					],
+				},
 			},
-		},
-		{
-			kind: "field",
-			path: "representation",
-			control: "select",
-			label: "Representation",
-			options: {
-				emptyOption: { label: "Choose a representation", disabled: true },
-				options: [
-					{ value: "registered", label: "Registered" },
-					{ value: "forming", label: "Forming" },
-				],
+			{
+				kind: "field",
+				path: "representation",
+				control: "select",
+				label: "Representation",
+				options: {
+					emptyOption: { label: "Choose a representation", disabled: true },
+					options: [
+						{ value: "registered", label: "Registered" },
+						{ value: "forming", label: "Forming" },
+					],
+				},
 			},
-		},
-		{
-			kind: "field",
-			path: "subscribed",
-			control: "checkbox",
-			label: "Subscribed",
-		},
-		{
-			kind: "field",
-			path: "avatar",
-			control: "file",
-			label: "Avatar",
-		},
-	],
-})
+			{
+				kind: "field",
+				path: "subscribed",
+				control: "checkbox",
+				label: "Subscribed",
+			},
+			{
+				kind: "field",
+				path: "avatar",
+				control: "file",
+				label: "Avatar",
+			},
+		],
+	},
+)
 
 const nativeChoicePreservationDefinition = nativeTextLikeKit.defineForm(
 	nativeChoiceFileSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "disabledStatus",
-			control: "select",
-			label: "Disabled status",
-			disabled: true,
-			options: {
-				options: [
-					{ value: "draft", label: "Draft" },
-					{ value: "published", label: "Published" },
-				],
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "disabledStatus",
+				control: "select",
+				label: "Disabled status",
+				disabled: true,
+				options: {
+					options: [
+						{ value: "draft", label: "Draft" },
+						{ value: "published", label: "Published" },
+					],
+				},
 			},
-		},
-		{
-			kind: "field",
-			path: "hiddenStatus",
-			control: "select",
-			label: "Hidden status",
-			visible: false,
-			options: {
-				options: [
-					{ value: "draft", label: "Draft" },
-					{ value: "published", label: "Published" },
-				],
+			{
+				kind: "field",
+				path: "hiddenStatus",
+				control: "select",
+				label: "Hidden status",
+				visible: false,
+				options: {
+					options: [
+						{ value: "draft", label: "Draft" },
+						{ value: "published", label: "Published" },
+					],
+				},
 			},
-		},
-		{
-			kind: "field",
-			path: "disabledSubscribed",
-			control: "checkbox",
-			label: "Disabled subscribed",
-			disabled: true,
-		},
-		{
-			kind: "field",
-			path: "hiddenSubscribed",
-			control: "checkbox",
-			label: "Hidden subscribed",
-			visible: false,
-		},
-	],
-})
+			{
+				kind: "field",
+				path: "disabledSubscribed",
+				control: "checkbox",
+				label: "Disabled subscribed",
+				disabled: true,
+			},
+			{
+				kind: "field",
+				path: "hiddenSubscribed",
+				control: "checkbox",
+				label: "Hidden subscribed",
+				visible: false,
+			},
+		],
+	},
+)
 
 const disabledNativeFileDefinition = nativeTextLikeKit.defineForm(
 	nativeChoiceFileSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "disabledAvatar",
-			control: "file",
-			label: "Disabled avatar",
-			disabled: true,
-		},
-	],
-})
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "disabledAvatar",
+				control: "file",
+				label: "Disabled avatar",
+				disabled: true,
+			},
+		],
+	},
+)
 
 const hiddenNativeFileDefinition = nativeTextLikeKit.defineForm(
 	nativeChoiceFileSchema,
-)({
-	ui: [
-		{
-			kind: "field",
-			path: "hiddenAvatar",
-			control: "file",
-			label: "Hidden avatar",
-			visible: false,
-		},
-	],
-})
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "hiddenAvatar",
+				control: "file",
+				label: "Hidden avatar",
+				visible: false,
+			},
+		],
+	},
+)
 
 describe("native FormData serialization", () => {
 	beforeEach(() => {
@@ -779,13 +789,12 @@ describe("native FormData serialization", () => {
 	})
 
 	it("renders hidden serializer entries in SSR and client output", () => {
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			context: { prefix: "ctx" },
+		})
 		const element = (
-			<kit.AutoForm
-				context={{ prefix: "ctx" }}
-				defaultValues={defaultValues()}
-				definition={definition}
-				id="profile"
-			/>
+			<kit.AutoForm context={{ prefix: "ctx" }} form={form} id="profile" />
 		)
 
 		const html = renderToString(element)
@@ -825,11 +834,14 @@ describe("native FormData serialization", () => {
 	})
 
 	it("normalizes to the same schema output as the controlled snapshot", async () => {
+		const formInstance = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			context: { prefix: "ctx" },
+		})
 		render(
 			<kit.AutoForm
 				context={{ prefix: "ctx" }}
-				defaultValues={defaultValues()}
-				definition={definition}
+				form={formInstance}
 				id="profile"
 			/>,
 		)
@@ -852,14 +864,14 @@ describe("native FormData serialization", () => {
 	})
 
 	it("keeps empty arrays as arrays with only the reserved marker", async () => {
+		const formInstance = kit.createForm(definition, {
+			defaultValues: { ...defaultValues(), contacts: [] },
+			context: { prefix: "ctx" },
+		})
 		render(
 			<kit.AutoForm
 				context={{ prefix: "ctx" }}
-				defaultValues={{
-					...defaultValues(),
-					contacts: [],
-				}}
-				definition={definition}
+				form={formInstance}
 				id="profile"
 			/>,
 		)
@@ -884,17 +896,13 @@ describe("native FormData serialization", () => {
 	})
 
 	it("renders hidden serializer entries for manually composed kit.Form", async () => {
+		const formInstance = kit.createForm(definition, {
+			defaultValues: { ...defaultValues(), contacts: [] },
+			context: { prefix: "ctx" },
+		})
 		function ManualForm() {
-			const form = useForm(definition, {
-				defaultValues: {
-					...defaultValues(),
-					contacts: [],
-				},
-				context: { prefix: "ctx" },
-			})
-
 			return (
-				<kit.Form form={form} id="manual-profile">
+				<kit.Form form={formInstance} id="manual-profile">
 					<kit.Fields />
 				</kit.Form>
 			)
@@ -938,11 +946,14 @@ describe("native FormData serialization", () => {
 				},
 			],
 		} satisfies NestedValues
+		const formInstance = kit.createForm(nestedDefinition, {
+			defaultValues,
+			context: { prefix: "ctx" },
+		})
 		render(
 			<kit.AutoForm
 				context={{ prefix: "ctx" }}
-				defaultValues={defaultValues}
-				definition={nestedDefinition}
+				form={formInstance}
 				id="nested"
 			/>,
 		)
@@ -968,13 +979,10 @@ describe("native FormData serialization", () => {
 	it("preserves browser File objects for native file controls", async () => {
 		const user = userEvent.setup()
 		const avatar = new File(["avatar"], "avatar.txt", { type: "text/plain" })
-		render(
-			<uploadKit.AutoForm
-				defaultValues={{}}
-				definition={uploadDefinition}
-				id="upload"
-			/>,
-		)
+		const formInstance = uploadKit.createForm(uploadDefinition, {
+			defaultValues: {},
+		})
+		render(<uploadKit.AutoForm form={formInstance} id="upload" />)
 
 		const fileInput = screen.getByLabelText("avatar") as HTMLInputElement
 
@@ -997,7 +1005,7 @@ describe("native FormData serialization", () => {
 		expect(parsed.value.avatar?.size).toBe(avatar.size)
 	})
 
-	it("preserves text-like nativeControls values as hidden FormData entries", async () => {
+	it("preserves native text-like control values as hidden FormData entries", async () => {
 		const defaultValues = {
 			name: "Ada",
 			note: "private",
@@ -1005,12 +1013,14 @@ describe("native FormData serialization", () => {
 			birthday: "2026-07-28",
 			openingTime: "08:30",
 		} satisfies NativeTextLikeValues
+		const formInstance = nativeTextLikeKit.createForm(
+			nativeTextLikeDefinition,
+			{
+				defaultValues,
+			},
+		)
 		render(
-			<nativeTextLikeKit.AutoForm
-				defaultValues={defaultValues}
-				definition={nativeTextLikeDefinition}
-				id="native-text-like"
-			/>,
+			<nativeTextLikeKit.AutoForm form={formInstance} id="native-text-like" />,
 		)
 		const form = document.querySelector("form")
 		if (form === null) {
@@ -1034,17 +1044,22 @@ describe("native FormData serialization", () => {
 	it("uses native FormData protocols for select, checkbox, and file controls", async () => {
 		const user = userEvent.setup()
 		const avatar = new File(["avatar"], "avatar.png", { type: "image/png" })
-		render(
-			<nativeTextLikeKit.AutoForm
-				defaultValues={{
+		const formInstance = nativeTextLikeKit.createForm(
+			nativeChoiceFileDefinition,
+			{
+				defaultValues: {
 					status: "draft",
 					subscribed: true,
 					disabledStatus: "published",
 					hiddenStatus: "draft",
 					disabledSubscribed: true,
 					hiddenSubscribed: false,
-				}}
-				definition={nativeChoiceFileDefinition}
+				},
+			},
+		)
+		render(
+			<nativeTextLikeKit.AutoForm
+				form={formInstance}
 				id="native-choice-file"
 			/>,
 		)
@@ -1087,10 +1102,13 @@ describe("native FormData serialization", () => {
 			disabledSubscribed: true,
 			hiddenSubscribed: false,
 		} satisfies NativeChoiceFileValues
+		const formInstance = nativeTextLikeKit.createForm(
+			nativeChoicePreservationDefinition,
+			{ defaultValues },
+		)
 		render(
 			<nativeTextLikeKit.AutoForm
-				defaultValues={defaultValues}
-				definition={nativeChoicePreservationDefinition}
+				form={formInstance}
 				id="native-choice-preserved"
 			/>,
 		)
@@ -1110,11 +1128,14 @@ describe("native FormData serialization", () => {
 	})
 
 	it("updates hidden serializer entries when values change", () => {
+		const formInstance = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+			context: { prefix: "ctx" },
+		})
 		render(
 			<kit.AutoForm
 				context={{ prefix: "ctx" }}
-				defaultValues={defaultValues()}
-				definition={definition}
+				form={formInstance}
 				id="profile"
 			/>,
 		)
@@ -1127,12 +1148,15 @@ describe("native FormData serialization", () => {
 	})
 
 	it("rejects preserved disabled native controls without serializers", () => {
+		const form = kit.createForm(incompatibleDefinition, {
+			defaultValues: defaultValues(),
+			context: { prefix: "ctx" },
+		})
 		expect(() => {
 			render(
 				<kit.AutoForm
 					context={{ prefix: "ctx" }}
-					defaultValues={defaultValues()}
-					definition={incompatibleDefinition}
+					form={form}
 					id="incompatible"
 				/>,
 			)
@@ -1174,12 +1198,14 @@ describe("native FormData serialization", () => {
 				hiddenSubscribed: false,
 				...defaultValues,
 			} satisfies NativeChoiceFileValues
+			const form = nativeTextLikeKit.createForm(definition, {
+				defaultValues: fullDefaultValues,
+			})
 
 			expect(() => {
 				render(
 					<nativeTextLikeKit.AutoForm
-						defaultValues={fullDefaultValues}
-						definition={definition}
+						form={form}
 						id="native-file-incompatible"
 					/>,
 				)
@@ -1229,14 +1255,13 @@ describe("native FormData serialization", () => {
 				hiddenSubscribed: false,
 				...defaultValues,
 			} satisfies NativeChoiceFileValues
+			const form = nativeTextLikeKit.createForm(definition, {
+				defaultValues: fullDefaultValues,
+			})
 
 			expect(() => {
 				render(
-					<nativeTextLikeKit.AutoForm
-						defaultValues={fullDefaultValues}
-						definition={definition}
-						id="native-file-undefined"
-					/>,
+					<nativeTextLikeKit.AutoForm form={form} id="native-file-undefined" />,
 				)
 			}).not.toThrow()
 			expect(hiddenInputs(path)).toHaveLength(0)

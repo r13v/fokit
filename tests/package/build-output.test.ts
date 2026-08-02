@@ -15,6 +15,13 @@ const packageJson = JSON.parse(
 const javaScriptEntrypoints = {
 	".": "index",
 	"./core": "core",
+	"./default-slots": "default-slots",
+	"./devtools": "devtools",
+	"./history": "history",
+	"./native-controls": "native-controls",
+	"./persistence": "persistence",
+	"./preset-native": "preset-native",
+	"./preset-mui": "preset-mui",
 	"./react19": "react19",
 	"./server": "server",
 } as const
@@ -48,17 +55,29 @@ describe("packed build output", () => {
 			expect(exported.require.types).toBe(`./dist/${distName}.d.cts`)
 			expect(exported.import.types).not.toBe(exported.require.types)
 
-			await assertPackageFileExists(exported.import.default)
-			await assertPackageFileExists(exported.require.default)
-			await assertPackageFileExists(exported.import.types)
-			await assertPackageFileExists(exported.require.types)
+			const targets = [
+				exported.import.default,
+				exported.require.default,
+				exported.import.types,
+				exported.require.types,
+			]
+			for (const target of targets) {
+				await assertPackageFileExists(target)
+			}
+			const mappedTargets: string[] = []
+			for (const target of targets) {
+				if ((await readPackageFile(target)).includes("sourceMappingURL=")) {
+					mappedTargets.push(target)
+				}
+			}
+			for (const target of mappedTargets) {
+				await assertPackageFileExists(`${target}.map`)
+			}
 
 			expect(packedFiles).toEqual(
 				expect.arrayContaining([
-					toPackedPath(exported.import.default),
-					toPackedPath(exported.require.default),
-					toPackedPath(exported.import.types),
-					toPackedPath(exported.require.types),
+					...targets.map(toPackedPath),
+					...mappedTargets.map((target) => toPackedPath(`${target}.map`)),
 				]),
 			)
 		}
@@ -81,7 +100,14 @@ describe("packed build output", () => {
 	})
 
 	it("preserves client directives only on React entries", async () => {
-		const clientEntrypoints = new Set<JavaScriptEntrypoint>([".", "./react19"])
+		const clientEntrypoints = new Set<JavaScriptEntrypoint>([
+			".",
+			"./default-slots",
+			"./native-controls",
+			"./preset-native",
+			"./preset-mui",
+			"./react19",
+		])
 
 		for (const entrypoint of Object.keys(
 			javaScriptEntrypoints,
@@ -105,6 +131,98 @@ describe("packed build output", () => {
 
 			await expectNoClientRuntimeImport(exported.import.default)
 			await expectNoClientRuntimeImport(exported.require.default)
+		}
+	})
+
+	it("keeps optional implementations out of the base entry graphs", async () => {
+		for (const entrypoint of [
+			".",
+			"./core",
+			"./default-slots",
+			"./native-controls",
+			"./preset-native",
+			"./preset-mui",
+			"./react19",
+			"./server",
+		] as const) {
+			const exported = getJavaScriptExport(entrypoint)
+
+			await expectGraphNotToContainOptionalImplementation(
+				exported.import.default,
+			)
+			await expectGraphNotToContainOptionalImplementation(
+				exported.require.default,
+			)
+		}
+	})
+
+	it("keeps rendering defaults out of the headless root graph", async () => {
+		const root = getJavaScriptExport(".")
+
+		await expectGraphNotToContainRenderingSources(root.import.default, [
+			"default-slots",
+			"native-controls",
+			"preset-mui",
+			"preset-native",
+		])
+		await expectGraphNotToContainRenderingSources(root.require.default, [
+			"default-slots",
+			"native-controls",
+			"preset-mui",
+			"preset-native",
+		])
+	})
+
+	it("keeps low-level rendering entries independent from the native preset", async () => {
+		const defaultSlots = getJavaScriptExport("./default-slots")
+		const nativeControls = getJavaScriptExport("./native-controls")
+
+		for (const target of [
+			defaultSlots.import.default,
+			defaultSlots.require.default,
+		]) {
+			await expectGraphNotToContainRenderingSources(target, [
+				"native-controls",
+				"preset-mui",
+				"preset-native",
+			])
+		}
+		for (const target of [
+			nativeControls.import.default,
+			nativeControls.require.default,
+		]) {
+			await expectGraphNotToContainRenderingSources(target, [
+				"default-slots",
+				"preset-mui",
+				"preset-native",
+			])
+		}
+	})
+
+	it("keeps Material UI imports isolated to the MUI preset", async () => {
+		for (const entrypoint of Object.keys(
+			javaScriptEntrypoints,
+		) as JavaScriptEntrypoint[]) {
+			if (entrypoint === "./preset-mui") continue
+			const exported = getJavaScriptExport(entrypoint)
+			await expectGraphNotToImportMui(exported.import.default)
+			await expectGraphNotToImportMui(exported.require.default)
+		}
+	})
+
+	it("keeps optional entries free of Redux runtime dependencies", async () => {
+		expect(packageJson.dependencies).not.toHaveProperty("redux")
+		expect(packageJson.dependencies).not.toHaveProperty(
+			"@redux-devtools/extension",
+		)
+		for (const entrypoint of [
+			"./devtools",
+			"./history",
+			"./persistence",
+		] as const) {
+			const exported = getJavaScriptExport(entrypoint)
+			await expectGraphNotToImportRedux(exported.import.default)
+			await expectGraphNotToImportRedux(exported.require.default)
 		}
 	})
 
@@ -198,6 +316,93 @@ async function expectNoClientRuntimeImport(
 
 		if (specifier.startsWith(".")) {
 			await expectNoClientRuntimeImport(
+				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				visited,
+			)
+		}
+	}
+}
+
+async function expectGraphNotToContainOptionalImplementation(
+	packagePath: string,
+	visited = new Set<string>(),
+): Promise<void> {
+	const absolutePath = packagePathToAbsolutePath(packagePath)
+	if (visited.has(absolutePath)) return
+	visited.add(absolutePath)
+
+	const source = await readFile(absolutePath, "utf8")
+	expect(source).not.toMatch(/src\/(?:devtools|history|persistence)\//)
+	for (const specifier of collectRuntimeSpecifiers(source)) {
+		if (specifier.startsWith(".")) {
+			await expectGraphNotToContainOptionalImplementation(
+				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				visited,
+			)
+		}
+	}
+}
+
+async function expectGraphNotToContainRenderingSources(
+	packagePath: string,
+	sourceDirectories: readonly string[],
+	visited = new Set<string>(),
+): Promise<void> {
+	const absolutePath = packagePathToAbsolutePath(packagePath)
+	if (visited.has(absolutePath)) return
+	visited.add(absolutePath)
+
+	const source = await readFile(absolutePath, "utf8")
+	expect(source).not.toMatch(
+		new RegExp(`src/(?:${sourceDirectories.join("|")})/`),
+	)
+	for (const specifier of collectRuntimeSpecifiers(source)) {
+		if (specifier.startsWith(".")) {
+			await expectGraphNotToContainRenderingSources(
+				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				sourceDirectories,
+				visited,
+			)
+		}
+	}
+}
+
+async function expectGraphNotToImportRedux(
+	packagePath: string,
+	visited = new Set<string>(),
+): Promise<void> {
+	const absolutePath = packagePathToAbsolutePath(packagePath)
+	if (visited.has(absolutePath)) return
+	visited.add(absolutePath)
+
+	const source = await readFile(absolutePath, "utf8")
+	for (const specifier of collectRuntimeSpecifiers(source)) {
+		expect(specifier).not.toMatch(
+			/^(?:redux|@redux-devtools\/extension)(?:\/|$)/,
+		)
+		if (specifier.startsWith(".")) {
+			await expectGraphNotToImportRedux(
+				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
+				visited,
+			)
+		}
+	}
+}
+
+async function expectGraphNotToImportMui(
+	packagePath: string,
+	visited = new Set<string>(),
+): Promise<void> {
+	const absolutePath = packagePathToAbsolutePath(packagePath)
+	if (visited.has(absolutePath)) return
+	visited.add(absolutePath)
+
+	const source = await readFile(absolutePath, "utf8")
+	for (const specifier of collectRuntimeSpecifiers(source)) {
+		expect(specifier).not.toMatch(/^@mui\/material(?:\/|$)/)
+		expect(specifier).not.toMatch(/^@emotion\/(?:react|styled)(?:\/|$)/)
+		if (specifier.startsWith(".")) {
+			await expectGraphNotToImportMui(
 				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
 				visited,
 			)

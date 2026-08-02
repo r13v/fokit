@@ -1,6 +1,9 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 
-import { reindexArrayPath } from "./array-state.js"
+import {
+	type RowIdentityState,
+	reconcileRowIdentityPaths,
+} from "./array-state.js"
 import { isPlainObject } from "./object.js"
 import {
 	formatPath,
@@ -75,10 +78,6 @@ export function createIssueState(
 		issues.map((issue) => normalizeFormIssue(issue)),
 		emptyExposure,
 	)
-}
-
-export function isIssueStateEmpty(state: IssueState): boolean {
-	return state.issues.length === 0 && isExposureEmpty(state.exposure)
 }
 
 export function deriveFormErrors<Context>(
@@ -335,61 +334,48 @@ export function replaceSchemaIssues(
 	return createIssueStateFromNormalized(nextIssues, nextExposure)
 }
 
-export function reindexIssueStateArrayPaths(
+export function reconcileIssueStateRowIdentity(
 	state: IssueState,
-	arrayPath: string,
-	previousKeys: readonly string[],
-	nextKeys: readonly string[],
+	previous: RowIdentityState,
+	nextIdentity: RowIdentityState,
 ): IssueState {
 	const reindexedSources = new Set(["manual", "schema"])
-	const nextIssues: FormIssue[] = []
-	let issuesChanged = false
-
-	for (const issue of state.issues) {
+	const pathMap = new Map<string, string | undefined>()
+	const reconcilePath = (path: string): string | undefined => {
+		if (pathMap.has(path)) return pathMap.get(path)
+		const reconciled = [
+			...reconcileRowIdentityPaths([path], previous, nextIdentity),
+		][0]
+		pathMap.set(path, reconciled)
+		return reconciled
+	}
+	const issues = state.issues.flatMap((issue) => {
 		if (issue.path === undefined || !reindexedSources.has(issue.source)) {
-			nextIssues.push(issue)
-			continue
+			return [issue]
 		}
-
-		const nextPath = reindexArrayPath(
-			issue.path,
-			arrayPath,
-			previousKeys,
-			nextKeys,
-		)
-
-		if (nextPath === undefined) {
-			issuesChanged = true
-			continue
-		}
-
-		if (nextPath === issue.path) {
-			nextIssues.push(issue)
-			continue
-		}
-
-		issuesChanged = true
-		nextIssues.push(
-			Object.freeze({
-				...issue,
-				path: nextPath,
-			}),
-		)
-	}
-
-	const nextExposure = reindexExposureArrayPaths(
-		state.exposure,
-		arrayPath,
-		previousKeys,
-		nextKeys,
-		reindexedSources,
+		const path = reconcilePath(issue.path)
+		return path === undefined ? [] : [Object.freeze({ ...issue, path })]
+	})
+	const exposurePaths = new Set(
+		[...state.exposure.paths].flatMap((path) => {
+			const reconciled = reconcilePath(path)
+			return reconciled === undefined ? [] : [reconciled]
+		}),
 	)
-
-	if (!issuesChanged && nextExposure === state.exposure) {
-		return state
-	}
-
-	return createIssueStateFromNormalized(nextIssues, nextExposure)
+	const imperativePathSources = new Map(
+		[...state.exposure.imperativePathSources].flatMap(([path, sources]) => {
+			const reconciled = reconcilePath(path)
+			return reconciled === undefined ? [] : [[reconciled, sources] as const]
+		}),
+	)
+	return createIssueStateFromNormalized(
+		issues,
+		createIssueExposureState({
+			...state.exposure,
+			paths: exposurePaths,
+			imperativePathSources,
+		}),
+	)
 }
 
 export function normalizeStandardSchemaIssue(
@@ -638,60 +624,6 @@ function removeImperativeExposureForIssues(
 	}
 
 	return nextExposure
-}
-
-function reindexExposureArrayPaths(
-	exposure: IssueExposureState,
-	arrayPath: string,
-	previousKeys: readonly string[],
-	nextKeys: readonly string[],
-	reindexedSources: ReadonlySet<string>,
-): IssueExposureState {
-	const nextPaths = new Set<string>()
-	let changed = false
-
-	for (const path of exposure.paths) {
-		const nextPath = reindexArrayPath(path, arrayPath, previousKeys, nextKeys)
-		if (nextPath === undefined) {
-			changed = true
-			continue
-		}
-
-		changed ||= nextPath !== path
-		nextPaths.add(nextPath)
-	}
-
-	const nextImperativePathSources = new Map<
-		string,
-		Set<ImperativeIssueSource>
-	>()
-	for (const [path, sources] of exposure.imperativePathSources) {
-		for (const source of sources) {
-			if (!reindexedSources.has(source)) {
-				addPathSource(nextImperativePathSources, path, source)
-				continue
-			}
-
-			const nextPath = reindexArrayPath(path, arrayPath, previousKeys, nextKeys)
-			if (nextPath === undefined) {
-				changed = true
-				continue
-			}
-
-			changed ||= nextPath !== path
-			addPathSource(nextImperativePathSources, nextPath, source)
-		}
-	}
-
-	if (!changed && exposure.paths.size === nextPaths.size) {
-		return exposure
-	}
-
-	return createIssueExposureState({
-		...exposure,
-		paths: nextPaths,
-		imperativePathSources: nextImperativePathSources,
-	})
 }
 
 function hasVisibleOwner<Context>(

@@ -1,12 +1,8 @@
 "use client"
 
-import {
-	createDefaultSlots,
-	createFormKit,
-	type FormInput,
-	type FormOutput,
-	nativeControls,
-} from "form-please"
+import { createFormKit, type FormInput, type FormOutput } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -52,6 +48,7 @@ const profileSchema = z
 		contactCount: value.contacts.length,
 	}))
 
+export type ProfileInput = FormInput<typeof profileSchema>
 export type ProfileOutput = FormOutput<typeof profileSchema>
 
 export const defaultValues = {
@@ -60,7 +57,7 @@ export const defaultValues = {
 	country: "GB",
 	newsletter: true,
 	contacts: [{ email: "ada@example.com", label: "primary" }],
-} satisfies FormInput<typeof profileSchema>
+} satisfies ProfileInput
 
 const countryOptions = [
 	{ value: "GB", label: "United Kingdom" },
@@ -69,7 +66,7 @@ const countryOptions = [
 ]
 
 export const kit = createFormKit({
-	controls: nativeControls,
+	controls: createNativeControls(),
 	slots: createDefaultSlots({
 		i18n: {
 			arrayAdd: "Add contact",
@@ -80,13 +77,22 @@ export const kit = createFormKit({
 	}),
 })
 
-export const profileDefinition = kit.defineForm(profileSchema)({
+export const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [
 		{
 			kind: "section",
 			id: "account",
 			title: "Profile",
 			description: "Edit a personal or company profile.",
+			// [!region tailwind-class-name]
+			className: ({ accountType }) => {
+				if (accountType === "company") {
+					return "rounded-2xl border border-amber-300 bg-amber-50 p-5 shadow-sm transition-colors dark:border-amber-700 dark:bg-amber-950/30"
+				}
+
+				return "rounded-2xl border border-emerald-300 bg-emerald-50 p-5 shadow-sm transition-colors dark:border-emerald-700 dark:bg-emerald-950/30"
+			},
+			// [!endregion tailwind-class-name]
 			columns: 2,
 			children: [
 				{
@@ -193,16 +199,13 @@ export const profileDefinition = kit.defineForm(profileSchema)({
 
 export function ProfileForm() {
 	const [saved, setSaved] = useState<ProfileOutput>()
+	const form = kit.useCreateForm(profileDefinition, { defaultValues })
 	let output = "Submit the form to see typed output."
 	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
 
 	return (
 		<>
-			<kit.AutoForm
-				definition={profileDefinition}
-				defaultValues={defaultValues}
-				onSubmit={({ value }) => setSaved(value)}
-			>
+			<kit.AutoForm form={form} onSubmit={({ value }) => setSaved(value)}>
 				<kit.Submit>Save profile</kit.Submit>
 			</kit.AutoForm>
 			<pre aria-live="polite">{output}</pre>

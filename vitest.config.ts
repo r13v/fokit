@@ -7,7 +7,13 @@ export default defineConfig({
 				test: {
 					name: "node",
 					environment: "node",
-					include: ["src/core/**/*.test.ts", "src/server/**/*.test.ts"],
+					include: [
+						"src/core/**/*.test.ts",
+						"src/devtools/**/*.test.ts",
+						"src/history/**/*.test.ts",
+						"src/persistence/**/*.test.ts",
+						"src/server/**/*.test.ts",
+					],
 				},
 			},
 			{
@@ -15,6 +21,10 @@ export default defineConfig({
 					name: "react",
 					environment: "jsdom",
 					include: [
+						"src/default-slots/**/*.test.{ts,tsx}",
+						"src/native-controls/**/*.test.{ts,tsx}",
+						"src/preset-native/**/*.test.{ts,tsx}",
+						"src/preset-mui/**/*.test.{ts,tsx}",
 						"src/react/**/*.test.{ts,tsx}",
 						"src/react19/**/*.test.{ts,tsx}",
 					],

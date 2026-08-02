@@ -2,8 +2,16 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen } from "@testing-library/react"
+import { StrictMode } from "react"
 import { describe, expect, it, vi } from "vitest"
-import type { FormInput, ImperativeFormIssue } from "../core/index.js"
+import { formBindingFinalizer } from "../core/feature-protocol.js"
+import type {
+	FormInput,
+	FormMiddleware,
+	ImperativeFormIssue,
+} from "../core/index.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
+import { createDevToolsMiddleware } from "../devtools/devtools.js"
 import { FieldControl } from "./control.js"
 import { createFormKit, type FormKitSlots } from "./create-form-kit.js"
 import { useFormState } from "./hooks.js"
@@ -14,7 +22,6 @@ import type {
 	SectionSlotProps,
 } from "./slots.js"
 import { type TestValues, testKit, textControl } from "./test-kit.js"
-import { createForm, useForm } from "./use-form.js"
 
 type TestSchema = StandardSchemaV1<TestValues>
 type CollisionValues = {
@@ -37,7 +44,7 @@ const collisionSchema = {} as CollisionSchema
 const richSchema = {} as RichSchema
 
 function createDefinition() {
-	return testKit.defineForm(schema)({
+	return testKit.defineForm(schema, {
 		ui: [
 			{
 				kind: "field",
@@ -61,11 +68,103 @@ function defaultValues(): FormInput<TestSchema> {
 }
 
 describe("createFormKit", () => {
+	it("exposes explicit creation and binding lifetimes without an alias", () => {
+		expect(testKit.createForm).toBeTypeOf("function")
+		expect(testKit.useCreateForm).toBeTypeOf("function")
+		expect(testKit.useBindForm).toBeTypeOf("function")
+		expect(testKit.grid).toEqual([1, 2, 3, 4])
+		expect(Object.isFrozen(testKit.grid)).toBe(true)
+		expect(testKit).not.toHaveProperty("useForm")
+	})
+
+	it("uses forContext as a type-only view of the same kit", () => {
+		expect(testKit.forContext<{ readonly locked: boolean }>()).toBe(testKit)
+	})
+
+	it("extends the kit grid as an immutable add-only design-system scale", () => {
+		const base = createFormKit({
+			controls: { text: textControl },
+			grid: [6, 1],
+			slots: createDefaultSlots(),
+		})
+		const extended = base.extend({ grid: [12] })
+		const baseDefinition = base.defineForm(schema, {
+			ui: [
+				{
+					kind: "section",
+					id: "base-layout",
+					columns: 6,
+					children: [],
+				},
+			],
+		})
+		const extendedDefinition = extended.defineForm(schema, {
+			ui: [
+				{
+					kind: "section",
+					id: "extended-layout",
+					columns: 12,
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							span: "full",
+						},
+					],
+				},
+			],
+		})
+
+		expect(base.grid).toEqual([1, 6])
+		expect(extended.grid).toEqual([1, 6, 12])
+		expect(baseDefinition.grid).toEqual([1, 6])
+		expect(extendedDefinition.grid).toEqual([1, 6, 12])
+		expect(Object.isFrozen(extended.grid)).toBe(true)
+		expect(() =>
+			extended.createForm(baseDefinition, {
+				defaultValues: defaultValues(),
+			}),
+		).not.toThrow()
+
+		const createWithBase = base.createForm as (
+			definition: unknown,
+			options: { defaultValues: TestValues },
+		) => unknown
+		expect(() =>
+			createWithBase(extendedDefinition, {
+				defaultValues: defaultValues(),
+			}),
+		).toThrow(/requires grid value 12/i)
+	})
+
+	it("rejects invalid kit grids and grid extensions at the public boundary", () => {
+		const create = (grid: readonly number[]) =>
+			createFormKit({
+				controls: { text: textControl },
+				grid,
+				slots: createDefaultSlots(),
+			})
+
+		for (const grid of [[], [2, 6], [1, 2, 2], [1, -2], [1, 1.5]]) {
+			expect(() => create(grid), JSON.stringify(grid)).toThrow(
+				/createFormKit grid/i,
+			)
+		}
+
+		const extend = testKit.extend as (options: unknown) => unknown
+		expect(() => extend({ grid: [] })).toThrow(/non-empty array/i)
+		expect(() => extend({ grid: [2] })).toThrow(/duplicate 2/i)
+	})
+
 	it("extends controls and resolved slots as an immutable add-only snapshot", () => {
 		const controls = {
 			text: textControl,
 		}
-		const baseKit = createFormKit({ controls })
+		const baseKit = createFormKit({
+			controls,
+			slots: createDefaultSlots(),
+		})
 		const LocalField = ({ rootProps, label, control }: FieldSlotProps) => (
 			<div {...rootProps} data-local-field="">
 				{label}
@@ -85,7 +184,7 @@ describe("createFormKit", () => {
 				secondaryText: textControl,
 			},
 		})
-		const definition = localKit.defineForm(schema)({
+		const definition = localKit.defineForm(schema, {
 			ui: [
 				{
 					kind: "field",
@@ -106,13 +205,11 @@ describe("createFormKit", () => {
 		expect(localKit.slots.Section).toBe(baseKit.slots.Section)
 		expect(chainedKit.controls).toHaveProperty("localText", textControl)
 		expect(chainedKit.controls).toHaveProperty("secondaryText", textControl)
+		const form = localKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
-		render(
-			<localKit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-			/>,
-		)
+		render(<localKit.AutoForm form={form} />)
 		expect(screen.getByText("Name").getAttribute("data-local-field")).toBe("")
 	})
 
@@ -121,13 +218,14 @@ describe("createFormKit", () => {
 			controls: {
 				text: textControl,
 			},
+			slots: createDefaultSlots(),
 		})
 		const localKit = baseKit.extend({
 			controls: {
 				localText: textControl,
 			},
 		})
-		const definition = baseKit.defineForm(schema)({
+		const definition = baseKit.defineForm(schema, {
 			ui: [
 				{
 					kind: "field",
@@ -137,17 +235,74 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = localKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
-		render(
-			<localKit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-			/>,
-		)
+		render(<localKit.AutoForm form={form} />)
 
 		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
 			"Ada",
 		)
+	})
+
+	it("preserves in-progress values when useCreateForm inputs change", () => {
+		const firstDefinition = createDefinition()
+		const nextDefinition = testKit.defineForm(schema, { ui: [] })
+		let currentForm:
+			| ReturnType<typeof testKit.createForm<TestSchema, unknown>>
+			| undefined
+
+		function Editor({
+			definition,
+			initialName,
+		}: {
+			readonly definition: ReturnType<typeof createDefinition>
+			readonly initialName: string
+		}) {
+			const form = testKit.useCreateForm<TestSchema, unknown>(definition, {
+				defaultValues: { name: initialName },
+			})
+			currentForm = form
+			const name = useFormState(form, (snapshot) => snapshot.values.name)
+			return (
+				<button type="button" onClick={() => form.setValue("name", "Grace")}>
+					{name}
+				</button>
+			)
+		}
+
+		const { rerender } = render(
+			<Editor definition={firstDefinition} initialName="Ada" />,
+		)
+		const retainedForm = currentForm
+		fireEvent.click(screen.getByRole("button"))
+		rerender(<Editor definition={nextDefinition} initialName="Katherine" />)
+
+		expect(currentForm).toBe(retainedForm)
+		expect(currentForm?.definition).toBe(firstDefinition)
+		expect(screen.getByRole("button").textContent).toBe("Grace")
+	})
+
+	it("rejects a JavaScript-erased definition whose controls are missing", () => {
+		const baseKit = createFormKit({
+			controls: { text: textControl },
+			slots: createDefaultSlots(),
+		})
+		const extendedKit = baseKit.extend({
+			controls: { localText: textControl },
+		})
+		const definition = extendedKit.defineForm(schema, {
+			ui: [{ kind: "field", path: "name", control: "localText" }],
+		})
+		const create = baseKit.createForm as (
+			definition: unknown,
+			options: { defaultValues: TestValues },
+		) => unknown
+
+		expect(() =>
+			create(definition, { defaultValues: defaultValues() }),
+		).toThrow(/kit\.createForm requires control "localText"/i)
 	})
 
 	it("rejects empty extensions, control replacement, and removed slots", () => {
@@ -155,10 +310,11 @@ describe("createFormKit", () => {
 			controls: {
 				text: textControl,
 			},
+			slots: createDefaultSlots(),
 		})
 		const extend = kit.extend as (options: unknown) => unknown
 
-		expect(() => extend({})).toThrow(/requires controls or slots/i)
+		expect(() => extend({})).toThrow(/requires controls, grid, or slots/i)
 		expect(() =>
 			extend({
 				controls: {
@@ -173,16 +329,24 @@ describe("createFormKit", () => {
 				},
 			}),
 		).toThrow(/requires a Field slot/i)
+		expect(() =>
+			extend({
+				slots: {
+					Submit: undefined,
+				},
+			}),
+		).toThrow(/requires a Submit slot/i)
 	})
 
-	it("normalizes definitions with kit controls when slots are omitted", () => {
+	it("normalizes definitions with an explicit complete slot registry", () => {
 		const kit = createFormKit({
 			controls: {
 				text: textControl,
 			},
+			slots: createDefaultSlots(),
 		})
 
-		const definition = kit.defineForm(schema)({
+		const definition = kit.defineForm(schema, {
 			ui: [
 				{
 					kind: "field",
@@ -197,84 +361,6 @@ describe("createFormKit", () => {
 		expect(Object.isFrozen(kit.slots)).toBe(true)
 	})
 
-	it("scopes reusable object fragments while preserving relative resolver dependencies", () => {
-		type FragmentValues = {
-			readonly account: {
-				readonly name: string
-				readonly contacts: readonly { readonly value: string }[]
-			}
-			readonly unrelated: string
-		}
-		const fragmentSchema = {} as StandardSchemaV1<FragmentValues>
-		const define = testKit.defineForm(fragmentSchema)
-		const label = vi.fn(
-			({ name }: FragmentValues["account"]) => `Name: ${name}`,
-		)
-		const account = define.fragment("account", [
-			{
-				kind: "field",
-				path: "name",
-				control: "text",
-				label,
-			},
-			{
-				kind: "array",
-				path: "contacts",
-				itemDefault: { value: "" },
-				children: [{ kind: "field", path: "value", control: "text" }],
-			},
-		])
-		const definition = define({ ui: account })
-		const form = createForm(definition, {
-			defaultValues: {
-				account: { name: "Ada", contacts: [] },
-				unrelated: "same",
-			},
-		})
-		const initialCalls = label.mock.calls.length
-
-		expect(definition.fieldsByPath["account.name"].path).toBe("account.name")
-		expect(definition.arraysByPath["account.contacts"].path).toBe(
-			"account.contacts",
-		)
-		const contactChild = definition.arraysByPath["account.contacts"].children[0]
-		if (contactChild?.kind !== "field") {
-			throw new Error("Expected a relative contact field")
-		}
-		expect(contactChild.path).toBe("value")
-		expect(
-			form.getSnapshot().resolvedUi.fieldsByPath["account.name"].label,
-		).toBe("Name: Ada")
-
-		form.setValue("unrelated", "changed")
-		expect(label).toHaveBeenCalledTimes(initialCalls)
-
-		form.setValue("account.name", "Grace")
-		expect(label).toHaveBeenCalledTimes(initialCalls + 1)
-		expect(
-			form.getSnapshot().resolvedUi.fieldsByPath["account.name"].label,
-		).toBe("Name: Grace")
-	})
-
-	it("keeps explicit node IDs global across fragment scopes", () => {
-		type FragmentValues = {
-			readonly primary: { readonly name: string }
-			readonly secondary: { readonly name: string }
-		}
-		const fragmentSchema = {} as StandardSchemaV1<FragmentValues>
-		const define = testKit.defineForm(fragmentSchema)
-		const primary = define.fragment("primary", [
-			{ kind: "section", id: "contact", children: [] },
-		])
-		const secondary = define.fragment("secondary", [
-			{ kind: "section", id: "contact", children: [] },
-		])
-
-		expect(() => define({ ui: [...primary, ...secondary] })).toThrow(
-			'Duplicate node ID "contact"',
-		)
-	})
-
 	it("resolves render visibility and passes inherited interaction state", () => {
 		function Status({ disabled, readOnly }: RenderNodeProps) {
 			return (
@@ -287,7 +373,7 @@ describe("createFormKit", () => {
 				</button>
 			)
 		}
-		const definition = testKit.defineForm(schema)({
+		const definition = testKit.defineForm(schema, {
 			ui: [
 				{ kind: "field", path: "name", control: "text", label: "Name" },
 				{
@@ -306,13 +392,11 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = testKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
-		render(
-			<testKit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-			/>,
-		)
+		render(<testKit.AutoForm form={form} />)
 
 		const status = screen.getByRole("button", { name: "Account status" })
 		expect((status as HTMLButtonElement).disabled).toBe(true)
@@ -326,7 +410,7 @@ describe("createFormKit", () => {
 
 	it("preserves custom kits while defaulting omitted slots", () => {
 		expect(() =>
-			testKit.defineForm(schema)({
+			testKit.defineForm(schema, {
 				ui: [
 					{
 						kind: "field",
@@ -338,7 +422,7 @@ describe("createFormKit", () => {
 		).not.toThrow()
 
 		expect(() =>
-			testKit.defineForm(schema).withContext<{ readonly locked: boolean }>({
+			testKit.forContext<{ readonly locked: boolean }>().defineForm(schema, {
 				ui: [
 					{
 						kind: "field",
@@ -361,10 +445,11 @@ describe("createFormKit", () => {
 				text: textControl,
 			},
 			slots: {
+				...createDefaultSlots(),
 				Field,
 			},
 		})
-		const definition = kit.defineForm(schema)({
+		const definition = kit.defineForm(schema, {
 			ui: [
 				{
 					kind: "field",
@@ -374,14 +459,11 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = kit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
-		render(
-			<kit.AutoForm
-				defaultValues={defaultValues()}
-				definition={definition}
-				id="partial"
-			/>,
-		)
+		render(<kit.AutoForm form={form} id="partial" />)
 
 		expect(screen.getByText("Name").getAttribute("data-custom-field")).toBe("")
 		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
@@ -468,12 +550,13 @@ describe("createFormKit", () => {
 				text: textControl,
 			},
 			slots: {
+				...createDefaultSlots(),
 				Field,
 				Section,
 				Array: ArraySlot,
 			},
 		})
-		const definition = kit.defineForm(richSchema)({
+		const definition = kit.defineForm(richSchema, {
 			ui: [
 				{
 					kind: "section",
@@ -522,16 +605,14 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = kit.createForm(definition, {
+			defaultValues: {
+				name: "Ada",
+				contacts: [],
+			},
+		})
 
-		render(
-			<kit.AutoForm
-				defaultValues={{
-					name: "Ada",
-					contacts: [],
-				}}
-				definition={definition}
-			/>,
-		)
+		render(<kit.AutoForm form={form} />)
 
 		expect(screen.getByText("optional details")).toBeTruthy()
 		expect(
@@ -576,11 +657,11 @@ describe("createFormKit", () => {
 
 	it("passes resolved control props with deterministic names, IDs, ARIA, and meta", () => {
 		const definition = createDefinition()
+		const form = testKit.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
 
 		function ControlHarness() {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
-			})
 			const displayErrors = useFormState(
 				form,
 				(snapshot) => snapshot.displayErrors.fields.get("name") ?? [],
@@ -631,7 +712,7 @@ describe("createFormKit", () => {
 	})
 
 	it("keeps generated DOM IDs distinct for dashed and nested paths", () => {
-		const definition = testKit.defineForm(collisionSchema)({
+		const definition = testKit.defineForm(collisionSchema, {
 			ui: [
 				{
 					kind: "field",
@@ -647,19 +728,14 @@ describe("createFormKit", () => {
 				},
 			],
 		})
+		const form = testKit.createForm(definition, {
+			defaultValues: {
+				"user-name": "Ada",
+				user: { name: "Grace" },
+			},
+		})
 
-		render(
-			<testKit.AutoForm
-				defaultValues={{
-					"user-name": "Ada",
-					user: {
-						name: "Grace",
-					},
-				}}
-				definition={definition}
-				id="profile"
-			/>,
-		)
+		render(<testKit.AutoForm form={form} id="profile" />)
 
 		const dashed = document.querySelector<HTMLInputElement>(
 			'input[name="user-name"]',
@@ -671,6 +747,167 @@ describe("createFormKit", () => {
 		expect(dashed?.id).toBe("profile-user-name")
 		expect(nested?.id).toBe("profile-user%2Ename")
 		expect(dashed?.id).not.toBe(nested?.id)
+	})
+
+	it("rejects forms from base, extended, and sibling kit snapshots", () => {
+		const base = createFormKit({
+			controls: { text: textControl },
+			slots: createDefaultSlots(),
+		})
+		const extended = base.extend({ controls: { extra: textControl } })
+		const sibling = createFormKit({
+			controls: { text: textControl },
+			slots: createDefaultSlots(),
+		})
+		const definition = base.defineForm(schema, { ui: [] })
+		const form = base.createForm(definition, {
+			defaultValues: defaultValues(),
+		})
+
+		expect(() => render(<extended.Form form={form as never} />)).toThrow(
+			/exact form kit/i,
+		)
+		expect(() => render(<sibling.AutoForm form={form as never} />)).toThrow(
+			/exact form kit/i,
+		)
+
+		function BindingMismatch() {
+			sibling.useBindForm(form as never, {})
+			return null
+		}
+		expect(() => render(<BindingMismatch />)).toThrow(/exact form kit/i)
+	})
+
+	it("initializes one isolated middleware closure per form and rejects duplicates", () => {
+		const commits: number[][] = []
+		const middleware: FormMiddleware<TestValues, unknown> = () => (next) => {
+			const local: number[] = []
+			commits.push(local)
+			return (transaction) => {
+				local.push(local.length + 1)
+				return next(transaction)
+			}
+		}
+		const definition = createDefinition()
+		const first = testKit.createForm<TestSchema, unknown>(definition, {
+			defaultValues: defaultValues(),
+			middleware: [middleware],
+		})
+		const second = testKit.createForm<TestSchema, unknown>(definition, {
+			defaultValues: defaultValues(),
+			middleware: [middleware],
+		})
+
+		first.setValue("name", "Grace")
+		second.setValue("name", "Katherine")
+		expect(commits).toEqual([[1], [1]])
+		expect(() =>
+			testKit.createForm<TestSchema, unknown>(definition, {
+				defaultValues: defaultValues(),
+				middleware: [middleware, middleware],
+			}),
+		).toThrow(/duplicates an earlier middleware reference/i)
+	})
+
+	it("publishes no binding activation for failed or discarded forms", () => {
+		const activated = vi.fn()
+		const pass = Object.assign<FormMiddleware<TestValues, unknown>, object>(
+			() => (next) => (transaction) => next(transaction),
+			{ [formBindingFinalizer]: activated },
+		)
+		const fail: FormMiddleware<TestValues, unknown> = () => {
+			throw new Error("initialization failed")
+		}
+		const definition = createDefinition()
+
+		expect(() =>
+			testKit.createForm<TestSchema, unknown>(definition, {
+				defaultValues: defaultValues(),
+				middleware: [pass, fail],
+			}),
+		).toThrow("initialization failed")
+		testKit.createForm<TestSchema, unknown>(definition, {
+			defaultValues: defaultValues(),
+			middleware: [pass],
+		})
+		expect(activated).not.toHaveBeenCalled()
+
+		function BoundForm() {
+			const form = testKit.useCreateForm<TestSchema, unknown>(definition, {
+				defaultValues: defaultValues(),
+				middleware: [pass],
+			})
+			return <testKit.AutoForm form={form} />
+		}
+
+		render(
+			<StrictMode>
+				<BoundForm />
+			</StrictMode>,
+		)
+		expect(activated).toHaveBeenCalledTimes(1)
+	})
+
+	it("keeps DevTools attached to the retained Strict Mode form until explicit disconnect", () => {
+		const listeners = new Set<(message: unknown) => void>()
+		const unsubscribeFromMessages = vi.fn(() => listeners.clear())
+		const subscribe = vi.fn((listener: (message: unknown) => void) => {
+			listeners.add(listener)
+			return unsubscribeFromMessages
+		})
+		const connect = vi.fn(() => ({
+			init: vi.fn(),
+			send: vi.fn(),
+			error: vi.fn(),
+			subscribe,
+			unsubscribe: vi.fn(() => listeners.clear()),
+		}))
+		Object.defineProperty(window, "__REDUX_DEVTOOLS_EXTENSION__", {
+			configurable: true,
+			value: { connect },
+		})
+		const feature = createDevToolsMiddleware()
+		const definition = createDefinition()
+		let retainedForm:
+			| ReturnType<typeof testKit.createForm<TestSchema, unknown>>
+			| undefined
+
+		function BoundForm() {
+			const form = testKit.useCreateForm<TestSchema, unknown>(definition, {
+				defaultValues: defaultValues(),
+				middleware: [feature],
+			})
+			retainedForm = form
+			return <testKit.AutoForm form={form} />
+		}
+
+		try {
+			const { unmount } = render(
+				<StrictMode>
+					<BoundForm />
+				</StrictMode>,
+			)
+			expect(connect).toHaveBeenCalledOnce()
+			expect(subscribe).toHaveBeenCalledOnce()
+			expect(listeners.size).toBe(1)
+			expect(unsubscribeFromMessages).not.toHaveBeenCalled()
+
+			unmount()
+			expect(listeners.size).toBe(1)
+			expect(unsubscribeFromMessages).not.toHaveBeenCalled()
+
+			if (retainedForm === undefined) {
+				throw new Error("Expected Strict Mode to retain a form")
+			}
+			feature.handle(retainedForm).disconnect()
+			expect(unsubscribeFromMessages).toHaveBeenCalledOnce()
+			expect(listeners.size).toBe(0)
+		} finally {
+			if (retainedForm !== undefined) {
+				feature.handle(retainedForm).disconnect()
+			}
+			Reflect.deleteProperty(window, "__REDUX_DEVTOOLS_EXTENSION__")
+		}
 	})
 })
 
@@ -688,4 +925,5 @@ function expectResolvedSlots(slots: FormKitSlots) {
 	expect(slots.Array).toBeTypeOf("function")
 	expect(slots.ArrayItem).toBeTypeOf("function")
 	expect(slots.ErrorMessage).toBeTypeOf("function")
+	expect(slots.Submit).toBeTypeOf("function")
 }

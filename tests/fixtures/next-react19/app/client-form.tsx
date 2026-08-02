@@ -11,6 +11,7 @@ import {
 	type SectionSlotProps,
 	type StandardSchema,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
 
@@ -90,6 +91,7 @@ const kit = createFormKit({
 		text,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field,
 		Section,
 		Array: ArraySlot,
@@ -98,7 +100,7 @@ const kit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -118,14 +120,11 @@ async function submit(_formData: FormData): Promise<void> {
 }
 
 export function ClientForm() {
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { name: "Ada" },
+	})
 	return (
-		<ActionForm
-			action={submit}
-			defaultValues={{ name: "Ada" }}
-			definition={definition}
-			kit={kit}
-			result={actionResult}
-		>
+		<ActionForm action={submit} form={form} result={actionResult}>
 			<ActionSubmit>Save</ActionSubmit>
 		</ActionForm>
 	)

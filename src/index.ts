@@ -3,13 +3,11 @@
 export type {
 	AnyUiPresentation,
 	ArrayCommand,
-	ArrayCommandChange,
 	ArrayFieldPath,
 	ArrayItemMetadata,
 	ArrayMetadata,
 	ArrayNode,
-	ArrayRowState,
-	ArrayRowsState,
+	BaselineDisposition,
 	BeforeUpdateEvent,
 	ControlContextOf,
 	ControlFormData,
@@ -21,25 +19,43 @@ export type {
 	ControlValueOf,
 	CoreUiPresentation,
 	DisplayFormErrors,
+	DocumentCommittedEvent,
+	DocumentRestoredEvent,
+	DocumentTransaction,
+	FieldBlurredEvent,
 	FieldMetadata,
 	FieldNode,
 	FieldPath,
+	FieldTouchedEvent,
 	FocusTarget,
+	FormCommand,
 	FormDefinition,
+	FormDispatchResult,
+	FormDocument,
+	FormDocumentEvent,
 	FormErrors,
+	FormEvent,
 	FormInput,
 	FormIssue,
 	FormMetadata,
+	FormMiddleware,
+	FormMiddlewareApi,
 	FormOutput,
+	FormRuntimeEvent,
 	FormSnapshot,
 	FormState,
 	FormStoreListener,
 	FormStoreOptions,
 	FormStoreSelector,
 	FormStoreSubscriptionOptions,
+	FormTransaction,
+	FormTransactionDispatch,
 	GridColumns,
 	GridSpan,
 	ImperativeFormIssue,
+	IssuesChange,
+	IssuesChangedEvent,
+	IssuesCommand,
 	IsValidControlValue,
 	NormalizeDefinitionInput,
 	NormalizedArrayNode,
@@ -55,6 +71,8 @@ export type {
 	PathValue,
 	RelativeUiNode,
 	RenderNode,
+	ReplaceRuntimeCommand,
+	ResetCommand,
 	Resolvable,
 	ResolvedArrayNode,
 	ResolvedComputedCache,
@@ -67,26 +85,42 @@ export type {
 	ResolvedUiState,
 	ResolveUiOptions,
 	ResourceState,
+	RestoreOrigin,
+	RestoreTransaction,
+	RowIdentityChange,
+	RuntimeReplacedEvent,
+	RuntimeResetEvent,
+	RuntimeTransaction,
 	SectionNode,
+	SetValueCommand,
+	SetValuesCommand,
 	StandardSchema,
+	SubmissionFinishedEvent,
+	SubmissionStartedEvent,
+	TouchCommand,
 	UiNode,
 	UiPresentation,
 	UiResolver,
 	UiResolverDetails,
 	UiResolverValues,
+	UnsetValueCommand,
 	UpdateEvent,
 	UpdateHooks,
 	UpdateSource,
+	ValidationCommand,
+	ValidationFailedEvent,
 	ValidationMode,
 	ValidationOptions,
+	ValidationResolvedEvent,
 	ValidationResult,
+	ValidationStartedEvent,
 	ValidationStatus,
 	ValueChange,
+	ValueCommand,
 	ValuePolicy,
 } from "./core/index.js"
 export {
 	cloneValue,
-	createFormStore,
 	extendValueChanges,
 	formatPath,
 	fromResource,
@@ -105,22 +139,19 @@ export {
 	setPathValue,
 	unsetPathValue,
 } from "./core/index.js"
+export type { FieldControlProps } from "./react/control.js"
 export type {
 	AnyControlDefinition,
 	ControlDefinition,
 	ControlDefinitionRegistry,
 	ControlProps,
 	DefineControlInput,
-	FieldControlProps,
-} from "./react/control.js"
-export { defineControl } from "./react/control.js"
+} from "./react/control-definition.js"
+export { defineControl } from "./react/control-definition.js"
 export type {
 	AutoFormProps,
 	CreateFormKitOptions,
 	DefineForm,
-	DefineFormFragment,
-	DefinitionFragmentNode,
-	DefinitionFragmentPath,
 	ExtendFormKit,
 	FieldsProps,
 	FormKit,
@@ -129,15 +160,7 @@ export type {
 	SubmitProps,
 } from "./react/create-form-kit.js"
 export { createFormKit } from "./react/create-form-kit.js"
-export type {
-	DefaultArrayAddI18nData,
-	DefaultArrayItemI18nData,
-	DefaultSlotI18nValue,
-	DefaultSlotsI18n,
-} from "./react/default-slots.js"
-export { createDefaultSlots } from "./react/default-slots.js"
 export type { NativeFormProps } from "./react/form.js"
-export { KitForm } from "./react/form.js"
 export type { FormProviderProps } from "./react/form-context.js"
 export { FormProvider, useFormContext } from "./react/form-context.js"
 export type {
@@ -152,19 +175,6 @@ export {
 	useFormState,
 	useValue,
 } from "./react/hooks.js"
-export type {
-	NativeDateOptions,
-	NativeFileOptions,
-	NativeNumberOptions,
-	NativeSelectEmptyOption,
-	NativeSelectOption,
-	NativeSelectOptions,
-	NativeTextareaOptions,
-	NativeTextOptions,
-	NativeTextType,
-	NativeTimeOptions,
-} from "./react/native-controls.js"
-export { nativeControls } from "./react/native-controls.js"
 export type {
 	RenderNodeComponent,
 	RenderNodeProps,
@@ -182,15 +192,15 @@ export type {
 	SectionSlotProps,
 	StructuralNodeName,
 	StructuralRootProps,
+	SubmitSlotProps,
 } from "./react/slots.js"
 export type {
 	SubmitContext,
 	SubmitHandler,
 } from "./react/submission.js"
-export { Submit } from "./react/submit.js"
 export type {
+	CreateFormOptions,
 	FormInstance,
 	FormRuntimeOptions,
-	UseFormOptions,
 } from "./react/use-form.js"
-export { createForm, useForm } from "./react/use-form.js"
+export { useSnapshot } from "./react/use-snapshot.js"

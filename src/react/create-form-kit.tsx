@@ -1,19 +1,25 @@
 "use client"
 
-import type { ComponentType, ElementType, ReactElement, ReactNode } from "react"
-import { scopeDefinitionFragment } from "../core/definition-fragment.js"
 import {
-	type FieldPath,
-	type FormInput,
+	type ComponentType,
+	type ElementType,
+	type ReactElement,
+	type ReactNode,
+	useState,
+} from "react"
+import {
 	type NormalizedFormDefinition,
 	normalizeDefinition,
-	type PathValue,
 	type StandardSchema,
 	type UiNode,
 } from "../core/index.js"
+import {
+	extendGridScale,
+	normalizeGridScale,
+} from "../core/structural-presentation.js"
+import type { DefaultGridValue } from "../core/ui-types.js"
 import { createAutoFormComponent } from "./auto-form.js"
-import type { ControlDefinitionRegistry } from "./control.js"
-import { createDefaultSlots } from "./default-slots.js"
+import type { ControlDefinitionRegistry } from "./control-definition.js"
 import { createFieldsComponent } from "./fields.js"
 import type { NativeFormProps } from "./form.js"
 import {
@@ -21,6 +27,16 @@ import {
 	type KitFormComponent,
 	type KitFormProps,
 } from "./form.js"
+import {
+	assertFormKitOwnership,
+	type CreateFormOptions,
+	createFormInstance,
+	type FormContextProp,
+	type FormInstance,
+	type FormKitDescriptor,
+	type FormKitOwner,
+	type FormRuntimeOptions,
+} from "./form-instance.js"
 import type { RenderNodeComponent } from "./render-node.js"
 import type {
 	ArrayItemSlotProps,
@@ -29,9 +45,14 @@ import type {
 	FieldSlotProps,
 	ReactUiPresentation,
 	SectionSlotProps,
+	SubmitSlotProps,
 } from "./slots.js"
-import { Submit, type SubmitProps } from "./submit.js"
-import type { UseFormOptions } from "./use-form.js"
+import {
+	createSubmitComponent,
+	type SubmitComponent,
+	type SubmitProps,
+} from "./submit.js"
+import { useFormBinding } from "./use-form.js"
 
 export type FormKitSlots<
 	FieldSlotOptions = never,
@@ -43,6 +64,7 @@ export type FormKitSlots<
 	readonly Array: ComponentType<ArraySlotProps<ArraySlotOptions>>
 	readonly ArrayItem: ComponentType<ArrayItemSlotProps>
 	readonly ErrorMessage: ComponentType<ErrorMessageSlotProps>
+	readonly Submit: ComponentType<SubmitSlotProps>
 }
 
 export type RuntimeFormKitSlots = {
@@ -51,6 +73,7 @@ export type RuntimeFormKitSlots = {
 	readonly Array: ElementType
 	readonly ArrayItem: ComponentType<ArrayItemSlotProps>
 	readonly ErrorMessage: ComponentType<ErrorMessageSlotProps>
+	readonly Submit: ComponentType<SubmitSlotProps>
 }
 
 export type CreateFormKitOptions<
@@ -58,10 +81,14 @@ export type CreateFormKitOptions<
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
+	Grid extends number = DefaultGridValue,
 > = {
 	readonly controls: Controls
-	readonly slots?: Partial<
-		FormKitSlots<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+	readonly grid?: readonly Grid[]
+	readonly slots: FormKitSlots<
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions
 	>
 }
 
@@ -72,175 +99,16 @@ type FormDefinitionInput<
 	FieldSlotOptions,
 	SectionSlotOptions,
 	ArraySlotOptions,
+	Grid extends number,
 > = {
-	readonly ui: readonly (
-		| UiNode<
-				Input,
-				Controls,
-				Context,
-				RenderNodeComponent,
-				ReactUiPresentation<
-					FieldSlotOptions,
-					SectionSlotOptions,
-					ArraySlotOptions
-				>
-		  >
-		| DefinitionFragmentNode<
-				Input,
-				Controls,
-				Context,
-				FieldSlotOptions,
-				SectionSlotOptions,
-				ArraySlotOptions
-		  >
-	)[]
-}
-
-declare const definitionFragmentNodeBrand: unique symbol
-
-export type DefinitionFragmentNode<
-	Input,
-	Controls extends ControlDefinitionRegistry,
-	Context,
-	FieldSlotOptions,
-	SectionSlotOptions,
-	ArraySlotOptions,
-> = {
-	readonly kind?: never
-	readonly [definitionFragmentNodeBrand]: {
-		readonly input: (input: Input) => void
-		readonly controls: (controls: Controls) => void
-		readonly context: (context: Context) => void
-		readonly fieldSlotOptions: () => FieldSlotOptions
-		readonly sectionSlotOptions: () => SectionSlotOptions
-		readonly arraySlotOptions: () => ArraySlotOptions
-	}
-}
-
-type DefinitionFragmentPathFor<Input, Path> =
-	Path extends FieldPath<Input>
-		? PathValue<Input, Path> extends readonly unknown[]
-			? never
-			: PathValue<Input, Path> extends object
-				? Path
-				: never
-		: never
-
-export type DefinitionFragmentPath<Input> = DefinitionFragmentPathFor<
-	Input,
-	FieldPath<Input>
->
-
-export type DefineFormFragment<
-	Input,
-	Controls extends ControlDefinitionRegistry,
-	Context,
-	FieldSlotOptions,
-	SectionSlotOptions,
-	ArraySlotOptions,
-> = <const Scope extends DefinitionFragmentPath<Input>>(
-	scope: Scope,
-	nodes: readonly UiNode<
-		NonNullable<PathValue<Input, Scope>>,
+	readonly ui: readonly UiNode<
+		Input,
 		Controls,
 		Context,
 		RenderNodeComponent,
-		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
-	>[],
-) => readonly DefinitionFragmentNode<
-	Input,
-	Controls,
-	Context,
-	FieldSlotOptions,
-	SectionSlotOptions,
-	ArraySlotOptions
->[]
-
-type DefineFormFragmentForSchema<
-	Input,
-	Controls extends ControlDefinitionRegistry,
-	FieldSlotOptions,
-	SectionSlotOptions,
-	ArraySlotOptions,
-> = DefineFormFragment<
-	Input,
-	Controls,
-	unknown,
-	FieldSlotOptions,
-	SectionSlotOptions,
-	ArraySlotOptions
-> & {
-	readonly withContext: <Context>() => DefineFormFragment<
-		Input,
-		Controls,
-		Context,
-		FieldSlotOptions,
-		SectionSlotOptions,
-		ArraySlotOptions
-	>
-}
-
-type DefineFormWithContext<
-	Schema extends StandardSchema,
-	Input,
-	Controls extends ControlDefinitionRegistry,
-	FieldSlotOptions,
-	SectionSlotOptions,
-	ArraySlotOptions,
-> = <Context>(
-	definition: FormDefinitionInput<
-		Input,
-		Controls,
-		Context,
-		FieldSlotOptions,
-		SectionSlotOptions,
-		ArraySlotOptions
-	>,
-) => NormalizedFormDefinition<
-	Schema,
-	Controls,
-	RenderNodeComponent,
-	ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
->
-
-type DefineFormForSchema<
-	Schema extends StandardSchema,
-	Input,
-	Controls extends ControlDefinitionRegistry,
-	FieldSlotOptions,
-	SectionSlotOptions,
-	ArraySlotOptions,
-> = {
-	(
-		definition: FormDefinitionInput<
-			Input,
-			Controls,
-			unknown,
-			FieldSlotOptions,
-			SectionSlotOptions,
-			ArraySlotOptions
-		>,
-	): NormalizedFormDefinition<
-		Schema,
-		Controls,
-		RenderNodeComponent,
-		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
-	>
-	readonly withContext: DefineFormWithContext<
-		Schema,
-		Input,
-		Controls,
-		FieldSlotOptions,
-		SectionSlotOptions,
-		ArraySlotOptions
-	>
-	readonly fragment: DefineFormFragmentForSchema<
-		Input,
-		Controls,
-		FieldSlotOptions,
-		SectionSlotOptions,
-		ArraySlotOptions
-	>
+		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+		Grid
+	>[]
 }
 
 export type DefineForm<
@@ -248,20 +116,36 @@ export type DefineForm<
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
+	Context = unknown,
+	Grid extends number = DefaultGridValue,
 > = <Input, Output, Schema extends StandardSchema<Input, Output>>(
 	schema: Schema & StandardSchema<Input, Output>,
-) => DefineFormForSchema<
+	definition: FormDefinitionInput<
+		Input,
+		Controls,
+		Context,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions,
+		Grid
+	>,
+) => NormalizedFormDefinition<
 	Schema,
-	Input,
 	Controls,
-	FieldSlotOptions,
-	SectionSlotOptions,
-	ArraySlotOptions
+	RenderNodeComponent,
+	ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+	Context,
+	Grid
 >
 
 export type FieldsProps = {
 	readonly children?: ReactNode
 }
+
+type CreateFormContextProp<Context, RequiredContext> =
+	unknown extends RequiredContext
+		? { readonly context?: Context }
+		: { readonly context: Context }
 
 export type AutoFormProps<
 	Schema extends StandardSchema = StandardSchema,
@@ -271,20 +155,88 @@ export type AutoFormProps<
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
 > = NativeFormProps &
-	Omit<UseFormOptions<Schema, Context>, "defaultValues"> & {
-		readonly definition: NormalizedFormDefinition<
+	Omit<FormRuntimeOptions<Schema, NoInfer<Context>>, "context"> &
+	FormContextProp<Context> & {
+		readonly form: FormInstance<
 			Schema,
+			Context,
 			Controls,
-			RenderNodeComponent,
 			ReactUiPresentation<
 				FieldSlotOptions,
 				SectionSlotOptions,
 				ArraySlotOptions
+			>,
+			FormKitOwner<
+				Controls,
+				ReactUiPresentation<
+					FieldSlotOptions,
+					SectionSlotOptions,
+					ArraySlotOptions
+				>
 			>
 		>
-		readonly defaultValues: FormInput<Schema>
 		readonly children?: ReactNode
 	}
+
+type KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions> =
+	ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+
+type KitOwner<
+	Controls,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+> = FormKitOwner<
+	Controls,
+	KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+>
+
+type CreateKitForm<
+	Controls extends ControlDefinitionRegistry,
+	FieldSlotOptions = never,
+	SectionSlotOptions = never,
+	ArraySlotOptions = never,
+	KitContext = unknown,
+	Grid extends number = DefaultGridValue,
+> = <
+	Schema extends StandardSchema,
+	RequiredContext = unknown,
+	Context extends KitContext & RequiredContext = KitContext & RequiredContext,
+>(
+	definition: NormalizedFormDefinition<
+		Schema,
+		Controls,
+		RenderNodeComponent,
+		KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+		RequiredContext,
+		Grid
+	>,
+	options: Omit<CreateFormOptions<Schema, Context>, "context"> &
+		CreateFormContextProp<Context, KitContext & RequiredContext>,
+) => FormInstance<
+	Schema,
+	Context,
+	Controls,
+	KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+	KitOwner<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+>
+
+type UseBindKitForm<
+	Controls extends ControlDefinitionRegistry,
+	FieldSlotOptions = never,
+	SectionSlotOptions = never,
+	ArraySlotOptions = never,
+	KitContext = unknown,
+> = <Schema extends StandardSchema, Context extends KitContext = KitContext>(
+	form: FormInstance<
+		Schema,
+		Context,
+		Controls,
+		KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+		KitOwner<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+	>,
+	options: FormRuntimeOptions<Schema, NoInfer<Context>>,
+) => typeof form
 
 export type FieldsComponent = (props: FieldsProps) => ReactElement
 
@@ -293,7 +245,8 @@ export type AutoFormComponent<
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
-> = <Schema extends StandardSchema, Context = unknown>(
+	KitContext = unknown,
+> = <Schema extends StandardSchema, Context extends KitContext = KitContext>(
 	props: AutoFormProps<
 		Schema,
 		Context,
@@ -319,6 +272,7 @@ type FormKitSlotOverrides = {
 	readonly Array?: ComponentType<never>
 	readonly ArrayItem?: ComponentType<ArrayItemSlotProps>
 	readonly ErrorMessage?: ComponentType<ErrorMessageSlotProps>
+	readonly Submit?: ComponentType<SubmitSlotProps>
 }
 
 type FieldSlotOptionsOf<Slot> =
@@ -398,8 +352,10 @@ type ExtendWithControlsOptions<
 	SectionSlotOptions,
 	ArraySlotOptions,
 	Overrides extends FormKitSlotOverrides,
+	GridAdditions extends number,
 > = {
 	readonly controls: WithoutControlCollisions<Base, Additions>
+	readonly grid?: readonly GridAdditions[]
 	readonly slots?: CompatibleSlotOverrides<
 		FieldSlotOptions,
 		SectionSlotOptions,
@@ -413,9 +369,28 @@ type ExtendWithSlotsOptions<
 	SectionSlotOptions,
 	ArraySlotOptions,
 	Overrides extends FormKitSlotOverrides,
+	GridAdditions extends number,
 > = {
 	readonly controls?: never
+	readonly grid?: readonly GridAdditions[]
 	readonly slots: CompatibleSlotOverrides<
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions,
+		Overrides
+	>
+}
+
+type ExtendWithGridOptions<
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+	Overrides extends FormKitSlotOverrides,
+	GridAdditions extends number,
+> = {
+	readonly controls?: never
+	readonly grid: readonly GridAdditions[]
+	readonly slots?: CompatibleSlotOverrides<
 		FieldSlotOptions,
 		SectionSlotOptions,
 		ArraySlotOptions,
@@ -428,10 +403,13 @@ export type ExtendFormKit<
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
+	Context = unknown,
+	Grid extends number = DefaultGridValue,
 > = {
 	<
 		const Additions extends ControlDefinitionRegistry,
 		const Overrides extends FormKitSlotOverrides = Record<never, never>,
+		const GridAdditions extends number = never,
 	>(
 		options: ExtendWithControlsOptions<
 			Controls,
@@ -439,26 +417,54 @@ export type ExtendFormKit<
 			FieldSlotOptions,
 			SectionSlotOptions,
 			ArraySlotOptions,
-			Overrides
+			Overrides,
+			GridAdditions
 		>,
 	): FormKit<
 		Controls & Additions,
 		NextFieldSlotOptions<FieldSlotOptions, Overrides>,
 		NextSectionSlotOptions<SectionSlotOptions, Overrides>,
-		NextArraySlotOptions<ArraySlotOptions, Overrides>
+		NextArraySlotOptions<ArraySlotOptions, Overrides>,
+		Context,
+		Grid | GridAdditions
 	>
-	<const Overrides extends FormKitSlotOverrides>(
+	<
+		const Overrides extends FormKitSlotOverrides,
+		const GridAdditions extends number = never,
+	>(
 		options: ExtendWithSlotsOptions<
 			FieldSlotOptions,
 			SectionSlotOptions,
 			ArraySlotOptions,
-			Overrides
+			Overrides,
+			GridAdditions
 		>,
 	): FormKit<
 		Controls,
 		NextFieldSlotOptions<FieldSlotOptions, Overrides>,
 		NextSectionSlotOptions<SectionSlotOptions, Overrides>,
-		NextArraySlotOptions<ArraySlotOptions, Overrides>
+		NextArraySlotOptions<ArraySlotOptions, Overrides>,
+		Context,
+		Grid | GridAdditions
+	>
+	<
+		const GridAdditions extends number,
+		const Overrides extends FormKitSlotOverrides = Record<never, never>,
+	>(
+		options: ExtendWithGridOptions<
+			FieldSlotOptions,
+			SectionSlotOptions,
+			ArraySlotOptions,
+			Overrides,
+			GridAdditions
+		>,
+	): FormKit<
+		Controls,
+		NextFieldSlotOptions<FieldSlotOptions, Overrides>,
+		NextSectionSlotOptions<SectionSlotOptions, Overrides>,
+		NextArraySlotOptions<ArraySlotOptions, Overrides>,
+		Context,
+		Grid | GridAdditions
 	>
 }
 
@@ -467,8 +473,11 @@ export interface FormKit<
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
+	Context = unknown,
+	Grid extends number = DefaultGridValue,
 > {
 	readonly controls: Controls
+	readonly grid: readonly Grid[]
 	readonly slots: FormKitSlots<
 		FieldSlotOptions,
 		SectionSlotOptions,
@@ -478,45 +487,118 @@ export interface FormKit<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
-		ArraySlotOptions
+		ArraySlotOptions,
+		Context,
+		Grid
+	>
+	readonly forContext: <NextContext extends Context>() => FormKit<
+		Controls,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions,
+		NextContext,
+		Grid
 	>
 	readonly defineForm: DefineForm<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
-		ArraySlotOptions
+		ArraySlotOptions,
+		Context,
+		Grid
+	>
+	readonly createForm: CreateKitForm<
+		Controls,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions,
+		Context,
+		Grid
+	>
+	readonly useCreateForm: CreateKitForm<
+		Controls,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions,
+		Context,
+		Grid
+	>
+	readonly useBindForm: UseBindKitForm<
+		Controls,
+		FieldSlotOptions,
+		SectionSlotOptions,
+		ArraySlotOptions,
+		Context
 	>
 	readonly Form: KitFormComponent<
 		Controls,
-		ReactUiPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>
+		KitPresentation<FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+		KitOwner<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
+		Context
 	>
-	readonly Submit: typeof Submit
+	readonly Submit: SubmitComponent
 	readonly Fields: FieldsComponent
 	readonly AutoForm: AutoFormComponent<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
-		ArraySlotOptions
+		ArraySlotOptions,
+		Context
 	>
 }
 
 type RuntimeExtendOptions = {
 	readonly controls?: ControlDefinitionRegistry
+	readonly grid?: readonly number[]
 	readonly slots?: Partial<RuntimeFormKitSlots>
 }
 
+type RuntimeKitDefinition<RequiredContext = never> = NormalizedFormDefinition<
+	StandardSchema,
+	ControlDefinitionRegistry,
+	RenderNodeComponent,
+	KitPresentation<unknown, unknown, unknown>,
+	RequiredContext
+>
+
 type RuntimeFormKit = {
 	readonly controls: ControlDefinitionRegistry
+	readonly grid: readonly number[]
 	readonly slots: RuntimeFormKitSlots
 	readonly extend: (options: RuntimeExtendOptions) => RuntimeFormKit
+	readonly forContext: <_Context>() => RuntimeFormKit
 	readonly defineForm: DefineForm<
+		ControlDefinitionRegistry,
+		unknown,
+		unknown,
+		unknown,
+		unknown,
+		number
+	>
+	readonly createForm: CreateKitForm<
+		ControlDefinitionRegistry,
+		unknown,
+		unknown,
+		unknown,
+		unknown,
+		number
+	>
+	readonly useCreateForm: CreateKitForm<
+		ControlDefinitionRegistry,
+		unknown,
+		unknown,
+		unknown,
+		unknown,
+		number
+	>
+	readonly useBindForm: UseBindKitForm<
 		ControlDefinitionRegistry,
 		unknown,
 		unknown,
 		unknown
 	>
 	readonly Form: KitFormComponent<ControlDefinitionRegistry>
-	readonly Submit: typeof Submit
+	readonly Submit: SubmitComponent
 	readonly Fields: FieldsComponent
 	readonly AutoForm: AutoFormComponent<
 		ControlDefinitionRegistry,
@@ -531,35 +613,57 @@ export function createFormKit<
 	FieldSlotOptions = never,
 	SectionSlotOptions = never,
 	ArraySlotOptions = never,
+	const Grid extends number = DefaultGridValue,
 >(
 	options: CreateFormKitOptions<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
-		ArraySlotOptions
+		ArraySlotOptions,
+		Grid
 	>,
-): FormKit<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions> {
+): FormKit<
+	Controls,
+	FieldSlotOptions,
+	SectionSlotOptions,
+	ArraySlotOptions,
+	unknown,
+	Grid
+> {
 	const slots = Object.freeze({
-		...createDefaultSlots(),
 		...options.slots,
 	}) as unknown as Partial<RuntimeFormKitSlots>
 	assertSlots(slots, "createFormKit")
+	const controls = Object.freeze({ ...options.controls }) as Controls
+	const grid = normalizeGridScale(options.grid, "createFormKit")
 
-	return assembleFormKit(options.controls, slots) as unknown as FormKit<
+	return assembleFormKit(controls, grid, slots) as unknown as FormKit<
 		Controls,
 		FieldSlotOptions,
 		SectionSlotOptions,
-		ArraySlotOptions
+		ArraySlotOptions,
+		unknown,
+		Grid
 	>
 }
 
 function assembleFormKit(
 	controls: ControlDefinitionRegistry,
+	grid: readonly number[],
 	slots: RuntimeFormKitSlots,
 ): RuntimeFormKit {
+	const descriptor = Object.freeze({
+		controls,
+		grid,
+		slots,
+	}) satisfies FormKitDescriptor
 	const extend = (options: RuntimeExtendOptions) => {
-		if (options.controls === undefined && options.slots === undefined) {
-			throw new TypeError("kit.extend requires controls or slots")
+		if (
+			options.controls === undefined &&
+			options.grid === undefined &&
+			options.slots === undefined
+		) {
+			throw new TypeError("kit.extend requires controls, grid, or slots")
 		}
 
 		for (const name of Object.keys(options.controls ?? {})) {
@@ -572,48 +676,82 @@ function assembleFormKit(
 			...controls,
 			...options.controls,
 		})
+		const extendedGrid =
+			options.grid === undefined ? grid : extendGridScale(grid, options.grid)
 		const extendedSlots = Object.freeze({
 			...slots,
 			...options.slots,
 		})
 		assertSlots(extendedSlots, "kit.extend")
 
-		return assembleFormKit(extendedControls, extendedSlots)
+		return assembleFormKit(extendedControls, extendedGrid, extendedSlots)
 	}
 
-	const defineForm = ((schema: unknown) => {
-		const create = (createDefinition: unknown) =>
-			normalizeKitDefinition(schema, createDefinition, controls)
-		const fragment = Object.assign(
-			(scope: string, nodes: readonly unknown[]) =>
-				scopeDefinitionFragment(scope, nodes),
-			{
-				withContext: () => fragment,
-			},
-		)
+	const defineForm = ((schema: unknown, definition: unknown) =>
+		normalizeKitDefinition(schema, definition, controls, grid)) as DefineForm<
+		ControlDefinitionRegistry,
+		unknown,
+		unknown,
+		unknown,
+		unknown,
+		number
+	>
+	const createRuntimeForm = <RequiredContext, Context extends RequiredContext>(
+		definition: RuntimeKitDefinition<RequiredContext>,
+		options: CreateFormOptions<StandardSchema, Context>,
+	) => {
+		assertDefinitionControls(definition, controls)
+		assertDefinitionGrid(definition, grid)
+		return createFormInstance<
+			StandardSchema,
+			RequiredContext,
+			Context,
+			ControlDefinitionRegistry,
+			KitPresentation<unknown, unknown, unknown>,
+			KitOwner<ControlDefinitionRegistry, unknown, unknown, unknown>
+		>(definition, options, descriptor)
+	}
+	const createForm = createRuntimeForm as RuntimeFormKit["createForm"]
+	const useCreateForm = ((
+		definition: RuntimeKitDefinition<unknown>,
+		options: CreateFormOptions<StandardSchema, unknown>,
+	) => {
+		const [form] = useState(() => createRuntimeForm(definition, options))
+		return form
+	}) as RuntimeFormKit["useCreateForm"]
+	const useBindForm = ((
+		form: FormInstance<StandardSchema>,
+		options: FormRuntimeOptions<StandardSchema, unknown>,
+	) => {
+		assertFormKitOwnership(form, descriptor, "kit.useBindForm")
+		return useFormBinding(form as never, options) as unknown
+	}) as unknown as RuntimeFormKit["useBindForm"]
 
-		return Object.assign(create, {
-			withContext: create,
-			fragment,
-		})
-	}) as DefineForm<ControlDefinitionRegistry, unknown, unknown, unknown>
-
-	return Object.freeze({
+	let kit: RuntimeFormKit
+	const forContext = () => kit
+	kit = Object.freeze({
 		controls,
+		grid,
 		slots,
 		extend,
+		forContext,
 		defineForm,
-		Form: createFormComponent(controls),
-		Submit,
+		createForm,
+		useCreateForm,
+		useBindForm,
+		Form: createFormComponent(controls, descriptor),
+		Submit: createSubmitComponent(slots.Submit),
 		Fields: createFieldsComponent(controls, slots),
-		AutoForm: createAutoFormComponent(controls, slots),
+		AutoForm: createAutoFormComponent(controls, slots, descriptor),
 	})
+	return kit
 }
 
 function normalizeKitDefinition(
 	schema: unknown,
 	definitionSource: unknown,
 	controls: ControlDefinitionRegistry,
+	grid: readonly number[],
 ): NormalizedFormDefinition<
 	StandardSchema,
 	ControlDefinitionRegistry,
@@ -627,6 +765,7 @@ function normalizeKitDefinition(
 		readonly schema: StandardSchema
 		readonly ui: readonly unknown[]
 		readonly controls: ControlDefinitionRegistry
+		readonly grid: readonly number[]
 	}) => NormalizedFormDefinition<
 		StandardSchema,
 		ControlDefinitionRegistry,
@@ -638,6 +777,7 @@ function normalizeKitDefinition(
 		schema: schema as StandardSchema,
 		ui: input.ui,
 		controls,
+		grid,
 	})
 }
 
@@ -651,9 +791,36 @@ function assertSlots(
 		"Array",
 		"ArrayItem",
 		"ErrorMessage",
+		"Submit",
 	] as const) {
 		if (slots[key] === undefined) {
 			throw new TypeError(`${owner} requires a ${key} slot`)
+		}
+	}
+}
+
+function assertDefinitionControls(
+	definition: RuntimeKitDefinition,
+	controls: ControlDefinitionRegistry,
+): void {
+	for (const node of definition.nodes) {
+		if (node.kind === "field" && !Object.hasOwn(controls, node.control)) {
+			throw new TypeError(
+				`kit.createForm requires control "${node.control}" used by the definition`,
+			)
+		}
+	}
+}
+
+function assertDefinitionGrid(
+	definition: RuntimeKitDefinition,
+	grid: readonly number[],
+): void {
+	for (const value of definition.grid) {
+		if (!grid.includes(value)) {
+			throw new TypeError(
+				`kit.createForm requires grid value ${value} required by the definition`,
+			)
 		}
 	}
 }

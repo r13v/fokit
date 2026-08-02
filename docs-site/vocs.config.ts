@@ -1,13 +1,16 @@
 import { defineConfig } from "vocs/config"
 
+const basePath = process.env.BASE_PATH ?? "/"
+const assetBasePath = basePath.replace(/\/$/, "")
+
 export default defineConfig({
 	title: "Form, Please",
 	description:
 		"Typed, schema-validated React forms that keep native HTML semantics and your design system.",
 	// logoUrl: "/brand/form-please-icon.png",
-	iconUrl: "/favicon.ico",
+	iconUrl: `${assetBasePath}/favicon.ico`,
 	baseUrl: process.env.BASE_URL ?? "https://r13v.github.io",
-	basePath: process.env.BASE_PATH ?? "/",
+	basePath,
 	renderStrategy: "full-static",
 	checkDeadlinks: true,
 	codeHighlight: {
@@ -51,20 +54,29 @@ export default defineConfig({
 				{ text: "Async fields", link: "/guides/async-fields" },
 				{ text: "Styling", link: "/guides/styling" },
 				{ text: "React 19 Actions", link: "/guides/react-19-actions" },
+				{ text: "History & journals", link: "/guides/history" },
+				{ text: "Persistence", link: "/guides/persistence" },
+				{ text: "Redux DevTools", link: "/guides/devtools" },
 				{ text: "Production recipes", link: "/advanced" },
+				{ text: "React-free core", link: "/guides/core" },
 			],
 		},
 		{
 			text: "Examples",
 			collapsed: false,
 			items: [
-				{ text: "Complex examples", link: "/examples" },
+				{ text: "Examples", link: "/examples" },
+				{ text: "Material UI with Yup", link: "/examples/mui-yup" },
+				{ text: "Shadcn with Valibot", link: "/examples/shadcn-valibot" },
 				{ text: "Research grant", link: "/examples/research-grant" },
 				{ text: "Studio policies", link: "/examples/studio-policies" },
 				{ text: "Makerspace launch", link: "/examples/makerspace-launch" },
 				{ text: "Learning cohort", link: "/examples/learning-cohort" },
 				{ text: "Membership ladder", link: "/examples/membership-ladder" },
 				{ text: "Campaign builder", link: "/examples/campaign-builder" },
+				{ text: "History workflow", link: "/examples/history" },
+				{ text: "Persistent draft", link: "/examples/persistence" },
+				{ text: "DevTools workflow", link: "/examples/devtools" },
 			],
 		},
 		{

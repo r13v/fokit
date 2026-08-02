@@ -3,10 +3,9 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-
+import { createDefaultSlots } from "../default-slots/default-slots.js"
 import { type ControlProps, defineControl } from "./control.js"
 import { createFormKit } from "./create-form-kit.js"
-import { createDefaultSlots } from "./default-slots.js"
 import { useFormContext } from "./form-context.js"
 import type {
 	ArrayItemSlotProps,
@@ -87,6 +86,7 @@ const kit = createFormKit({
 		text,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field: FieldSlot,
 		Section: SectionSlot,
 		Array: ArraySlot,
@@ -95,7 +95,7 @@ const kit = createFormKit({
 	},
 })
 
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "section",
@@ -121,7 +121,7 @@ const definition = kit.defineForm(schema)({
 	],
 })
 
-const defaultSlotsDefinition = defaultSlotsKit.defineForm(schema)({
+const defaultSlotsDefinition = defaultSlotsKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "section",
@@ -149,15 +149,11 @@ const defaultSlotsDefinition = defaultSlotsKit.defineForm(schema)({
 
 describe("generated field accessibility", () => {
 	it("uses deterministic IDs, ARIA, public data state, and displayed-error invalid state", async () => {
+		const form = kit.createForm(definition, {
+			defaultValues: { name: "", email: "invalid" },
+		})
 		render(
-			<kit.AutoForm
-				defaultValues={{
-					name: "",
-					email: "invalid",
-				}}
-				definition={definition}
-				id="profile"
-			>
+			<kit.AutoForm form={form} id="profile">
 				<ValidateEmail />
 			</kit.AutoForm>,
 		)
@@ -198,15 +194,11 @@ describe("generated field accessibility", () => {
 	})
 
 	it("preserves generated label, description, error, and focus props with the default slots", async () => {
+		const form = defaultSlotsKit.createForm(defaultSlotsDefinition, {
+			defaultValues: { name: "Ada", email: "invalid" },
+		})
 		render(
-			<defaultSlotsKit.AutoForm
-				defaultValues={{
-					name: "Ada",
-					email: "invalid",
-				}}
-				definition={defaultSlotsDefinition}
-				id="profile"
-			>
+			<defaultSlotsKit.AutoForm form={form} id="profile">
 				<ValidateEmail />
 			</defaultSlotsKit.AutoForm>,
 		)

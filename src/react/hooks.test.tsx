@@ -5,16 +5,12 @@ import { act, StrictMode } from "react"
 import { hydrateRoot } from "react-dom/client"
 import { renderToString } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
-import {
-	type ControlMetadata,
-	type ImperativeFormIssue,
-	normalizeDefinition,
-	type StandardSchema,
-	type UiNode,
-} from "../core/index.js"
+import type { ImperativeFormIssue, StandardSchema } from "../core/index.js"
+import { createDefaultSlots } from "../default-slots/default-slots.js"
+import { defineControl } from "./control.js"
+import { createFormKit } from "./create-form-kit.js"
+import type { CreateFormOptions } from "./form-instance.js"
 import { useArrayField, useField, useFormState, useValue } from "./hooks.js"
-import type { FormInstance } from "./use-form.js"
-import { createForm, useForm } from "./use-form.js"
 
 type ProfileValues = {
 	name: string
@@ -29,26 +25,16 @@ type ProfileContext = {
 	readonly locked: boolean
 }
 
-type ProfileControls = {
-	readonly text: ControlMetadata<string | undefined>
-}
-
 const schema = {} as StandardSchema<ProfileValues>
-const controls = {
-	text: {
-		formData: {
-			mode: "native",
-		},
-	},
-} satisfies ProfileControls
-
-const definition = normalizeDefinition<
-	typeof schema,
-	ProfileControls,
-	ProfileContext
->({
-	schema,
-	controls,
+const text = defineControl<string | undefined>({
+	component: () => null,
+	formData: { mode: "native" },
+})
+const kit = createFormKit({
+	controls: { text },
+	slots: createDefaultSlots(),
+})
+const definition = kit.forContext<ProfileContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -80,7 +66,7 @@ const definition = normalizeDefinition<
 				},
 			],
 		},
-	] satisfies readonly UiNode<ProfileValues, ProfileControls, ProfileContext>[],
+	],
 })
 
 function defaultValues(): ProfileValues {
@@ -97,15 +83,34 @@ function context(locked = false): ProfileContext {
 	}
 }
 
+function createProfileForm(
+	options: Omit<
+		CreateFormOptions<typeof schema, ProfileContext>,
+		"defaultValues"
+	> = { context: context() },
+) {
+	return kit.createForm<typeof schema, ProfileContext>(definition, {
+		defaultValues: defaultValues(),
+		...options,
+	})
+}
+
+type ProfileForm = ReturnType<typeof createProfileForm>
+
 describe("React form hooks", () => {
-	it("keeps one useForm instance while using the latest option callbacks", () => {
+	it("keeps one bound form instance while using the latest option callbacks", () => {
 		const firstBeforeUpdate = vi.fn()
 		const latestBeforeUpdate = vi.fn(() => [
 			{ type: "set" as const, path: "name", value: "Katherine" },
 		])
 		const firstAfterUpdate = vi.fn()
 		const latestAfterUpdate = vi.fn()
-		const seen: FormInstance<typeof schema, ProfileContext>[] = []
+		const form = createProfileForm({
+			context: context(),
+			beforeUpdate: firstBeforeUpdate,
+			afterUpdate: firstAfterUpdate,
+		})
+		const seen: ProfileForm[] = []
 
 		function View({
 			beforeUpdate,
@@ -114,8 +119,7 @@ describe("React form hooks", () => {
 			readonly beforeUpdate?: typeof firstBeforeUpdate
 			readonly afterUpdate?: typeof firstAfterUpdate
 		}) {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
+			kit.useBindForm(form, {
 				context: context(),
 				beforeUpdate,
 				afterUpdate,
@@ -150,11 +154,11 @@ describe("React form hooks", () => {
 	})
 
 	it("replaces context after commit without recreating the form", async () => {
-		const seen: FormInstance<typeof schema, ProfileContext>[] = []
+		const form = createProfileForm({ context: context(false) })
+		const seen: ProfileForm[] = []
 
 		function View({ locked }: { readonly locked: boolean }) {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
+			kit.useBindForm(form, {
 				context: context(locked),
 			})
 			seen.push(form)
@@ -178,7 +182,8 @@ describe("React form hooks", () => {
 	})
 
 	it("updates root disabled and read-only options without recreating the form", async () => {
-		const seen: FormInstance<typeof schema, ProfileContext>[] = []
+		const form = createProfileForm({ context: context() })
+		const seen: ProfileForm[] = []
 
 		function View({
 			disabled,
@@ -187,8 +192,7 @@ describe("React form hooks", () => {
 			readonly disabled: boolean
 			readonly readOnly: boolean
 		}) {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
+			kit.useBindForm(form, {
 				context: context(),
 				disabled,
 				readOnly,
@@ -219,15 +223,14 @@ describe("React form hooks", () => {
 	it("binds an external instance and restores its configuration on unmount", () => {
 		const externalBeforeUpdate = vi.fn()
 		const reactBeforeUpdate = vi.fn()
-		const form = createForm(definition, {
-			defaultValues: defaultValues(),
+		const form = createProfileForm({
 			context: context(false),
 			beforeUpdate: externalBeforeUpdate,
 		})
-		let boundForm: FormInstance<typeof schema, ProfileContext> | undefined
+		let boundForm: ProfileForm | undefined
 
 		function View() {
-			boundForm = useForm(form, {
+			boundForm = kit.useBindForm(form, {
 				context: context(true),
 				disabled: true,
 				beforeUpdate: reactBeforeUpdate,
@@ -258,8 +261,7 @@ describe("React form hooks", () => {
 	it("fully replaces external runtime options without replacing context", () => {
 		const firstAfterUpdate = vi.fn()
 		const latestAfterUpdate = vi.fn()
-		const form = createForm(definition, {
-			defaultValues: defaultValues(),
+		const form = createProfileForm({
 			context: context(true),
 			disabled: true,
 			afterUpdate: firstAfterUpdate,
@@ -276,16 +278,60 @@ describe("React form hooks", () => {
 		expect(latestAfterUpdate).toHaveBeenCalledTimes(1)
 	})
 
+	it("keeps binding-owned context and value policy active until unbind", () => {
+		const policyDefinition = kit
+			.forContext<ProfileContext>()
+			.defineForm(schema, {
+				ui: [
+					{
+						kind: "field",
+						path: "companyName",
+						control: "text",
+						visible: (_values, { context }) => !context.locked,
+						valuePolicy: "unset",
+					},
+				],
+			})
+		const form = kit.createForm<typeof schema, ProfileContext>(
+			policyDefinition,
+			{
+				defaultValues: {
+					...defaultValues(),
+					companyName: "Analytical Engines",
+				},
+				context: context(false),
+			},
+		)
+
+		function View() {
+			kit.useBindForm(form, { context: context(false) })
+			return null
+		}
+
+		const { unmount } = render(<View />)
+		form.replaceContext(context(true))
+		form.replaceOptions({ disabled: true })
+
+		expect(form.getSnapshot().context.locked).toBe(false)
+		expect(form.getSnapshot().resolvedUi.disabled).toBe(false)
+		expect(form.getValues().companyName).toBe("Analytical Engines")
+
+		unmount()
+
+		expect(form.getSnapshot().context.locked).toBe(true)
+		expect(form.getSnapshot().resolvedUi.disabled).toBe(true)
+		expect(form.getValues().companyName).toBeUndefined()
+	})
+
 	it("applies one React context and option update without an intermediate snapshot", () => {
-		const form = createForm(definition, {
-			defaultValues: defaultValues(),
+		const form = createProfileForm({
 			context: context(false),
 		})
 		const listener = vi.fn()
 		form.subscribe((snapshot) => snapshot, listener)
 
 		function View() {
-			useForm(form, {
+			kit.useBindForm(form, {
 				context: context(true),
 				disabled: true,
 			})
@@ -301,13 +347,12 @@ describe("React form hooks", () => {
 	})
 
 	it("supports Strict Mode replay for one external binding", () => {
-		const form = createForm(definition, {
-			defaultValues: defaultValues(),
+		const form = createProfileForm({
 			context: context(false),
 		})
 
 		function View() {
-			useForm(form, {
+			kit.useBindForm(form, {
 				context: context(true),
 			})
 			return null
@@ -325,13 +370,12 @@ describe("React form hooks", () => {
 	})
 
 	it("rejects concurrent React bindings for one external instance", () => {
-		const form = createForm(definition, {
-			defaultValues: defaultValues(),
+		const form = createProfileForm({
 			context: context(false),
 		})
 
 		function View() {
-			useForm(form, {
+			kit.useBindForm(form, {
 				context: context(true),
 			})
 			return null
@@ -345,12 +389,12 @@ describe("React form hooks", () => {
 				</>,
 			),
 		).toThrow(
-			"A Form Please form instance cannot be bound by multiple useForm hooks at the same time",
+			"A Form Please form instance cannot have multiple active React bindings",
 		)
 	})
 
 	it("rerenders only hooks whose selected path changes", () => {
-		let form: FormInstance<typeof schema, ProfileContext> | undefined
+		const form = createProfileForm({ context: context() })
 		const counters = {
 			name: 0,
 			email: 0,
@@ -383,11 +427,6 @@ describe("React form hooks", () => {
 		}
 
 		function View() {
-			form = useForm(definition, {
-				defaultValues: defaultValues(),
-				context: context(),
-			})
-
 			return (
 				<>
 					<NameValue />
@@ -413,7 +452,7 @@ describe("React form hooks", () => {
 	})
 
 	it("exposes direct field and array metadata with stable row items", () => {
-		let form: FormInstance<typeof schema, ProfileContext> | undefined
+		const form = createProfileForm({ context: context() })
 		const seenKeys: string[][] = []
 
 		function Contacts() {
@@ -457,10 +496,6 @@ describe("React form hooks", () => {
 		}
 
 		function View() {
-			form = useForm(definition, {
-				defaultValues: defaultValues(),
-				context: context(),
-			})
 			return <Contacts />
 		}
 
@@ -483,7 +518,7 @@ describe("React form hooks", () => {
 	})
 
 	it("registers mounted refs and unregisters them on unmount", () => {
-		let form: FormInstance<typeof schema, ProfileContext> | undefined
+		const form = createProfileForm({ context: context() })
 		const focus = vi.spyOn(HTMLElement.prototype, "focus")
 
 		function Field() {
@@ -502,10 +537,6 @@ describe("React form hooks", () => {
 		}
 
 		function View({ show }: { readonly show: boolean }) {
-			form = useForm(definition, {
-				defaultValues: defaultValues(),
-				context: context(),
-			})
 			return show ? <Field /> : null
 		}
 
@@ -521,14 +552,13 @@ describe("React form hooks", () => {
 	it("uses the server snapshot for equivalent hydration and skips lifecycle hooks during Strict Mode replay", async () => {
 		const beforeUpdate = vi.fn()
 		const afterUpdate = vi.fn()
+		const form = createProfileForm({
+			context: context(),
+			beforeUpdate,
+			afterUpdate,
+		})
 
 		function View() {
-			const form = useForm(definition, {
-				defaultValues: defaultValues(),
-				context: context(),
-				beforeUpdate,
-				afterUpdate,
-			})
 			const name = useValue(form, "name")
 			const dirty = useFormState(form, (snapshot) => snapshot.isDirty)
 

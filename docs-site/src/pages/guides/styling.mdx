@@ -4,6 +4,8 @@ description: Add responsive structure and a copyable visual baseline without giv
 showAskAi: false
 ---
 
+import { TailwindProfileDemo } from "../../components/tailwind-profile-demo"
+
 # Styling
 
 Form, Please ships accessible semantic markup and optional responsive structure. Your
@@ -35,12 +37,34 @@ control of their own styling.
 The stylesheet provides:
 
 - stacked form, field, section, and array structure;
-- one to four section columns through container queries;
+- the default `[1, 2, 3, 4]` section grid through container queries;
 - `span` support, including `span: "full"`;
 - independent nested layout containers;
 - four spacing custom properties.
 
 It does not set colors, fonts, borders, shadows, or control appearance.
+
+## Match a design-system grid
+
+Give a form kit the finite layout values that the design system supports:
+
+```tsx twoslash
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
+
+const designSystemKit = createFormKit({
+	controls: createNativeControls(),
+	grid: [1, 2, 6, 12],
+	slots: createDefaultSlots(),
+})
+```
+
+The grid types both `columns` and numeric `span`, while `"full"` always means
+the complete row. The shipped `layout.css` guarantees behavior only for the
+default scale. For values such as `6` and `12`, map the forwarded
+`data-fp-columns` and `data-fp-span` attributes in application CSS or implement
+that mapping inside custom structural slots.
 
 ## Add a product class
 
@@ -48,12 +72,17 @@ Scope product styling through the native form class:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
-const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -65,16 +94,38 @@ const definition = kit.defineForm(schema)({
 })
 
 // ---cut---
-const profileForm = (
-	<kit.AutoForm
-		className="profile-form"
-		definition={definition}
-		defaultValues={{ name: "" }}
-	>
-		<kit.Submit>Save profile</kit.Submit>
-	</kit.AutoForm>
-)
+function ProfileForm() {
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { name: "" },
+	})
+	return (
+		<kit.AutoForm className="profile-form" form={form}>
+			<kit.Submit>Save profile</kit.Submit>
+		</kit.AutoForm>
+	)
+}
 ```
+
+## Resolve Tailwind classes from form values
+
+`className` on fields, sections, and arrays can be a resolver. The live form
+below reuses the same `profileDefinition` and defaults as Get started, History,
+Persistence, and DevTools. Change **Account type** to **Company**: the account
+section changes from emerald to amber and reveals the company-name field.
+
+<TailwindProfileDemo />
+
+The definition returns complete literal class strings from each branch, so
+Tailwind can discover every utility at build time:
+
+```tsx
+// [!include ~/snippets/lab-profile-form.tsx:tailwind-class-name]
+```
+
+Tailwind remains application-owned. Form, Please resolves the string and
+forwards it to the structural slot; it does not install Tailwind or interpret
+its utilities. Avoid constructing class names such as `bg-${tone}-50`, because
+Tailwind cannot reliably discover them from source.
 
 ## Copy a visual baseline
 

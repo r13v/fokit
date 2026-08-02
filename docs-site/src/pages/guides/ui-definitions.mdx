@@ -11,7 +11,7 @@ sees, how fields are grouped, and which control edits each value. Keeping those
 decisions separate lets a domain schema evolve without silently redesigning the
 form.
 
-`kit.defineForm(schema)({ ui })` validates the tree once, freezes it, and keeps
+`kit.defineForm(schema, { ui })` validates the tree once, freezes it, and keeps
 the result reusable across form instances.
 
 ## Read the tree at a glance
@@ -58,15 +58,20 @@ belong to the selected control. For example, a number path accepts the shipped
 `required` does not add a validation rule. Generated forms use the Standard
 Schema as the source of truth, so required validation belongs in the schema.
 
-## Reuse object-scoped fragments
+## Split large definitions with typed arrays
 
-Use `define.fragment(scope, nodes)` when several fields belong to one nested
-object. Paths and resolver dependencies inside the fragment are relative to
-that object, while normalization still produces the ordinary four node kinds
-with absolute paths:
+Plain typed arrays are enough when a large definition needs local sections.
+Keep paths absolute so each extracted block has the same meaning where it is
+declared and where it is composed:
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "form-please"
+import {
+	createFormKit,
+	type FormInput,
+	type UiNode,
+} from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({
@@ -75,37 +80,35 @@ const schema = z.object({
 		invoiceNote: z.string().optional(),
 	}),
 })
-const kit = createFormKit({ controls: nativeControls })
-const define = kit.defineForm(schema)
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
+type Input = FormInput<typeof schema>
 
-const billing = define.fragment("billing", [
+const billing = [
 	{
 		kind: "field",
-		path: "contact",
+		path: "billing.contact",
 		control: "text",
-		label: ({ contact }) => `Billing contact: ${contact}`,
+		label: ({ "billing.contact": contact }) =>
+			`Billing contact: ${contact}`,
 	},
 	{
 		kind: "field",
-		path: "invoiceNote",
+		path: "billing.invoiceNote",
 		control: "textarea",
 		label: "Invoice note",
 	},
-])
+] satisfies readonly UiNode<Input, typeof kit.controls>[]
 
-const definition = define({ ui: billing })
+const definition = kit.defineForm(schema, { ui: billing })
 ```
 
-The scope must be a definitely present, non-null object-valued schema path.
-Keep absolute nodes for optional or nullable objects so resolver and control
-types preserve the missing-parent possibility. Arrays keep their existing
-`children` contract and item-relative paths. A fragment may contain sections,
-fields, and arrays; put a section inside the fragment when the reused block
-needs structural grouping. Explicit section and render IDs remain global to
-the complete definition, including across fragment scopes. A context-free
-fragment works in a context-aware definition; use
-`define.fragment.withContext<Context>()` only when its resolvers read runtime
-context.
+Use `UiNode<Input, typeof kit.controls, Context>` when the form has a context
+contract. Arrays keep their existing item-relative `children` paths; all nodes
+outside an array use absolute form paths. Section and render IDs remain global
+to the complete definition.
 
 ## Compose structural copy
 
@@ -115,13 +118,18 @@ elements for inline links, emphasis, or badges:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -144,13 +152,15 @@ with `createFormKit`:
 // @jsx: react-jsx
 import {
 	createFormKit,
-	nativeControls,
 	type FieldSlotProps,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 type OverviewFieldOptions = {
 	readonly labelTooltip?: string
+	readonly testId?: string
 }
 
 function FieldTooltip({
@@ -186,7 +196,7 @@ function OverviewField({
 	const tooltipId = `${labelProps.htmlFor}-tooltip`
 
 	return (
-		<div {...rootProps}>
+		<div {...rootProps} data-testid={slotOptions?.testId}>
 			{label !== undefined && <label {...labelProps}>{label}</label>}
 			{slotOptions?.labelTooltip !== undefined && (
 				<FieldTooltip content={slotOptions.labelTooltip} id={tooltipId} />
@@ -202,20 +212,26 @@ function OverviewField({
 
 const schema = z.object({ name: z.string() })
 const kit = createFormKit({
-	controls: nativeControls,
-	slots: { Field: OverviewField },
+	controls: createNativeControls(),
+	slots: { ...createDefaultSlots(), Field: OverviewField },
 })
 
-kit.defineForm(schema)({
+kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
 			path: "name",
 			control: "text",
 			label: "Name",
-			slotOptions: ({ name }) => ({
-				labelTooltip: `Editing ${name}`,
-			}),
+			slotOptions: ({ name }) => {
+				let testId = "profile-name"
+				if (name.length === 0) testId = "profile-name-empty"
+
+				return {
+					labelTooltip: `Editing ${name}`,
+					testId,
+				}
+			},
 		},
 	],
 })
@@ -223,7 +239,9 @@ kit.defineForm(schema)({
 
 `createFormKit` infers `OverviewFieldOptions` from the registered `Field` slot.
 The resolver reads `name` and returns the field slot options. `OverviewField`
-receives the resolved object through its `slotOptions` prop.
+receives the resolved object through its `slotOptions` prop. Its typed `testId`
+option is mapped to `data-testid`; use the same pattern for application-owned
+`data-*` attributes. Core does not add arbitrary DOM attributes to every node.
 
 `Field`, `Section`, and `Array` each have an independent slot option type. Field
 `slotOptions` belongs to structural presentation. Field `options` belongs to
@@ -247,15 +265,19 @@ an exact position but does not represent one field:
 // @jsx: react-jsx
 import {
 	createFormKit,
-	nativeControls,
 	type RenderNodeProps,
 	useFormContext,
 	useFormState,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({ name: z.string() })
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 function NamePreview({ disabled, readOnly }: RenderNodeProps) {
 	const form = useFormContext<typeof schema>()
@@ -267,7 +289,7 @@ function NamePreview({ disabled, readOnly }: RenderNodeProps) {
 	)
 }
 
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "render",
@@ -298,15 +320,21 @@ cannot cross a serializable React Server Components boundary.
 ## Group fields and describe layout
 
 A section has a required `id`, optional `title` and `description`, and a
-`children` array. Set `columns` to `1`, `2`, `3`, or `4`; the default is `1`.
+`children` array. Set `columns` to a value from the form kit's finite grid
+scale; the default is `1`. Kits use `[1, 2, 3, 4]` unless `createFormKit`
+receives a custom scale such as `grid: [1, 2, 6, 12]`.
 
-Direct children can set `span` to a column count or `"full"`. Inside a section,
-fields default to one column while nested sections and arrays default to the
-full row. Import `form-please/layout.css` for the shipped responsive grid, or forward
-the same layout props through a custom `Section` slot.
+Direct children can set `span` to a value from the same scale or `"full"`.
+Inside a section, fields default to one column while nested sections and arrays
+default to the full row. Import `form-please/layout.css` for the shipped
+responsive default grid. Custom scales remain portable through structural slot
+props and require application-owned slot styling or CSS for their extra values.
 
-`className` is static escape-hatch metadata for product styling. It does not
-change the form state model.
+`className`, `span`, and `columns` can also be resolvers. A section resolves its
+column count before resolving child spans, so a child span is checked against
+the current grid. Invalid resolver results throw `TypeError` at the runtime
+boundary. These properties change presentation without changing the form state
+model or UI topology.
 
 ## Derive UI from tracked values
 
@@ -317,14 +345,14 @@ only when one of those values changes. The resolver can also read runtime
 
 | Node | Resolvable properties |
 | --- | --- |
-| `field` | `label`, `description`, `slotOptions`, `required`, `visible`, `disabled`, `readOnly`, `options` |
-| `section` | `title`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly` |
-| `array` | `label`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly` |
+| `field` | `label`, `description`, `slotOptions`, `required`, `visible`, `disabled`, `readOnly`, `options`, `className`, `span` |
+| `section` | `title`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly`, `className`, `columns`, `span` |
+| `array` | `label`, `description`, `slotOptions`, `visible`, `disabled`, `readOnly`, `className`, `span` |
 | `render` | `visible`, `disabled`, `readOnly` |
 
-Structure stays static: paths, controls, children, layout, classes, and array
-defaults are not resolvable. Change resolvable properties for dynamic UI;
-compose manually when the product needs a different tree.
+Topology and behavior stay static: `kind`, paths, controls, children,
+`valuePolicy`, render components, and array `itemDefault` values are not
+resolvable. Compose manually when the product needs a different tree.
 
 Resolvers are synchronous and pure. Fetch remote options in application data
 flow, pass them through `context`, and let a resolver select the relevant result.

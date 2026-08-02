@@ -12,11 +12,12 @@ import {
 	extendValueChanges,
 	type FormInput,
 	type FormOutput,
-	nativeControls,
 	useFormContext,
 	useFormState,
 	type ValueChange,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -339,7 +340,10 @@ const savedCampaign = {
 	},
 } satisfies CampaignInput
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 function CampaignPreview() {
 	const form = useFormContext<typeof campaignSchema, CampaignContext>()
@@ -364,8 +368,8 @@ function CampaignPreview() {
 }
 
 const campaignDefinition = kit
-	.defineForm(campaignSchema)
-	.withContext<CampaignContext>({
+	.forContext<CampaignContext>()
+	.defineForm(campaignSchema, {
 		ui: [
 			{
 				kind: "section",
@@ -760,6 +764,15 @@ export function CampaignBuilderExample() {
 
 function CampaignBuilderForm() {
 	const [mode, setMode] = useState<"create" | "edit">("edit")
+	const initialContext: CampaignContext = { segments: [] }
+	const createForm = kit.useCreateForm(campaignDefinition, {
+		defaultValues: newCampaign,
+		context: initialContext,
+	})
+	const editForm = kit.useCreateForm(campaignDefinition, {
+		defaultValues: savedCampaign,
+		context: initialContext,
+	})
 	const draft = useQuery({
 		queryKey: ["campaign-draft", "campaign-204"],
 		queryFn: () => fakeRequest(savedCampaign, 390),
@@ -798,10 +811,10 @@ function CampaignBuilderForm() {
 				Could not load campaign resources.
 			</section>
 		)
-	let initialValues: CampaignInput = newCampaign
+	let form = createForm
 	let submitLabel = "Create campaign"
 	if (mode === "edit") {
-		initialValues = draft.data
+		form = editForm
 		submitLabel = "Update campaign"
 	}
 	let status = notice
@@ -843,8 +856,7 @@ function CampaignBuilderForm() {
 				beforeUpdate={clearInactiveTemplate}
 				className="form-please-complex__form"
 				context={{ segments: segments.data }}
-				defaultValues={initialValues}
-				definition={campaignDefinition}
+				form={form}
 				key={mode}
 				onSubmit={async ({ value, form }) => {
 					try {

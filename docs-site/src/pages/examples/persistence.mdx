@@ -1,0 +1,52 @@
+---
+title: Persistent draft workflow
+description: Restore, observe, save, and delete a versioned localStorage draft for the profile form from get-started.
+showAskAi: false
+---
+
+import { PersistenceDemo } from "../../components/persistence-demo"
+
+# Persistent draft workflow
+
+This example stores the profile form from [Get started](/get-started) as one
+versioned draft in `localStorage` for the current documentation origin. Do not
+enter sensitive information in the example.
+
+## Try the workflow
+
+1. Wait until the output shows `Phase: active`.
+2. Change the name or another non-file field.
+3. Observe the save state after the edit.
+4. Select **Save now** to flush pending data.
+5. Reload the page.
+6. Confirm that the profile returns as the clean form baseline.
+7. Select **Delete saved draft** to remove the stored value.
+
+<PersistenceDemo />
+
+The form remains usable when storage is empty. A restore or storage failure is
+reported without replacing the current form values.
+
+The shared profile includes an avatar field. The default persistence encoder
+does not store `File` values without a codec, so this workflow leaves the avatar
+empty. See the [Persistence guide](/guides/persistence#encoding-codecs-and-migration)
+when storing file bytes is appropriate.
+
+## What this example shows
+
+- `createLocalStorageAdapter` supplies an application-owned storage transport.
+- `createPersistenceMiddleware` owns encoding, version checks, and scheduling.
+- `restore()` runs before local editing starts.
+- `subscribe()` and `getSnapshot()` expose the restore and save states.
+- `flush()` saves pending data immediately.
+- `clear()` removes the stored draft without clearing the live form.
+- The storage getter does not read `window` during module import.
+
+## Copy the source
+
+```tsx
+// [!include ~/snippets/persistence-local-storage.tsx]
+```
+
+Read the [Persistence guide](/guides/persistence) for conflicts, history mode,
+codecs, migration, and custom transports.

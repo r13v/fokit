@@ -1,8 +1,9 @@
 import type {
 	NormalizedArrayNode,
-	NormalizedFormDefinition,
 	NormalizedRelativeUiNode,
+	RuntimeNormalizedFormDefinition,
 } from "./definition.js"
+import type { RowIdentityChange } from "./form-events.js"
 import {
 	formatPath,
 	type PathInput,
@@ -13,13 +14,18 @@ import type { FormInput, StandardSchema } from "./standard-schema.js"
 import { createSetChange, type NormalizedValueChange } from "./transaction.js"
 import { cloneValue, getPathValue } from "./value.js"
 
-export type ArrayRowState = {
+const rowIdentityStateBrand: unique symbol = Symbol("form-please.rowIdentity")
+
+type RowIdentityEntry = {
 	readonly keys: readonly string[]
-	readonly baselineKeys: readonly string[]
 	readonly nextKeyIndex: number
 }
 
-export type ArrayRowsState = Readonly<Record<string, ArrayRowState>>
+export type RowIdentityState = {
+	readonly [rowIdentityStateBrand]: true
+}
+
+type RowIdentityEntries = Readonly<Record<string, RowIdentityEntry>>
 
 export type ArrayCommand =
 	| {
@@ -47,31 +53,31 @@ export type ArrayCommandChange = {
 	readonly changes: readonly NormalizedValueChange[]
 	readonly previousKeys: readonly string[]
 	readonly nextKeys: readonly string[]
-	readonly rowState: ArrayRowState
+	readonly rowIdentity: RowIdentityEntry
 }
 
-export function createArrayRowsState<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
+export function createRowIdentityState<Schema extends StandardSchema>(
+	definition: RuntimeNormalizedFormDefinition<Schema>,
 	values: FormInput<Schema>,
-): ArrayRowsState {
-	const rowsByPath = Object.create(null) as Record<string, ArrayRowState>
+): RowIdentityState {
+	const rowsByPath = Object.create(null) as Record<string, RowIdentityEntry>
 
 	for (const array of Object.values(definition.arraysByPath)) {
 		addConcreteArrayRowStates(rowsByPath, array, values, array.path)
 	}
 
-	return freezeArrayRowsState(rowsByPath)
+	return freezeRowIdentityState(rowsByPath)
 }
 
 function addConcreteArrayRowStates(
-	rowsByPath: Record<string, ArrayRowState>,
+	rowsByPath: Record<string, RowIdentityEntry>,
 	array: NormalizedArrayNode,
 	values: unknown,
 	path: string,
 ): void {
 	const value = getPathValue(values, path)
 	const length = Array.isArray(value) ? value.length : 0
-	rowsByPath[path] = createInitialRowState(path, length)
+	rowsByPath[path] = createInitialRowIdentity(path, length)
 
 	if (!Array.isArray(value)) {
 		return
@@ -88,7 +94,7 @@ function addConcreteArrayRowStates(
 }
 
 function addRelativeArrayRowStates(
-	rowsByPath: Record<string, ArrayRowState>,
+	rowsByPath: Record<string, RowIdentityEntry>,
 	nodes: readonly NormalizedRelativeUiNode[],
 	values: unknown,
 	scopePath: string,
@@ -114,7 +120,7 @@ export function createArrayCommandChange(
 	path: string,
 	node: NormalizedArrayNode,
 	values: unknown,
-	rowsState: ArrayRowsState,
+	rowIdentity: RowIdentityState,
 	command: ArrayCommand,
 ): ArrayCommandChange | undefined {
 	const currentValue = getPathValue(values, path)
@@ -123,11 +129,13 @@ export function createArrayCommandChange(
 	}
 
 	const existingRowState =
-		rowsState[path] ?? createInitialRowState(path, currentValue.length)
+		rowIdentityEntries(rowIdentity)[path] ?? createInitialRowIdentity(path, 0)
+	const reservedKeys = collectRowIdentityKeys(rowIdentity)
 	const previousRowState = reconcileRowState(
 		path,
 		existingRowState,
 		currentValue.length,
+		reservedKeys,
 	)
 	const previousKeys = previousRowState.keys.slice(0, currentValue.length)
 	const result = applyArrayCommand(
@@ -136,6 +144,7 @@ export function createArrayCommandChange(
 		currentValue,
 		previousRowState,
 		command,
+		reservedKeys,
 	)
 
 	if (result === undefined) {
@@ -145,32 +154,34 @@ export function createArrayCommandChange(
 	return Object.freeze({
 		changes: Object.freeze([createSetChange(path, result.values)]),
 		previousKeys: Object.freeze(previousKeys),
-		nextKeys: result.rowState.keys,
-		rowState: result.rowState,
+		nextKeys: result.rowIdentity.keys,
+		rowIdentity: result.rowIdentity,
 	})
 }
 
-export function replaceArrayRowState(
-	rowsState: ArrayRowsState,
+export function replaceRowIdentity(
+	rowIdentity: RowIdentityState,
 	path: string,
-	rowState: ArrayRowState,
-): ArrayRowsState {
-	return freezeArrayRowsState({
-		...rowsState,
-		[path]: rowState,
+	entry: RowIdentityEntry,
+): RowIdentityState {
+	return freezeRowIdentityState({
+		...rowIdentityEntries(rowIdentity),
+		[path]: entry,
 	})
 }
 
-export function reindexArrayRowsState(
-	rowsState: ArrayRowsState,
+export function reindexRowIdentity(
+	rowIdentity: RowIdentityState,
 	arrayPath: string,
 	previousKeys: readonly string[],
 	nextKeys: readonly string[],
-): ArrayRowsState {
+): RowIdentityState {
 	let changed = false
-	const nextRowsState = Object.create(null) as Record<string, ArrayRowState>
+	const nextRowsState = Object.create(null) as Record<string, RowIdentityEntry>
 
-	for (const [path, rowState] of Object.entries(rowsState)) {
+	for (const [path, rowState] of Object.entries(
+		rowIdentityEntries(rowIdentity),
+	)) {
 		const nextPath = reindexArrayPath(path, arrayPath, previousKeys, nextKeys)
 		if (nextPath === undefined) {
 			changed = true
@@ -181,43 +192,409 @@ export function reindexArrayRowsState(
 		nextRowsState[nextPath] = rowState
 	}
 
-	return changed ? freezeArrayRowsState(nextRowsState) : rowsState
+	return changed ? freezeRowIdentityState(nextRowsState) : rowIdentity
 }
 
-export function reindexTouchedArrayPaths(
-	touchedPaths: ReadonlySet<string>,
-	arrayPath: string,
-	previousKeys: readonly string[],
-	nextKeys: readonly string[],
-): ReadonlySet<string> {
-	if (touchedPaths.size === 0) {
-		return touchedPaths
+export function getRowIdentityKeys(
+	rowIdentity: RowIdentityState,
+	path: string,
+): readonly string[] | undefined {
+	return rowIdentityEntries(rowIdentity)[path]?.keys
+}
+
+export function getRowIdentityNextKeyIndex(
+	rowIdentity: RowIdentityState,
+	path: string,
+): number | undefined {
+	return rowIdentityEntries(rowIdentity)[path]?.nextKeyIndex
+}
+
+export function createRowIdentityStateFromEntries(
+	entries: readonly {
+		readonly path: string
+		readonly keys: readonly string[]
+		readonly nextKeyIndex: number
+	}[],
+): RowIdentityState {
+	const rowsByPath = Object.create(null) as Record<string, RowIdentityEntry>
+	for (const entry of entries) {
+		const path = formatPath(entry.path)
+		if (rowsByPath[path] !== undefined) {
+			throw new TypeError(`Duplicate row identity path "${path}"`)
+		}
+		rowsByPath[path] = createRowIdentityEntry(
+			path,
+			entry.keys,
+			entry.nextKeyIndex,
+		)
+	}
+	return freezeRowIdentityState(rowsByPath)
+}
+
+export function cloneRowIdentityState(
+	rowIdentity: RowIdentityState,
+): RowIdentityState {
+	return createRowIdentityStateFromEntries(
+		Object.entries(rowIdentityEntries(rowIdentity)).map(([path, entry]) => ({
+			path,
+			keys: entry.keys,
+			nextKeyIndex: entry.nextKeyIndex,
+		})),
+	)
+}
+
+export function reconcileRowIdentityState<Schema extends StandardSchema>(
+	definition: RuntimeNormalizedFormDefinition<Schema>,
+	values: FormInput<Schema>,
+	previous: RowIdentityState,
+): RowIdentityState {
+	const initial = createRowIdentityState(definition, values)
+	const previousEntries = rowIdentityEntries(previous)
+	const nextEntries = Object.create(null) as Record<string, RowIdentityEntry>
+	const reservedKeys = collectRowIdentityKeys(previous)
+
+	for (const [path, entry] of Object.entries(rowIdentityEntries(initial))) {
+		nextEntries[path] = reconcileRowState(
+			path,
+			previousEntries[path] ?? createInitialRowIdentity(path, 0),
+			entry.keys.length,
+			reservedKeys,
+		)
 	}
 
-	let changed = false
-	const nextTouchedPaths = new Set<string>()
+	return freezeRowIdentityState(nextEntries)
+}
 
-	for (const touchedPath of touchedPaths) {
-		const nextPath = reindexArrayPath(
-			touchedPath,
-			arrayPath,
-			previousKeys,
-			nextKeys,
-		)
+export function createRowIdentityChanges(
+	previous: RowIdentityState,
+	next: RowIdentityState,
+): readonly RowIdentityChange[] {
+	const previousEntries = rowIdentityEntries(previous)
+	const nextEntries = rowIdentityEntries(next)
+	const changes: RowIdentityChange[] = []
 
-		if (nextPath === undefined) {
-			changed = true
+	for (const path of Object.keys(previousEntries)) {
+		if (nextEntries[path] === undefined) {
+			changes.push(Object.freeze({ type: "array/deleted", path }))
+		}
+	}
+
+	for (const [path, entry] of Object.entries(nextEntries)) {
+		const previousEntry = previousEntries[path]
+		if (
+			previousEntry !== undefined &&
+			previousEntry.nextKeyIndex === entry.nextKeyIndex &&
+			previousEntry.keys.length === entry.keys.length &&
+			previousEntry.keys.every((key, index) => key === entry.keys[index])
+		) {
 			continue
 		}
 
-		changed ||= nextPath !== touchedPath
-		nextTouchedPaths.add(nextPath)
+		changes.push(
+			Object.freeze({
+				type: "array/replaced",
+				path,
+				keys: entry.keys,
+				nextKeyIndex: entry.nextKeyIndex,
+			}),
+		)
 	}
 
-	return changed ? nextTouchedPaths : touchedPaths
+	return Object.freeze(changes)
 }
 
-export function reindexArrayPath(
+export function reconcileRowIdentityPaths(
+	paths: Iterable<string>,
+	previous: RowIdentityState,
+	next: RowIdentityState,
+): ReadonlySet<string> {
+	const originalPaths = [...paths]
+	const previousEntries = rowIdentityEntries(previous)
+	const nextEntries = rowIdentityEntries(next)
+	const orderedPaths = Object.keys(previousEntries).sort(
+		(left, right) => parsePath(left).length - parsePath(right).length,
+	)
+	const result = new Set<string>()
+
+	for (const originalPath of originalPaths) {
+		let path: string | undefined = originalPath
+		for (const previousArrayPath of orderedPaths) {
+			if (path === undefined) break
+			const currentArrayPath = reconcileParentArrayPath(
+				previousArrayPath,
+				previousEntries,
+				nextEntries,
+				orderedPaths,
+			)
+			if (currentArrayPath === undefined) continue
+			path = reindexArrayPath(
+				path,
+				currentArrayPath,
+				previousEntries[previousArrayPath]?.keys ?? [],
+				nextEntries[currentArrayPath]?.keys ?? [],
+			)
+		}
+		if (path !== undefined) result.add(path)
+	}
+
+	if (
+		paths instanceof Set &&
+		result.size === paths.size &&
+		[...result].every((path) => paths.has(path))
+	) {
+		return paths
+	}
+
+	return result
+}
+
+function reconcileParentArrayPath(
+	path: string,
+	previousEntries: RowIdentityEntries,
+	nextEntries: RowIdentityEntries,
+	orderedPaths: readonly string[],
+): string | undefined {
+	let reconciled: string | undefined = path
+	for (const parentPath of orderedPaths) {
+		if (parentPath === path || reconciled === undefined) break
+		const nextParentPath = reconcileParentArrayPath(
+			parentPath,
+			previousEntries,
+			nextEntries,
+			orderedPaths,
+		)
+		if (nextParentPath === undefined) continue
+		reconciled = reindexArrayPath(
+			reconciled,
+			parentPath,
+			previousEntries[parentPath]?.keys ?? [],
+			nextEntries[nextParentPath]?.keys ?? [],
+		)
+	}
+	return reconciled
+}
+
+export function reduceRowIdentity(
+	rowIdentity: RowIdentityState,
+	changes: readonly RowIdentityChange[],
+): RowIdentityState {
+	if (changes.length === 0) {
+		return rowIdentity
+	}
+
+	const entries = Object.create(null) as Record<string, RowIdentityEntry>
+	for (const [path, entry] of Object.entries(rowIdentityEntries(rowIdentity))) {
+		entries[path] = entry
+	}
+
+	for (const change of changes) {
+		applyRowIdentityChange(entries, change)
+	}
+
+	return freezeRowIdentityState(entries)
+}
+
+export function validateRowIdentity(
+	rowIdentity: RowIdentityState,
+	values: unknown,
+): void {
+	const allKeys = new Set<string>()
+	for (const [path, entry] of Object.entries(rowIdentityEntries(rowIdentity))) {
+		const value = getPathValue(values, path)
+		if (!Array.isArray(value)) {
+			throw new TypeError(`Row identity path "${path}" is not an array`)
+		}
+		if (value.length !== entry.keys.length) {
+			throw new TypeError(`Row identity at "${path}" does not match its array`)
+		}
+		for (const key of entry.keys) {
+			if (allKeys.has(key)) {
+				throw new TypeError(`Duplicate row identity key "${key}"`)
+			}
+			allKeys.add(key)
+		}
+	}
+}
+
+export function validateRestoredRowIdentity<Schema extends StandardSchema>(
+	definition: RuntimeNormalizedFormDefinition<Schema>,
+	values: FormInput<Schema>,
+	rowIdentity: RowIdentityState,
+): void {
+	validateRowIdentity(rowIdentity, values)
+	const expectedEntries = rowIdentityEntries(
+		createRowIdentityState(definition, values),
+	)
+	const entries = rowIdentityEntries(rowIdentity)
+
+	for (const path of Object.keys(expectedEntries)) {
+		const entry = entries[path]
+		if (entry === undefined) {
+			throw new TypeError(`Row identity is missing array path "${path}"`)
+		}
+		if (entry.nextKeyIndex === Number.MAX_SAFE_INTEGER) {
+			throw new TypeError(
+				`Row identity counter at "${path}" must reserve a safe successor`,
+			)
+		}
+	}
+
+	for (const path of Object.keys(entries)) {
+		if (expectedEntries[path] === undefined) {
+			throw new TypeError(`Row identity has unexpected array path "${path}"`)
+		}
+	}
+}
+
+function applyRowIdentityChange(
+	entries: Record<string, RowIdentityEntry>,
+	change: RowIdentityChange,
+): void {
+	switch (change.type) {
+		case "array/initialized":
+		case "array/replaced":
+			entries[change.path] = createRowIdentityEntry(
+				change.path,
+				change.keys,
+				change.nextKeyIndex,
+			)
+			return
+		case "array/inserted": {
+			const entry = requireRowIdentityEntry(entries, change.path)
+			if (change.nextKeyIndex !== entry.nextKeyIndex + 1) {
+				throw new TypeError(
+					"Inserted row identity must advance the key counter exactly once",
+				)
+			}
+			assertArrayIndex(change.index, entry.keys.length, {
+				allowEnd: true,
+				label: "row identity insert index",
+			})
+			entries[change.path] = createRowIdentityEntry(
+				change.path,
+				[
+					...entry.keys.slice(0, change.index),
+					change.key,
+					...entry.keys.slice(change.index),
+				],
+				change.nextKeyIndex,
+			)
+			return
+		}
+		case "array/removed": {
+			const entry = requireRowIdentityEntry(entries, change.path)
+			assertExpectedKey(entry, change.index, change.key)
+			entries[change.path] = createRowIdentityEntry(
+				change.path,
+				[
+					...entry.keys.slice(0, change.index),
+					...entry.keys.slice(change.index + 1),
+				],
+				entry.nextKeyIndex,
+			)
+			return
+		}
+		case "array/moved": {
+			const entry = requireRowIdentityEntry(entries, change.path)
+			assertExpectedKey(entry, change.from, change.key)
+			assertArrayIndex(change.to, entry.keys.length, {
+				allowEnd: false,
+				label: "row identity move destination",
+			})
+			entries[change.path] = createRowIdentityEntry(
+				change.path,
+				moveArrayItem(entry.keys, change.from, change.to),
+				entry.nextKeyIndex,
+			)
+			return
+		}
+		case "array/path-reindexed": {
+			const entry = requireRowIdentityEntry(entries, change.previousPath)
+			if (entries[change.path] !== undefined) {
+				throw new TypeError(`Row identity path "${change.path}" already exists`)
+			}
+			delete entries[change.previousPath]
+			entries[change.path] = entry
+			return
+		}
+		case "array/paths-reindexed": {
+			const movedEntries = change.paths.map(({ previousPath, path }) => ({
+				path,
+				entry: requireRowIdentityEntry(entries, previousPath),
+			}))
+			for (const { previousPath } of change.paths) {
+				delete entries[previousPath]
+			}
+			for (const { path, entry } of movedEntries) {
+				if (entries[path] !== undefined) {
+					throw new TypeError(`Row identity path "${path}" already exists`)
+				}
+				entries[path] = entry
+			}
+			return
+		}
+		case "array/deleted":
+			delete entries[change.path]
+			return
+	}
+}
+
+function createRowIdentityEntry(
+	path: string,
+	keys: readonly string[],
+	nextKeyIndex: number,
+): RowIdentityEntry {
+	if (!Number.isSafeInteger(nextKeyIndex) || nextKeyIndex < keys.length) {
+		throw new TypeError("Row identity counter must cover every assigned key")
+	}
+	if (new Set(keys).size !== keys.length) {
+		throw new TypeError("Row identity keys must be unique")
+	}
+	const generatedKeyPrefix = `${path}:`
+	for (const key of keys) {
+		if (!key.startsWith(generatedKeyPrefix)) continue
+		const suffix = key.slice(generatedKeyPrefix.length)
+		const index = Number(suffix)
+		if (
+			Number.isSafeInteger(index) &&
+			index >= 0 &&
+			String(index) === suffix &&
+			index >= nextKeyIndex
+		) {
+			throw new TypeError(
+				"Row identity counter must exceed every generated key index",
+			)
+		}
+	}
+	return freezeRowIdentityEntry({ keys, nextKeyIndex })
+}
+
+function requireRowIdentityEntry(
+	entries: Readonly<Record<string, RowIdentityEntry>>,
+	path: string,
+): RowIdentityEntry {
+	const entry = entries[path]
+	if (entry === undefined) {
+		throw new TypeError(`Unknown row identity path "${path}"`)
+	}
+	return entry
+}
+
+function assertExpectedKey(
+	entry: RowIdentityEntry,
+	index: number,
+	key: string,
+): void {
+	assertArrayIndex(index, entry.keys.length, {
+		allowEnd: false,
+		label: "row identity index",
+	})
+	if (entry.keys[index] !== key) {
+		throw new TypeError(`Row identity key "${key}" is not at index ${index}`)
+	}
+}
+
+function reindexArrayPath(
 	path: string,
 	arrayPath: string,
 	previousKeys: readonly string[],
@@ -257,7 +634,7 @@ export function reindexArrayPath(
 }
 
 export function isKnownArrayDescendantFieldPath<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
+	definition: RuntimeNormalizedFormDefinition<Schema>,
 	values: FormInput<Schema>,
 	path: PathInput,
 ): boolean {
@@ -296,7 +673,7 @@ export function isKnownArrayDescendantFieldPath<Schema extends StandardSchema>(
 }
 
 export function findArrayNodeForPath<Schema extends StandardSchema>(
-	definition: NormalizedFormDefinition<Schema>,
+	definition: RuntimeNormalizedFormDefinition<Schema>,
 	path: PathInput,
 ): NormalizedArrayNode | undefined {
 	const segments = parsePath(path)
@@ -379,20 +756,27 @@ function applyArrayCommand(
 	path: string,
 	node: NormalizedArrayNode,
 	currentValue: readonly unknown[],
-	rowState: ArrayRowState,
+	rowState: RowIdentityEntry,
 	command: ArrayCommand,
+	reservedKeys: Set<string>,
 ):
-	| { readonly values: readonly unknown[]; readonly rowState: ArrayRowState }
+	| {
+			readonly values: readonly unknown[]
+			readonly rowIdentity: RowIdentityEntry
+	  }
 	| undefined {
 	switch (command.type) {
 		case "append": {
-			const nextKey = createRowKey(path, rowState.nextKeyIndex)
+			const allocated = allocateRowKey(
+				path,
+				rowState.nextKeyIndex,
+				reservedKeys,
+			)
 			return {
 				values: [...currentValue, createArrayItem(node, command)],
-				rowState: freezeArrayRowState({
-					keys: [...rowState.keys, nextKey],
-					baselineKeys: rowState.baselineKeys,
-					nextKeyIndex: rowState.nextKeyIndex + 1,
+				rowIdentity: freezeRowIdentityEntry({
+					keys: [...rowState.keys, allocated.key],
+					nextKeyIndex: allocated.nextKeyIndex,
 				}),
 			}
 		}
@@ -401,21 +785,24 @@ function applyArrayCommand(
 				allowEnd: true,
 				label: "insert index",
 			})
-			const nextKey = createRowKey(path, rowState.nextKeyIndex)
+			const allocated = allocateRowKey(
+				path,
+				rowState.nextKeyIndex,
+				reservedKeys,
+			)
 			return {
 				values: [
 					...currentValue.slice(0, command.index),
 					createArrayItem(node, command),
 					...currentValue.slice(command.index),
 				],
-				rowState: freezeArrayRowState({
+				rowIdentity: freezeRowIdentityEntry({
 					keys: [
 						...rowState.keys.slice(0, command.index),
-						nextKey,
+						allocated.key,
 						...rowState.keys.slice(command.index),
 					],
-					baselineKeys: rowState.baselineKeys,
-					nextKeyIndex: rowState.nextKeyIndex + 1,
+					nextKeyIndex: allocated.nextKeyIndex,
 				}),
 			}
 		}
@@ -429,12 +816,11 @@ function applyArrayCommand(
 					...currentValue.slice(0, command.index),
 					...currentValue.slice(command.index + 1),
 				],
-				rowState: freezeArrayRowState({
+				rowIdentity: freezeRowIdentityEntry({
 					keys: [
 						...rowState.keys.slice(0, command.index),
 						...rowState.keys.slice(command.index + 1),
 					],
-					baselineKeys: rowState.baselineKeys,
 					nextKeyIndex: rowState.nextKeyIndex,
 				}),
 			}
@@ -452,9 +838,8 @@ function applyArrayCommand(
 			}
 			return {
 				values: moveArrayItem(currentValue, command.from, command.to),
-				rowState: freezeArrayRowState({
+				rowIdentity: freezeRowIdentityEntry({
 					keys: moveArrayItem(rowState.keys, command.from, command.to),
-					baselineKeys: rowState.baselineKeys,
 					nextKeyIndex: rowState.nextKeyIndex,
 				}),
 			}
@@ -482,23 +867,26 @@ function createArrayItem(
 	return cloneValue(itemDefault)
 }
 
-function createInitialRowState(path: string, length: number): ArrayRowState {
+function createInitialRowIdentity(
+	path: string,
+	length: number,
+): RowIdentityEntry {
 	const keys = Array.from({ length }, (_value, index) =>
 		createRowKey(path, index),
 	)
 
-	return freezeArrayRowState({
+	return freezeRowIdentityEntry({
 		keys,
-		baselineKeys: keys,
 		nextKeyIndex: length,
 	})
 }
 
 function reconcileRowState(
 	path: string,
-	rowState: ArrayRowState,
+	rowState: RowIdentityEntry,
 	length: number,
-): ArrayRowState {
+	reservedKeys: Set<string> = new Set(rowState.keys),
+): RowIdentityEntry {
 	if (rowState.keys.length === length) {
 		return rowState
 	}
@@ -507,19 +895,48 @@ function reconcileRowState(
 	let nextKeyIndex = rowState.nextKeyIndex
 
 	while (keys.length < length) {
-		keys.push(createRowKey(path, nextKeyIndex))
-		nextKeyIndex += 1
+		const allocated = allocateRowKey(path, nextKeyIndex, reservedKeys)
+		keys.push(allocated.key)
+		nextKeyIndex = allocated.nextKeyIndex
 	}
 
-	return freezeArrayRowState({
+	return freezeRowIdentityEntry({
 		keys,
-		baselineKeys: rowState.baselineKeys,
 		nextKeyIndex,
 	})
 }
 
 function createRowKey(path: string, index: number): string {
 	return `${path}:${index}`
+}
+
+function allocateRowKey(
+	path: string,
+	nextKeyIndex: number,
+	reservedKeys: Set<string>,
+): { readonly key: string; readonly nextKeyIndex: number } {
+	let index = nextKeyIndex
+	let key = createRowKey(path, index)
+	while (reservedKeys.has(key)) {
+		if (index >= Number.MAX_SAFE_INTEGER) {
+			throw new TypeError("Row identity counter has no safe successor")
+		}
+		index += 1
+		key = createRowKey(path, index)
+	}
+	if (index >= Number.MAX_SAFE_INTEGER) {
+		throw new TypeError("Row identity counter has no safe successor")
+	}
+	reservedKeys.add(key)
+	return Object.freeze({ key, nextKeyIndex: index + 1 })
+}
+
+function collectRowIdentityKeys(rowIdentity: RowIdentityState): Set<string> {
+	const keys = new Set<string>()
+	for (const entry of Object.values(rowIdentityEntries(rowIdentity))) {
+		for (const key of entry.keys) keys.add(key)
+	}
+	return keys
 }
 
 function hasRelativeFieldPath(
@@ -592,29 +1009,28 @@ function moveArrayItem<Item>(
 ): readonly Item[] {
 	const next = items.slice()
 	const [item] = next.splice(from, 1)
-	if (item === undefined) {
-		throw new TypeError(`Array index ${from} is out of range`)
-	}
-	next.splice(to, 0, item)
+	next.splice(to, 0, item as Item)
 	return next
 }
 
-function freezeArrayRowsState(
-	rowsState: Record<string, ArrayRowState>,
-): ArrayRowsState {
-	return Object.freeze(rowsState)
+function freezeRowIdentityState(
+	rowsState: Record<string, RowIdentityEntry>,
+): RowIdentityState {
+	return Object.freeze(rowsState) as unknown as RowIdentityState
 }
 
-function freezeArrayRowState(rowState: {
+function freezeRowIdentityEntry(rowState: {
 	readonly keys: readonly string[]
-	readonly baselineKeys: readonly string[]
 	readonly nextKeyIndex: number
-}): ArrayRowState {
+}): RowIdentityEntry {
 	return Object.freeze({
 		keys: Object.freeze([...rowState.keys]),
-		baselineKeys: Object.freeze([...rowState.baselineKeys]),
 		nextKeyIndex: rowState.nextKeyIndex,
 	})
+}
+
+function rowIdentityEntries(rowIdentity: RowIdentityState): RowIdentityEntries {
+	return rowIdentity as unknown as RowIdentityEntries
 }
 
 function startsWithSegments(

@@ -11,6 +11,12 @@ import type { ControlDefinitionRegistry } from "./control.js"
 import { FormProvider } from "./form-context.js"
 import { resetFormFromEvent, useGeneratedFormId } from "./form-dom.js"
 import { hasDisplayErrors } from "./form-errors.js"
+import {
+	assertFormKitOwnership,
+	type FormInstance,
+	type FormKitDescriptor,
+	type FormKitOwner,
+} from "./form-instance.js"
 import { assertFormDataCompatible, HiddenInputs } from "./hidden-inputs.js"
 import { useFormState } from "./hooks.js"
 import { rejectOwnedProps } from "./owned-props.js"
@@ -21,7 +27,6 @@ import {
 	rejectClassicFormSubmit,
 	submitClassicForm,
 } from "./submission.js"
-import type { FormInstance } from "./use-form.js"
 
 export type NativeFormProps = Omit<
 	ComponentPropsWithoutRef<"form">,
@@ -35,8 +40,15 @@ export type KitFormProps<
 	Context = unknown,
 	RequiredControls extends ControlDefinitionRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
+	Owner = FormKitOwner<RequiredControls, Presentation>,
 > = NativeFormProps & {
-	readonly form: FormInstance<Schema, Context, RequiredControls, Presentation>
+	readonly form: FormInstance<
+		Schema,
+		Context,
+		RequiredControls,
+		Presentation,
+		Owner
+	>
 	readonly controls?: ControlDefinitionRegistry
 	readonly children?: ReactNode
 }
@@ -44,9 +56,11 @@ export type KitFormProps<
 export type KitFormComponent<
 	Controls extends ControlDefinitionRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
-> = <Schema extends StandardSchema, Context = unknown>(
+	Owner = FormKitOwner<Controls, Presentation>,
+	KitContext = unknown,
+> = <Schema extends StandardSchema, Context extends KitContext = KitContext>(
 	props: Omit<
-		KitFormProps<Schema, Context, Controls, Presentation>,
+		KitFormProps<Schema, Context, Controls, Presentation, Owner>,
 		"controls"
 	>,
 ) => ReactNode
@@ -56,7 +70,8 @@ export function KitForm<
 	Context = unknown,
 	RequiredControls extends ControlDefinitionRegistry | undefined = undefined,
 	Presentation extends UiPresentation = ReactUiPresentation,
->(props: KitFormProps<Schema, Context, RequiredControls, Presentation>) {
+	Owner = FormKitOwner<RequiredControls, Presentation>,
+>(props: KitFormProps<Schema, Context, RequiredControls, Presentation, Owner>) {
 	rejectOwnedProps(props, "form", [
 		"action",
 		"onReset",
@@ -129,13 +144,19 @@ export function KitForm<
 export function createFormComponent<
 	Controls extends ControlDefinitionRegistry,
 	Presentation extends UiPresentation = ReactUiPresentation,
->(controls: Controls): KitFormComponent<Controls, Presentation> {
-	function Form<Schema extends StandardSchema, Context>(
+	Owner = FormKitOwner<Controls, Presentation>,
+	KitContext = unknown,
+>(
+	controls: Controls,
+	descriptor: FormKitDescriptor,
+): KitFormComponent<Controls, Presentation, Owner, KitContext> {
+	function Form<Schema extends StandardSchema, Context extends KitContext>(
 		props: Omit<
-			KitFormProps<Schema, Context, Controls, Presentation>,
+			KitFormProps<Schema, Context, Controls, Presentation, Owner>,
 			"controls"
 		>,
 	) {
+		assertFormKitOwnership(props.form as never, descriptor, "kit.Form")
 		return <KitForm {...props} controls={controls} />
 	}
 

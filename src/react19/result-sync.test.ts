@@ -2,10 +2,15 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it, vi } from "vitest"
-import { startActionSubmission } from "../core/form-store.js"
+import {
+	getFormStoreDocument,
+	restoreFormStoreDocument,
+	startActionSubmission,
+} from "../core/form-store.js"
 import {
 	createFormStore,
 	type FormStore,
+	type FormStoreOptions,
 	normalizeDefinition,
 } from "../core/index.js"
 import { defineControl } from "../react/control.js"
@@ -75,7 +80,6 @@ describe("React 19 Action result synchronization", () => {
 		const attempt = startActionSubmission(form)
 
 		form.setValue("email", "fixed@example.test")
-		attempt.recordChanges(["email"])
 
 		syncActionResult(
 			form,
@@ -114,12 +118,80 @@ describe("React 19 Action result synchronization", () => {
 		expect(validate).toHaveBeenCalledTimes(1)
 	})
 
+	it("uses effective committed paths when requested Action edits are replaced", () => {
+		const afterUpdate =
+			vi.fn<NonNullable<FormStoreOptions<Schema>["afterUpdate"]>>()
+		const form = createStore({
+			beforeUpdate: (event) =>
+				event.source === "imperative"
+					? [
+							{
+								type: "set",
+								path: "email",
+								value: "grace@example.test",
+							},
+						]
+					: undefined,
+			afterUpdate,
+		})
+		const attempt = startActionSubmission(form)
+
+		form.setValue("name", "Grace")
+
+		expect(form.getSnapshot().values).toEqual({
+			name: "Ada",
+			email: "grace@example.test",
+		})
+		expect([...attempt.changedPaths]).toEqual(["email"])
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
+
+		syncActionResult(
+			form,
+			{
+				status: "error",
+				issues: [
+					{
+						source: "server",
+						message: "Requested name is invalid",
+						path: "name",
+					},
+					{
+						source: "server",
+						message: "Committed email is invalid",
+						path: "email",
+					},
+				],
+			},
+			attempt,
+		)
+
+		const snapshot = form.getSnapshot()
+		expect(snapshot.errors.fields.get("name")).toEqual([
+			expect.objectContaining({ message: "Requested name is invalid" }),
+		])
+		expect(snapshot.errors.fields.has("email")).toBe(false)
+	})
+
+	it("tracks restore paths while ignoring runtime-only events", () => {
+		const planner = createStore()
+		planner.setValue("email", "restored@example.test")
+		const target = getFormStoreDocument(planner)
+		const afterUpdate = vi.fn()
+		const form = createStore({ afterUpdate })
+		const attempt = startActionSubmission(form)
+
+		form.touch("name")
+		restoreFormStoreDocument(form, target, "undo")
+
+		expect([...attempt.changedPaths]).toEqual(["email"])
+		expect(afterUpdate).not.toHaveBeenCalled()
+	})
+
 	it("keeps pending edits while making the submitted snapshot the reset baseline", () => {
 		const form = createStore()
 		const attempt = startActionSubmission(form)
 
 		form.setValue("name", "Grace")
-		attempt.recordChanges(["name"])
 
 		syncActionResult(
 			form,
@@ -138,6 +210,45 @@ describe("React 19 Action result synchronization", () => {
 		expect(snapshot.isDirty).toBe(true)
 		expect(snapshot.metadata.fieldsByPath.name?.dirty).toBe(true)
 		expect(snapshot.isSubmitting).toBe(false)
+	})
+
+	it("keeps submitted row identity when pending edits remove an earlier row", () => {
+		type ArrayValues = { rows: { name: string }[] }
+		const arraySchema = {
+			"~standard": {
+				version: 1,
+				vendor: "action-row-identity-test",
+				validate: (value: unknown) => ({ value: value as ArrayValues }),
+			},
+		} as StandardSchemaV1<ArrayValues>
+		const arrayDefinition = normalizeDefinition({
+			schema: arraySchema,
+			controls: {},
+			ui: [
+				{
+					kind: "array",
+					path: "rows",
+					itemDefault: { name: "" },
+					children: [],
+				},
+			],
+		})
+		const form = createFormStore({
+			definition: arrayDefinition,
+			defaultValues: { rows: [{ name: "A" }, { name: "B" }] },
+		})
+		const attempt = startActionSubmission(form)
+
+		form.remove("rows", 0)
+		syncActionResult(form, { status: "success", reset: "submitted" }, attempt)
+
+		const snapshot = form.getSnapshot()
+		expect(snapshot.values.rows).toEqual([{ name: "B" }])
+		expect(snapshot.isDirty).toBe(true)
+		expect(snapshot.metadata.arraysByPath.rows.items[0]).toMatchObject({
+			key: "rows:1",
+			dirty: false,
+		})
 	})
 
 	it("resets to defaults and clears metadata after a successful default reset", () => {
@@ -228,7 +339,11 @@ describe("React 19 Action result synchronization", () => {
 })
 
 function createStore(
-	options: { readonly validate?: Schema["~standard"]["validate"] } = {},
+	options: {
+		readonly validate?: Schema["~standard"]["validate"]
+		readonly beforeUpdate?: FormStoreOptions<Schema>["beforeUpdate"]
+		readonly afterUpdate?: FormStoreOptions<Schema>["afterUpdate"]
+	} = {},
 ): FormStore<Schema> {
 	const schema = createSchema(options.validate ?? validateValues)
 	const definition = normalizeDefinition({
@@ -240,6 +355,8 @@ function createStore(
 	return createFormStore({
 		definition,
 		defaultValues: defaultValues(),
+		beforeUpdate: options.beforeUpdate,
+		afterUpdate: options.afterUpdate,
 	})
 }
 

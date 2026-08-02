@@ -3,9 +3,16 @@ import { hasOwn, isPlainObject } from "./object.js"
 import type { PathSegments } from "./path.js"
 import { formatPath, parsePath } from "./path.js"
 import type { FormInput, StandardSchema } from "./standard-schema.js"
+import {
+	normalizeGridScale,
+	validateClassName,
+	validateGridColumns,
+	validateGridSpan,
+} from "./structural-presentation.js"
 import type {
 	AnyUiPresentation,
 	CoreUiPresentation,
+	DefaultGridValue,
 	GridColumns,
 	GridSpan,
 	Resolvable,
@@ -16,7 +23,6 @@ import type {
 import { cloneValue } from "./value.js"
 
 type NodeKind = "array" | "field" | "render" | "section"
-type NoInferValue<Value> = [Value][Value extends unknown ? 0 : never]
 type NodeScope = {
 	readonly idPrefix: string
 	readonly pathScope: string
@@ -28,6 +34,7 @@ type NormalizationState<
 	Presentation extends UiPresentation,
 > = {
 	readonly controls: ControlRegistry
+	readonly grid: readonly number[]
 	readonly nodeIds: Set<string>
 	readonly pathsByScope: Map<string, Set<string>>
 	readonly nodes: NormalizedUiNode<RenderComponent, Presentation>[]
@@ -102,8 +109,8 @@ type NormalizedNodeBase = {
 	readonly kind: NodeKind
 	readonly parentId?: string
 	readonly scopePath: string
-	readonly className?: string
-	readonly span?: GridSpan
+	readonly className?: Resolvable<string>
+	readonly span?: Resolvable<GridSpan>
 	readonly visible?: Resolvable<boolean>
 	readonly disabled?: Resolvable<boolean>
 	readonly readOnly?: Resolvable<boolean>
@@ -137,7 +144,7 @@ export type NormalizedSectionNode<
 	readonly title?: Resolvable<Presentation["content"]>
 	readonly description?: Resolvable<Presentation["content"]>
 	readonly slotOptions?: Resolvable<Presentation["sectionSlotOptions"]>
-	readonly columns: GridColumns
+	readonly columns: Resolvable<GridColumns>
 	readonly children: readonly NormalizedUiNode<RenderComponent, Presentation>[]
 }
 
@@ -178,14 +185,16 @@ export type FormDefinition<
 	Context = unknown,
 	RenderComponent = never,
 	Presentation extends UiPresentation = CoreUiPresentation,
+	Grid extends number = DefaultGridValue,
 > = {
 	readonly schema: Schema
 	readonly ui: readonly UiNode<
-		FormInput<NoInferValue<Schema>>,
+		FormInput<Schema>,
 		Controls,
 		Context,
 		RenderComponent,
-		Presentation
+		Presentation,
+		NoInfer<Grid>
 	>[]
 }
 
@@ -195,12 +204,23 @@ export type NormalizeDefinitionInput<
 	Context,
 	RenderComponent = never,
 	Presentation extends UiPresentation = CoreUiPresentation,
-> = FormDefinition<Schema, Controls, Context, RenderComponent, Presentation> & {
+	Grid extends number = DefaultGridValue,
+> = FormDefinition<
+	Schema,
+	Controls,
+	Context,
+	RenderComponent,
+	Presentation,
+	Grid
+> & {
 	readonly controls: Controls
+	readonly grid?: readonly Grid[]
 }
 
 declare const requiredControls: unique symbol
+declare const requiredContext: unique symbol
 declare const requiredPresentation: unique symbol
+declare const requiredGrid: unique symbol
 
 type DefinitionControlRequirement<
 	RequiredControls extends ControlRegistry | undefined,
@@ -219,13 +239,23 @@ type DefinitionPresentationRequirement<Presentation extends UiPresentation> = {
 	readonly [requiredPresentation]?: Presentation
 }
 
-export type NormalizedFormDefinition<
+type DefinitionContextRequirement<RequiredContext> = {
+	readonly [requiredContext]?: (context: RequiredContext) => void
+}
+
+type DefinitionGridRequirement<RequiredGrid extends number> = {
+	readonly [requiredGrid]?: RequiredGrid
+}
+
+export type RuntimeNormalizedFormDefinition<
 	Schema extends StandardSchema = StandardSchema,
 	RequiredControls extends ControlRegistry | undefined = undefined,
 	RenderComponent = unknown,
 	Presentation extends UiPresentation = AnyUiPresentation,
+	RequiredGrid extends number = number,
 > = {
 	readonly schema: Schema
+	readonly grid: readonly number[]
 	readonly ui: readonly NormalizedUiNode<RenderComponent, Presentation>[]
 	readonly nodes: readonly NormalizedUiNode<RenderComponent, Presentation>[]
 	readonly nodesById: Readonly<
@@ -238,7 +268,24 @@ export type NormalizedFormDefinition<
 		Record<string, NormalizedArrayNode<Presentation>>
 	>
 } & DefinitionControlRequirement<RequiredControls> &
-	DefinitionPresentationRequirement<Presentation>
+	DefinitionPresentationRequirement<Presentation> &
+	DefinitionGridRequirement<RequiredGrid>
+
+export type NormalizedFormDefinition<
+	Schema extends StandardSchema = StandardSchema,
+	RequiredControls extends ControlRegistry | undefined = undefined,
+	RenderComponent = unknown,
+	Presentation extends UiPresentation = AnyUiPresentation,
+	RequiredContext = unknown,
+	RequiredGrid extends number = number,
+> = RuntimeNormalizedFormDefinition<
+	Schema,
+	RequiredControls,
+	RenderComponent,
+	Presentation,
+	RequiredGrid
+> &
+	DefinitionContextRequirement<RequiredContext>
 
 export function normalizeDefinition<
 	Schema extends StandardSchema,
@@ -246,17 +293,28 @@ export function normalizeDefinition<
 	Context = unknown,
 	RenderComponent = never,
 	Presentation extends UiPresentation = CoreUiPresentation,
+	const Grid extends number = DefaultGridValue,
 >(
 	input: NormalizeDefinitionInput<
 		Schema,
 		Controls,
 		Context,
 		RenderComponent,
-		Presentation
+		Presentation,
+		Grid
 	>,
-): NormalizedFormDefinition<Schema, Controls, RenderComponent, Presentation> {
+): NormalizedFormDefinition<
+	Schema,
+	Controls,
+	RenderComponent,
+	Presentation,
+	Context,
+	Grid
+> {
+	const grid = normalizeGridScale(input.grid, "normalizeDefinition")
 	const state: NormalizationState<RenderComponent, Presentation> = {
 		controls: input.controls,
+		grid,
 		nodeIds: new Set(),
 		pathsByScope: new Map(),
 		nodes: [],
@@ -282,6 +340,7 @@ export function normalizeDefinition<
 
 	return Object.freeze({
 		schema: input.schema,
+		grid,
 		ui,
 		nodes: Object.freeze([...state.nodes]),
 		nodesById: Object.freeze({ ...state.nodesById }),
@@ -291,7 +350,9 @@ export function normalizeDefinition<
 		Schema,
 		Controls,
 		RenderComponent,
-		Presentation
+		Presentation,
+		Context,
+		Grid
 	>
 }
 
@@ -303,7 +364,7 @@ function normalizeChildren<
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId?: string,
-	parentColumns?: GridColumns,
+	parentColumns?: Resolvable<GridColumns>,
 ): readonly NormalizedUiNode<RenderComponent, Presentation>[] {
 	if (!Array.isArray(nodes)) {
 		throw new TypeError("UI children must be an array")
@@ -321,7 +382,7 @@ function normalizeNode<RenderComponent, Presentation extends UiPresentation>(
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 ): NormalizedUiNode<RenderComponent, Presentation> {
 	if (!isPlainObject(node)) {
 		throw new TypeError("UI node must be an object")
@@ -369,13 +430,13 @@ function normalizeField<RenderComponent, Presentation extends UiPresentation>(
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 ): NormalizedFieldNode<Presentation> {
 	const path = normalizeNodePath(node.path, scope.relative)
 	const id = normalizeNodeId(node.id ?? joinId(scope.idPrefix, path), "field")
 	registerPath(path, state, scope)
 	registerNodeId(id, state)
-	const span = normalizeSpan(node.span, parentColumns, "field")
+	const span = normalizeSpan(node.span, parentColumns, "field", state.grid)
 	const valuePolicy = normalizeValuePolicy(node.valuePolicy)
 	const control = normalizeControl(node.control, state.controls)
 	const normalized: NormalizedFieldNode<Presentation> = deepFreezePlainExcept(
@@ -418,12 +479,12 @@ function normalizeSection<RenderComponent, Presentation extends UiPresentation>(
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 ): NormalizedSectionNode<RenderComponent, Presentation> {
 	const id = normalizeNodeId(node.id, "section")
 	registerNodeId(id, state)
-	const columns = normalizeColumns(node.columns)
-	const span = normalizeSpan(node.span, parentColumns, "section")
+	const columns = normalizeColumns(node.columns, state.grid)
+	const span = normalizeSpan(node.span, parentColumns, "section", state.grid)
 	const children = normalizeChildren(
 		normalizeChildArray(node.children, "section"),
 		state,
@@ -464,13 +525,13 @@ function normalizeArray<RenderComponent, Presentation extends UiPresentation>(
 	state: NormalizationState<RenderComponent, Presentation>,
 	scope: NodeScope,
 	parentId: string | undefined,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 ): NormalizedArrayNode<Presentation> {
 	const path = normalizeNodePath(node.path, scope.relative)
 	const id = normalizeNodeId(node.id ?? joinId(scope.idPrefix, path), "array")
 	registerPath(path, state, scope)
 	registerNodeId(id, state)
-	const span = normalizeSpan(node.span, parentColumns, "array")
+	const span = normalizeSpan(node.span, parentColumns, "array", state.grid)
 	const childScope = {
 		idPrefix: id,
 		pathScope: joinPathScope(scope.pathScope, path),
@@ -622,23 +683,27 @@ function normalizeControl(control: unknown, controls: ControlRegistry): string {
 	return control
 }
 
-function normalizeColumns(columns: unknown): GridColumns {
+function normalizeColumns(
+	columns: unknown,
+	grid: readonly number[],
+): Resolvable<GridColumns> {
 	if (columns === undefined) {
 		return 1
 	}
 
-	if (columns === 1 || columns === 2 || columns === 3 || columns === 4) {
-		return columns
+	if (typeof columns === "function") {
+		return columns as Resolvable<GridColumns>
 	}
 
-	throw new TypeError("Section layout columns must be 1, 2, 3, or 4")
+	return validateGridColumns(columns, grid)
 }
 
 function normalizeSpan(
 	span: unknown,
-	parentColumns: GridColumns | undefined,
+	parentColumns: Resolvable<GridColumns> | undefined,
 	nodeKind: NodeKind,
-): GridSpan | undefined {
+	grid: readonly number[],
+): Resolvable<GridSpan> | undefined {
 	if (span === undefined) {
 		if (parentColumns === undefined) {
 			return undefined
@@ -646,19 +711,15 @@ function normalizeSpan(
 		return nodeKind === "field" ? 1 : "full"
 	}
 
-	if (span !== "full" && span !== 1 && span !== 2 && span !== 3 && span !== 4) {
-		throw new TypeError("Layout span must be 1, 2, 3, 4, or full")
+	if (typeof span === "function") {
+		return span as Resolvable<GridSpan>
 	}
 
-	if (parentColumns !== undefined && typeof span === "number") {
-		if (span > parentColumns) {
-			throw new TypeError(
-				`Layout span ${span} exceeds parent columns ${parentColumns}`,
-			)
-		}
-	}
-
-	return span
+	return validateGridSpan(
+		span,
+		grid,
+		typeof parentColumns === "function" ? undefined : parentColumns,
+	)
 }
 
 function normalizeValuePolicy(valuePolicy: unknown): ValuePolicy {
@@ -677,16 +738,18 @@ function asResolvable<Value>(value: unknown): Resolvable<Value> | undefined {
 	return value as Resolvable<Value> | undefined
 }
 
-function normalizeClassName(className: unknown): string | undefined {
+function normalizeClassName(
+	className: unknown,
+): Resolvable<string> | undefined {
 	if (className === undefined) {
 		return undefined
 	}
 
-	if (typeof className !== "string") {
-		throw new TypeError("className must be a string")
+	if (typeof className === "function") {
+		return className as Resolvable<string>
 	}
 
-	return className
+	return validateClassName(className)
 }
 
 function normalizeChildArray(

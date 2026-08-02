@@ -4,14 +4,15 @@ import {
 	fromResource as fromCoreResource,
 	matchResource as matchCoreResource,
 } from "../../src/core/index.js"
+import { createDefaultSlots } from "../../src/default-slots/index.js"
 import {
 	createFormKit,
 	fromResource,
 	matchResource,
-	nativeControls,
 	type ResourceState,
 	type UiResolver,
 } from "../../src/index.js"
+import { createNativeControls } from "../../src/native-controls/index.js"
 
 type Equal<Left, Right> =
 	(<Value>() => Value extends Left ? 1 : 2) extends <
@@ -64,9 +65,12 @@ type ExampleSchema = StandardSchemaV1<ExampleInput>
 declare const schema: ExampleSchema
 declare const context: ExampleContext
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -120,7 +124,7 @@ kit.defineForm(schema).withContext<ExampleContext>({
 	],
 })
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -178,7 +182,7 @@ declare const asyncPermission: UiResolver<
 	ExampleContext
 >
 
-kit.defineForm(schema).withContext<ExampleContext>({
+kit.forContext<ExampleContext>().defineForm(schema, {
 	ui: [
 		{
 			kind: "field",

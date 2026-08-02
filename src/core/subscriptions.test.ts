@@ -52,6 +52,7 @@ function createProfileForm() {
 				control: "text",
 				visible: (_values, { context }) => context.showCompany,
 				disabled: (_values, { context }) => context.locked,
+				valuePolicy: "unset",
 			},
 		] satisfies readonly UiNode<
 			ProfileValues,
@@ -74,6 +75,69 @@ function createProfileForm() {
 }
 
 describe("form store subscriptions", () => {
+	it("publishes one coherent snapshot for each multi-path value transition", () => {
+		const form = createProfileForm()
+		const listener = vi.fn()
+		form.subscribe((snapshot) => snapshot, listener)
+
+		form.setValues({
+			name: "Grace",
+			email: "grace@example.test",
+		})
+
+		expect(listener).toHaveBeenCalledTimes(1)
+		expect(listener.mock.calls[0]?.[0]).toMatchObject({
+			values: {
+				name: "Grace",
+				email: "grace@example.test",
+			},
+			isDirty: true,
+		})
+
+		form.batch(() => {
+			form.setValue("name", "Katherine")
+			form.setValue("email", "katherine@example.test")
+		})
+
+		expect(listener).toHaveBeenCalledTimes(2)
+		expect(listener.mock.calls[1]?.[0].values).toEqual({
+			name: "Katherine",
+			email: "katherine@example.test",
+		})
+	})
+
+	it("publishes context before a separate valuePolicy snapshot", () => {
+		const form = createProfileForm()
+		const listener = vi.fn()
+		form.setValue("companyName", "Analytical Engines")
+		form.subscribe(
+			(snapshot) => ({
+				showCompany: snapshot.context.showCompany,
+				companyName: snapshot.values.companyName,
+				visible: snapshot.resolvedUi.fieldsByPath.companyName.visible,
+			}),
+			listener,
+		)
+
+		form.replaceContext({
+			locked: false,
+			showCompany: false,
+		})
+
+		expect(listener.mock.calls.map(([snapshot]) => snapshot)).toEqual([
+			{
+				showCompany: false,
+				companyName: "Analytical Engines",
+				visible: false,
+			},
+			{
+				showCompany: false,
+				companyName: undefined,
+				visible: false,
+			},
+		])
+	})
+
 	it("notifies only selector results changed by a committed metadata update", () => {
 		const form = createProfileForm()
 		const nameTouched = vi.fn()
@@ -163,6 +227,9 @@ describe("form store subscriptions", () => {
 
 		form.replaceContext(context)
 		form.registerFieldRef("name", { focus: vi.fn() })
+		form.setValue("name", "Ada")
+		form.setValues({ email: "ada@example.test" })
+		form.clearErrors()
 		form.blur("name")
 		form.blur("name")
 

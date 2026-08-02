@@ -5,9 +5,10 @@ import {
 	createFormKit,
 	extendValueChanges,
 	type FormInput,
-	nativeControls,
 	type UpdateEvent,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -24,8 +25,11 @@ const scheduleSchema = z
 
 type ScheduleInput = FormInput<typeof scheduleSchema>
 
-const kit = createFormKit({ controls: nativeControls })
-const scheduleDefinition = kit.defineForm(scheduleSchema)({
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
+const scheduleDefinition = kit.defineForm(scheduleSchema, {
 	ui: [
 		{
 			kind: "field",
@@ -102,12 +106,12 @@ const defaultValues = {
 // [!region form]
 export function ScheduleEditor() {
 	const [lastUpdate, setLastUpdate] = useState("No update committed.")
+	const form = kit.useCreateForm(scheduleDefinition, { defaultValues })
 
 	return (
 		<kit.AutoForm
 			beforeUpdate={preserveDateRange}
-			defaultValues={defaultValues}
-			definition={scheduleDefinition}
+			form={form}
 			afterUpdate={(event) => setLastUpdate(describeUpdate(event))}
 		>
 			<output aria-live="polite">{lastUpdate}</output>

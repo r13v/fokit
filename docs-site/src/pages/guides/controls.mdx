@@ -14,7 +14,7 @@ generated and manually composed form.
 
 | Need | Start with |
 | --- | --- |
-| Working semantic HTML | `nativeControls` |
+| Working semantic HTML | `createNativeControls()` |
 | Product input components | Add controls with `defineControl` |
 | One form needs an extra control | Extend the shared kit |
 | Different field or array markup | Override structural slots |
@@ -34,8 +34,9 @@ import {
 	type ControlProps,
 	createFormKit,
 	defineControl,
-	nativeControls,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import type { ComponentPropsWithRef } from "react"
 import { z } from "zod"
 
@@ -89,14 +90,15 @@ const productText = defineControl<string | undefined, TextOptions>({
 
 const kit = createFormKit({
 	controls: {
-		...nativeControls,
+		...createNativeControls(),
 		productText,
 	},
+	slots: createDefaultSlots(),
 })
 const schema = z.object({ name: z.string().optional() })
 
 // The registry key becomes the definition discriminator
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -118,9 +120,14 @@ only where it is needed:
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, defineControl, nativeControls } from "form-please"
+import { createFormKit, defineControl } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 
-const productKit = createFormKit({ controls: nativeControls })
+const productKit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 const addressPicker = defineControl<string>({
 	component: () => null,
 	formData: { mode: "native" },
@@ -155,6 +162,48 @@ preventing value mutation and exposing `aria-readonly`.
 Read [Choose disabled or read-only](/guides/ui-definitions#choose-disabled-or-read-only)
 for the product-level distinction between the two states.
 
+## Keep access to the control element
+
+`input.ref` connects the mounted interactive element to Form, Please. This
+connection lets the form find the control for `form.focus(path)` and
+`form.focusFirstError()`.
+
+If the control also needs direct access to its element, assign both refs in the
+same callback:
+
+```tsx twoslash
+// @jsx: react-jsx
+import type { ControlProps } from "form-please"
+import { useRef } from "react"
+
+function ProductTextControl({
+	value,
+	setValue,
+	blur,
+	input,
+}: ControlProps<string | undefined>) {
+	const elementRef = useRef<HTMLInputElement>(null)
+
+	return (
+		<input
+			id={input.id}
+			name={input.name}
+			onBlur={blur}
+			onChange={(event) => setValue(event.currentTarget.value)}
+			ref={(element) => {
+				elementRef.current = element
+				input.ref(element)
+			}}
+			value={value ?? ""}
+		/>
+	)
+}
+```
+
+Use the local ref for selection, scrolling, measurement, or a third-party
+widget. The callback clears both refs when the control unmounts. Do not replace
+`input.ref` with the local ref, or the form cannot find the control.
+
 ## Choose a FormData mode
 
 | Mode | Use it when | Serializer |
@@ -176,7 +225,7 @@ TanStack Query while keeping remote options outside synchronous UI resolvers.
 
 ## Native controls
 
-`nativeControls` is a normal registry built with `defineControl`:
+`createNativeControls()` returns a fresh frozen registry built with `defineControl`:
 
 | Control | Store value | Options summary |
 | --- | --- | --- |
@@ -190,7 +239,7 @@ TanStack Query while keeping remote options outside synchronous UI resolvers.
 | `file` | `File \| undefined` | single file and `accept` |
 
 Start with these controls to prove the form model. Replace only the controls
-that need product components. The [API reference](/api#nativecontrols) lists
+that need product components. The [API reference](/api#createnativecontrols) lists
 every option with its exact type and default.
 
 ## Replace structural slots
@@ -201,11 +250,12 @@ control state:
 ```tsx twoslash
 // @jsx: react-jsx
 import {
-	createDefaultSlots,
 	createFormKit,
-	nativeControls,
 	type FieldSlotProps,
+	type SubmitSlotProps,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 
 function ProductField({
 	rootProps,
@@ -228,8 +278,28 @@ function ProductField({
 	)
 }
 
+function ProductSubmit({
+	buttonProps,
+	values,
+	isSubmitting,
+}: SubmitSlotProps) {
+	let label = "Save"
+	if (values.accountType === "company") {
+		label = "Save company"
+	}
+	if (isSubmitting) {
+		label = "Saving…"
+	}
+
+	return (
+		<button {...buttonProps} data-product-submit="">
+			{label}
+		</button>
+	)
+}
+
 const kit = createFormKit({
-	controls: nativeControls,
+	controls: createNativeControls(),
 	slots: {
 		...createDefaultSlots({
 			i18n: {
@@ -238,13 +308,17 @@ const kit = createFormKit({
 			},
 		}),
 		Field: ProductField,
+		Submit: ProductSubmit,
 	},
 })
 ```
 
-The five slots are `Field`, `Section`, `Array`, `ArrayItem`, and
-`ErrorMessage`. Keep forwarding their public props so labels, focus targets,
-layout data, and errors remain connected.
+The six slots are `Field`, `Section`, `Array`, `ArrayItem`, `ErrorMessage`, and
+`Submit`. Keep forwarding their public props so labels, focus targets, layout
+data, errors, and submit semantics remain connected. `SubmitSlotProps.values`
+contains the current input values, not validated or transformed schema output;
+because one kit can serve multiple schemas, its properties are typed as
+`unknown` and must be narrowed before use.
 
 `FieldSlotProps`, `SectionSlotProps`, and `ArraySlotProps` accept an independent
 generic options type. Registering `FieldSlotProps<{ labelTooltip?: string }>`

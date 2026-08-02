@@ -9,7 +9,7 @@ import { OverviewDemo } from "../components/overview-demo"
 <div className="form-please-overview-hero">
 
 <img
-	src="./brand/form-please-logo.png"
+	src={`${import.meta.env.BASE_URL}brand/form-please-logo.png`}
 	alt="Form, Please mascot holding a coffee mug"
 	className="form-please-overview-logo"
 />
@@ -19,8 +19,9 @@ import { OverviewDemo } from "../components/overview-demo"
 # Build forms with ease
 
 <div className="form-please-overview-intro-text">
-Form, Please turns a Standard Schema and a UI definition into a working
-React form with typed output. It handles state, validation, and submission while
+Use Form, Please to build product forms quickly from an existing design system.
+Wrap product controls and structural slots once, then reuse them across generated or manually composed forms.
+It handles state, validation, and submission while
 your application keeps control of components, markup, styling, and product logic.
 <br />
 Start with native controls or bring your own design system.
@@ -40,9 +41,9 @@ Start with native controls or bring your own design system.
 
 ## See it work
 
-This form uses the public package, `nativeControls`, and the default accessible
-slots. Clear the email address. Submit the form to see the schema error. Enter a
-valid email address. Submit again to see the typed output.
+This form uses the `nativeFormKit` preset with native controls and accessible
+default slots. Clear the email address. Submit the form to see the schema
+error. Enter a valid email address. Submit again to see the typed output.
 
 <OverviewDemo />
 
@@ -53,7 +54,8 @@ definition for structure, and a kit for rendering.
 
 ```tsx twoslash
 // @jsx: react-jsx
-import { createFormKit, nativeControls, type FormInput } from "form-please"
+import type { FormInput } from "form-please"
+import { nativeFormKit as kit } from "form-please/preset-native"
 import { z } from "zod"
 
 const profileSchema = z.object({
@@ -62,9 +64,7 @@ const profileSchema = z.object({
 	newsletter: z.boolean(),
 })
 
-const kit = createFormKit({ controls: nativeControls })
-
-const profileDefinition = kit.defineForm(profileSchema)({
+const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [
 		{ kind: "field", path: "name", control: "text", label: "Name" },
 		{
@@ -90,10 +90,11 @@ const defaultValues = {
 } satisfies FormInput<typeof profileSchema>
 
 export function ProfileForm() {
+	const form = kit.useCreateForm(profileDefinition, { defaultValues })
+
 	return (
 		<kit.AutoForm
-			definition={profileDefinition}
-			defaultValues={defaultValues}
+			form={form}
 			onSubmit={({ value }) => console.log(value)}
 		>
 			<kit.Submit>Save profile</kit.Submit>
@@ -115,8 +116,8 @@ silently change the interface.
 
 ### Your kit owns rendering
 
-Start with `nativeControls`. Replace controls and structural slots with your
-design-system components when needed. The form definition and state model stay
+Start with `nativeFormKit`. Extend it with your design-system controls and
+replace structural slots when needed. The form definition and state model stay
 the same.
 
 ## The responsibility boundary
@@ -130,6 +131,10 @@ the same.
 
 Use the same definition with `kit.AutoForm`. You can also compose it manually
 with `kit.Form`, `kit.Fields`, and granular hooks.
+
+Create each form through its exact kit. Bind an existing form with
+`kit.useBindForm`. A base kit, an extended kit, and two sibling kits have distinct
+owners, even when their controls have the same structure.
 
 ## When to reach for Form, Please
 
@@ -153,6 +158,10 @@ you add production features.
   library.
 - [Styling](/guides/styling) to add structural CSS or replace the markup.
 - [React 19 Actions](/guides/react-19-actions) to connect a server Action.
+- [History and journals](/guides/history) to add undo, redo, and replay.
+- [Persistence](/guides/persistence) to hydrate and save a document or journal.
+- [Redux DevTools](/guides/devtools) to inspect committed events and time travel.
+- [React-free core](/guides/core) when form state must run outside React.
 
 ## Kudos
 

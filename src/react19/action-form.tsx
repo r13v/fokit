@@ -14,30 +14,33 @@ import {
 	startActionSubmission,
 } from "../core/form-store.js"
 import type {
-	FormInput,
+	AnyUiPresentation,
 	FormStore,
-	NormalizedFormDefinition,
 	StandardSchema,
 } from "../core/index.js"
 import type { ControlDefinitionRegistry } from "../react/control.js"
-import type { FormKit } from "../react/create-form-kit.js"
 import { ErrorSummary } from "../react/error-summary.js"
 import { FieldsRenderer } from "../react/fields.js"
 import type { NativeFormProps } from "../react/form.js"
 import { FormProvider } from "../react/form-context.js"
 import { resetFormFromEvent, useGeneratedFormId } from "../react/form-dom.js"
 import { hasDisplayErrors } from "../react/form-errors.js"
-import { getFormStore } from "../react/form-instance.js"
+import {
+	type FormContextProp,
+	type FormContextSource,
+	type FormInstance,
+	getFormKitDescriptor,
+	getFormStore,
+} from "../react/form-instance.js"
 import {
 	assertFormDataCompatible,
 	HiddenInputs,
 } from "../react/hidden-inputs.js"
 import { useFormState } from "../react/hooks.js"
 import { rejectOwnedProps } from "../react/owned-props.js"
-import type { RenderNodeComponent } from "../react/render-node.js"
-import type { FormPleaseStyle, ReactUiPresentation } from "../react/slots.js"
+import type { FormPleaseStyle } from "../react/slots.js"
 import { booleanData } from "../react/structural-props.js"
-import { type UseFormOptions, useForm } from "../react/use-form.js"
+import { type FormRuntimeOptions, useFormBinding } from "../react/use-form.js"
 import {
 	assertReact19ActionSupport,
 	useReact19FormStatus,
@@ -45,46 +48,35 @@ import {
 import { syncActionResult } from "./result-sync.js"
 
 export type ActionFormProps<
-	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
 	Schema extends StandardSchema = StandardSchema,
 	Context = unknown,
-	FieldSlotOptions = never,
-	SectionSlotOptions = never,
-	ArraySlotOptions = never,
+	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
+	Presentation extends AnyUiPresentation = AnyUiPresentation,
+	Owner = unknown,
 > = NativeFormProps &
-	Omit<UseFormOptions<Schema, Context>, "defaultValues" | "onSubmit"> & {
-		readonly kit: Pick<
-			FormKit<Controls, FieldSlotOptions, SectionSlotOptions, ArraySlotOptions>,
-			"controls" | "slots"
-		>
-		readonly definition: NormalizedFormDefinition<
+	Omit<FormRuntimeOptions<Schema, NoInfer<Context>>, "context" | "onSubmit"> &
+	FormContextProp<Context> & {
+		readonly form: FormInstance<
 			Schema,
+			NoInfer<Context>,
 			Controls,
-			RenderNodeComponent,
-			ReactUiPresentation<
-				NoInfer<FieldSlotOptions>,
-				NoInfer<SectionSlotOptions>,
-				NoInfer<ArraySlotOptions>
-			>
-		>
-		readonly defaultValues: FormInput<Schema>
+			Presentation,
+			Owner
+		> &
+			FormContextSource<Context>
 		readonly action: NonNullable<ComponentPropsWithoutRef<"form">["action"]>
 		readonly result?: FormResult | null
 		readonly children?: ReactNode
 		readonly style?: FormPleaseStyle
 	}
-
 export function ActionForm<
-	Controls extends ControlDefinitionRegistry,
 	Schema extends StandardSchema,
 	Context = unknown,
-	FieldSlotOptions = never,
-	SectionSlotOptions = never,
-	ArraySlotOptions = never,
+	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
+	Presentation extends AnyUiPresentation = AnyUiPresentation,
+	Owner = unknown,
 >({
-	kit,
-	definition,
-	defaultValues,
+	form: suppliedForm,
 	context,
 	disabled,
 	readOnly,
@@ -96,36 +88,27 @@ export function ActionForm<
 	children,
 	id,
 	...nativeProps
-}: ActionFormProps<
-	Controls,
-	Schema,
-	Context,
-	FieldSlotOptions,
-	SectionSlotOptions,
-	ArraySlotOptions
->) {
+}: ActionFormProps<Schema, Context, Controls, Presentation, Owner>) {
 	rejectOwnedProps(nativeProps, "form", ["onReset", "onSubmit", "noValidate"])
 	assertReact19ActionSupport()
 
 	const attemptRef = useRef<ActionSubmissionAttempt<Schema>>(undefined)
+	const attemptStoreRef = useRef<FormStore<Schema, Context>>(undefined)
 	const formElementRef = useRef<HTMLFormElement | null>(null)
 	const observedPendingRef = useRef(false)
 	const lastResultRef = useRef<FormResult | null | undefined>(undefined)
 	const generatedId = useGeneratedFormId(id)
-	const form = useForm(definition, {
-		defaultValues,
+	const descriptor = getFormKitDescriptor(suppliedForm)
+	const form = useFormBinding(suppliedForm, {
 		context,
 		disabled,
 		readOnly,
 		validation,
 		beforeUpdate,
-		afterUpdate: (event) => {
-			attemptRef.current?.recordChanges(
-				event.changes.map((change) => change.path),
-			)
-			afterUpdate?.(event)
-		},
-	})
+		afterUpdate,
+	} as FormRuntimeOptions<Schema, Context>)
+	const controls = descriptor.controls as Controls
+	const slots = descriptor.slots
 	const store = getFormStore(form)
 	const state = useFormState(form, (snapshot) => ({
 		dirty: snapshot.isDirty,
@@ -137,6 +120,17 @@ export function ActionForm<
 		validationStatus: snapshot.validationStatus,
 		submitting: snapshot.isSubmitting,
 	}))
+
+	useEffect(
+		() => () => {
+			if (attemptStoreRef.current !== store) return
+			attemptRef.current?.finish()
+			attemptRef.current = undefined
+			attemptStoreRef.current = undefined
+			observedPendingRef.current = false
+		},
+		[store],
+	)
 
 	useEffect(() => {
 		if (
@@ -157,6 +151,7 @@ export function ActionForm<
 		)
 		if (attempt !== undefined && Object.is(attemptRef.current, attempt)) {
 			attemptRef.current = undefined
+			attemptStoreRef.current = undefined
 		}
 	}, [result, store])
 
@@ -168,6 +163,7 @@ export function ActionForm<
 					const snapshot = form.getSnapshot()
 					if (!snapshot.resolvedUi.disabled && !snapshot.isSubmitting) {
 						attemptRef.current = startActionSubmission(store)
+						attemptStoreRef.current = store
 					}
 				}
 				return
@@ -192,7 +188,7 @@ export function ActionForm<
 		}
 
 		try {
-			assertActionFormCompatible(snapshot, kit.controls)
+			assertActionFormCompatible(snapshot, controls)
 		} catch (error) {
 			event.preventDefault()
 			event.stopPropagation()
@@ -200,6 +196,7 @@ export function ActionForm<
 		}
 
 		attemptRef.current = startActionSubmission(store)
+		attemptStoreRef.current = store
 	}
 
 	return (
@@ -224,11 +221,11 @@ export function ActionForm<
 				onSubmit={handleSubmit}
 			>
 				<ActionPendingBridge onPendingChange={handlePendingChange} />
-				<ErrorSummary form={form} slots={kit.slots} />
-				<FieldsRenderer controls={kit.controls} form={form} slots={kit.slots} />
+				<ErrorSummary form={form} slots={slots} />
+				<FieldsRenderer controls={controls} form={form} slots={slots} />
 				<HiddenInputs
 					compatibilityOwner="ActionForm"
-					controls={kit.controls}
+					controls={controls}
 					form={form}
 				/>
 				{children}

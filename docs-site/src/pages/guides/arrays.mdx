@@ -16,7 +16,9 @@ An array node names the array path, provides a new-item value, and describes
 fields relative to each item.
 
 ```ts twoslash
-import { createFormKit, nativeControls } from "form-please"
+import { createFormKit } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({
@@ -30,9 +32,12 @@ const schema = z.object({
 		.min(1, "Add at least one contact"),
 })
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "array",
@@ -103,17 +108,20 @@ Generated array actions and manual controls operate on the same form instance.
 // @jsx: react-jsx
 import {
 	createFormKit,
-	nativeControls,
 	useArrayField,
-	useForm,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
 const schema = z.object({
 	contacts: z.array(z.object({ email: z.string() })),
 })
-const kit = createFormKit({ controls: nativeControls })
-const definition = kit.defineForm(schema)({
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "array",
@@ -132,7 +140,7 @@ const definition = kit.defineForm(schema)({
 })
 
 function ContactsEditor() {
-	const form = useForm(definition, {
+	const form = kit.useCreateForm(definition, {
 		defaultValues: { contacts: [] },
 	})
 	const contacts = useArrayField(form, "contacts")

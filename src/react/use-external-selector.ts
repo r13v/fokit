@@ -5,8 +5,9 @@ import { useCallback, useMemo, useSyncExternalStore } from "react"
 import type {
 	FormInput,
 	FormSnapshot,
-	FormStore,
+	FormStoreListener,
 	FormStoreSelector,
+	FormStoreSubscriptionOptions,
 	StandardSchema,
 } from "../core/index.js"
 
@@ -14,12 +15,22 @@ export type ExternalSelectorOptions<Selected> = {
 	readonly equalityFn?: (previous: Selected, next: Selected) => boolean
 }
 
+type ExternalStore<Input, Context> = {
+	getSnapshot(): FormSnapshot<Input, Context>
+	getServerSnapshot(): FormSnapshot<Input, Context>
+	subscribe<Selected>(
+		selector: FormStoreSelector<Input, Context, Selected>,
+		listener: FormStoreListener<Selected>,
+		options?: FormStoreSubscriptionOptions<Selected>,
+	): () => void
+}
+
 export function useExternalSelector<
 	Schema extends StandardSchema,
 	Context,
 	Selected,
 >(
-	form: FormStore<Schema, Context>,
+	form: ExternalStore<FormInput<Schema>, Context>,
 	selector: FormStoreSelector<FormInput<Schema>, Context, Selected>,
 	options: ExternalSelectorOptions<Selected> = {},
 ): Selected {

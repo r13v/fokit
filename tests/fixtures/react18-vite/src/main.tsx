@@ -3,9 +3,7 @@ import {
 	type ArraySlotProps,
 	type ControlProps,
 	cloneValue,
-	createForm,
 	createFormKit,
-	createFormStore,
 	defineControl,
 	type ErrorMessageSlotProps,
 	extendValueChanges,
@@ -17,9 +15,7 @@ import {
 	isDescendantPath,
 	isDirtyEqual,
 	isSamePath,
-	KitForm,
 	mergePathValue,
-	nativeControls,
 	normalizeDefinition,
 	parseArrayIndex,
 	parsePath,
@@ -28,24 +24,31 @@ import {
 	resolveUi,
 	type SectionSlotProps,
 	type StandardSchema,
-	Submit,
 	setPathValue,
 	type UiNode,
 	type UiResolver,
 	unsetPathValue,
 	useArrayField,
 	useField,
-	useForm,
 	useFormContext,
 	useFormState,
 	useValue,
 } from "form-please"
+import { createFormStore } from "form-please/core"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createMuiFormKit } from "form-please/preset-mui"
+import { nativeFormKit } from "form-please/preset-native"
 import type { ReactNode } from "react"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
 type MainExports = typeof import("form-please")
 type CoreExports = typeof import("form-please/core")
+
+const muiKit = createMuiFormKit()
+if (!muiKit.controls.autocomplete || muiKit.grid.at(-1) !== 12) {
+	throw new Error("Material UI preset did not initialize")
+}
 
 // @ts-expect-error React 19 Action APIs must stay isolated under form-please/react19.
 type _NoActionForm = MainExports["ActionForm"]
@@ -215,6 +218,7 @@ const kit = createFormKit({
 		text,
 	},
 	slots: {
+		...createDefaultSlots(),
 		Field,
 		Section,
 		Array: ArraySlot,
@@ -239,7 +243,7 @@ function LocalPreview({ disabled, readOnly }: RenderNodeProps) {
 	)
 }
 
-const extendedDefinition = extendedKit.defineForm(schema)({
+const extendedDefinition = extendedKit.defineForm(schema, {
 	ui: [
 		{
 			kind: "render",
@@ -255,17 +259,16 @@ const extendedDefinition = extendedKit.defineForm(schema)({
 })
 
 function ExtendedFormProbe() {
-	return (
-		<extendedKit.AutoForm
-			defaultValues={{ name: "Ada Lovelace", settings: { nickname: "Ada" } }}
-			definition={extendedDefinition}
-		/>
-	)
+	const form = extendedKit.useCreateForm(extendedDefinition, {
+		defaultValues: {
+			name: "Ada Lovelace",
+			settings: { nickname: "Ada" },
+		},
+	})
+	return <extendedKit.AutoForm form={form} />
 }
 
-const nativeKit = createFormKit({
-	controls: nativeControls,
-})
+const nativeKit = nativeFormKit
 
 const description: UiResolver<string, ProfileInput> = ({ name }) =>
 	name.length > 0 ? `Editing ${name}` : "Profile"
@@ -281,17 +284,18 @@ const ui = [
 	},
 ] satisfies readonly UiNode<ProfileInput, typeof kit.controls>[]
 
-const defineProfile = kit.defineForm(schema)
-const settingsFragment = defineProfile.fragment("settings", [
-	{
-		kind: "field",
-		path: "nickname",
-		control: "text",
-		label: "Nickname",
-	},
-])
-const definition = defineProfile({ ui: [...ui, ...settingsFragment] })
-const richDefinition = defineProfile({
+const definition = kit.defineForm(schema, {
+	ui: [
+		...ui,
+		{
+			kind: "field",
+			path: "settings.nickname",
+			control: "text",
+			label: "Nickname",
+		},
+	],
+})
+const richDefinition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "section",
@@ -375,8 +379,6 @@ void [
 	resolveUi(definition, snapshot.values, undefined),
 	unsetPathValue(mergedValues, "name"),
 	nativeKit.slots.Field,
-	KitForm,
-	Submit,
 	normalizeDefinition,
 	useArrayField,
 	ExtendedFormProbe,
@@ -392,12 +394,13 @@ function defaultValues(): FormInput<typeof schema> {
 }
 
 function RichFormProbe() {
-	return (
-		<kit.AutoForm defaultValues={defaultValues()} definition={richDefinition} />
-	)
+	const form = kit.useCreateForm(richDefinition, {
+		defaultValues: defaultValues(),
+	})
+	return <kit.AutoForm form={form} />
 }
 
-const externalForm = createForm(definition, {
+const externalForm = kit.createForm(definition, {
 	defaultValues: defaultValues(),
 })
 
@@ -415,7 +418,7 @@ function HookProbe() {
 }
 
 function App({ children }: { readonly children?: ReactNode }) {
-	const form = useForm(externalForm, {
+	const form = kit.useBindForm(externalForm, {
 		onSubmit({ value }) {
 			void value.slug
 		},
@@ -426,7 +429,6 @@ function App({ children }: { readonly children?: ReactNode }) {
 			<kit.Fields />
 			<HookProbe />
 			<kit.Submit>Save</kit.Submit>
-			<Submit>Save again</Submit>
 			{children}
 		</kit.Form>
 	)

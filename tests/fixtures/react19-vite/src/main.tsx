@@ -1,11 +1,8 @@
 import "form-please/layout.css"
 
-import {
-	createFormKit,
-	nativeControls,
-	type StandardSchema,
-	Submit,
-} from "form-please"
+import type { StandardSchema } from "form-please"
+import { createMuiFormKit } from "form-please/preset-mui"
+import { nativeFormKit as kit } from "form-please/preset-native"
 import { ActionForm, ActionSubmit } from "form-please/react19"
 import type { FormResult } from "form-please/server"
 import { StrictMode } from "react"
@@ -13,6 +10,11 @@ import { createRoot } from "react-dom/client"
 
 type ProfileInput = {
 	readonly name: string
+}
+
+const muiKit = createMuiFormKit()
+if (!muiKit.controls.slider || muiKit.grid.at(-1) !== 12) {
+	throw new Error("Material UI preset did not initialize")
 }
 
 const schema: StandardSchema<ProfileInput> = {
@@ -25,11 +27,7 @@ const schema: StandardSchema<ProfileInput> = {
 	},
 }
 
-const kit = createFormKit({
-	controls: nativeControls,
-})
-
-const definition = kit.defineForm(schema)({
+const definition = kit.defineForm(schema, {
 	ui: [
 		{
 			kind: "field",
@@ -50,16 +48,13 @@ async function saveProfile(_formData: FormData): Promise<void> {
 }
 
 function App() {
+	const form = kit.useCreateForm(definition, {
+		defaultValues: { name: "Ada" },
+	})
 	return (
-		<ActionForm
-			action={saveProfile}
-			defaultValues={{ name: "Ada" }}
-			definition={definition}
-			kit={kit}
-			result={actionResult}
-		>
+		<ActionForm action={saveProfile} form={form} result={actionResult}>
 			<ActionSubmit>Save</ActionSubmit>
-			<Submit>Classic submit also remains importable</Submit>
+			<kit.Submit>Classic submit also remains available</kit.Submit>
 		</ActionForm>
 	)
 }

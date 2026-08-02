@@ -36,6 +36,83 @@
 			},
 			"default": "./dist/core.js"
 		},
+		"./default-slots": {
+			"import": {
+				"types": "./dist/default-slots.d.ts",
+				"default": "./dist/default-slots.js"
+			},
+			"require": {
+				"types": "./dist/default-slots.d.cts",
+				"default": "./dist/default-slots.cjs"
+			},
+			"default": "./dist/default-slots.js"
+		},
+		"./devtools": {
+			"import": {
+				"types": "./dist/devtools.d.ts",
+				"default": "./dist/devtools.js"
+			},
+			"require": {
+				"types": "./dist/devtools.d.cts",
+				"default": "./dist/devtools.cjs"
+			},
+			"default": "./dist/devtools.js"
+		},
+		"./history": {
+			"import": {
+				"types": "./dist/history.d.ts",
+				"default": "./dist/history.js"
+			},
+			"require": {
+				"types": "./dist/history.d.cts",
+				"default": "./dist/history.cjs"
+			},
+			"default": "./dist/history.js"
+		},
+		"./native-controls": {
+			"import": {
+				"types": "./dist/native-controls.d.ts",
+				"default": "./dist/native-controls.js"
+			},
+			"require": {
+				"types": "./dist/native-controls.d.cts",
+				"default": "./dist/native-controls.cjs"
+			},
+			"default": "./dist/native-controls.js"
+		},
+		"./persistence": {
+			"import": {
+				"types": "./dist/persistence.d.ts",
+				"default": "./dist/persistence.js"
+			},
+			"require": {
+				"types": "./dist/persistence.d.cts",
+				"default": "./dist/persistence.cjs"
+			},
+			"default": "./dist/persistence.js"
+		},
+		"./preset-native": {
+			"import": {
+				"types": "./dist/preset-native.d.ts",
+				"default": "./dist/preset-native.js"
+			},
+			"require": {
+				"types": "./dist/preset-native.d.cts",
+				"default": "./dist/preset-native.cjs"
+			},
+			"default": "./dist/preset-native.js"
+		},
+		"./preset-mui": {
+			"import": {
+				"types": "./dist/preset-mui.d.ts",
+				"default": "./dist/preset-mui.js"
+			},
+			"require": {
+				"types": "./dist/preset-mui.d.cts",
+				"default": "./dist/preset-mui.cjs"
+			},
+			"default": "./dist/preset-mui.js"
+		},
 		"./react19": {
 			"import": {
 				"types": "./dist/react19.d.ts",
@@ -71,6 +148,7 @@
 		"test:types": "npm run build && tsc --project tsconfig.json",
 		"test:browser": "playwright test",
 		"test:package": "npm run build && vitest run --config vitest.package.config.ts",
+		"test:registry": "node scripts/verify-shadcn-registry.mjs",
 		"test:smoke": "node scripts/verify-smoke-fixtures.mjs",
 		"test:docs": "npm run build && npm run typecheck --prefix docs-site",
 		"site:dev": "npm run build && npm run dev --prefix docs-site",
@@ -80,9 +158,9 @@
 		"site:verify:preview": "npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/form-please npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
 		"site:verify:production": "BASE_PATH=/form-please npm run site:build && EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
 		"site:verify": "npm run site:verify:preview && npm run site:verify:production",
-		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./react19 ./server",
+		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./react19 ./server",
 		"knip": "knip --workspace . --workspace docs-site",
-		"verify": "npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:smoke && npm run package:check && npm run knip"
+		"verify": "npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:registry && npm run test:smoke && npm run package:check && npm run knip"
 	},
 	"repository": {
 		"type": "git",
@@ -93,8 +171,22 @@
 	},
 	"homepage": "https://r13v.github.io/form-please/",
 	"peerDependencies": {
+		"@emotion/react": "^11.14.0",
+		"@emotion/styled": "^11.14.1",
+		"@mui/material": "^9.0.0",
 		"react": "^18.0.0 || ^19.0.0",
 		"react-dom": "^18.0.0 || ^19.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@emotion/react": {
+			"optional": true
+		},
+		"@emotion/styled": {
+			"optional": true
+		},
+		"@mui/material": {
+			"optional": true
+		}
 	},
 	"dependencies": {
 		"@standard-schema/spec": "1.1.0"
@@ -102,6 +194,9 @@
 	"devDependencies": {
 		"@arethetypeswrong/cli": "0.18.5",
 		"@biomejs/biome": "2.5.5",
+		"@emotion/react": "11.14.0",
+		"@emotion/styled": "11.14.1",
+		"@mui/material": "9.2.0",
 		"@playwright/test": "1.62.0",
 		"@testing-library/react": "16.3.2",
 		"@testing-library/user-event": "14.6.1",
@@ -112,9 +207,11 @@
 		"jsdom": "30.0.0",
 		"knip": "6.29.0",
 		"lefthook": "2.1.10",
+		"portless": "^0.15.5",
 		"publint": "0.3.22",
 		"react": "19.2.8",
 		"react-dom": "19.2.8",
+		"shadcn": "4.16.1",
 		"tsdown": "0.22.14",
 		"typescript": "6.0.3",
 		"vitest": "4.1.10",

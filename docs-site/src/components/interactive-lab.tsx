@@ -15,10 +15,14 @@ export const InteractiveLab = Object.assign(
 					"docs-site/src/components/interactive-lab.client.tsx",
 				),
 				{
-					type: "code",
-					lang: "ts",
-					value:
-						'import { createFormKit, nativeControls } from "form-please"\n\nconst kit = createFormKit({ controls: nativeControls })',
+					type: "paragraph",
+					children: [
+						{ type: "text", value: "Its form kit uses " },
+						{ type: "inlineCode", value: "controls: createNativeControls()" },
+						{ type: "text", value: " and " },
+						{ type: "inlineCode", value: "slots: createDefaultSlots()" },
+						{ type: "text", value: "." },
+					],
 				},
 			]
 		},

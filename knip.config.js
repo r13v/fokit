@@ -1,7 +1,15 @@
 const docsStyleCompiler = (source) => {
-	return source.includes("@fontsource-variable/newsreader")
-		? 'import "@fontsource-variable/newsreader"'
-		: ""
+	const imports = []
+	if (source.includes("@fontsource-variable/newsreader")) {
+		imports.push('import "@fontsource-variable/newsreader"')
+	}
+	if (source.includes("tailwindcss/")) {
+		imports.push('import "tailwindcss"')
+	}
+	if (source.includes("tw-animate-css")) {
+		imports.push('import "tw-animate-css"')
+	}
+	return imports.join("\n")
 }
 
 export default {
@@ -14,6 +22,15 @@ export default {
 	ignoreFiles: [],
 	workspaces: {
 		".": {
+			entry: [
+				"src/index.ts",
+				"src/core/index.ts",
+				"src/history/index.ts",
+				"src/persistence/index.ts",
+				"src/preset-mui/index.ts",
+				"src/react19/index.ts",
+				"src/server/index.ts",
+			],
 			project: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 		},
 		"docs-site": {

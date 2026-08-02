@@ -49,13 +49,21 @@ test("Vocs public output includes the static Markdown and indexing artifacts", a
 		"assets/md/guides/validation.md",
 		"assets/md/guides/transaction-hooks.md",
 		"assets/md/guides/async-fields.md",
+		"assets/md/guides/history.md",
+		"assets/md/guides/persistence.md",
+		"assets/md/guides/devtools.md",
+		"assets/md/guides/core.md",
 		"assets/md/examples.md",
+		"assets/md/examples/mui-yup.md",
 		"assets/md/examples/research-grant.md",
 		"assets/md/examples/studio-policies.md",
 		"assets/md/examples/makerspace-launch.md",
 		"assets/md/examples/learning-cohort.md",
 		"assets/md/examples/membership-ladder.md",
 		"assets/md/examples/campaign-builder.md",
+		"assets/md/examples/history.md",
+		"assets/md/examples/persistence.md",
+		"assets/md/examples/devtools.md",
 		"llms.txt",
 		"llms-full.txt",
 		"sitemap.xml",
@@ -135,11 +143,33 @@ test("production output keeps Vocs skip links under the GitHub Pages base path",
 	}
 })
 
+test("configured static assets stay under the generated site base path", async () => {
+	const html = await readFile(new URL("index.html", publicRoot), "utf8")
+	const assetBasePath = /href="([^"]*)\/assets\//.exec(html)?.[1]
+
+	assert.equal(typeof assetBasePath, "string")
+	assert.match(
+		html,
+		new RegExp(
+			`<link rel="icon" href="${escapeRegExp(`${assetBasePath}/favicon.ico`)}"`,
+		),
+	)
+	assert.match(
+		html,
+		new RegExp(
+			`<img src="${escapeRegExp(`${assetBasePath}/brand/form-please-logo.png`)}"`,
+		),
+	)
+	assert.equal(await pathExists("favicon.ico"), true)
+	assert.equal(await pathExists("brand/form-please-logo.png"), true)
+})
+
 test("Interactive Lab has meaningful generated Markdown fallbacks", async () => {
 	const fallbackTerms = [
 		"Interactive Form, Please Lab",
 		"runs only in a browser",
-		"createFormKit({ controls: nativeControls })",
+		"controls: createNativeControls()",
+		"slots: createDefaultSlots()",
 	]
 	const fallbackFiles = ["assets/md/get-started.md", "llms-full.txt"]
 
@@ -163,13 +193,26 @@ test("Interactive Lab has meaningful generated Markdown fallbacks", async () => 
 	)
 	assert.match(llms, /Describe fields, sections, arrays, layout/)
 	assert.match(llms, /Control when Form, Please validates/)
+	assert.match(llms, /Add undo, redo, seek, deterministic replay/)
+	assert.match(llms, /Hydrate and save a form document or history journal/)
+	assert.match(llms, /Inspect committed form events and use constrained local/)
+
+	const full = await readFile(new URL("llms-full.txt", publicRoot), "utf8")
+	assert.match(full, /createHistoryMiddleware/)
+	assert.match(full, /createPersistenceMiddleware/)
+	assert.match(full, /createDevToolsMiddleware/)
+	assert.match(full, /createFormStore/)
+	assert.match(full, /form-please\/history/)
+	assert.match(full, /form-please\/persistence/)
+	assert.match(full, /form-please\/devtools/)
+	assert.match(full, /form-please\/core/)
 })
 
 test("overview demo has a meaningful generated Markdown fallback", async () => {
 	const fallbackTerms = [
 		"live overview form runs only in a browser",
 		"validates it with Standard Schema",
-		"createFormKit({ controls: nativeControls })",
+		'nativeFormKit as kit } from "form-please/preset-native"',
 	]
 	const fallbackFiles = ["assets/md/index.md", "llms-full.txt"]
 
@@ -199,6 +242,22 @@ test("generated Markdown links live demos to their canonical source files", asyn
 		{
 			file: "assets/md/guides/async-multiselect.md",
 			path: "docs-site/src/snippets/async-multiselect.tsx",
+		},
+		{
+			file: "assets/md/examples/devtools.md",
+			path: "docs-site/src/snippets/devtools.tsx",
+		},
+		{
+			file: "assets/md/examples/history.md",
+			path: "docs-site/src/snippets/history.tsx",
+		},
+		{
+			file: "assets/md/examples/mui-yup.md",
+			path: "docs-site/src/snippets/mui-yup-conference.tsx",
+		},
+		{
+			file: "assets/md/examples/persistence.md",
+			path: "docs-site/src/snippets/persistence-local-storage.tsx",
 		},
 		...[
 			"research-grant",

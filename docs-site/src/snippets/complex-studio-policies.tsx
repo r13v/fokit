@@ -13,11 +13,12 @@ import {
 	type FormInput,
 	type FormOutput,
 	fromResource,
-	nativeControls,
 	useFormContext,
 	useFormState,
 	type ValueChange,
 } from "form-please"
+import { createDefaultSlots } from "form-please/default-slots"
+import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
@@ -160,7 +161,10 @@ const equipmentCatalog: readonly EquipmentOption[] = [
 	{ value: "laser-cutter", label: "Laser cutter" },
 ]
 
-const kit = createFormKit({ controls: nativeControls })
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
 
 function PolicyBalance() {
 	const form = useFormContext<typeof studioPolicySchema, PolicyContext>()
@@ -197,8 +201,8 @@ function PolicyBalance() {
 }
 
 const policyDefinition = kit
-	.defineForm(studioPolicySchema)
-	.withContext<PolicyContext>({
+	.forContext<PolicyContext>()
+	.defineForm(studioPolicySchema, {
 		ui: [
 			{
 				kind: "section",
@@ -468,6 +472,13 @@ export function StudioPoliciesExample() {
 }
 
 function StudioPoliciesForm() {
+	const form = kit.useCreateForm(policyDefinition, {
+		defaultValues: baseline,
+		context: {
+			equipment: { status: "pending", fetchStatus: "idle" },
+			savedEquipmentOptions,
+		},
+	})
 	const policies = useQuery({
 		queryKey: ["studio-policy-baseline"],
 		queryFn: () => fakeRequest(baseline, 360),
@@ -521,8 +532,7 @@ function StudioPoliciesForm() {
 				beforeUpdate={preservePolicyInvariants}
 				className="form-please-complex__form"
 				context={{ equipment: equipmentResource, savedEquipmentOptions }}
-				defaultValues={policies.data}
-				definition={policyDefinition}
+				form={form}
 				onSubmit={async ({ value, form }) => {
 					try {
 						form.clearErrors()

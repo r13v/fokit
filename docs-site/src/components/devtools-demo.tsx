@@ -10,7 +10,7 @@ export const DevToolsDemo = Object.assign(
 	{
 		toMarkdown() {
 			return markdownFallback(
-				"The Redux DevTools workflow runs in a browser. It connects a live article editor to Redux DevTools and keeps the form usable when the extension is absent.",
+				"The Redux DevTools workflow runs in a browser. It connects the profile form from get-started to Redux DevTools and keeps the form usable when the extension is absent.",
 				"docs-site/src/snippets/devtools.tsx",
 			)
 		},

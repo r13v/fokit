@@ -3,17 +3,10 @@ import { defineConfig } from "tsdown"
 export default defineConfig({
 	entry: {
 		index: "src/index.ts",
-		core: "src/core/index.ts",
 		"default-slots": "src/default-slots/index.ts",
-		devtools: "src/devtools/index.ts",
-		history: "src/history/index.ts",
 		"native-controls": "src/native-controls/index.ts",
-		persistence: "src/persistence/index.ts",
 		"preset-native": "src/preset-native/index.ts",
 		"preset-mui": "src/preset-mui/index.ts",
-		react19: "src/react19/index.ts",
-		server: "src/server/index.ts",
-		tanstack: "src/tanstack/index.ts",
 	},
 	format: ["esm", "cjs"],
 	platform: "neutral",

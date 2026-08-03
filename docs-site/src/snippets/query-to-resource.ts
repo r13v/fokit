@@ -2,7 +2,7 @@ import type { UseQueryResult } from "@tanstack/react-query"
 
 type FetchStatus = "idle" | "fetching" | "paused"
 
-export type RefreshState<Error> =
+type RefreshState<Error> =
 	| { readonly status: "idle" }
 	| { readonly status: "pending" }
 	| { readonly status: "paused" }

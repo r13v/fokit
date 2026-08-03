@@ -53,25 +53,24 @@ const profileDefinition = kit.defineForm(profileSchema, {
 
 export function OverviewDemoClient() {
 	const [saved, setSaved] = useState<FormOutput<typeof profileSchema>>()
-	const form = kit.useCreateForm(profileDefinition, { defaultValues })
+	const form = kit.useForm(profileDefinition, {
+		defaultValues,
+		onSubmit: ({ value }) => setSaved(value),
+	})
 	let output = "Submit the form to see typed output."
 	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
 
 	return (
 		<section
-			aria-label="Live Form, Please profile form"
-			className="form-please-lab form-please-overview-demo"
+			aria-label="Live 'Form, Please' profile form"
+			className="form-please-complex form-please-lab form-please-overview-demo"
 			data-testid="overview-demo"
 		>
 			<p className="form-please-lab__kicker">Live demo</p>
 			<p className="form-please-lab__summary">
 				Edit the profile. Submit it to see the schema-validated output.
 			</p>
-			<kit.AutoForm
-				className="form-please-overview-demo__form"
-				form={form}
-				onSubmit={({ value }) => setSaved(value)}
-			>
+			<kit.AutoForm className="form-please-overview-demo__form" form={form}>
 				<kit.Submit className="form-please-lab__primary">
 					Save profile
 				</kit.Submit>

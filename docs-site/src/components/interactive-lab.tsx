@@ -11,7 +11,7 @@ export const InteractiveLab = Object.assign(
 		toMarkdown() {
 			return [
 				...markdownFallback(
-					"The Interactive Form, Please Lab runs only in a browser. It demonstrates a generated form, validation, reset, classic submission, array actions, and native FormData.",
+					"The Interactive 'Form, Please' Lab runs only in a browser. It demonstrates a generated form, TanStack validation, reset, array actions, subscriptions, and a diagnostic native FormData snapshot. Submission uses TanStack Form values.",
 					"docs-site/src/components/interactive-lab.client.tsx",
 				),
 				{

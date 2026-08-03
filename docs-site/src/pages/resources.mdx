@@ -1,0 +1,55 @@
+---
+title: Resource state
+description: Map application-owned request state into synchronous UI resolvers.
+showAskAi: false
+---
+
+# Resource state
+
+"Form, Please" does not own requests, caches, cancellation, or retries. Keep that
+state in the application and pass a `ResourceState` through form values or
+context.
+
+Use `matchResource` for direct branching. Use `fromResource` to create a
+synchronous UI resolver:
+
+```tsx
+const description = fromResource(
+	(_values, { context }) => context.countries,
+	{
+		pending: () => "Loading countries",
+		success: ({ value }) => `${value.length} countries available`,
+		error: ({ error }) => error.message,
+	},
+)
+```
+
+Each branch also receives the full readonly values and resolver details. This
+keeps context support without adding request ownership to the form runtime.
+
+## Adapt TanStack Query locally
+
+Keep the query result in application code. Convert its states before you pass
+the result through form context. This focused adapter preserves background
+refresh state without making "Form, Please" depend on TanStack Query:
+
+```ts
+// [!include ~/snippets/query-to-resource.ts]
+```
+
+Use the adapted value as the context property that a `fromResource` resolver
+selects. A pending branch can disable a field. A success branch can provide
+options. An error branch can preserve saved options and explain the failure.
+
+Do not make a UI resolver asynchronous. Load data in the application, then
+resolve the current resource state synchronously.
+
+## Preserve request ownership
+
+- TanStack Query owns requests, retries, cancellation, and caching.
+- The application owns the conversion to `ResourceState`.
+- Form context carries the current resource value.
+- `fromResource` converts each state into a synchronous UI property.
+
+See [Creative studio policies](/examples/studio-policies) for a live form that
+uses context and `fromResource` for an equipment catalog.

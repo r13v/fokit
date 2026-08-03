@@ -256,6 +256,7 @@ const defaultValues = {
 
 export function MuiYupConferenceExample() {
 	const mode = useVocsPaletteMode()
+	const [isClientReady, setIsClientReady] = useState(false)
 	const theme = useMemo(
 		() =>
 			createTheme({
@@ -265,7 +266,13 @@ export function MuiYupConferenceExample() {
 		[mode],
 	)
 	const [saved, setSaved] = useState<ConferenceOutput>()
-	const form = kit.useCreateForm(conferenceDefinition, { defaultValues })
+	const form = kit.useForm(conferenceDefinition, {
+		defaultValues,
+		onSubmit({ value }) {
+			setSaved(value)
+		},
+	})
+	useEffect(() => setIsClientReady(true), [])
 	let status = "Submit the proposal to validate it with Yup."
 	if (saved !== undefined) {
 		const topics = saved.topics.map((topic) => topicLabels[topic]).join(", ")
@@ -277,14 +284,11 @@ export function MuiYupConferenceExample() {
 			<Paper
 				aria-label="Material UI with Yup conference example"
 				component="section"
+				data-demo-client-ready={isClientReady}
 				sx={{ my: 3, p: { xs: 2, sm: 3 } }}
 				variant="outlined"
 			>
-				<kit.AutoForm
-					form={form}
-					onSubmit={({ value }) => setSaved(value)}
-					validation={{ mode: "change" }}
-				>
+				<kit.AutoForm form={form}>
 					<kit.Submit>Submit proposal</kit.Submit>
 				</kit.AutoForm>
 				<Box sx={{ mt: 2 }}>

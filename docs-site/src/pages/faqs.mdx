@@ -1,155 +1,33 @@
 ---
 title: FAQs
-description: Direct answers about when to use Form, Please, validation, defaults, design systems, servers, and React versions.
+description: Answers about TanStack Form, transforms, hidden values, context, and definition lifetime.
 showAskAi: false
 ---
 
 # FAQs
 
-Use these answers to resolve common setup and integration questions. Form, Please owns
-form state and native form behavior. Your application owns its visual system.
+## Why does a valid submit parse the schema twice?
 
-## Why use Form, Please instead of a smaller form hook?
+TanStack Form uses the first result for validation. Standard Schema transforms
+are not retained in form state, so "Form, Please" parses again to obtain typed
+output. This is the TanStack Form recommendation and avoids a custom cache.
 
-Use Form, Please to build product forms quickly from an existing design system.
-Wrap product controls and structural slots once, then reuse them across generated
-or manually composed forms. A single typed state model also handles:
+## Do hidden fields lose their values?
 
-- schema-owned validation and typed transformations;
-- stable arrays;
-- safe server `FormData`;
-- React 19 support.
+No. Hidden generated fields do not render, but their values remain in TanStack
+Form state.
 
-For a few uncontrolled inputs and one submit handler, the browser can be the
-simpler tool. See [When to reach for Form, Please](/#when-to-reach-for-form-please).
+## How do I use TanStack Form directly?
 
-## Does Form, Please require Zod?
+Use `form.api.Field`, `form.api.FormGroup`, `form.api.Subscribe`, or other
+methods on `form.api`.
 
-No. Form, Please accepts any schema library that implements Standard Schema. The
-documentation uses Zod because it implements that contract.
+## Does "Form, Please" fetch async options?
 
-## Are Form, Please controls controlled or uncontrolled?
+No. Your application owns request and cache state. Pass it through values or
+context, then use `matchResource` or `fromResource` in synchronous resolvers.
 
-The Form, Please store controls product values. Custom controls read `value` and write
-changes through `setValue`.
+## Can I replace a definition while a component stays mounted?
 
-Explicit control serialization preserves native `FormData` behavior. The
-`file` control is the DOM exception. The browser owns the selected file list,
-and Form, Please stores the first selected `File | undefined`.
-
-Read [Controls and design systems](/guides/controls) for the adapter contract.
-
-## Why are complete default values required?
-
-A complete editable baseline makes these operations deterministic:
-
-- dirty comparison and reset;
-- array metadata;
-- hidden-field policies;
-- native serialization.
-
-Optional schema fields can begin as `undefined` when that is part of
-`FormInput`. Use [TypeScript input and output](/types#input-and-output) to see
-the distinction.
-
-## Why does `required: true` not validate an empty field?
-
-The Standard Schema owns validation. Add the required-value rule to the schema.
-
-The UI option `required: true` sets required presentation, native state, and
-ARIA. It does not add a schema rule.
-
-## How do I load an existing profile?
-
-When possible, load the profile before you create the form. To make newly
-loaded or saved data the clean baseline, call `form.reset(profile)`.
-
-Changing the `defaultValues` prop does not silently overwrite user edits. The
-[loaded edit-form recipe](/advanced#load-an-edit-form-baseline) shows the
-deliberate reset path.
-
-## Does Form, Please support async validation?
-
-Yes. Standard Schema validation can return a promise. Form, Please exposes
-`isValidating` and ignores stale results. Set `asyncDebounceMs` to debounce
-change-triggered asynchronous validation.
-
-Blur, imperative validation, and submit are never debounced. Read
-[Validation and errors](/guides/validation) for the complete lifecycle.
-
-## Can I use an existing component library?
-
-Yes. Wrap each product input with `defineControl`. Replace a structural slot
-when it needs design-system markup.
-
-Start with `createNativeControls()`, then replace only the product-specific parts.
-
-## Why is there no built-in theme?
-
-Form state does not dictate product styling. `createDefaultSlots()` renders
-accessible unstyled structure. `form-please/layout.css` adds only responsive layout.
-
-Colors, typography, focus rings, density, and control polish stay in the
-application. Start with the copyable [styling baseline](/guides/styling).
-
-## What happens when a field becomes hidden?
-
-Visibility and value retention are separate. By default, `valuePolicy`
-preserves the value. Use `"unset"` for an optional value that must leave the
-form when hidden.
-
-Preserved hidden values need a serializer when they must participate in
-FormData. See [Conditional fields](/guides/conditional-fields).
-
-## How do I reset a form?
-
-Call `form.reset()`, or use a native reset button inside `kit.Form`. Form, Please
-resets the store and prevents controlled inputs from resetting independently.
-
-`form.reset(nextValues)` replaces the baseline. Both forms clear dirty,
-touched, validation, issue, and submission metadata.
-
-## Why does `onSubmit` not run?
-
-The form contains a schema issue. Form, Please exposes the visible issues and focuses
-the first visible invalid control. Correct the issues, then submit again.
-
-If the issue belongs to a hidden field, check its schema rule and
-`valuePolicy`. Read [Conditional fields](/guides/conditional-fields) for the
-available retention policies.
-
-## How do server errors reach fields?
-
-In a classic flow, call `form.setErrors()` with normalized server issues.
-Editing the matching path clears its stale server issue.
-
-React 19 `ActionForm` consumes a returned `FormResult` and installs field or
-form issues automatically. Both paths are covered in
-[Validation and errors](/guides/validation#install-server-errors).
-
-## How do React 18 and React 19 differ?
-
-The main `form-please` entry supports classic submission in React 18 and React 19.
-React 19 Actions are available only from `form-please/react19`. React 18 consumers do
-not load or typecheck Action-only APIs.
-
-Use the [submission ownership table](/guides/react-19-actions#choose-the-submission-owner)
-before choosing a mode.
-
-## Does every field rerender on each change?
-
-No. The store uses external subscriptions. `useValue`, `useField`,
-`useArrayField`, and `useFormState` select focused slices. UI resolvers
-automatically track the paths that they read.
-
-## Does Form, Please provide wizards or autosave?
-
-No. Form, Please does not impose a wizard or autosave abstraction. Keep page
-navigation, draft persistence, and retry policy in application code. Reuse the
-same form instance and typed commands.
-
-The [production recipes](/advanced) show manual composition without introducing
-a second state model.
-
-Still looking for an exact method or type? Use the [API reference](/api) or
-[TypeScript reference](/types).
+No. Treat the definition as fixed for the hook lifetime. Change a React `key`
+to remount the form with another definition.

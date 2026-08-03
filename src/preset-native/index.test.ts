@@ -5,13 +5,7 @@ import { describe, expect, it } from "vitest"
 import { nativeFormKit } from "./index.js"
 
 describe("nativeFormKit preset", () => {
-	it("provides an immutable native kit that can be extended without mutation", () => {
-		const extended = nativeFormKit.extend({
-			controls: {
-				custom: nativeFormKit.controls.text,
-			},
-		})
-
+	it("provides an immutable native kit", () => {
 		expect(Object.isFrozen(nativeFormKit)).toBe(true)
 		expect(Object.isFrozen(nativeFormKit.controls)).toBe(true)
 		expect(Object.isFrozen(nativeFormKit.slots)).toBe(true)
@@ -25,7 +19,5 @@ describe("nativeFormKit preset", () => {
 			"time",
 			"file",
 		])
-		expect(extended.controls.custom).toBe(nativeFormKit.controls.text)
-		expect(nativeFormKit.controls).not.toHaveProperty("custom")
 	})
 })

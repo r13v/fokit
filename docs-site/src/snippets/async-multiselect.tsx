@@ -408,15 +408,6 @@ export const asyncMultiSelect = defineControl<
 	AsyncMultiSelectOptions
 >({
 	component: AsyncMultiSelectControl,
-	formData: {
-		mode: "hidden",
-		serialize(value, { name }) {
-			return [
-				{ kind: "array" as const, name },
-				...value.map((item) => ({ name, value: item })),
-			]
-		},
-	},
 })
 
 function useDebouncedValue<Value>(value: Value, delayMs: number): Value {
@@ -508,7 +499,10 @@ const queryClient = new QueryClient({
 
 export function AsyncMultiSelectExample() {
 	const [savedCityIds, setSavedCityIds] = useState<readonly string[]>()
-	const form = kit.useCreateForm(definition, { defaultValues })
+	const form = kit.useForm(definition, {
+		defaultValues,
+		onSubmit: ({ value }) => setSavedCityIds(value.cityIds),
+	})
 	let output = "Submit to see the validated city IDs."
 	if (savedCityIds !== undefined) {
 		output = `Saved: ${savedCityIds.join(", ")}`
@@ -518,7 +512,7 @@ export function AsyncMultiSelectExample() {
 		<QueryClientProvider client={queryClient}>
 			<section
 				aria-label="Async multiselect example"
-				className="form-please-async-demo"
+				className="form-please-complex form-please-async-demo"
 				data-testid="async-multiselect-demo"
 			>
 				<p className="form-please-async-demo__kicker">Live demo</p>
@@ -526,10 +520,7 @@ export function AsyncMultiSelectExample() {
 					Open the list and search for “m”. Repeated searches reuse the query
 					cache.
 				</p>
-				<kit.AutoForm
-					form={form}
-					onSubmit={({ value }) => setSavedCityIds(value.cityIds)}
-				>
+				<kit.AutoForm form={form}>
 					<kit.Submit>Save selection</kit.Submit>
 				</kit.AutoForm>
 				<output aria-live="polite" data-testid="async-multiselect-output">

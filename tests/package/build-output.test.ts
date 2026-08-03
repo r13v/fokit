@@ -1,456 +1,87 @@
-import { execFile } from "node:child_process"
 import { readFile, stat } from "node:fs/promises"
-import { dirname, relative, resolve } from "node:path"
+import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { promisify } from "node:util"
 
 import { describe, expect, it } from "vitest"
 
-const execFileAsync = promisify(execFile)
-const rootDirectory = resolve(fileURLToPath(new URL("../..", import.meta.url)))
-const packageJson = JSON.parse(
-	await readFile(new URL("../../package.json", import.meta.url), "utf8"),
-)
+const rootDirectory = fileURLToPath(new URL("../..", import.meta.url))
+const entrypoints = [
+	"index",
+	"default-slots",
+	"native-controls",
+	"preset-native",
+	"preset-mui",
+] as const
 
-const javaScriptEntrypoints = {
-	".": "index",
-	"./core": "core",
-	"./default-slots": "default-slots",
-	"./devtools": "devtools",
-	"./history": "history",
-	"./native-controls": "native-controls",
-	"./persistence": "persistence",
-	"./preset-native": "preset-native",
-	"./preset-mui": "preset-mui",
-	"./react19": "react19",
-	"./server": "server",
-	"./tanstack": "tanstack",
-} as const
-
-type JavaScriptEntrypoint = keyof typeof javaScriptEntrypoints
-
-type ExportCondition = {
-	readonly types: string
-	readonly default: string
-}
-
-type JavaScriptExport = {
-	readonly import: ExportCondition
-	readonly require: ExportCondition
-	readonly default: string
-}
-
-describe("packed build output", () => {
-	it("ships every JavaScript export target with matching declarations", async () => {
-		const packedFiles = await getPackedFiles()
-
-		for (const [entrypoint, distName] of Object.entries(
-			javaScriptEntrypoints,
-		) as [JavaScriptEntrypoint, string][]) {
-			const exported = getJavaScriptExport(entrypoint)
-
-			expect(exported.import.default).toBe(`./dist/${distName}.js`)
-			expect(exported.require.default).toBe(`./dist/${distName}.cjs`)
-			expect(exported.default).toBe(exported.import.default)
-			expect(exported.import.types).toBe(`./dist/${distName}.d.ts`)
-			expect(exported.require.types).toBe(`./dist/${distName}.d.cts`)
-			expect(exported.import.types).not.toBe(exported.require.types)
-
-			const targets = [
-				exported.import.default,
-				exported.require.default,
-				exported.import.types,
-				exported.require.types,
-			]
-			for (const target of targets) {
-				await assertPackageFileExists(target)
-			}
-			const mappedTargets: string[] = []
-			for (const target of targets) {
-				if ((await readPackageFile(target)).includes("sourceMappingURL=")) {
-					mappedTargets.push(target)
-				}
-			}
-			for (const target of mappedTargets) {
-				await assertPackageFileExists(`${target}.map`)
-			}
-
-			expect(packedFiles).toEqual(
-				expect.arrayContaining([
-					...targets.map(toPackedPath),
-					...mappedTargets.map((target) => toPackedPath(`${target}.map`)),
-				]),
-			)
-		}
-	})
-
-	it("keeps CSS explicit and side-effectful in the packed output", async () => {
-		const packedFiles = await getPackedFiles()
-
-		expect(packageJson.exports["./layout.css"]).toBe("./dist/layout.css")
-		expect(packageJson.sideEffects).toEqual(["**/*.css"])
-		expect(packedFiles).toContain("dist/layout.css")
-
-		for (const entrypoint of Object.keys(
-			javaScriptEntrypoints,
-		) as JavaScriptEntrypoint[]) {
-			const exported = getJavaScriptExport(entrypoint)
-			await expectTargetNotToContain(exported.import.default, "layout.css")
-			await expectTargetNotToContain(exported.require.default, "layout.css")
-		}
-	})
-
-	it("preserves client directives only on React entries", async () => {
-		const clientEntrypoints = new Set<JavaScriptEntrypoint>([
-			".",
-			"./default-slots",
-			"./native-controls",
-			"./preset-native",
-			"./preset-mui",
-			"./react19",
-			"./tanstack",
-		])
-
-		for (const entrypoint of Object.keys(
-			javaScriptEntrypoints,
-		) as JavaScriptEntrypoint[]) {
-			const exported = getJavaScriptExport(entrypoint)
-			const expectedDirective = clientEntrypoints.has(entrypoint)
-
-			for (const target of [
-				exported.import.default,
-				exported.require.default,
-			]) {
-				const source = await readPackageFile(target)
-				expect(hasUseClientDirective(source)).toBe(expectedDirective)
+describe("build output", () => {
+	it("emits both module formats and their declarations", async () => {
+		for (const entrypoint of entrypoints) {
+			for (const extension of ["js", "cjs", "d.ts", "d.cts"]) {
+				await expect(
+					stat(resolve(rootDirectory, `dist/${entrypoint}.${extension}`)),
+				).resolves.toBeDefined()
 			}
 		}
 	})
 
-	it("keeps React and control imports out of the core and server export graphs", async () => {
-		for (const entrypoint of ["./core", "./server"] as const) {
-			const exported = getJavaScriptExport(entrypoint)
-
-			await expectNoClientRuntimeImport(exported.import.default)
-			await expectNoClientRuntimeImport(exported.require.default)
+	it("marks every React entry as a client module", async () => {
+		for (const entrypoint of entrypoints) {
+			for (const extension of ["js", "cjs"]) {
+				const source = await readFile(
+					resolve(rootDirectory, `dist/${entrypoint}.${extension}`),
+					"utf8",
+				)
+				expect(source.trimStart().startsWith('"use client";')).toBe(true)
+			}
 		}
 	})
 
-	it("keeps optional implementations out of the base entry graphs", async () => {
+	it("removes every retired JavaScript entry", async () => {
 		for (const entrypoint of [
-			".",
-			"./core",
-			"./default-slots",
-			"./native-controls",
-			"./preset-native",
-			"./preset-mui",
-			"./react19",
-			"./server",
-			"./tanstack",
-		] as const) {
-			const exported = getJavaScriptExport(entrypoint)
-
-			await expectGraphNotToContainOptionalImplementation(
-				exported.import.default,
-			)
-			await expectGraphNotToContainOptionalImplementation(
-				exported.require.default,
-			)
-		}
-	})
-
-	it("keeps rendering defaults out of the headless root graph", async () => {
-		const root = getJavaScriptExport(".")
-
-		await expectGraphNotToContainRenderingSources(root.import.default, [
-			"default-slots",
-			"native-controls",
-			"preset-mui",
-			"preset-native",
-		])
-		await expectGraphNotToContainRenderingSources(root.require.default, [
-			"default-slots",
-			"native-controls",
-			"preset-mui",
-			"preset-native",
-		])
-	})
-
-	it("keeps low-level rendering entries independent from the native preset", async () => {
-		const defaultSlots = getJavaScriptExport("./default-slots")
-		const nativeControls = getJavaScriptExport("./native-controls")
-
-		for (const target of [
-			defaultSlots.import.default,
-			defaultSlots.require.default,
+			"core",
+			"devtools",
+			"history",
+			"persistence",
+			"react19",
+			"server",
+			"tanstack",
 		]) {
-			await expectGraphNotToContainRenderingSources(target, [
-				"native-controls",
-				"preset-mui",
-				"preset-native",
-			])
-		}
-		for (const target of [
-			nativeControls.import.default,
-			nativeControls.require.default,
-		]) {
-			await expectGraphNotToContainRenderingSources(target, [
-				"default-slots",
-				"preset-mui",
-				"preset-native",
-			])
+			await expect(
+				stat(resolve(rootDirectory, `dist/${entrypoint}.js`)),
+			).rejects.toMatchObject({ code: "ENOENT" })
 		}
 	})
 
-	it("keeps Material UI imports isolated to the MUI preset", async () => {
-		for (const entrypoint of Object.keys(
-			javaScriptEntrypoints,
-		) as JavaScriptEntrypoint[]) {
-			if (entrypoint === "./preset-mui") continue
-			const exported = getJavaScriptExport(entrypoint)
-			await expectGraphNotToImportMui(exported.import.default)
-			await expectGraphNotToImportMui(exported.require.default)
+	it("keeps Material UI isolated to its preset graph", async () => {
+		for (const entrypoint of entrypoints) {
+			const graph = await readEsmGraph(`dist/${entrypoint}.js`)
+			if (entrypoint === "preset-mui") {
+				expect(graph).toContain("@mui/material")
+			} else {
+				expect(graph).not.toContain("@mui/material")
+			}
 		}
 	})
 
-	it("keeps TanStack Form imports isolated to the TanStack entry", async () => {
-		for (const entrypoint of Object.keys(
-			javaScriptEntrypoints,
-		) as JavaScriptEntrypoint[]) {
-			if (entrypoint === "./tanstack") continue
-			const exported = getJavaScriptExport(entrypoint)
-			await expectGraphNotToImportTanStack(exported.import.default)
-			await expectGraphNotToImportTanStack(exported.require.default)
-		}
-	})
-
-	it("keeps optional entries free of Redux runtime dependencies", async () => {
-		expect(packageJson.dependencies).not.toHaveProperty("redux")
-		expect(packageJson.dependencies).not.toHaveProperty(
-			"@redux-devtools/extension",
-		)
-		for (const entrypoint of [
-			"./devtools",
-			"./history",
-			"./persistence",
-		] as const) {
-			const exported = getJavaScriptExport(entrypoint)
-			await expectGraphNotToImportRedux(exported.import.default)
-			await expectGraphNotToImportRedux(exported.require.default)
-		}
-	})
-
-	it("packs only public package artifacts", async () => {
-		const packedFiles = await getPackedFiles()
-
-		expect(packedFiles).toEqual(
-			expect.arrayContaining([
-				"dist/layout.css",
-				"LICENSE",
-				"README.md",
-				"package.json",
-			]),
-		)
-		expect(packedFiles.some((file) => file.startsWith("dist/"))).toBe(true)
-
-		for (const file of packedFiles) {
-			expect(file).toMatch(/^(?:dist\/|LICENSE$|README\.md$|package\.json$)/)
-			expect(file).not.toMatch(
-				/^(?:src|tests|docs\/plans|docs-site|examples|\.ralphex)\//,
-			)
-			expect(file).not.toMatch(/^form-please-\d+\.\d+\.\d+\.tgz$/)
-		}
+	it("uses TanStack Form in the main runtime graph", async () => {
+		const graph = await readEsmGraph("dist/index.js")
+		expect(graph).toContain("@tanstack/react-form")
+		expect(graph).not.toContain("layout.css")
 	})
 })
 
-async function getPackedFiles(): Promise<readonly string[]> {
-	const { stdout } = await execFileAsync(
-		"npm",
-		["pack", "--dry-run", "--json"],
-		{
-			cwd: rootDirectory,
-		},
-	)
-	const [packResult] = JSON.parse(stdout) as [
-		{
-			readonly files: readonly { readonly path: string }[]
-		},
-	]
-	return packResult.files.map((file) => file.path).sort()
-}
-
-function getJavaScriptExport(
-	entrypoint: JavaScriptEntrypoint,
-): JavaScriptExport {
-	return packageJson.exports[entrypoint] as JavaScriptExport
-}
-
-async function assertPackageFileExists(packagePath: string): Promise<void> {
-	await stat(packagePathToAbsolutePath(packagePath))
-}
-
-async function readPackageFile(packagePath: string): Promise<string> {
-	return await readFile(packagePathToAbsolutePath(packagePath), "utf8")
-}
-
-async function expectTargetNotToContain(
-	packagePath: string,
-	pattern: string,
-): Promise<void> {
-	await expect(readPackageFile(packagePath)).resolves.not.toContain(pattern)
-}
-
-function packagePathToAbsolutePath(packagePath: string): string {
-	return resolve(rootDirectory, toPackedPath(packagePath))
-}
-
-function toPackedPath(packagePath: string): string {
-	return packagePath.replace(/^\.\//, "")
-}
-
-function hasUseClientDirective(source: string): boolean {
-	return source.trimStart().startsWith('"use client";')
-}
-
-async function expectNoClientRuntimeImport(
-	packagePath: string,
+async function readEsmGraph(
+	path: string,
 	visited = new Set<string>(),
-): Promise<void> {
-	const absolutePath = packagePathToAbsolutePath(packagePath)
-	if (visited.has(absolutePath)) {
-		return
-	}
-	visited.add(absolutePath)
-
-	const source = await readFile(absolutePath, "utf8")
-	for (const specifier of collectRuntimeSpecifiers(source)) {
-		expect(specifier).not.toMatch(/^react(?:\/|$)/)
-		expect(specifier).not.toMatch(/^react-dom(?:\/|$)/)
-		expect(specifier).not.toMatch(/control-types/)
-
-		if (specifier.startsWith(".")) {
-			await expectNoClientRuntimeImport(
-				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
-				visited,
-			)
-		}
-	}
-}
-
-async function expectGraphNotToContainOptionalImplementation(
-	packagePath: string,
-	visited = new Set<string>(),
-): Promise<void> {
-	const absolutePath = packagePathToAbsolutePath(packagePath)
-	if (visited.has(absolutePath)) return
-	visited.add(absolutePath)
-
-	const source = await readFile(absolutePath, "utf8")
-	expect(source).not.toMatch(/src\/(?:devtools|history|persistence)\//)
-	for (const specifier of collectRuntimeSpecifiers(source)) {
-		if (specifier.startsWith(".")) {
-			await expectGraphNotToContainOptionalImplementation(
-				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
-				visited,
-			)
-		}
-	}
-}
-
-async function expectGraphNotToContainRenderingSources(
-	packagePath: string,
-	sourceDirectories: readonly string[],
-	visited = new Set<string>(),
-): Promise<void> {
-	const absolutePath = packagePathToAbsolutePath(packagePath)
-	if (visited.has(absolutePath)) return
-	visited.add(absolutePath)
-
-	const source = await readFile(absolutePath, "utf8")
-	expect(source).not.toMatch(
-		new RegExp(`src/(?:${sourceDirectories.join("|")})/`),
-	)
-	for (const specifier of collectRuntimeSpecifiers(source)) {
-		if (specifier.startsWith(".")) {
-			await expectGraphNotToContainRenderingSources(
-				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
-				sourceDirectories,
-				visited,
-			)
-		}
-	}
-}
-
-async function expectGraphNotToImportRedux(
-	packagePath: string,
-	visited = new Set<string>(),
-): Promise<void> {
-	const absolutePath = packagePathToAbsolutePath(packagePath)
-	if (visited.has(absolutePath)) return
-	visited.add(absolutePath)
-
-	const source = await readFile(absolutePath, "utf8")
-	for (const specifier of collectRuntimeSpecifiers(source)) {
-		expect(specifier).not.toMatch(
-			/^(?:redux|@redux-devtools\/extension)(?:\/|$)/,
-		)
-		if (specifier.startsWith(".")) {
-			await expectGraphNotToImportRedux(
-				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
-				visited,
-			)
-		}
-	}
-}
-
-async function expectGraphNotToImportMui(
-	packagePath: string,
-	visited = new Set<string>(),
-): Promise<void> {
-	const absolutePath = packagePathToAbsolutePath(packagePath)
-	if (visited.has(absolutePath)) return
-	visited.add(absolutePath)
-
-	const source = await readFile(absolutePath, "utf8")
-	for (const specifier of collectRuntimeSpecifiers(source)) {
-		expect(specifier).not.toMatch(/^@mui\/material(?:\/|$)/)
-		expect(specifier).not.toMatch(/^@emotion\/(?:react|styled)(?:\/|$)/)
-		if (specifier.startsWith(".")) {
-			await expectGraphNotToImportMui(
-				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
-				visited,
-			)
-		}
-	}
-}
-
-async function expectGraphNotToImportTanStack(
-	packagePath: string,
-	visited = new Set<string>(),
-): Promise<void> {
-	const absolutePath = packagePathToAbsolutePath(packagePath)
-	if (visited.has(absolutePath)) return
-	visited.add(absolutePath)
-
-	const source = await readFile(absolutePath, "utf8")
-	for (const specifier of collectRuntimeSpecifiers(source)) {
-		expect(specifier).not.toMatch(
-			/^@tanstack\/(?:form-core|react-form|react-store)(?:\/|$)/,
-		)
-		if (specifier.startsWith(".")) {
-			await expectGraphNotToImportTanStack(
-				`./${relative(rootDirectory, resolve(dirname(absolutePath), specifier))}`,
-				visited,
-			)
-		}
-	}
-}
-
-function collectRuntimeSpecifiers(source: string): readonly string[] {
-	return [
-		...source.matchAll(
-			/\bimport\s+(?:[^'"]+\s+from\s+)?["']([^"']+)["']|export\s+[^"']+\s+from\s+["']([^"']+)["']/g,
+): Promise<string> {
+	if (visited.has(path)) return ""
+	visited.add(path)
+	const source = await readFile(resolve(rootDirectory, path), "utf8")
+	const localImports = [...source.matchAll(/from\s+["'](\.\/.+?\.js)["']/g)]
+	const children = await Promise.all(
+		localImports.map((match) =>
+			readEsmGraph(`dist/${String(match[1]).replace(/^\.\//, "")}`, visited),
 		),
-		...source.matchAll(/\brequire\(["']([^"']+)["']\)/g),
-	].map((match) => match[1] ?? match[2] ?? "")
+	)
+	return [source, ...children].join("\n")
 }

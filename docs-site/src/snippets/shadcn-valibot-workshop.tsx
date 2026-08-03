@@ -138,7 +138,6 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					path: "brief",
 					control: "file",
 					label: "Optional brief",
-					valuePolicy: "unset",
 					options: { accept: ".pdf,.md,text/markdown,application/pdf" },
 				},
 			],
@@ -287,7 +286,12 @@ const defaultValues = {
 
 export function ShadcnValibotWorkshopExample() {
 	const [saved, setSaved] = useState<WorkshopOutput>()
-	const form = kit.useCreateForm(workshopDefinition, { defaultValues })
+	const form = kit.useForm(workshopDefinition, {
+		defaultValues,
+		onSubmit({ value }) {
+			setSaved(value)
+		},
+	})
 	let status = "Submit the proposal to validate it with Valibot."
 	if (saved !== undefined) {
 		status = `${saved.title} is ready for ${saved.capacity} participants.`
@@ -298,12 +302,7 @@ export function ShadcnValibotWorkshopExample() {
 			aria-label="Shadcn with Valibot workshop example"
 			className="grid gap-4"
 		>
-			<kit.AutoForm
-				className="grid gap-4"
-				form={form}
-				onSubmit={({ value }) => setSaved(value)}
-				validation={{ mode: "blur", revalidateMode: "change" }}
-			>
+			<kit.AutoForm className="grid gap-4" form={form}>
 				<kit.Submit>Submit proposal</kit.Submit>
 			</kit.AutoForm>
 			<output aria-live="polite" className="text-sm text-muted-foreground">

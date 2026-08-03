@@ -1,169 +1,61 @@
 ---
 title: Form, Please
-description: Typed, schema-validated React forms that keep native semantics and your design system.
+description: Build typed, schema-validated React forms with TanStack Form state and your own design system.
 showAskAi: false
 ---
 
 import { OverviewDemo } from "../components/overview-demo"
 
+
 <div className="form-please-overview-hero">
 
-<img
-	src={`${import.meta.env.BASE_URL}brand/form-please-logo.png`}
-	alt="Form, Please mascot holding a coffee mug"
-	className="form-please-overview-logo"
-/>
+  <img
+    src={`${import.meta.env.BASE_URL}brand/form-please-logo.png`}
+    alt="Form, Please mascot holding a coffee mug"
+    className="form-please-overview-logo"
+  />
 
-<div className="form-please-overview-intro">
+  <div className="form-please-overview-intro">
 
-# Build forms with ease
+    # Build forms with ease
 
-<div className="form-please-overview-intro-text">
-Use Form, Please to build product forms quickly from an existing design system.
-Wrap product controls and structural slots once, then reuse them across generated or manually composed forms.
-It handles state, validation, and submission while
-your application keeps control of components, markup, styling, and product logic.
-<br />
-Start with native controls or bring your own design system.
-</div>
+    <div className="form-please-overview-intro-text">
+    Use "Form, Please" to build product forms quickly from an existing design system.
+    Wrap product controls and structural slots once, then reuse them across generated or manually composed forms.
+    It handles state, validation, and submission while
+    your application keeps control of components, markup, styling, and product logic.
+    Start with native controls or bring your own design system.
+    </div>
 
-</div>
-
-</div>
-
-<div className="form-please-overview-actions">
-
-[Build your first form](/get-started)
-
-[Try the live form](#see-it-work)
+  </div>
 
 </div>
+
+[Build your first form](/get-started), explore the [live examples](/examples),
+or review the [API](/api).
 
 ## See it work
 
-This form uses the `nativeFormKit` preset with native controls and accessible
-default slots. Clear the email address. Submit the form to see the schema
-error. Enter a valid email address. Submit again to see the typed output.
+Edit the profile and submit it. TanStack Form validates the input. Form,
+Please parses the successful input again and displays the typed output.
 
 <OverviewDemo />
 
-## One explicit model
+## What stays explicit
 
-A form built with Form, Please has three parts: a schema for validity, a UI
-definition for structure, and a kit for rendering.
+- Your Standard Schema owns validation and transformed submit output.
+- Your definition owns fields, sections, arrays, labels, and conditional UI.
+- Your controls and slots own the rendered design system.
+- TanStack Form owns editable state and its low-level API.
 
-```tsx twoslash
-// @jsx: react-jsx
-import type { FormInput } from "form-please"
-import { nativeFormKit as kit } from "form-please/preset-native"
-import { z } from "zod"
+Use `form.api.Field`, `form.api.FormGroup`, and `form.api.Subscribe` when a
+generated definition is not enough.
 
-const profileSchema = z.object({
-	name: z.string().min(1, "Name is required"),
-	email: z.string().email("Enter a valid email"),
-	newsletter: z.boolean(),
-})
+## Supported package entries
 
-const profileDefinition = kit.defineForm(profileSchema, {
-	ui: [
-		{ kind: "field", path: "name", control: "text", label: "Name" },
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-			options: { type: "email" },
-		},
-		{
-			kind: "field",
-			path: "newsletter",
-			control: "checkbox",
-			label: "Send me product news",
-		},
-	],
-})
+The package has five JavaScript entries: `form-please`,
+`form-please/default-slots`, `form-please/native-controls`,
+`form-please/preset-native`, and `form-please/preset-mui`.
 
-const defaultValues = {
-	name: "Ada Lovelace",
-	email: "ada@example.com",
-	newsletter: true,
-} satisfies FormInput<typeof profileSchema>
-
-export function ProfileForm() {
-	const form = kit.useCreateForm(profileDefinition, { defaultValues })
-
-	return (
-		<kit.AutoForm
-			form={form}
-			onSubmit={({ value }) => console.log(value)}
-		>
-			<kit.Submit>Save profile</kit.Submit>
-		</kit.AutoForm>
-	)
-}
-```
-
-### Schema owns validity
-
-Form, Please accepts any Standard Schema implementation. Your schema is the source of
-truth for validation. It also defines editable input and validated output.
-
-### UI definition owns structure
-
-Define fields, sections, arrays, conditions, and layout explicitly.
-Form, Please does not guess a product UI from schema metadata. A schema change cannot
-silently change the interface.
-
-### Your kit owns rendering
-
-Start with `nativeFormKit`. Extend it with your design-system controls and
-replace structural slots when needed. The form definition and state model stay
-the same.
-
-## The responsibility boundary
-
-| Form, Please owns | Your application owns |
-| --- | --- |
-| Typed form state and granular subscriptions | The schema library and domain rules |
-| Validation, issues, focus, and submit lifecycle | Field choice, labels, and product workflow |
-| Stable arrays and dynamic UI resolution | Controls, slots, styling, and layout |
-| Native names and FormData coordination | Server persistence and business effects |
-
-Use the same definition with `kit.AutoForm`. You can also compose it manually
-with `kit.Form`, `kit.Fields`, and granular hooks.
-
-Create each form through its exact kit. Bind an existing form with
-`kit.useBindForm`. A base kit, an extended kit, and two sibling kits have distinct
-owners, even when their controls have the same structure.
-
-## When to reach for Form, Please
-
-Use Form, Please when a form needs schema validation, typed transformations,
-conditional fields, stable arrays, generated and manual rendering, or client
-and server submission under one state model.
-
-For a small form with uncontrolled inputs and one submit handler, native HTML
-is usually the smaller tool.
-
-## Start with the working path
-
-Start with [Get started](/get-started). Build and submit the profile form before
-you add production features.
-
-- [Build a production form](/guides/tutorial) to add conditional fields and
-  arrays.
-- [UI definitions](/guides/ui-definitions) to define sections, layout, render
-  nodes, and derived state.
-- [Controls and design systems](/guides/controls) to connect your component
-  library.
-- [Styling](/guides/styling) to add structural CSS or replace the markup.
-- [React 19 Actions](/guides/react-19-actions) to connect a server Action.
-- [History and journals](/guides/history) to add undo, redo, and replay.
-- [Persistence](/guides/persistence) to hydrate and save a document or journal.
-- [Redux DevTools](/guides/devtools) to inspect committed events and time travel.
-- [React-free core](/guides/core) when form state must run outside React.
-
-## Kudos
-
-Kudos to [Evgeniy Ivaha](https://github.com/ivahaev) for the idea and the
-example implementation.
+The current release line remains 1.x. Release automation controls the exact
+version.

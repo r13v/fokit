@@ -1,136 +1,58 @@
 import {
-	type ControlMetadata,
-	createFormStore,
-	type FormInput,
-	type NormalizedFormDefinition,
-	normalizeDefinition,
+	createFormKit,
+	type FormDefinition,
+	fromResource,
 	type StandardSchema,
-	type UiNode,
-} from "form-please/core"
+} from "form-please"
 import type { DefaultSlotsI18n } from "form-please/default-slots"
 import { createDefaultSlots } from "form-please/default-slots"
-import { createDevToolsMiddleware } from "form-please/devtools"
-import {
-	createHistoryMiddleware,
-	type FormJournal,
-	replayJournal,
-} from "form-please/history"
-import type {
-	NativeSelectOptions,
-	NativeTextOptions,
-} from "form-please/native-controls"
+import type { NativeSelectOptions } from "form-please/native-controls"
 import { createNativeControls } from "form-please/native-controls"
-import {
-	createPersistenceMiddleware,
-	type FormPersistenceAdapter,
-} from "form-please/persistence"
 import { nativeFormKit } from "form-please/preset-native"
-import { type ParseResult, parseFormData } from "form-please/server"
 
-type ProfileInput = {
-	readonly name: string
-	readonly tags: readonly string[]
+type Input = {
+	readonly name?: string
+	readonly organization: {
+		readonly status: "pending" | "success"
+		readonly value?: string
+	}
 }
 
-const schema: StandardSchema<ProfileInput> = {
+const schema: StandardSchema<Input> = {
 	"~standard": {
 		version: 1,
 		vendor: "form-please-smoke",
 		validate(value) {
-			return { value: value as ProfileInput }
+			return { value: value as Input }
 		},
 	},
 }
-
-type Controls = {
-	readonly text: ControlMetadata<string | undefined>
-}
-
-const controls = {
-	text: {
-		formData: {
-			mode: "native",
-		},
-	},
-} satisfies Controls
-
-const ui = [
+const kit = createFormKit({
+	controls: createNativeControls(),
+	slots: createDefaultSlots(),
+})
+const definition: FormDefinition<typeof schema> = kit.defineForm(schema, {
+	ui: [{ kind: "field", path: "name", control: "text" }],
+})
+const selectOptions = {
+	emptyOption: { label: "Choose" },
+	options: [{ label: "Draft", value: "draft" }],
+} satisfies NativeSelectOptions
+const i18n = { arrayAdd: "Add" } satisfies Partial<DefaultSlotsI18n>
+const label = fromResource(
+	(values: Readonly<Input>) =>
+		values.organization.status === "success"
+			? ({ status: "success", value: values.organization.value ?? "" } as const)
+			: ({ status: "pending" } as const),
 	{
-		kind: "field",
-		path: "name",
-		control: "text",
+		pending: () => "Loading",
+		success: ({ value }) => value,
+		error: ({ error }) => String(error),
 	},
-] satisfies readonly UiNode<ProfileInput, Controls>[]
-
-const normalizeProfile = normalizeDefinition as unknown as (input: {
-	readonly schema: typeof schema
-	readonly controls: Controls
-	readonly ui: typeof ui
-}) => NormalizedFormDefinition<typeof schema>
-
-const definition = normalizeProfile({
-	schema,
-	controls,
-	ui,
-})
-
-const store = createFormStore({
-	definition,
-	defaultValues: {
-		name: "Ada",
-		tags: [],
-	},
-})
-
-type _Input = FormInput<typeof schema>
-
-const result: Promise<ParseResult<ProfileInput>> = parseFormData(
-	new FormData(),
-	schema,
 )
 
-const textOptions = {
-	type: "email",
-	placeholder: "ada@example.test",
-} satisfies NativeTextOptions
-
-const selectOptions = {
-	options: [{ value: "draft", label: "Draft" }],
-} satisfies NativeSelectOptions<"draft">
-
-const slotI18n = {
-	arrayAdd: "Add item",
-	arrayRemove: ({ position }) => `Remove item ${position}`,
-} satisfies Partial<DefaultSlotsI18n>
-
-const defaultSlots = createDefaultSlots()
-const historyFeature = createHistoryMiddleware()
-const adapter: FormPersistenceAdapter = {
-	load: async () => undefined,
-	save: async () => {},
-	remove: async () => {},
-}
-const persistenceFeature = createPersistenceMiddleware({
-	adapter,
-	key: "type-smoke",
-	version: 1,
-})
-const devToolsFeature = createDevToolsMiddleware()
-declare const journal: FormJournal<ProfileInput>
-const replayed = replayJournal(journal, journal.cursor)
-
-if (createNativeControls().text.formData.mode !== "native") {
-	throw new Error("CommonJS declarations did not expose native control values")
-}
-
-void store
-void result
-void textOptions
+void definition
 void selectOptions
-void slotI18n
-void defaultSlots
-void historyFeature
-void persistenceFeature
-void devToolsFeature
-void replayed
+void i18n
+void label
 void nativeFormKit

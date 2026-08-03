@@ -2,15 +2,15 @@
 
 import type { ReactNode } from "react"
 
-import type { FormKitSlots } from "../react/create-form-kit.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
 	ErrorMessageSlotProps,
 	FieldSlotProps,
+	FormKitSlots,
 	SectionSlotProps,
 	SubmitSlotProps,
-} from "../react/slots.js"
+} from "../types.js"
 
 export type DefaultSlotI18nValue<Data> =
 	| string

@@ -1,0 +1,39 @@
+---
+title: Conditional fields
+description: Derive visible, disabled, readonly, required, labels, and options from values and context.
+showAskAi: false
+---
+
+# Conditional fields
+
+Use synchronous resolvers for derived UI properties.
+
+```tsx
+// [!include ~/snippets/lab-profile-form.tsx:conditional-field]
+```
+
+The full input is available at every nesting level, including fields inside an
+array. This makes cross-section and cross-row conditions explicit.
+
+Visibility does not modify form state. A field that becomes hidden keeps its
+value and does not render a control. If product behavior requires cleanup,
+perform that state update through `form.api` in application code.
+
+## Use runtime context
+
+Bind the context type once with `kit.forContext<Context>()`. Resolvers then
+receive the current context beside the complete form input:
+
+```tsx
+disabled: (_values, { context }) => !context.permissions.canEditCompany
+```
+
+Pass the concrete value to `useForm`. Keep loaded data and request state in the
+application; [Resource state](/resources) shows how `fromResource` adapts that
+state without another cache.
+
+## Keep conditional validation in the schema
+
+`visible` and `required` control the rendered UI. They do not add or remove
+schema rules. Express cross-field validity in the Standard Schema so generated
+and application-owned fields use the same submission contract.

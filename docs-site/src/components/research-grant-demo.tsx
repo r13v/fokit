@@ -10,7 +10,7 @@ export const ResearchGrantDemo = Object.assign(
 	{
 		toMarkdown() {
 			return markdownFallback(
-				"The research grant example runs in a browser. It combines branching identity, registry lookup, transactional cleanup, live preview, and two fake requests.",
+				"The research grant example runs in a browser. It combines branching identity, registry lookup, preserved conditional values, live preview, and two fake requests.",
 				"docs-site/src/snippets/complex-research-grant.tsx",
 			)
 		},

@@ -12,14 +12,6 @@
 			"form-please": [
 				"../../../dist/index.d.cts",
 				"./node_modules/form-please/dist/index.d.cts"
-			],
-			"form-please/core": [
-				"../../../dist/core.d.cts",
-				"./node_modules/form-please/dist/core.d.cts"
-			],
-			"form-please/server": [
-				"../../../dist/server.d.cts",
-				"./node_modules/form-please/dist/server.d.cts"
 			]
 		}
 	},

@@ -7,15 +7,10 @@ import {
 	useQuery,
 } from "@tanstack/react-query"
 import {
-	type BeforeUpdateEvent,
 	createFormKit,
-	extendValueChanges,
 	type FormInput,
 	type FormOutput,
 	fromResource,
-	useFormContext,
-	useFormState,
-	type ValueChange,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -165,299 +160,254 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
+const contextualKit = kit.forContext<PolicyContext>()
 
-function PolicyBalance() {
-	const form = useFormContext<typeof studioPolicySchema, PolicyContext>()
-	const balance = useFormState(form, (snapshot) => {
-		let deposit = 0
-		if (
-			snapshot.values.safeguard.depositRequired &&
-			snapshot.values.safeguard.amount !== undefined
-		) {
-			deposit = snapshot.values.safeguard.amount
-		}
-
-		return {
-			accessOptions:
-				Number(snapshot.values.access.earlyEnabled) +
-				Number(snapshot.values.access.lateEnabled),
-			restrictedEquipment: snapshot.values.equipment.filter(
-				(item) => item.mandatoryBriefing,
-			).length,
-			deposit,
-		}
-	})
-
-	return (
-		<aside className="form-please-complex__preview" aria-label="Policy balance">
-			<strong>Live policy balance</strong>
-			<span>
-				{balance.accessOptions} access exception(s) ·{" "}
-				{balance.restrictedEquipment} briefing rule(s) · {balance.deposit ?? 0}{" "}
-				held as safeguard
-			</span>
-		</aside>
-	)
-}
-
-const policyDefinition = kit
-	.forContext<PolicyContext>()
-	.defineForm(studioPolicySchema, {
-		ui: [
-			{
-				kind: "section",
-				id: "access",
-				title: "Access windows",
-				description: "Opening exceptions carry their own times and fees.",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "access.earlyEnabled",
-						control: "checkbox",
-						label: "Allow early access",
-					},
-					{
-						kind: "field",
-						path: "access.earlyFrom",
-						control: "time",
-						label: "Earliest arrival",
-						visible: ({ "access.earlyEnabled": enabled }) => enabled,
-						valuePolicy: "unset",
-						options: { step: 900 },
-					},
-					{
-						kind: "field",
-						path: "access.earlyFee",
-						control: "number",
-						label: "Early access fee",
-						visible: ({ "access.earlyEnabled": enabled }) => enabled,
-						valuePolicy: "unset",
-						options: { min: 0, step: 5 },
-					},
-					{
-						kind: "field",
-						path: "access.lateEnabled",
-						control: "checkbox",
-						label: "Allow late departure",
-					},
-					{
-						kind: "field",
-						path: "access.lateUntil",
-						control: "time",
-						label: "Latest departure",
-						visible: ({ "access.lateEnabled": enabled }) => enabled,
-						valuePolicy: "unset",
-						options: { step: 900 },
-					},
-					{
-						kind: "field",
-						path: "access.lateFee",
-						control: "number",
-						label: "Late departure fee",
-						visible: ({ "access.lateEnabled": enabled }) => enabled,
-						valuePolicy: "unset",
-						options: { min: 0, step: 5 },
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "safeguards",
-				title: "Safeguards and age policy",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "safeguard.depositRequired",
-						control: "checkbox",
-						label: "Hold a refundable deposit",
-					},
-					{
-						kind: "field",
-						path: "safeguard.amount",
-						control: "number",
-						label: "Deposit amount",
-						visible: ({ "safeguard.depositRequired": required }) => required,
-						valuePolicy: "unset",
-						options: { min: 0, step: 25 },
-					},
-					{
-						kind: "field",
-						path: "safeguard.currency",
-						control: "select",
-						label: "Currency",
-						options: {
-							options: [
-								{ value: "USD", label: "USD" },
-								{ value: "EUR", label: "EUR" },
-								{ value: "GBP", label: "GBP" },
-							],
-						},
-					},
-					{
-						kind: "field",
-						path: "youth.policy",
-						control: "select",
-						label: "Age policy",
-						options: {
-							options: [
-								{ value: "all-ages", label: "All ages" },
-								{ value: "sixteen-plus", label: "16 and older" },
-								{ value: "adults-only", label: "Adults only" },
-							],
-						},
-					},
-					{
-						kind: "field",
-						path: "youth.guardianRequired",
-						control: "checkbox",
-						label: "Require a guardian for minors",
-						visible: ({ "youth.policy": policy }) => policy !== "adults-only",
-					},
-					{
-						kind: "field",
-						path: "youth.quietHours",
-						control: "textarea",
-						label: "Quiet-hours rule",
-						valuePolicy: "unset",
-						span: "full",
-						options: { rows: 3 },
-					},
-				],
-			},
-			{
-				kind: "array",
-				path: "equipment",
-				label: "Equipment rules",
-				description: fromResource((_values, { context }) => context.equipment, {
-					pending: () => "Loading the equipment catalog…",
-					success: ({ refresh }) => {
-						switch (refresh.status) {
-							case "pending":
-								return "Refreshing the catalog; saved options remain available."
-							case "paused":
-								return "Catalog refresh paused; saved options remain available."
-							case "error":
-								return "Catalog refresh failed; saved options remain available."
-							case "idle":
-								return "Each row retains stable identity while it moves."
-						}
-					},
-					error: () =>
-						"The equipment catalog is unavailable; existing rules are preserved.",
-				}),
-				disabled: fromResource((_values, { context }) => context.equipment, {
-					pending: () => true,
-					success: () => false,
-					error: () => true,
-				}),
-				itemDefault: {
-					assetId: "",
-					mandatoryBriefing: false,
-					replacementValue: 0,
+const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
+	ui: [
+		{
+			kind: "section",
+			id: "access",
+			title: "Access windows",
+			description: "Opening exceptions carry their own times and fees.",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "access.earlyEnabled",
+					control: "checkbox",
+					label: "Allow early access",
 				},
-				children: [
-					{
-						kind: "field",
-						path: "assetId",
-						control: "select",
-						label: "Equipment",
-						options: fromResource((_values, { context }) => context.equipment, {
-							pending: (_state, _values, { context }) => ({
-								options: context.savedEquipmentOptions,
-							}),
-							success: ({ value }) => ({ options: value }),
-							error: (_state, _values, { context }) => ({
-								options: context.savedEquipmentOptions,
-							}),
+				{
+					kind: "field",
+					path: "access.earlyFrom",
+					control: "time",
+					label: "Earliest arrival",
+					visible: (values) => values.access.earlyEnabled,
+					options: { step: 900 },
+				},
+				{
+					kind: "field",
+					path: "access.earlyFee",
+					control: "number",
+					label: "Early access fee",
+					visible: (values) => values.access.earlyEnabled,
+					options: { min: 0, step: 5 },
+				},
+				{
+					kind: "field",
+					path: "access.lateEnabled",
+					control: "checkbox",
+					label: "Allow late departure",
+				},
+				{
+					kind: "field",
+					path: "access.lateUntil",
+					control: "time",
+					label: "Latest departure",
+					visible: (values) => values.access.lateEnabled,
+					options: { step: 900 },
+				},
+				{
+					kind: "field",
+					path: "access.lateFee",
+					control: "number",
+					label: "Late departure fee",
+					visible: (values) => values.access.lateEnabled,
+					options: { min: 0, step: 5 },
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "safeguards",
+			title: "Safeguards and age policy",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "safeguard.depositRequired",
+					control: "checkbox",
+					label: "Hold a refundable deposit",
+				},
+				{
+					kind: "field",
+					path: "safeguard.amount",
+					control: "number",
+					label: "Deposit amount",
+					visible: (values) => values.safeguard.depositRequired,
+					options: { min: 0, step: 25 },
+				},
+				{
+					kind: "field",
+					path: "safeguard.currency",
+					control: "select",
+					label: "Currency",
+					options: {
+						options: [
+							{ value: "USD", label: "USD" },
+							{ value: "EUR", label: "EUR" },
+							{ value: "GBP", label: "GBP" },
+						],
+					},
+				},
+				{
+					kind: "field",
+					path: "youth.policy",
+					control: "select",
+					label: "Age policy",
+					options: {
+						options: [
+							{ value: "all-ages", label: "All ages" },
+							{ value: "sixteen-plus", label: "16 and older" },
+							{ value: "adults-only", label: "Adults only" },
+						],
+					},
+				},
+				{
+					kind: "field",
+					path: "youth.guardianRequired",
+					control: "checkbox",
+					label: "Require a guardian for minors",
+					visible: (values) => values.youth.policy !== "adults-only",
+				},
+				{
+					kind: "field",
+					path: "youth.quietHours",
+					control: "textarea",
+					label: "Quiet-hours rule",
+					span: "full",
+					options: { rows: 3 },
+				},
+			],
+		},
+		{
+			kind: "array",
+			path: "equipment",
+			label: "Equipment rules",
+			description: fromResource((_values, { context }) => context.equipment, {
+				pending: () => "Loading the equipment catalog…",
+				success: ({ refresh }) => {
+					switch (refresh.status) {
+						case "pending":
+							return "Refreshing the catalog; saved options remain available."
+						case "paused":
+							return "Catalog refresh paused; saved options remain available."
+						case "error":
+							return "Catalog refresh failed; saved options remain available."
+						case "idle":
+							return "Rows use TanStack Form index identity while they move."
+					}
+				},
+				error: () =>
+					"The equipment catalog is unavailable; existing rules are preserved.",
+			}),
+			disabled: fromResource((_values, { context }) => context.equipment, {
+				pending: () => true,
+				success: () => false,
+				error: () => true,
+			}),
+			itemDefault: {
+				assetId: "",
+				mandatoryBriefing: false,
+				replacementValue: 0,
+			},
+			children: [
+				{
+					kind: "field",
+					path: "assetId",
+					control: "select",
+					label: "Equipment",
+					options: fromResource((_values, { context }) => context.equipment, {
+						pending: (_state, _values, { context }) => ({
+							options: context.savedEquipmentOptions,
 						}),
+						success: ({ value }) => ({ options: value }),
+						error: (_state, _values, { context }) => ({
+							options: context.savedEquipmentOptions,
+						}),
+					}),
+				},
+				{
+					kind: "field",
+					path: "mandatoryBriefing",
+					control: "checkbox",
+					label: "Briefing required",
+				},
+				{
+					kind: "field",
+					path: "replacementValue",
+					control: "number",
+					label: "Replacement value",
+					options: { min: 0, step: 50 },
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "shared-services",
+			title: "Shared services",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "refreshments.allowed",
+					control: "checkbox",
+					label: "Allow catered refreshments",
+				},
+				{
+					kind: "field",
+					path: "refreshments.cateringNoticeHours",
+					control: "number",
+					label: "Catering notice in hours",
+					visible: (values) => values.refreshments.allowed,
+					options: { min: 0, step: 1 },
+				},
+				{
+					kind: "field",
+					path: "connectivity.mode",
+					control: "select",
+					label: "Connectivity",
+					options: {
+						options: [
+							{ value: "included", label: "Included" },
+							{ value: "request", label: "Available by request" },
+							{ value: "offline", label: "Offline space" },
+						],
 					},
-					{
-						kind: "field",
-						path: "mandatoryBriefing",
-						control: "checkbox",
-						label: "Briefing required",
+				},
+				{
+					kind: "field",
+					path: "connectivity.minimumMbps",
+					control: "number",
+					label: "Published minimum Mbps",
+					visible: (values) => values.connectivity.mode === "included",
+					options: { min: 1, step: 5 },
+				},
+				{
+					kind: "field",
+					path: "animals.policy",
+					control: "select",
+					label: "Animal access",
+					options: {
+						options: [
+							{ value: "assistance-only", label: "Assistance animals only" },
+							{ value: "approval", label: "With prior approval" },
+							{ value: "not-allowed", label: "Not allowed" },
+						],
 					},
-					{
-						kind: "field",
-						path: "replacementValue",
-						control: "number",
-						label: "Replacement value",
-						options: { min: 0, step: 50 },
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "shared-services",
-				title: "Shared services",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "refreshments.allowed",
-						control: "checkbox",
-						label: "Allow catered refreshments",
-					},
-					{
-						kind: "field",
-						path: "refreshments.cateringNoticeHours",
-						control: "number",
-						label: "Catering notice in hours",
-						visible: ({ "refreshments.allowed": allowed }) => allowed,
-						valuePolicy: "unset",
-						options: { min: 0, step: 1 },
-					},
-					{
-						kind: "field",
-						path: "connectivity.mode",
-						control: "select",
-						label: "Connectivity",
-						options: {
-							options: [
-								{ value: "included", label: "Included" },
-								{ value: "request", label: "Available by request" },
-								{ value: "offline", label: "Offline space" },
-							],
-						},
-					},
-					{
-						kind: "field",
-						path: "connectivity.minimumMbps",
-						control: "number",
-						label: "Published minimum Mbps",
-						visible: ({ "connectivity.mode": mode }) => mode === "included",
-						valuePolicy: "unset",
-						options: { min: 1, step: 5 },
-					},
-					{
-						kind: "field",
-						path: "animals.policy",
-						control: "select",
-						label: "Animal access",
-						options: {
-							options: [
-								{ value: "assistance-only", label: "Assistance animals only" },
-								{ value: "approval", label: "With prior approval" },
-								{ value: "not-allowed", label: "Not allowed" },
-							],
-						},
-					},
-					{
-						kind: "field",
-						path: "animals.notes",
-						control: "textarea",
-						label: "Animal access notes",
-						visible: ({ "animals.policy": policy }) => policy === "approval",
-						valuePolicy: "unset",
-						options: { rows: 3 },
-					},
-				],
-			},
-			{ kind: "render", id: "policy-balance", component: PolicyBalance },
-		],
-	})
+				},
+				{
+					kind: "field",
+					path: "animals.notes",
+					control: "textarea",
+					label: "Animal access notes",
+					visible: (values) => values.animals.policy === "approval",
+					options: { rows: 3 },
+				},
+			],
+		},
+	],
+})
 
 export function StudioPoliciesExample() {
 	const [queryClient] = useState(
@@ -472,13 +422,6 @@ export function StudioPoliciesExample() {
 }
 
 function StudioPoliciesForm() {
-	const form = kit.useCreateForm(policyDefinition, {
-		defaultValues: baseline,
-		context: {
-			equipment: { status: "pending", fetchStatus: "idle" },
-			savedEquipmentOptions,
-		},
-	})
 	const policies = useQuery({
 		queryKey: ["studio-policy-baseline"],
 		queryFn: () => fakeRequest(baseline, 360),
@@ -497,6 +440,21 @@ function StudioPoliciesForm() {
 			fakeRequest({ equipmentCount: value.equipment.length }, 330),
 	})
 	const [notice, setNotice] = useState("No changes published yet.")
+	const form = contextualKit.useForm(policyDefinition, {
+		defaultValues: baseline,
+		context: { equipment: equipmentResource, savedEquipmentOptions },
+		async onSubmit({ value }) {
+			try {
+				const saved = await saveRules.mutateAsync(value)
+				const published = await publishSummary.mutateAsync(value)
+				setNotice(
+					`Revision ${saved.revision} published with ${published.equipmentCount} equipment rule(s).`,
+				)
+			} catch {
+				setNotice("Publishing failed; the draft is still editable.")
+			}
+		},
+	})
 
 	if (policies.isPending) {
 		return (
@@ -528,29 +486,36 @@ function StudioPoliciesForm() {
 				conditional policy groups and a reorderable equipment matrix are
 				published to two endpoints.
 			</p>
-			<kit.AutoForm
-				beforeUpdate={preservePolicyInvariants}
-				className="form-please-complex__form"
-				context={{ equipment: equipmentResource, savedEquipmentOptions }}
-				form={form}
-				onSubmit={async ({ value, form }) => {
-					try {
-						form.clearErrors()
-						const saved = await saveRules.mutateAsync(value)
-						const published = await publishSummary.mutateAsync(value)
-						setNotice(
-							`Revision ${saved.revision} published with ${published.equipmentCount} equipment rule(s).`,
+			<kit.AutoForm className="form-please-complex__form" form={form}>
+				<form.api.Subscribe selector={(state) => state.values}>
+					{(values) => {
+						const accessOptions =
+							Number(values.access.earlyEnabled) +
+							Number(values.access.lateEnabled)
+						const restrictedEquipment = values.equipment.filter(
+							(item) => item.mandatoryBriefing,
+						).length
+						let deposit = 0
+						if (
+							values.safeguard.depositRequired &&
+							values.safeguard.amount !== undefined
+						) {
+							deposit = values.safeguard.amount
+						}
+						return (
+							<aside
+								aria-label="Policy balance"
+								className="form-please-complex__preview"
+							>
+								<strong>Live policy balance</strong>
+								<span>
+									{accessOptions} access exception(s) · {restrictedEquipment}{" "}
+									briefing rule(s) · {deposit} held as safeguard
+								</span>
+							</aside>
 						)
-					} catch {
-						form.setErrors([
-							{
-								source: "server",
-								message: "Publishing failed; the draft is still editable.",
-							},
-						])
-					}
-				}}
-			>
+					}}
+				</form.api.Subscribe>
 				<div className="form-please-complex__actions">
 					<kit.Submit className="form-please-complex__primary">
 						Publish policies
@@ -560,54 +525,6 @@ function StudioPoliciesForm() {
 			</kit.AutoForm>
 		</section>
 	)
-}
-
-function preservePolicyInvariants(
-	event: BeforeUpdateEvent<StudioPolicyInput, unknown>,
-): readonly ValueChange<StudioPolicyInput>[] | undefined {
-	const additions: ValueChange<StudioPolicyInput>[] = []
-	if (
-		event.currentValues.access.earlyEnabled &&
-		!event.nextValues.access.earlyEnabled
-	) {
-		additions.push(
-			{ type: "unset", path: "access.earlyFrom" },
-			{ type: "unset", path: "access.earlyFee" },
-		)
-	}
-	if (
-		event.currentValues.access.lateEnabled &&
-		!event.nextValues.access.lateEnabled
-	) {
-		additions.push(
-			{ type: "unset", path: "access.lateUntil" },
-			{ type: "unset", path: "access.lateFee" },
-		)
-	}
-	if (
-		event.currentValues.safeguard.depositRequired &&
-		!event.nextValues.safeguard.depositRequired
-	) {
-		additions.push({ type: "unset", path: "safeguard.amount" })
-	}
-	if (
-		event.currentValues.refreshments.allowed &&
-		!event.nextValues.refreshments.allowed
-	) {
-		additions.push({
-			type: "unset",
-			path: "refreshments.cateringNoticeHours",
-		})
-	}
-	if (
-		event.currentValues.connectivity.mode !==
-			event.nextValues.connectivity.mode &&
-		event.nextValues.connectivity.mode !== "included"
-	) {
-		additions.push({ type: "unset", path: "connectivity.minimumMbps" })
-	}
-
-	return extendValueChanges(event, additions)
 }
 
 function fakeRequest<Value>(value: Value, delay: number): Promise<Value> {

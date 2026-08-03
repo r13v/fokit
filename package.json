@@ -25,17 +25,6 @@
 			},
 			"default": "./dist/index.js"
 		},
-		"./core": {
-			"import": {
-				"types": "./dist/core.d.ts",
-				"default": "./dist/core.js"
-			},
-			"require": {
-				"types": "./dist/core.d.cts",
-				"default": "./dist/core.cjs"
-			},
-			"default": "./dist/core.js"
-		},
 		"./default-slots": {
 			"import": {
 				"types": "./dist/default-slots.d.ts",
@@ -47,28 +36,6 @@
 			},
 			"default": "./dist/default-slots.js"
 		},
-		"./devtools": {
-			"import": {
-				"types": "./dist/devtools.d.ts",
-				"default": "./dist/devtools.js"
-			},
-			"require": {
-				"types": "./dist/devtools.d.cts",
-				"default": "./dist/devtools.cjs"
-			},
-			"default": "./dist/devtools.js"
-		},
-		"./history": {
-			"import": {
-				"types": "./dist/history.d.ts",
-				"default": "./dist/history.js"
-			},
-			"require": {
-				"types": "./dist/history.d.cts",
-				"default": "./dist/history.cjs"
-			},
-			"default": "./dist/history.js"
-		},
 		"./native-controls": {
 			"import": {
 				"types": "./dist/native-controls.d.ts",
@@ -79,17 +46,6 @@
 				"default": "./dist/native-controls.cjs"
 			},
 			"default": "./dist/native-controls.js"
-		},
-		"./persistence": {
-			"import": {
-				"types": "./dist/persistence.d.ts",
-				"default": "./dist/persistence.js"
-			},
-			"require": {
-				"types": "./dist/persistence.d.cts",
-				"default": "./dist/persistence.cjs"
-			},
-			"default": "./dist/persistence.js"
 		},
 		"./preset-native": {
 			"import": {
@@ -112,39 +68,6 @@
 				"default": "./dist/preset-mui.cjs"
 			},
 			"default": "./dist/preset-mui.js"
-		},
-		"./react19": {
-			"import": {
-				"types": "./dist/react19.d.ts",
-				"default": "./dist/react19.js"
-			},
-			"require": {
-				"types": "./dist/react19.d.cts",
-				"default": "./dist/react19.cjs"
-			},
-			"default": "./dist/react19.js"
-		},
-		"./server": {
-			"import": {
-				"types": "./dist/server.d.ts",
-				"default": "./dist/server.js"
-			},
-			"require": {
-				"types": "./dist/server.d.cts",
-				"default": "./dist/server.cjs"
-			},
-			"default": "./dist/server.js"
-		},
-		"./tanstack": {
-			"import": {
-				"types": "./dist/tanstack.d.ts",
-				"default": "./dist/tanstack.js"
-			},
-			"require": {
-				"types": "./dist/tanstack.d.cts",
-				"default": "./dist/tanstack.cjs"
-			},
-			"default": "./dist/tanstack.js"
 		},
 		"./layout.css": "./dist/layout.css",
 		"./package.json": "./package.json"
@@ -169,7 +92,7 @@
 		"site:verify:preview": "npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/form-please npm run site:build && npm run test:markdown --prefix docs-site && npm run test:output --prefix docs-site && npm run site:test:e2e",
 		"site:verify:production": "BASE_PATH=/form-please npm run site:build && EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
 		"site:verify": "npm run site:verify:preview && npm run site:verify:production",
-		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./react19 ./server ./tanstack",
+		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./native-controls ./preset-native ./preset-mui",
 		"knip": "knip --workspace . --workspace docs-site",
 		"verify": "npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:registry && npm run test:smoke && npm run package:check && npm run knip"
 	},
@@ -198,9 +121,6 @@
 		},
 		"@mui/material": {
 			"optional": true
-		},
-		"@tanstack/react-form": {
-			"optional": true
 		}
 	},
 	"dependencies": {
@@ -219,7 +139,6 @@
 		"@types/node": "26.1.2",
 		"@types/react": "19.2.17",
 		"@types/react-dom": "19.2.3",
-		"fast-check": "4.9.0",
 		"jsdom": "30.0.0",
 		"knip": "6.29.0",
 		"lefthook": "2.1.10",

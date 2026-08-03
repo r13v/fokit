@@ -2,113 +2,219 @@
 // biome-ignore-all lint/correctness/noUnusedVariables: Named regions are consumed independently by the documentation.
 "use client"
 
-import { createFormKit as createSetupKit } from "form-please"
+import {
+	type ControlProps,
+	createFormKit,
+	defineControl,
+	fromResource,
+	type ResourceState,
+	type UiResolver,
+} from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
+import { nativeFormKit } from "form-please/preset-native"
 import { z } from "zod"
 
-const setupKit = createSetupKit({
-	controls: createNativeControls(),
-	slots: createDefaultSlots(),
+const profileSchema = z.object({
+	id: z.string(),
+	name: z.string().min(1),
+	email: z.email(),
+	department: z.string().optional(),
 })
-const setupSchema = z.object({ name: z.string() })
-const definition = setupKit.defineForm(setupSchema, {
-	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+
+type Profile = z.input<typeof profileSchema>
+
+const profileDefinition = nativeFormKit.defineForm(profileSchema, {
+	ui: [
+		{ kind: "field", path: "name", control: "text", label: "Name" },
+		{
+			kind: "field",
+			path: "email",
+			control: "text",
+			label: "Email",
+			options: { type: "email" },
+		},
+		{
+			kind: "field",
+			path: "department",
+			control: "text",
+			label: "Department",
+		},
+	],
 })
-const defaultValues = { name: "" }
+
+const emptyProfile = {
+	id: "profile-1",
+	name: "",
+	email: "",
+	department: undefined,
+} satisfies Profile
 
 // [!region composition]
-import {
-	createFormKit,
-	FormProvider,
-	useFormContext,
-	useFormState,
-} from "form-please"
-
-const kit = createFormKit({
-	controls: createNativeControls(),
-	slots: createDefaultSlots(),
-})
-
-function DirtyStatus() {
-	const form = useFormContext()
-	const dirty = useFormState(form, (snapshot) => snapshot.isDirty)
-	if (dirty) return <output>Unsaved changes</output>
-	return <output>Saved</output>
-}
-
-function Editor() {
-	const form = kit.useCreateForm(definition, { defaultValues })
+function ProfileForm() {
+	const form = nativeFormKit.useForm(profileDefinition, {
+		defaultValues: emptyProfile,
+	})
+	const Subscribe = form.api.Subscribe
 
 	return (
-		<kit.Form form={form}>
-			<kit.Fields />
-			<DirtyStatus />
-			<kit.Submit>Save</kit.Submit>
-		</kit.Form>
+		<nativeFormKit.Form form={form}>
+			<nativeFormKit.Fields />
+			<Subscribe selector={(state) => state.isDirty}>
+				{(isDirty) => {
+					if (isDirty) return <output>Unsaved changes</output>
+					return <output>No changes</output>
+				}}
+			</Subscribe>
+			<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
+		</nativeFormKit.Form>
 	)
 }
 // [!endregion composition]
 
-const profileSchema = z.object({ id: z.string(), name: z.string() })
-type Profile = z.infer<typeof profileSchema>
-const profileKit = createSetupKit({
-	controls: createNativeControls(),
-	slots: createDefaultSlots(),
-})
-const profileDefinition = profileKit.defineForm(profileSchema, { ui: [] })
-
 // [!region edit-baseline]
-function ProfileScreen({ profile }: { profile: Profile | undefined }) {
+function ProfileScreen({ profile }: { readonly profile: Profile | undefined }) {
 	if (profile === undefined) return <p>Loading…</p>
 	return <ProfileEditor key={profile.id} profile={profile} />
 }
 
-function ProfileEditor({ profile }: { profile: Profile }) {
-	const form = profileKit.useCreateForm(profileDefinition, {
+function ProfileEditor({ profile }: { readonly profile: Profile }) {
+	const form = nativeFormKit.useForm(profileDefinition, {
 		defaultValues: profile,
 	})
-	return <profileKit.AutoForm form={form} />
+	return (
+		<nativeFormKit.AutoForm form={form}>
+			<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
+		</nativeFormKit.AutoForm>
+	)
 }
 // [!endregion edit-baseline]
 
-type Input = { name: string }
-type Context = { actorId: string }
-function record(_value: unknown) {}
+async function updateProfile(profile: Profile): Promise<Profile> {
+	return profile
+}
 
-// [!region middleware]
-import type { FormMiddleware } from "form-please"
+// [!region async-submit]
+function SavingProfile({ profile }: { readonly profile: Profile }) {
+	const form = nativeFormKit.useForm(profileDefinition, {
+		defaultValues: profile,
+		onSubmit: async ({ value, form }) => {
+			const saved = await updateProfile(value)
+			form.api.reset(saved)
+		},
+	})
+	const Subscribe = form.api.Subscribe
 
-const audit: FormMiddleware<Input, Context> =
-	(api) => (next) => (transaction) => {
-		const before = api.getSnapshot()
-		const result = next(transaction)
-		const after = api.getSnapshot()
-		record({ transaction, result, before, after })
-		return result
-	}
-// [!endregion middleware]
+	return (
+		<nativeFormKit.AutoForm form={form}>
+			<Subscribe selector={(state) => state.isSubmitting}>
+				{(isSubmitting) => {
+					if (isSubmitting) {
+						return <output aria-live="polite">Saving…</output>
+					}
+					return <output aria-live="polite">Ready</output>
+				}}
+			</Subscribe>
+			<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
+		</nativeFormKit.AutoForm>
+	)
+}
+// [!endregion async-submit]
 
-// [!region nested-dispatch]
-const touchChangedName: FormMiddleware<Input, Context> =
-	(api) => (next) => (transaction) => {
-		const result = next(transaction)
-		if (
-			result.status === "committed" &&
-			result.event.type === "document/committed" &&
-			result.event.changes.some((change) => change.path === "name")
-		) {
-			api.dispatch({ type: "field/touch", path: "name" })
-		}
-		return result
-	}
-// [!endregion nested-dispatch]
+type DepartmentResource = ResourceState<readonly string[], Error>
+type DirectoryContext = {
+	readonly departments: DepartmentResource
+}
+type DirectoryInput = z.input<typeof profileSchema>
 
-const serverSchema = z.object({ name: z.string() })
-const formData = new FormData()
+const selectDepartments: UiResolver<
+	DepartmentResource,
+	DirectoryInput,
+	DirectoryContext
+> = (_values, { context }) => context.departments
 
-// [!region form-data]
-import { parseFormData } from "form-please/server"
+const departmentDescription = fromResource(selectDepartments, {
+	pending: () => "Loading departments",
+	success: ({ value }) => `${value.length} departments available`,
+	error: ({ error }) => error.message,
+})
 
-const result = await parseFormData(formData, serverSchema)
-// [!endregion form-data]
+const directoryKit = nativeFormKit.forContext<DirectoryContext>()
+
+// [!region context-resource]
+const directoryDefinition = directoryKit.defineForm(profileSchema, {
+	ui: [
+		{ kind: "field", path: "name", control: "text", label: "Name" },
+		{
+			kind: "field",
+			path: "department",
+			control: "text",
+			label: "Department",
+			description: departmentDescription,
+			disabled: (_values, { context }) =>
+				context.departments.status === "pending",
+		},
+	],
+})
+
+function DirectoryProfile({ context }: { readonly context: DirectoryContext }) {
+	const form = directoryKit.useForm(directoryDefinition, {
+		defaultValues: emptyProfile,
+		context,
+	})
+	return <directoryKit.AutoForm form={form} />
+}
+// [!endregion context-resource]
+
+type CurrencyOptions = {
+	readonly currency: string
+}
+
+function CurrencyControl({
+	value,
+	setValue,
+	blur,
+	input,
+	meta,
+	options,
+	disabled,
+	readOnly,
+	required,
+}: ControlProps<number | undefined, CurrencyOptions>) {
+	return (
+		<div>
+			<span aria-hidden="true">{options.currency}</span>
+			<input
+				aria-describedby={input["aria-describedby"]}
+				aria-invalid={meta.invalid || undefined}
+				disabled={disabled}
+				id={input.id}
+				name={input.name}
+				onBlur={blur}
+				onChange={(event) => {
+					if (event.currentTarget.value === "") {
+						setValue(undefined)
+						return
+					}
+					setValue(event.currentTarget.valueAsNumber)
+				}}
+				readOnly={readOnly}
+				ref={input.ref}
+				required={required}
+				type="number"
+				value={value ?? ""}
+			/>
+		</div>
+	)
+}
+
+// [!region accessible-control]
+const currency = defineControl<number | undefined, CurrencyOptions>({
+	component: CurrencyControl,
+})
+
+const billingKit = createFormKit({
+	controls: { ...createNativeControls(), currency },
+	slots: createDefaultSlots(),
+})
+// [!endregion accessible-control]

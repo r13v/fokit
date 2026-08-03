@@ -1,0 +1,41 @@
+---
+title: Arrays
+description: Define repeatable object rows and use TanStack Form array operations.
+showAskAi: false
+---
+
+# Arrays
+
+An array node requires a typed `itemDefault` and a child definition for one
+item. "Form, Please" renders add, remove, and move actions through the array slots.
+
+```tsx
+// [!include ~/snippets/lab-profile-form.tsx:array-node]
+```
+
+`itemDefault` can be one complete item or a function that returns one. Form,
+Please calls the function when needed and uses `structuredClone` before every
+generated insertion, so a new row does not share nested objects with another
+row.
+
+Generated paths use TanStack bracket syntax, such as
+`speakers[2].sessions[0].title`. `FieldPath`, `ArrayFieldPath`, and `PathValue`
+are aliases over TanStack Form deep-key types.
+
+Use `form.api.Field` with `mode="array"` when you need custom array UI:
+
+```tsx
+const Field = form.api.Field
+
+<Field name="speakers" mode="array">
+	{(field) => (
+		<button type="button" onClick={() => field.pushValue({ name: "" })}>
+			Add speaker
+		</button>
+	)}
+</Field>
+```
+
+Rows use index identity. Do not keep external state keyed only by a generated
+row path when rows can move. Put a durable ID in the schema value when product
+behavior needs identity that survives reordering.

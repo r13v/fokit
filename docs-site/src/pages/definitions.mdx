@@ -1,0 +1,74 @@
+---
+title: Definitions
+description: Describe fields, sections, arrays, and synchronous derived UI in one typed tree.
+showAskAi: false
+---
+
+# Definitions
+
+Call `kit.defineForm(schema, { ui })` once and keep the result stable for the
+hook lifetime. Remount the component with a React `key` when you must replace a
+definition.
+
+## Fields
+
+Each field binds a schema input path to a compatible control. The type checker
+verifies the path value, control value, options, context, slot options, and grid
+span.
+
+```tsx
+const definition = kit.defineForm(schema, {
+	ui: [
+		{
+			kind: "field",
+			path: "profile.email",
+			control: "text",
+			options: { type: "email" },
+		},
+	],
+})
+```
+
+## Sections and arrays
+
+Sections can contain fields, sections, and arrays. Array children use paths
+relative to one item. Nested arrays use the same rule.
+
+```tsx
+{
+	kind: "array",
+	path: "speakers",
+	itemDefault: { name: "" },
+	children: [
+		{ kind: "field", path: "name", control: "text" },
+	],
+}
+```
+
+Array rows use their current index as identity. Moving or removing a row changes
+later paths.
+
+## Resolver values
+
+A resolver receives the complete schema input as a deeply readonly value. It
+also receives the deeply readonly runtime context.
+
+```tsx
+visible: (values, { context }) =>
+	values.account.kind === "company" && context.canEditCompanies
+```
+
+Resolvers must be synchronous. "Form, Please" resolves the complete UI tree when
+form values change. Hidden fields preserve their values.
+
+## Form-local React content
+
+A render node inserts application content into the generated tree. Its
+component receives the resolved inherited `disabled` and `readOnly` flags.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:render-node]
+```
+
+Use direct TanStack composition outside `kit.Fields` when the content needs the
+form API. Render nodes deliberately receive only interaction state.

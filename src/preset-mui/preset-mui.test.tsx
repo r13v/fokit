@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import type { ControlProps } from "../react/control-definition.js"
+import type { ControlProps } from "../types.js"
 import { createMuiFormKit } from "./index.js"
 import type {
 	MuiFileOptions,
@@ -204,43 +204,6 @@ describe("createMuiFormKit", () => {
 		expect(setValue).toHaveBeenCalledWith("workshop")
 	})
 
-	it("serializes composite array controls with the Form Please array protocol", () => {
-		const kit = createMuiFormKit()
-		const details = {
-			context: {},
-			name: "topics",
-			options: { options: ["forms", "mui"] },
-			path: "topics",
-		}
-
-		const autocompleteFormData = kit.controls["autocomplete-multiple"].formData
-		const rangeFormData = kit.controls["range-slider"].formData
-		if (
-			autocompleteFormData.mode !== "hidden" ||
-			rangeFormData.mode !== "hidden"
-		) {
-			throw new Error("Composite MUI controls must use hidden serialization")
-		}
-
-		expect(autocompleteFormData.serialize(["forms", "mui"], details)).toEqual([
-			{ kind: "array", name: "topics" },
-			{ name: "topics", value: "forms" },
-			{ name: "topics", value: "mui" },
-		])
-		expect(
-			rangeFormData.serialize([2, 8], {
-				...details,
-				name: "range",
-				options: {},
-				path: "range",
-			}),
-		).toEqual([
-			{ kind: "array", name: "range" },
-			{ name: "range", value: "2" },
-			{ name: "range", value: "8" },
-		])
-	})
-
 	it("renders accessible Material UI slots on the 12-column grid", () => {
 		type Values = { readonly name?: string; readonly accepted: boolean }
 		const schema: StandardSchemaV1<Values> = {
@@ -279,7 +242,7 @@ describe("createMuiFormKit", () => {
 		})
 
 		function Form() {
-			const form = kit.useCreateForm(definition, {
+			const form = kit.useForm(definition, {
 				defaultValues: { accepted: false, name: "Ada" },
 			})
 			return <kit.AutoForm form={form} />
@@ -303,7 +266,7 @@ describe("createMuiFormKit", () => {
 		).toBe("7")
 	})
 
-	it("submits selected files through the native input and marks multiple files as an array", async () => {
+	it("submits selected files through the native input", async () => {
 		const user = userEvent.setup()
 		const kit = createMuiFormKit({ i18n: { chooseFile: "Attach files" } })
 		const FilesControl = kit.controls.files.component
@@ -340,7 +303,6 @@ describe("createMuiFormKit", () => {
 			name: "upload",
 		}) as HTMLFormElement
 		const formData = new FormData(form)
-		expect(formData.getAll("__fp.array")).toEqual(["field"])
 		expect((input as HTMLInputElement).files).toHaveLength(2)
 		expect(formData.get("field")).toBeInstanceOf(File)
 		expect(screen.getByText("brief.pdf, notes.pdf")).not.toBeNull()

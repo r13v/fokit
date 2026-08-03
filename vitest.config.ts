@@ -5,29 +5,14 @@ export default defineConfig({
 		projects: [
 			{
 				test: {
-					name: "node",
-					environment: "node",
-					include: [
-						"src/core/**/*.test.ts",
-						"src/devtools/**/*.test.ts",
-						"src/history/**/*.test.ts",
-						"src/persistence/**/*.test.ts",
-						"src/server/**/*.test.ts",
-					],
-				},
-			},
-			{
-				test: {
 					name: "react",
 					environment: "jsdom",
 					include: [
+						"src/*.test.{ts,tsx}",
 						"src/default-slots/**/*.test.{ts,tsx}",
 						"src/native-controls/**/*.test.{ts,tsx}",
 						"src/preset-native/**/*.test.{ts,tsx}",
 						"src/preset-mui/**/*.test.{ts,tsx}",
-						"src/react/**/*.test.{ts,tsx}",
-						"src/react19/**/*.test.{ts,tsx}",
-						"src/tanstack/**/*.test.{ts,tsx}",
 					],
 					setupFiles: ["tests/setup.ts"],
 				},

@@ -13,16 +13,16 @@ import {
 } from "@mui/material"
 import type { ReactElement } from "react"
 
-import type { FormKitSlots } from "../react/create-form-kit.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
 	ErrorMessageSlotProps,
 	FieldSlotProps,
+	FormKitSlots,
 	SectionSlotProps,
 	StructuralRootProps,
 	SubmitSlotProps,
-} from "../react/slots.js"
+} from "../types.js"
 import type {
 	MuiArraySlotOptions,
 	MuiFieldSlotOptions,

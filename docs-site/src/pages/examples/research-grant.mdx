@@ -1,6 +1,6 @@
 ---
 title: Research grant application
-description: A branching grant form with remote registry search, dependent cleanup, live preview, cross-field validation, and two fake submission requests.
+description: A branching grant form with registry search, preserved conditional values, live preview, cross-field validation, and two fake requests.
 showAskAi: false
 ---
 
@@ -8,36 +8,25 @@ import { ResearchGrantDemo } from "../../components/research-grant-demo"
 
 # Research grant application
 
-This application changes shape according to who applies, how a collective is
-represented, which settlement route it uses, and its reporting status. The
-long-lived project fields remain stable while branch-specific identity and
-payment values are removed in the same Form, Please transaction that changes their
-discriminator.
+The form changes shape for individual and collective applicants. It also
+changes the settlement and reporting fields for the selected routes.
 
 ## Try the complete flow
 
-Switch **Applying as** to **A collective**, choose a representation path, and
-use the fake registry search. Change the disbursement route to see mutually
-exclusive account fields clean up. Submission first builds a review preview and
-then sends the accepted application through a second mutation.
+Choose a collective and the registered representation path. Search the fake
+registry and apply a result with typed `form.api` updates. Change the payout
+route to resolve another conditional branch.
 
 <ResearchGrantDemo />
 
-## What this form stresses
+## What this form demonstrates
 
-- Deep paths across identity, project, settlement, and reporting objects.
-- An optional enum rendered through `select.emptyOption` without a domain
-  sentinel value.
-- Resolver-driven sections and `valuePolicy` cleanup for hidden optional fields.
-- An input-aware `beforeUpdate` hook extended with typed dependent changes.
-- A render node that reads the live Form, Please snapshot for a review card.
-- TanStack Query inside a resolver-visible render node for registry search.
-- Two sequential mutations with server errors installed on the form instance.
-- A schema transform that creates a typed review key for submission.
-
-The registry data and both mutations are deterministic browser-side requests.
-Replace `fakeRequest` at the network boundary; the schema, definition, and
-transaction rules do not need to change.
+- Conditional fields across several nested objects.
+- An application-owned registry search inside the form.
+- Read-only values populated through `form.api.setFieldValue`.
+- `form.api.Subscribe` for conditional application UI and a live preview.
+- Two sequential mutations from transformed schema output.
+- Preserved values when the selected branch changes.
 
 ## Copy the source
 
@@ -45,4 +34,4 @@ transaction rules do not need to change.
 // [!include ~/snippets/complex-research-grant.tsx]
 ```
 
-Compare the other workflows in [Complex form examples](/examples).
+Compare the other workflows in [Examples](/examples).

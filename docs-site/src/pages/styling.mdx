@@ -1,0 +1,38 @@
+---
+title: Styling
+description: Style stable structural attributes or replace slots completely.
+showAskAi: false
+---
+
+import { TailwindProfileDemo } from "../components/tailwind-profile-demo"
+
+# Styling
+
+Import `form-please/layout.css` for optional responsive structure. The file does
+not style colors, typography, or individual controls.
+
+Generated elements expose stable attributes:
+
+- `data-fp-node` identifies forms, fields, sections, arrays, items, and errors.
+- `data-fp-path` contains the current field or array path.
+- `data-invalid`, `data-dirty`, `data-disabled`, and related flags describe
+  state.
+- `data-fp-columns` and `data-fp-span` describe grid layout.
+
+For complete markup ownership, supply your own `FormKitSlots` to
+`createFormKit`.
+
+## Resolve classes from form values
+
+A structural `className` can be a synchronous resolver. Change the account
+type to Company. The resolver changes the section classes and shows the
+company-name field.
+
+<TailwindProfileDemo />
+
+Return complete class strings from each branch so Tailwind can discover every
+utility at build time:
+
+```tsx
+// [!include ~/snippets/lab-profile-form.tsx:tailwind-class-name]
+```

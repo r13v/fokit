@@ -10,7 +10,7 @@ export const StudioPoliciesDemo = Object.assign(
 	{
 		toMarkdown() {
 			return markdownFallback(
-				"The studio policy editor runs in a browser. It loads two baselines, coordinates cross-section rules and arrays, then publishes two resources.",
+				"The studio policy editor runs in a browser. It combines a loaded baseline with a catalog resource, cross-section rules, arrays, and two writes.",
 				"docs-site/src/snippets/complex-studio-policies.tsx",
 			)
 		},

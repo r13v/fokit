@@ -1,6 +1,6 @@
 ---
 title: Get started
-description: Build and submit your first typed form with Form, Please, then see how schema, UI, and controls fit together.
+description: Install Form, Please and submit a schema-validated React form.
 showAskAi: false
 ---
 
@@ -8,175 +8,50 @@ import { InteractiveLab } from "../components/interactive-lab"
 
 # Get started
 
-Build a schema-validated form and receive typed output when the user submits it.
-At the end, you will have a working profile form, a visible validation error,
-and a clear next step.
+## Install
 
-## Before you start
-
-You need:
-
-- an existing React 18 or React 19 application;
-- TypeScript;
-- a schema library that implements Standard Schema.
-
-This guide uses Zod. Form, Please does not require Zod or a Zod adapter.
-
-## Installation
-
-Install `form-please` and the schema library used in this guide:
+Install "Form, Please", TanStack Form, and a Standard Schema library. This example
+uses Zod.
 
 ```sh
-npm install form-please zod
+npm install form-please @tanstack/react-form zod
 ```
 
-Form, Please declares React and React DOM as peer dependencies. Both use the range
-`^18.0.0 || ^19.0.0`.
+React 18 and React 19 are supported peer dependencies.
 
-## Build your first form
+## Create a form
 
-Create a `ProfileForm.tsx` file and add this component:
+```tsx
+// [!include ~/snippets/profile-form.tsx]
+```
+
+Render `<ProfileForm />`. Submit values with an invalid name or email to see
+schema issues. After a valid submit, the handler receives the transformed
+output, including `slug`.
+
+Import the optional structural stylesheet once if you want baseline spacing:
+
+```ts
+import "form-please/layout.css"
+```
+
+The native preset is intentionally unstyled. Replace it with your own controls
+and slots, or use the Material UI preset.
+
+## Try the interactive lab
+
+The lab adds conditional fields, an editable contact array, reset, live
+TanStack Form state, and a diagnostic snapshot of native browser `FormData`.
+Submission uses the TanStack values, not that snapshot. Submit the form to see
+the transformed output.
+
+<InteractiveLab />
+
+<details>
+<summary>Copy the complete interactive lab form</summary>
 
 ```tsx
 // [!include ~/snippets/lab-profile-form.tsx]
 ```
 
-Render `<ProfileForm />` in your application.
-
-## Verify the result
-
-Complete these checks:
-
-1. Submit the prefilled form. The page shows the validated profile as JSON.
-2. Select Company. The company name field appears.
-3. Select Personal. The company name field disappears.
-4. Replace the contact email with an invalid value.
-5. Submit the form again. Form, Please shows the schema issue and focuses the email
-   control.
-6. Restore a valid email and submit. The handler receives
-   `FormOutput<typeof profileSchema>`.
-
-The shipped controls and slots are accessible semantic HTML, not a visual
-theme. For optional structural spacing, import `form-please/layout.css` in your
-application entry point. You can also style the exposed markup yourself.
-
-## What just happened
-
-### Schema owns validity
-
-`profileSchema` contains all validation rules. Form, Please stores editable
-`FormInput<typeof profileSchema>` values. After successful validation, Form, Please
-passes `FormOutput<typeof profileSchema>` to `onSubmit`.
-
-This separation lets schema transforms change the output type without replacing
-the editable values.
-
-### `onSubmit` can wait for async work
-
-`onSubmit` can return `void` or `Promise<void>`. Use an async callback when it
-must wait for a client request. For example, use
-`onSubmit={async ({ value }) => { await saveProfile(value) }}`.
-
-Form, Please keeps `isSubmitting` set to `true` while it waits. `kit.Submit` stays
-disabled until the promise settles. Concurrent submit attempts use the same
-in-flight promise and do not call `onSubmit` again.
-
-Form, Please does not reset the form after success. Call `form.reset(...)` when saved
-values must become the new baseline. A rejected promise is not a validation
-issue. Handle expected request failures in `onSubmit`, and call
-`form.setErrors(...)` when the form must show an issue.
-
-### UI definition owns structure
-
-`profileDefinition` specifies paths, controls, labels, and presentation options.
-Form, Please does not infer the UI from Zod or other schema metadata. A schema change
-therefore cannot silently change the product UI.
-
-### The kit owns rendering
-
-The example constructs a kit explicitly because it localizes the default array
-actions. For the English baseline, import `nativeFormKit` from
-`form-please/preset-native`; it combines the shipped native renderers and
-accessible structural slots.
-
-`kit.createForm` creates the form instance. `kit.AutoForm` binds and renders
-that existing form. You can render the same form manually with `kit.Form`,
-`kit.Fields`, and granular hooks.
-
-## Try the production loop
-
-The lab below uses the same `profileDefinition` and `defaultValues`. It adds
-reset, blur-first validation, compact default array actions, and live state
-panels. Edit the form. Then compare its values, visible issues, and browser
-submission payload.
-
-### Interactive Form, Please Lab
-
-<InteractiveLab />
-
-## What you get out of the box
-
-- Schema-owned synchronous or asynchronous validation.
-- Typed editable values and validated submit output.
-- Accessible labels, descriptions, issue relationships, and first-error focus.
-- Stable array commands and explicit hidden-value behavior.
-- Granular subscriptions for manual rendering.
-- Native names and `FormData` coordination for classic submission.
-- An isolated `form-please/react19` entry for React 19 Actions.
-- Optional history, persistence, and Redux DevTools package entries.
-
-## Make it yours
-
-Native controls and the default slots are a working baseline. They are not a
-design system. Use `defineControl` to replace controls. Override structural
-slots when their markup must change. Use `createDefaultSlots({ i18n })` to
-change the default action labels.
-
-Form, Please keeps those choices separate from the reusable form definition. Product
-controls can change without rewriting validation, conditions, arrays, or submit
-behavior.
-
-## Fix common setup problems
-
-### The form has no visual layout
-
-Import `form-please/layout.css` for the optional responsive structure, or add your own
-styles. Form, Please does not ship a visual theme.
-
-### A required field accepts an empty value
-
-Add the rule to the schema. The UI option `required: true` marks the control as
-required in presentation, native state, and ARIA. It does not add a validation
-rule.
-
-### TypeScript rejects `defaultValues`
-
-Provide a value for every field in `FormInput<typeof profileSchema>`. Use
-`undefined` only when the input type permits it.
-
-### `onSubmit` does not run
-
-Correct all visible schema issues and submit again. Form, Please calls `onSubmit` only
-after successful validation.
-
-## Choose your next step
-
-- [Build a production form](/guides/tutorial) to configure validation timing
-  and examine conditions, arrays, and transformed output in detail.
-- [UI definitions](/guides/ui-definitions) to understand fields, sections,
-  arrays, layout, and derived state.
-- [Validation and errors](/guides/validation) for timing, visibility, and
-  recoverable server feedback.
-- [Transaction hooks](/guides/transaction-hooks) for atomic cross-field updates
-  and post-commit effects.
-- [Controls and design systems](/guides/controls) to connect product inputs and
-  structural slots.
-- [Styling](/guides/styling) for responsive layout and a copyable visual
-  baseline.
-- [React 19 Actions](/guides/react-19-actions) for Action submission and
-  serializable results.
-- [History and journals](/guides/history) for undo, replay, and journal transfer.
-- [Persistence](/guides/persistence) for hydration and storage adapters.
-- [Redux DevTools](/guides/devtools) for constrained document time travel.
-- [Production recipes](/advanced) for manual composition, loaded edit forms,
-  server safety, and testing.
+</details>

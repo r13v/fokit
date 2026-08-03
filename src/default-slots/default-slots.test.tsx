@@ -3,16 +3,16 @@
 import { fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import type { FormIssue } from "../core/index.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
 	ErrorMessageSlotProps,
 	FieldSlotProps,
+	FormIssue,
 	SectionSlotProps,
 	StructuralNodeName,
 	StructuralRootProps,
-} from "../react/slots.js"
+} from "../types.js"
 import {
 	createDefaultSlots,
 	type DefaultArrayAddI18nData,
@@ -551,7 +551,6 @@ function rootProps(
 
 function issue(message: string): FormIssue {
 	return {
-		source: "manual",
 		message,
 	}
 }

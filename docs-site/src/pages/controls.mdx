@@ -1,0 +1,27 @@
+---
+title: Controls and slots
+description: Connect typed values to native HTML or a component library.
+showAskAi: false
+---
+
+# Controls and slots
+
+Controls adapt a typed value to one interactive component. "Form, Please" supplies
+the value, update functions, accessibility wiring, metadata, options, context,
+and interaction flags.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:define-control]
+```
+
+The control contract has no serialization mode. Form submission uses the
+schema input held by TanStack Form, not browser `FormData` reconstruction.
+
+Slots own field, section, array, array-item, error, and submit structure. Build
+one complete kit with `createFormKit`. Kits do not have a runtime extension API.
+
+Use `createNativeControls()` and `createDefaultSlots()` for an HTML baseline.
+Use `createMuiFormKit()` for the Material UI 9 preset.
+
+Read the [API reference](/api#native-controls-and-default-slots) for the shipped
+control names, localization, presets, and type-checked construction examples.

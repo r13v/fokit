@@ -10,7 +10,7 @@ export const TailwindProfileDemo = Object.assign(
 	{
 		toMarkdown() {
 			return markdownFallback(
-				"The live Tailwind profile form runs only in a browser. Its account section changes utility classes when the account type changes.",
+				"The live Tailwind profile form runs only in a browser. A synchronous resolver changes its account-section utility classes from the current TanStack Form values.",
 				"docs-site/src/components/tailwind-profile-demo.client.tsx",
 			)
 		},

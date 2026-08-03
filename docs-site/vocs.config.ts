@@ -31,34 +31,20 @@ export default defineConfig({
 			items: [
 				{ text: "Overview", link: "/" },
 				{ text: "Get started", link: "/get-started" },
-				{ text: "Build a production form", link: "/guides/tutorial" },
 			],
 		},
 		{
 			text: "Guides",
 			collapsed: false,
 			items: [
-				{ text: "UI definitions", link: "/guides/ui-definitions" },
-				{ text: "Validation & errors", link: "/guides/validation" },
-				{
-					text: "Conditional fields",
-					link: "/guides/conditional-fields",
-				},
-				{ text: "Transaction hooks", link: "/guides/transaction-hooks" },
-				{ text: "Arrays", link: "/guides/arrays" },
-				{ text: "Controls & design systems", link: "/guides/controls" },
-				{
-					text: "Async multiselect",
-					link: "/guides/async-multiselect",
-				},
-				{ text: "Async fields", link: "/guides/async-fields" },
-				{ text: "Styling", link: "/guides/styling" },
-				{ text: "React 19 Actions", link: "/guides/react-19-actions" },
-				{ text: "History & journals", link: "/guides/history" },
-				{ text: "Persistence", link: "/guides/persistence" },
-				{ text: "Redux DevTools", link: "/guides/devtools" },
-				{ text: "Production recipes", link: "/advanced" },
-				{ text: "React-free core", link: "/guides/core" },
+				{ text: "Definitions", link: "/definitions" },
+				{ text: "Validation & submission", link: "/validation" },
+				{ text: "Conditional fields", link: "/conditional-fields" },
+				{ text: "Arrays", link: "/arrays" },
+				{ text: "Controls & slots", link: "/controls" },
+				{ text: "Async multiselect", link: "/async-multiselect" },
+				{ text: "Resource state", link: "/resources" },
+				{ text: "Styling", link: "/styling" },
 			],
 		},
 		{
@@ -66,7 +52,6 @@ export default defineConfig({
 			collapsed: false,
 			items: [
 				{ text: "Examples", link: "/examples" },
-				{ text: "TanStack Form runtime", link: "/examples/tanstack-form" },
 				{ text: "Material UI with Yup", link: "/examples/mui-yup" },
 				{ text: "Shadcn with Valibot", link: "/examples/shadcn-valibot" },
 				{ text: "Research grant", link: "/examples/research-grant" },
@@ -75,9 +60,6 @@ export default defineConfig({
 				{ text: "Learning cohort", link: "/examples/learning-cohort" },
 				{ text: "Membership ladder", link: "/examples/membership-ladder" },
 				{ text: "Campaign builder", link: "/examples/campaign-builder" },
-				{ text: "History workflow", link: "/examples/history" },
-				{ text: "Persistent draft", link: "/examples/persistence" },
-				{ text: "DevTools workflow", link: "/examples/devtools" },
 			],
 		},
 		{
@@ -85,6 +67,7 @@ export default defineConfig({
 			collapsed: false,
 			items: [
 				{ text: "API", link: "/api" },
+				{ text: "Production recipes", link: "/advanced" },
 				{ text: "TypeScript", link: "/types" },
 				{
 					text: "LLM documentation index",

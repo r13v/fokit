@@ -12,9 +12,6 @@ import {
 	type FormOutput,
 	matchResource,
 	type UiNode,
-	useFormContext,
-	useFormState,
-	useValue,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -213,9 +210,13 @@ const kit = createFormKit({
 	slots: createDefaultSlots(),
 })
 
-function TitleSuggestions() {
-	const form = useFormContext<typeof cohortSchema>()
-	const title = useValue(form, "identity.title")
+function TitleSuggestions({
+	title,
+	onSelect,
+}: {
+	readonly title: string
+	readonly onSelect: (title: string) => void
+}) {
 	const suggestions = useQuery({
 		queryKey: ["cohort-title-suggestions", title],
 		queryFn: () =>
@@ -261,7 +262,7 @@ function TitleSuggestions() {
 							{value.map((suggestion) => (
 								<button
 									key={suggestion}
-									onClick={() => form.setValue("identity.title", suggestion)}
+									onClick={() => onSelect(suggestion)}
 									type="button"
 								>
 									{suggestion}
@@ -273,26 +274,6 @@ function TitleSuggestions() {
 				})}
 			</div>
 		</section>
-	)
-}
-
-function CohortPreview() {
-	const form = useFormContext<typeof cohortSchema>()
-	const preview = useFormState(form, (snapshot) => ({
-		title: snapshot.values.identity.title,
-		formats: snapshot.values.sessionFormats.length,
-		capacity: snapshot.values.sessionFormats.reduce(
-			(total, item) => total + item.cohortSize,
-			0,
-		),
-	}))
-	return (
-		<aside className="form-please-complex__preview" aria-label="Cohort preview">
-			<strong>{preview.title}</strong>
-			<span>
-				{preview.formats} formats · {preview.capacity} aggregate seats
-			</span>
-		</aside>
 	)
 }
 
@@ -310,11 +291,6 @@ const cohortDefinition = kit.defineForm(cohortSchema, {
 					control: "text",
 					label: "Cohort title",
 					span: "full",
-				},
-				{
-					kind: "render",
-					id: "title-suggestions",
-					component: TitleSuggestions,
 				},
 				{
 					kind: "field",
@@ -453,7 +429,6 @@ const cohortDefinition = kit.defineForm(cohortSchema, {
 			],
 		},
 		...offerSections(),
-		{ kind: "render", id: "cohort-preview", component: CohortPreview },
 	],
 })
 
@@ -476,8 +451,7 @@ function offerSections() {
 					path: "offers.earlyBird.percent",
 					control: "number",
 					label: "Reduction percent",
-					visible: ({ "offers.earlyBird.enabled": enabled }) => enabled,
-					valuePolicy: "unset",
+					visible: (values) => values.offers.earlyBird.enabled,
 					options: { min: 1, max: 80, step: 1 },
 				},
 				{
@@ -485,8 +459,7 @@ function offerSections() {
 					path: "offers.earlyBird.deadline",
 					control: "date",
 					label: "Deadline",
-					visible: ({ "offers.earlyBird.enabled": enabled }) => enabled,
-					valuePolicy: "unset",
+					visible: (values) => values.offers.earlyBird.enabled,
 				},
 			],
 		},
@@ -507,8 +480,7 @@ function offerSections() {
 					path: "offers.team.minimumSeats",
 					control: "number",
 					label: "Minimum seats",
-					visible: ({ "offers.team.enabled": enabled }) => enabled,
-					valuePolicy: "unset",
+					visible: (values) => values.offers.team.enabled,
 					options: { min: 2, step: 1 },
 				},
 				{
@@ -516,8 +488,7 @@ function offerSections() {
 					path: "offers.team.percent",
 					control: "number",
 					label: "Reduction percent",
-					visible: ({ "offers.team.enabled": enabled }) => enabled,
-					valuePolicy: "unset",
+					visible: (values) => values.offers.team.enabled,
 					options: { min: 1, max: 80, step: 1 },
 				},
 			],
@@ -539,8 +510,7 @@ function offerSections() {
 					path: "offers.scholarship.reservedSeats",
 					control: "number",
 					label: "Reserved seats",
-					visible: ({ "offers.scholarship.enabled": enabled }) => enabled,
-					valuePolicy: "unset",
+					visible: (values) => values.offers.scholarship.enabled,
 					options: { min: 1, step: 1 },
 				},
 			],
@@ -562,8 +532,7 @@ function offerSections() {
 					path: "offers.alumni.percent",
 					control: "number",
 					label: "Reduction percent",
-					visible: ({ "offers.alumni.enabled": enabled }) => enabled,
-					valuePolicy: "unset",
+					visible: (values) => values.offers.alumni.enabled,
 					options: { min: 1, max: 80, step: 1 },
 				},
 			],
@@ -583,7 +552,6 @@ export function LearningCohortExample() {
 }
 
 function LearningCohortForm() {
-	const form = kit.useCreateForm(cohortDefinition, { defaultValues: draft })
 	const loadedDraft = useQuery({
 		queryKey: ["learning-cohort-draft", "cohort-41"],
 		queryFn: () => fakeRequest(draft, 410),
@@ -611,6 +579,28 @@ function LearningCohortForm() {
 			),
 	})
 	const [notice, setNotice] = useState("Draft loaded from the fake API.")
+	const form = kit.useForm(cohortDefinition, {
+		defaultValues: draft,
+		async onSubmit({ value }) {
+			try {
+				const core = await saveCore.mutateAsync(value)
+				const media = await saveMedia.mutateAsync(value)
+				const offers = await syncOffers.mutateAsync(value)
+				setNotice(
+					`Revision ${core.revision} saved with ${media.resources} resource(s) and ${offers.active} active offer(s).`,
+				)
+			} catch (error) {
+				if (error instanceof CohortConflictError) {
+					setNotice(
+						"That title is already reserved. Choose a suggestion or edit it.",
+					)
+					return
+				}
+
+				setNotice("The cohort could not be saved. Your draft is intact.")
+			}
+		},
+	})
 
 	if (loadedDraft.isPending)
 		return (
@@ -638,41 +628,17 @@ function LearningCohortForm() {
 				media, four offer subforms, and conflict recovery remain typed end to
 				end.
 			</p>
-			<kit.AutoForm
-				className="form-please-complex__form"
-				form={form}
-				onSubmit={async ({ value, form }) => {
-					try {
-						form.clearErrors()
-						const core = await saveCore.mutateAsync(value)
-						const media = await saveMedia.mutateAsync(value)
-						const offers = await syncOffers.mutateAsync(value)
-						setNotice(
-							`Revision ${core.revision} saved with ${media.resources} resource(s) and ${offers.active} active offer(s).`,
-						)
-					} catch (error) {
-						if (error instanceof CohortConflictError) {
-							form.setErrors([
-								{
-									source: "server",
-									path: "identity.title",
-									code: "title_conflict",
-									message:
-										"That title is already reserved. Choose a suggestion or edit it.",
-								},
-							])
-							return
-						}
-
-						form.setErrors([
-							{
-								source: "server",
-								message: "The cohort could not be saved. Your draft is intact.",
-							},
-						])
-					}
-				}}
-			>
+			<kit.AutoForm className="form-please-complex__form" form={form}>
+				<form.api.Subscribe selector={(state) => state.values.identity.title}>
+					{(title) => (
+						<TitleSuggestions
+							title={title}
+							onSelect={(suggestion) =>
+								form.api.setFieldValue("identity.title", suggestion)
+							}
+						/>
+					)}
+				</form.api.Subscribe>
 				<div className="form-please-complex__actions">
 					<kit.Submit className="form-please-complex__primary">
 						Save cohort
@@ -680,6 +646,26 @@ function LearningCohortForm() {
 					<span aria-live="polite">{status}</span>
 				</div>
 			</kit.AutoForm>
+			<form.api.Subscribe selector={(state) => state.values}>
+				{(values) => {
+					const capacity = values.sessionFormats.reduce(
+						(total, item) => total + item.cohortSize,
+						0,
+					)
+					return (
+						<aside
+							aria-label="Cohort preview"
+							className="form-please-complex__preview"
+						>
+							<strong>{values.identity.title}</strong>
+							<span>
+								{values.sessionFormats.length} formats · {capacity} aggregate
+								seats
+							</span>
+						</aside>
+					)
+				}}
+			</form.api.Subscribe>
 		</section>
 	)
 }

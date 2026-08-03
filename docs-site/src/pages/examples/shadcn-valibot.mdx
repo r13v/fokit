@@ -1,6 +1,6 @@
 ---
 title: Shadcn with Valibot
-description: Install an application-owned Base UI adapter from the shadcn registry and validate a complete workshop proposal with Valibot.
+description: Build an application-owned shadcn adapter and validate a workshop proposal with Valibot.
 showAskAi: false
 ---
 
@@ -8,42 +8,43 @@ import { ShadcnValibotWorkshopDemo } from "../../components/shadcn-valibot-works
 
 # Shadcn with Valibot
 
-This example keeps the design-system boundary in your application. The registry
-item copies a small adapter next to your existing shadcn components; Form,
-Please stays headless and Valibot supplies the Standard Schema.
+This example keeps the design-system boundary in the application. A local kit
+maps "Form, Please" control props and slots to shadcn-style components. Valibot
+provides the Standard Schema.
 
 ## Install the adapter
 
-The first Form, Please release containing this item is `v1.1.0`:
-
 ```bash
-npx shadcn@latest add r13v/form-please/shadcn-form-kit#v1.1.0
+npx shadcn@latest add r13v/form-please/shadcn-form-kit
 ```
 
-The item targets shadcn's **Base UI** implementation. Because the adapter is
-application-owned, review its imports after installation if your local shadcn
-components were generated with another style or customized props. The copied
-source lives at `components/ui/form-please/shadcn-form-kit.tsx` by default.
+The registry item installs `form-please` and copies the adapter into your
+application. Install the schema library used by your form separately. This
+example uses `valibot`.
+
+```bash
+npm install valibot
+```
+
+The item targets shadcn's Base UI implementation. Review the copied component
+imports when your project uses another style or customized component props.
+The adapter remains normal application source, so it can follow local aliases,
+styles, and signatures.
 
 ## Try the workshop proposal
 
-Change a radio or switch, move all three slider shapes, search the comboboxes,
-choose calendar values, and edit the OTP. Submit to run the Valibot schema.
+Change radio and switch values, move the sliders, search the comboboxes, choose
+calendar values, and edit the OTP. Submit to run the Valibot schema twice and
+receive transformed output.
 
 <ShadcnValibotWorkshopDemo />
 
-## What the adapter includes
+## Adapter surface
 
-- Native-shaped `text`, `textarea`, `select`, `checkbox`, `number`, `date`,
-  `time`, and `file` controls.
-- Base UI `radio`, `switch`, `combobox`, and `multiCombobox` controls.
-- `slider`, fixed two-thumb `rangeSlider`, and arbitrary-thumb `multiSlider`.
-- ISO-string `datePicker`, `{ from, to }` `dateRangePicker`, and `inputOtp`.
-- Form, Please slots built from local shadcn Field and Button primitives.
-
-The adapter remains normal source code in your repository, so it can follow
-your aliases, styling, and component signatures without becoming a second
-component library.
+The local adapter defines native-shaped controls, Base UI choice controls,
+sliders, date pickers, comboboxes, an OTP control, and structural slots. Each
+control uses the public `ControlProps` contract. The kit uses the public
+`createFormKit` and `defineControl` functions.
 
 ## Copy the example
 
@@ -51,7 +52,9 @@ component library.
 // [!include ~/snippets/shadcn-valibot-workshop.tsx]
 ```
 
-Review the [registry source](https://github.com/r13v/form-please/blob/v1.1.0/registry.json)
-and the [adapter source](https://github.com/r13v/form-please/blob/v1.1.0/docs-site/src/components/ui/form-please/shadcn-form-kit.tsx)
-before adapting it to your project. Read [Controls and design systems](/guides/controls)
-for the underlying control and FormData contracts.
+Read [Controls and slots](/controls) for the control and slot contracts.
+Review the [registry manifest](https://github.com/r13v/form-please/blob/main/registry.json)
+and [adapter source](https://github.com/r13v/form-please/blob/main/docs-site/src/components/ui/form-please/shadcn-form-kit.tsx)
+before adapting them to your project. Append a matching Git release tag to the
+registry item reference, such as `#vX.Y.Z`, when an installation must be
+reproducible.

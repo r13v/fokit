@@ -1,0 +1,57 @@
+---
+title: Validation and submission
+description: Understand Standard Schema validation, transformed output, errors, and focus behavior.
+showAskAi: false
+---
+
+# Validation and submission
+
+The definition schema is the form-level TanStack Form validator. The first
+submit validates the form. After that submit, edits validate on change.
+
+## Transformed output
+
+Standard Schema validation does not store transformed output in TanStack Form.
+"Form, Please" follows the [TanStack Form submission recommendation](https://tanstack.com/form/v1/docs/framework/react/guides/submission-handling#transforming-data-with-standard-schemas):
+it parses the same input a second time after successful validation.
+
+- The first parse validates through TanStack Form.
+- The second parse produces `FormOutput<Schema>` for `onSubmit`.
+- There is no custom validation cache.
+
+The same input must have the same validity during one submit attempt. Form,
+Please rejects the submit with an invariant error if the second parse returns
+issues after the first parse succeeded.
+
+## Issues and focus
+
+Public issues have this shape:
+
+```ts
+type FormIssue = {
+	readonly message: string
+	readonly path?: string
+}
+```
+
+After an invalid submit, "Form, Please" focuses the first invalid visible
+generated control that can receive focus. If no such control exists, it focuses
+the first error-summary item.
+
+`onSubmit` receives `{ value, input, form }`. It does not receive submit
+metadata. The callback can return a promise; `isSubmitting` remains true until
+that promise settles.
+
+## Set default Zod messages
+
+"Form, Please" displays the messages that the Standard Schema returns. Configure
+Zod once, before form validation runs, when the application needs global
+defaults:
+
+```ts
+// [!include ~/snippets/zod-error-messages.ts]
+```
+
+Return `undefined` for issue types that must use the Zod default. A schema-level
+message has priority over `customError`. Do not call `z.config()` during a
+component render because it changes global Zod configuration.

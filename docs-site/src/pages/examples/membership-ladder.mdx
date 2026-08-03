@@ -1,6 +1,6 @@
 ---
 title: Membership ladder
-description: A four-tier membership editor with nested benefit arrays, transactional discount cascades, remote workspace connection, and pause-calendar shortcuts.
+description: A four-tier membership editor with nested benefit arrays, cross-tier validation, workspace connection, and pause shortcuts.
 showAskAi: false
 ---
 
@@ -8,29 +8,25 @@ import { MembershipLadderDemo } from "../../components/membership-ladder-demo"
 
 # Membership ladder
 
-Four named tiers each own a movable benefit array. Their reductions form a
-monotonic ladder: raising a lower tier above any higher tier updates the rest of
-the ladder in the same transaction, so the form never exposes a contradictory
-intermediate value.
+Four named tiers each contain a movable benefit array. The schema requires the
+discount values to increase across the tier ladder.
 
 ## Try the complete flow
 
-Raise the Seed reduction above the other tiers and watch the preview cascade.
-Add and move benefits independently inside every tier. Connect the selected
-workspace through a fake mutation, then add a pause window from the calendar
-shortcuts and edit its dates in the generated array.
+Change the discount values to test cross-tier validation. Add and move benefits
+inside each tier. Connect the selected workspace, then add a pause window with
+an application-owned shortcut.
 
 <MembershipLadderDemo />
 
-## What this form stresses
+## What this form demonstrates
 
 - Four nested arrays under fixed object paths.
-- `extendValueChanges` normalizing several correlated fields atomically.
-- Cross-tier schema validation as a second line of defense.
-- Query-provided workspace options and connect/disconnect mutations.
-- A custom calendar surface using typed array commands.
-- Date-range validation and stable pause-window row identity.
-- A derived benefit count in the typed submission output.
+- Cross-tier schema validation.
+- Query-provided workspace options through form context.
+- `form.api.setFieldValue` for connection state.
+- `form.api.pushFieldValue` for pause shortcuts.
+- A live ladder preview through `form.api.Subscribe`.
 
 ## Copy the source
 
@@ -38,4 +34,4 @@ shortcuts and edit its dates in the generated array.
 // [!include ~/snippets/complex-membership-ladder.tsx]
 ```
 
-Compare the other workflows in [Complex form examples](/examples).
+Compare the other workflows in [Examples](/examples).

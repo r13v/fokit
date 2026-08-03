@@ -87,18 +87,129 @@ const localizedNativeKit = createFormKit({
 })
 // [!endregion native-factories]
 
+// [!region default-slot-i18n]
+const fullyLocalizedSlots = createDefaultSlots({
+	i18n: {
+		arrayAdd: ({ label }) => {
+			if (typeof label === "string") return `Add ${label}`
+			return "Add item"
+		},
+		arrayRemove: ({ position }) => `Remove item ${position}`,
+		arrayMoveUp: ({ position }) => `Move item ${position} up`,
+		arrayMoveDown: ({ position }) => `Move item ${position} down`,
+	},
+})
+// [!endregion default-slot-i18n]
+
 // [!region native-preset]
 const readyNativeKit = nativeFormKit
 // [!endregion native-preset]
+
+// [!region native-control-options]
+const preferencesSchema = z.object({
+	email: z.string().optional(),
+	plan: z.enum(["solo", "team"]).optional(),
+	seats: z.number().optional(),
+	newsletter: z.boolean(),
+})
+
+const preferencesDefinition = nativeFormKit.defineForm(preferencesSchema, {
+	ui: [
+		{
+			kind: "field",
+			path: "email",
+			control: "text",
+			label: "Email",
+			options: { type: "email", autoComplete: "email" },
+		},
+		{
+			kind: "field",
+			path: "plan",
+			control: "select",
+			label: "Plan",
+			options: {
+				emptyOption: { label: "Select a plan" },
+				options: [
+					{ value: "solo", label: "Solo" },
+					{ value: "team", label: "Team" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "seats",
+			control: "number",
+			label: "Seats",
+			options: { min: 1, max: 100, step: 1 },
+		},
+		{
+			kind: "field",
+			path: "newsletter",
+			control: "checkbox",
+			label: "Send product news",
+		},
+	],
+})
+// [!endregion native-control-options]
 
 // [!region mui-preset]
 const muiKit = createMuiFormKit({
 	i18n: {
 		addItem: "Add item",
+		removeItem: (position) => `Remove item ${position}`,
+		moveItemUp: (position) => `Move item ${position} up`,
+		moveItemDown: (position) => `Move item ${position} down`,
 		chooseFile: "Choose file",
 	},
 })
 // [!endregion mui-preset]
+
+// [!region mui-fields]
+const muiSettingsSchema = z.object({
+	role: z.string().optional(),
+	topics: z.array(z.string()),
+	notifications: z.boolean(),
+	priority: z.number(),
+})
+
+const muiSettingsDefinition = muiKit.defineForm(muiSettingsSchema, {
+	ui: [
+		{
+			kind: "field",
+			path: "role",
+			control: "select",
+			label: "Role",
+			options: {
+				displayEmpty: true,
+				choices: [
+					{ value: "developer", label: "Developer" },
+					{ value: "designer", label: "Designer" },
+				],
+			},
+		},
+		{
+			kind: "field",
+			path: "topics",
+			control: "autocomplete-multiple",
+			label: "Topics",
+			options: { options: ["React", "TypeScript", "Accessibility"] },
+		},
+		{
+			kind: "field",
+			path: "notifications",
+			control: "switch",
+			label: "Notifications",
+		},
+		{
+			kind: "field",
+			path: "priority",
+			control: "slider",
+			label: "Priority",
+			options: { min: 0, max: 10, step: 1 },
+		},
+	],
+})
+// [!endregion mui-fields]
 
 const profileSchema = z.object({
 	name: z.string().trim().min(1),
@@ -256,6 +367,24 @@ function ProfileEditor({ context }: { readonly context: ProfileContext }) {
 }
 // [!endregion use-form]
 
+// [!region form-wide-state]
+function ProfileReview({ context }: { readonly context: ProfileContext }) {
+	const form = profileKit.useForm(profileDefinition, {
+		defaultValues,
+		context,
+		readOnly: true,
+	})
+
+	return (
+		<profileKit.Form form={form} aria-label="Profile review">
+			<profileKit.Fields />
+			<button type="reset">Restore initial values</button>
+			<profileKit.Submit disabled>Save profile</profileKit.Submit>
+		</profileKit.Form>
+	)
+}
+// [!endregion form-wide-state]
+
 // [!region manual-composition]
 function ProfileWithCustomSummary({
 	context,
@@ -301,13 +430,14 @@ function describeCountries(countries: CountryResource) {
 }
 // [!endregion resources]
 
-// [!region public-types]
-type Input = FormInput<typeof profileSchema>
-type Output = FormOutput<typeof profileSchema>
-
-const input: Input = defaultValues
-const output: Output = {
-	...defaultValues,
-	yearsOfExperience: 0,
+// [!region resource-states]
+const pendingCountries: CountryResource = { status: "pending" }
+const loadedCountries: CountryResource = {
+	status: "success",
+	value: ["Canada", "Japan"],
 }
-// [!endregion public-types]
+const failedCountries: CountryResource = {
+	status: "error",
+	error: new Error("Country list is unavailable"),
+}
+// [!endregion resource-states]

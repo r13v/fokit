@@ -192,6 +192,11 @@ table {
 	width: 100%;
 }
 
+.form-please-complex input[type="checkbox"] {
+	block-size: 1rem;
+	inline-size: 1rem;
+}
+
 .form-please-complex input:focus,
 .form-please-complex select:focus,
 .form-please-complex textarea:focus,

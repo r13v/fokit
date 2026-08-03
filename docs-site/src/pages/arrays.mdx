@@ -1,41 +1,171 @@
 ---
 title: Arrays
-description: Define repeatable object rows and use TanStack Form array operations.
+description: Build repeatable object rows, nested arrays, validation, and custom array actions.
 showAskAi: false
 ---
 
 # Arrays
 
-An array node requires a typed `itemDefault` and a child definition for one
-item. "Form, Please" renders add, remove, and move actions through the array slots.
+Use an array node for repeatable object rows with generated child fields. The
+current form value supplies the rows. The `Array` and `ArrayItem` slots supply
+the add, remove, and move actions.
+
+Use one field control when one widget edits the complete array value. For
+example, an async multiselect is one field, not a set of repeatable rows. See
+[Async multiselect](/examples/async-multiselect).
+
+## Define a repeatable row
+
+Define the array in the schema, the initial rows, the add-action default, and
+the child fields:
+
+```tsx
+// [!include ~/snippets/arrays-guide.tsx:define-array]
+```
+
+These four parts have different purposes:
+
+| Part | Purpose |
+| --- | --- |
+| Schema | Defines the array item and its validation rules. |
+| `defaultValues` | Supplies the rows that exist when the form starts. |
+| `itemDefault` | Supplies one new row for the generated add action. |
+| `children` | Defines the generated UI for one row. |
+
+`itemDefault` does not add an initial row. Use `defaultValues` when the form
+must start with one or more rows.
+
+Child paths are relative to one item. In the example, `path: "email"` produces
+`contacts[0].email`, `contacts[1].email`, and later paths.
+
+<details>
+<summary>See the contact array from the interactive lab</summary>
 
 ```tsx
 // [!include ~/snippets/lab-profile-form.tsx:array-node]
 ```
 
-`itemDefault` can be one complete item or a function that returns one. Form,
-Please calls the function when needed and uses `structuredClone` before every
-generated insertion, so a new row does not share nested objects with another
-row.
+</details>
 
-Generated paths use TanStack bracket syntax, such as
-`speakers[2].sessions[0].title`. `FieldPath`, `ArrayFieldPath`, and `PathValue`
-are aliases over TanStack Form deep-key types.
+## Choose an item default
 
-Use `form.api.Field` with `mode="array"` when you need custom array UI:
+Use an object when each new row can use the same data:
 
 ```tsx
-const Field = form.api.Field
-
-<Field name="speakers" mode="array">
-	{(field) => (
-		<button type="button" onClick={() => field.pushValue({ name: "" })}>
-			Add speaker
-		</button>
-	)}
-</Field>
+itemDefault: { name: "", sessions: [] }
 ```
 
-Rows use index identity. Do not keep external state keyed only by a generated
-row path when rows can move. Put a durable ID in the schema value when product
-behavior needs identity that survives reordering.
+Use a function when each new row needs a unique value:
+
+```tsx
+itemDefault: () => ({
+	id: crypto.randomUUID(),
+	name: "",
+	sessions: [],
+})
+```
+
+The generated add action calls the function for each insertion. It then clones
+the result with `structuredClone`. Nested objects in two generated rows do not
+share references.
+
+A manual TanStack Form operation does not use `itemDefault`. Supply the new
+item when you call `field.pushValue()` or `field.insertValue()`.
+
+## Define nested arrays
+
+Put an array node inside another array node. Keep each child path relative to
+its immediate item:
+
+```tsx
+// [!include ~/snippets/arrays-guide.tsx:nested-array]
+```
+
+The same definition produces these paths at runtime:
+
+| Definition path | Example runtime path |
+| --- | --- |
+| `speakers` | `speakers` |
+| `sessions` | `speakers[2].sessions` |
+| `title` | `speakers[2].sessions[0].title` |
+
+Generated paths use TanStack bracket syntax for array indexes. `FieldPath`,
+`ArrayFieldPath`, and `PathValue` use the same syntax.
+
+## Validate arrays and rows
+
+Keep array length, item, and cross-row rules in the Standard Schema. This Zod
+example reports a duplicate email on the specific row that must change:
+
+```tsx
+// [!include ~/snippets/arrays-guide.tsx:array-validation]
+```
+
+"Form, Please" converts numeric issue paths to bracket syntax. The duplicate
+issue above resolves to a path such as `contacts[2].email`.
+
+After an invalid submit, the form focuses the first visible generated control
+with an issue. Array-level issues remain available through the array slot and
+the form error summary. See [Validation and submission](/validation).
+
+## Understand the generated actions
+
+The default array slots provide these actions:
+
+- Add a row at the end.
+- Move a row up or down.
+- Remove a row.
+
+The generated add action uses `itemDefault`. Move and remove operations update
+TanStack Form state by index.
+
+When an array is disabled or read-only, the kit also disables its add, move,
+and remove actions. Child fields inherit that state. A hidden array keeps its
+value and does not render. See [Conditional fields](/conditional-fields).
+
+## Add custom array operations
+
+Use `form.api.Field` with `mode="array"` for application-owned operations. This
+example adds a toolbar after the generated fields:
+
+```tsx
+// [!include ~/snippets/arrays-guide.tsx:custom-operations]
+```
+
+Use these methods to add or update rows:
+
+| Method | Result |
+| --- | --- |
+| `pushValue(item)` | Adds an item at the end. |
+| `insertValue(index, item)` | Adds an item at an index. |
+| `replaceValue(index, item)` | Replaces one item. |
+
+Use these methods to reorder or remove rows:
+
+| Method | Result |
+| --- | --- |
+| `moveValue(from, to)` | Moves one item to another index. |
+| `swapValues(a, b)` | Exchanges two items. |
+| `removeValue(index)` | Removes one item. |
+| `clearValues()` | Removes all items. |
+
+These methods update the same TanStack Form state as the generated actions.
+They do not replace the generated array markup. Customize the `Array` and
+`ArrayItem` slots when you must replace that markup or its buttons. See
+[Controls and slots](/controls#implement-an-array-slot).
+
+## Preserve row identity
+
+Rows use index identity. A move or removal changes later paths. For example,
+the item at `contacts[2]` can become `contacts[1]`.
+
+Put a durable ID in each item when identity must survive reordering. Generate
+the ID in an `itemDefault` function. Do not store identity-sensitive external
+state under a generated row path.
+
+## Check common mistakes
+
+- Use `defaultValues`, not `itemDefault`, to supply initial rows.
+- Use paths relative to the current array item in `children`.
+- Use an `itemDefault` function when a new item needs a unique ID.
+- Use an array node for repeatable rows, not for one multiselect value.

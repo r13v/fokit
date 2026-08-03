@@ -13,7 +13,6 @@ const pages = [
 	["src/pages/conditional-fields.mdx", "Conditional fields"],
 	["src/pages/arrays.mdx", "Arrays"],
 	["src/pages/controls.mdx", "Controls and slots"],
-	["src/pages/async-multiselect.mdx", "Async multiselect"],
 	["src/pages/resources.mdx", "Resource state"],
 	["src/pages/styling.mdx", "Styling"],
 	["src/pages/api.mdx", "API"],
@@ -23,6 +22,7 @@ const pages = [
 	["src/pages/examples/index.mdx", "Examples"],
 	["src/pages/examples/mui-yup.mdx", "Material UI with Yup"],
 	["src/pages/examples/shadcn-valibot.mdx", "Shadcn with Valibot"],
+	["src/pages/examples/async-multiselect.mdx", "Async multiselect"],
 	["src/pages/examples/research-grant.mdx", "Research grant application"],
 	["src/pages/examples/studio-policies.mdx", "Creative studio policies"],
 	["src/pages/examples/makerspace-launch.mdx", "Makerspace launch wizard"],
@@ -42,11 +42,15 @@ const exampleSnippets = [
 	"src/snippets/complex-campaign-builder.tsx",
 	"src/snippets/lab-profile-form.tsx",
 	"src/snippets/async-multiselect.tsx",
+	"src/snippets/async-multiselect-request.ts",
 ]
 
 const referenceSnippets = [
 	"src/snippets/api-reference.tsx",
+	"src/snippets/controls-and-slots-control.tsx",
+	"src/snippets/controls-and-slots.tsx",
 	"src/snippets/production-recipes.tsx",
+	"src/snippets/validation-guide.tsx",
 ]
 
 test("documents only the supported navigation surface", async () => {
@@ -66,7 +70,6 @@ test("documents only the supported navigation surface", async () => {
 		"/conditional-fields",
 		"/arrays",
 		"/controls",
-		"/async-multiselect",
 		"/resources",
 		"/styling",
 		"/api",
@@ -76,6 +79,7 @@ test("documents only the supported navigation surface", async () => {
 		"/examples",
 		"/examples/mui-yup",
 		"/examples/shadcn-valibot",
+		"/examples/async-multiselect",
 		"/examples/research-grant",
 		"/examples/studio-policies",
 		"/examples/makerspace-launch",
@@ -152,7 +156,7 @@ test("keeps the supported live documentation demos", async () => {
 		["src/pages/index.mdx", "<OverviewDemo />"],
 		["src/pages/get-started.mdx", "<InteractiveLab />"],
 		["src/pages/styling.mdx", "<TailwindProfileDemo />"],
-		["src/pages/async-multiselect.mdx", "<AsyncMultiSelectDemo />"],
+		["src/pages/examples/async-multiselect.mdx", "<AsyncMultiSelectDemo />"],
 		["src/pages/validation.mdx", "~/snippets/zod-error-messages.ts"],
 	]) {
 		const source = await readFile(new URL(path, siteRoot), "utf8")
@@ -160,8 +164,68 @@ test("keeps the supported live documentation demos", async () => {
 	}
 })
 
-test("keeps API and production guidance executable instead of prose-only", async () => {
+test("keeps the async multiselect example copyable and production-shaped", async () => {
+	const page = await readFile(
+		new URL("src/pages/examples/async-multiselect.mdx", siteRoot),
+		"utf8",
+	)
+
+	for (const region of [
+		"schema-values",
+		"option-contract",
+		"register-control",
+		"demo-query",
+		"query-state",
+		"field-definition",
+		"label-cache",
+		"provider-submit",
+	]) {
+		assert.match(page, new RegExp(`async-multiselect\\.tsx:${region}`))
+	}
+
+	for (const phrase of [
+		"async-multiselect-request.ts",
+		"Pass the TanStack Query `AbortSignal` to `fetch`",
+		"Do not return a promise from the `options` resolver",
+		"The server must confirm",
+	]) {
+		assert.match(page, new RegExp(escapeRegExp(phrase)))
+	}
+	assert.match(page, /Its CSS class\s+names have no library styles/)
+
+	await access(new URL("src/snippets/async-multiselect-request.ts", siteRoot))
+	await assert.rejects(
+		access(new URL("src/pages/async-multiselect.mdx", siteRoot)),
+	)
+})
+
+test("keeps validation guidance executable and complete", async () => {
+	const validation = await readFile(
+		new URL("src/pages/validation.mdx", siteRoot),
+		"utf8",
+	)
+
+	for (const region of ["schema", "definition", "submission", "form-issue"]) {
+		assert.match(validation, new RegExp(`validation-guide\\.tsx:${region}`))
+	}
+
+	for (const phrase of [
+		"first submit attempt",
+		"FormInput<Schema>",
+		"FormOutput<Schema>",
+		"kit.AutoForm",
+		"Server validation is still required",
+	]) {
+		assert.match(validation, new RegExp(escapeRegExp(phrase)))
+	}
+})
+
+test("keeps controls, API, and production guidance executable", async () => {
 	const api = await readFile(new URL("src/pages/api.mdx", siteRoot), "utf8")
+	const controls = await readFile(
+		new URL("src/pages/controls.mdx", siteRoot),
+		"utf8",
+	)
 	const advanced = await readFile(
 		new URL("src/pages/advanced.mdx", siteRoot),
 		"utf8",
@@ -180,7 +244,6 @@ test("keeps API and production guidance executable instead of prose-only", async
 		"manual-composition",
 		"resource-resolver",
 		"resources",
-		"public-types",
 	]) {
 		assert.match(api, new RegExp(`api-reference\\.tsx:${region}`))
 	}
@@ -189,10 +252,26 @@ test("keeps API and production guidance executable instead of prose-only", async
 		"composition",
 		"edit-baseline",
 		"async-submit",
+		"reset-baseline",
+		"parsed-output",
 		"context-resource",
+		"form-modes",
 		"accessible-control",
 	]) {
 		assert.match(advanced, new RegExp(`production-recipes\\.tsx:${region}`))
+	}
+
+	assert.match(controls, /controls-and-slots-control\.tsx/)
+	for (const region of [
+		"register-control",
+		"control-options",
+		"field-slot",
+		"array-slot",
+		"submit-slot",
+		"slot-registry",
+		"slot-options",
+	]) {
+		assert.match(controls, new RegExp(`controls-and-slots\\.tsx:${region}`))
 	}
 
 	for (const snippet of referenceSnippets) {

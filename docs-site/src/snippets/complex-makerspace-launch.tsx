@@ -188,10 +188,10 @@ const kit = createFormKit({
 const contextualKit = kit.forContext<LaunchContext>()
 const stages = ["identity", "location", "capacity", "publishing"] as const
 const stageLabels = {
-	identity: "Step 1",
-	location: "Step 2",
-	capacity: "Step 3",
-	publishing: "Step 4",
+	identity: "Identity",
+	location: "Location",
+	capacity: "Capacity & media",
+	publishing: "Publishing",
 } satisfies Record<(typeof stages)[number], string>
 const stageNames = {
 	identity: "Identity",
@@ -231,10 +231,17 @@ function WizardNavigation({ form }: { readonly form: LaunchForm }) {
 						<ol>
 							{stages.map((item) => {
 								let ariaCurrent: "step" | undefined
-								if (item === stage) ariaCurrent = "step"
+								let color: string | undefined
+
+								if (item === stage) {
+									ariaCurrent = "step"
+									color = "var(--fp-docs-rust)"
+								}
+
 								return (
 									<li aria-current={ariaCurrent} key={item}>
 										<button
+											style={{ color }}
 											onClick={() => form.api.setFieldValue("stage", item)}
 											type="button"
 										>
@@ -632,7 +639,7 @@ function MakerspaceLaunchForm() {
 				media rows, pricing bands, four offers, and three writes retain one
 				state.
 			</p>
-			<kit.AutoForm className="form-please-complex__form" form={form}>
+			<kit.Form className="form-please-complex__form" form={form}>
 				<form.api.Subscribe selector={(state) => state.values}>
 					{(values) => {
 						let locationDetails = null
@@ -659,13 +666,16 @@ function MakerspaceLaunchForm() {
 						}
 						return (
 							<>
-								{locationDetails}
 								<WizardNavigation form={form} />
+								{locationDetails}
 							</>
 						)
 					}}
 				</form.api.Subscribe>
-			</kit.AutoForm>
+
+				<kit.Fields />
+			</kit.Form>
+
 			<output className="form-please-complex__network" aria-live="polite">
 				{status}
 			</output>

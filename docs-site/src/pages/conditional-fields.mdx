@@ -1,39 +1,126 @@
 ---
 title: Conditional fields
-description: Derive visible, disabled, readonly, required, labels, and options from values and context.
+description: Derive visibility, interaction state, content, and control options from values and context.
 showAskAi: false
 ---
 
 # Conditional fields
 
-Use synchronous resolvers for derived UI properties.
+Use a synchronous resolver when a UI property depends on form values or runtime
+context. A resolver returns the property value for the current form state.
+
+## Show or hide a field
+
+Set `visible` to a resolver that returns a boolean:
 
 ```tsx
 // [!include ~/snippets/lab-profile-form.tsx:conditional-field]
 ```
 
-The full input is available at every nesting level, including fields inside an
-array. This makes cross-section and cross-row conditions explicit.
+When `accountType` changes, "Form, Please" resolves the UI tree again. The
+`companyName` field appears only for a company account.
 
-Visibility does not modify form state. A field that becomes hidden keeps its
-value and does not render a control. If product behavior requires cleanup,
-perform that state update through `form.api` in application code.
+`visible` has these effects:
+
+- A hidden node does not render.
+- A hidden section or array does not render its descendants.
+- A hidden field keeps its value in TanStack Form state.
+- The Standard Schema still receives the hidden value during submission.
+
+`visible` does not clear a value or change schema validation.
+
+## Derive field properties
+
+Field properties can use the same form values:
+
+```tsx
+// [!include ~/snippets/conditional-fields-guide.tsx:derived-field]
+```
+
+The first resolver argument is the complete, deeply readonly schema input.
+It is not only the value at the field path.
+
+These field properties accept a static value or a synchronous resolver:
+
+| Property | Result | Default |
+| --- | --- | --- |
+| `visible` | Shows or hides the field. | `true` |
+| `disabled`, `readOnly` | Changes the control interaction state. | `false` |
+| `required` | Passes required UI state to the control. | `false` |
+| `label`, `description` | Changes displayed content. | No content |
+| `options`, `slotOptions` | Changes control or slot configuration. | Control-dependent |
+
+Layout properties such as `className` and `span` also accept resolvers. See
+[Definitions](/definitions#resolver-values) for the complete property reference.
+
+Resolvers must return immediately. A resolver that returns a promise causes a
+runtime error. Keep resolvers small and free of side effects. Do not fetch data
+or update form state in a resolver.
+
+## Apply one condition to a group
+
+Put `visible`, `disabled`, or `readOnly` on a section or array when one condition
+applies to all descendants:
+
+```tsx
+// [!include ~/snippets/conditional-fields-guide.tsx:conditional-section]
+```
+
+A descendant cannot override inherited state:
+
+- A hidden parent hides all descendants.
+- A disabled parent disables all descendants.
+- A read-only parent makes all descendants read-only.
+
+`required` is a field property. It is not inherited from a section or array.
 
 ## Use runtime context
 
-Bind the context type once with `kit.forContext<Context>()`. Resolvers then
-receive the current context beside the complete form input:
+Use context for data that is not part of the editable form value. Examples
+include permissions, feature flags, and loaded option lists.
+
+Bind the context type once with `kit.forContext<Context>()`:
 
 ```tsx
-disabled: (_values, { context }) => !context.permissions.canEditCompany
+// [!include ~/snippets/conditional-fields-guide.tsx:runtime-context]
 ```
 
-Pass the concrete value to `useForm`. Keep loaded data and request state in the
-application; [Resource state](/resources) shows how `fromResource` adapts that
-state without another cache.
+The second resolver argument contains the current, deeply readonly `context`.
+Pass a concrete context value to `useForm`.
+
+Keep requests and cache state in the application. Pass their current state
+through context. See [Resource state](/resources) for `fromResource` examples.
+
+## Use resolvers inside arrays carefully
+
+An array-child resolver receives the complete root input. It does not receive
+the current row or its index. Therefore, the same resolver result applies to
+each generated row for a given form state.
+
+Use an array-node resolver for conditions that depend on the complete array:
+
+```tsx
+// [!include ~/snippets/conditional-fields-guide.tsx:array-resolver]
+```
+
+Keep row and cross-row validation in the Standard Schema. Use custom array UI
+when the UI condition must depend on the current row index. See [Arrays](/arrays)
+for custom operations and array slots.
 
 ## Keep conditional validation in the schema
 
-`visible` and `required` control the rendered UI. They do not add or remove
-schema rules. Express cross-field validity in the Standard Schema so generated
-and application-owned fields use the same submission contract.
+`visible` and `required` control the rendered UI. They do not add, remove, or
+change schema rules.
+
+Express the same condition in the Standard Schema:
+
+```tsx
+// [!include ~/snippets/conditional-fields-guide.tsx:conditional-schema]
+```
+
+This schema requires `companyName` only for a company account. Its transform
+also removes a stale `companyName` from personal-account output.
+
+Use a schema transform when cleanup is part of the submission contract. Use an
+application-owned event handler and `form.api` when the UI must clear the value
+immediately.

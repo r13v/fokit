@@ -1,99 +1,203 @@
 ---
 title: Production recipes
-description: Compose generated and custom UI, load edit baselines, own async work, preserve accessibility, and test public behavior.
+description: Compose custom UI, manage edit baselines, submit safely, handle remote state, preserve accessibility, and test public behavior.
 showAskAi: false
 ---
 
 # Production recipes
 
-Use these recipes after the first generated form works. TanStack Form owns the
-editable state. Keep requests, caches, persistence, and product workflows in
-the application.
+Use this page after the first generated form works. Choose the recipe that
+matches the problem in your application.
 
-## Compose generated and bespoke UI
+| Problem | Use |
+| --- | --- |
+| Add product UI around generated fields | One binding with `kit.Form` and `kit.Fields` |
+| Replace the document being edited | A React `key` or `form.api.reset(nextInput)` |
+| Discard edits | A `type="reset"` button |
+| Save parsed data | The `value` argument in `onSubmit` |
+| Show a request failure | Application state with `role="alert"` |
+| Use remote options | Form context and `fromResource` |
+| Lock the complete form | The `disabled` or `readOnly` option |
+| Add a design-system control | `defineControl` and the full `ControlProps` contract |
 
-Create one binding. Render generated fields and subscribe to TanStack state in
-the same `kit.Form`.
+TanStack Form owns editable form state. The application owns requests, caches,
+persistence, navigation, permissions, and product workflow state.
+
+## Compose generated and custom UI
+
+Create one form binding for one form. Put generated fields, application
+actions, TanStack fields, and subscriptions inside the same `kit.Form`.
 
 ```tsx
 // [!include ~/snippets/production-recipes.tsx:composition]
 ```
 
-Use `form.api.Field` for an application-owned field, `form.api.FormGroup` for a
-group path, and `form.api.Subscribe` for derived UI. Do not create a second form
-binding for a custom panel on the same screen.
+Use `form.api.Field` when custom UI needs one field API. Use
+`form.api.Subscribe` when UI needs selected form state. Use methods such as
+`form.api.setFieldValue` for application actions that change form values.
+
+Do not copy a form value into React state. Two editable copies can become
+inconsistent. Do not create a second form binding for another panel that edits
+the same document.
+
+Use `kit.AutoForm` when the error summary and generated fields can render first.
+It renders custom children after the generated fields. Use `kit.Form` with
+`kit.Fields` when custom content needs another position or no error summary.
 
 ## Load an edit-form baseline
 
-Wait for the document before mounting the component that calls `kit.useForm`.
-Use the document identity as a React `key` when navigation can replace the
-edited document.
+Wait for the document before you mount the component that calls `kit.useForm`.
+Use the document ID as a React `key` when navigation can replace the document.
 
 ```tsx
 // [!include ~/snippets/production-recipes.tsx:edit-baseline]
 ```
 
-The definition is fixed for that mount. TanStack Form can adopt changed
-`defaultValues` while the form is untouched, but it protects touched work from
-that replacement. Do not use prop identity as an edit-document workflow.
-Remount for another document, or call `form.api.reset(nextInput)` after a
-deliberate save or reload.
+The form definition is fixed for one component mount. A changed
+`defaultValues` object updates TanStack Form values only while the form is
+untouched. After a user touches the form, TanStack Form preserves their work.
+
+Do not use this conditional update as a document navigation workflow. Remount
+the editor for a different document. Call `form.api.reset(nextInput)` only when
+the application intentionally replaces the current work.
+
+## Reset or discard changes
+
+A reset without arguments restores the current baseline. A reset with a value
+installs that schema input as the next baseline.
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:reset-baseline]
+```
+
+`kit.Form` handles the native reset event. It prevents the browser from
+resetting controls independently and calls `form.api.reset()`.
+
+Use these operations for different results:
+
+| Operation | Result |
+| --- | --- |
+| `form.api.reset()` | Restore the current baseline and clear form metadata. |
+| `form.api.reset(nextInput)` | Install `nextInput` as the clean baseline. |
+| Change `defaultValues` | Update an untouched form only. |
+| Change the editor `key` | Create a new form for another document. |
 
 ## Keep async submission in the application
 
-The submit callback can await an API request. TanStack Form keeps
-`isSubmitting` true while the promise is pending. After the server returns the
-canonical input, reset to install it as the new clean baseline.
+Return the request promise from `onSubmit`. TanStack Form keeps
+`isSubmitting` true until that promise settles. `kit.Submit` disables its button
+while validation or submission is in progress.
 
 ```tsx
 // [!include ~/snippets/production-recipes.tsx:async-submit]
 ```
 
-Transport failures remain application workflow state. Display them in the
-product UI or adapt them to the schema and TanStack error APIs when they are
-field validation results.
+Clear an old request error before each attempt. Render the new failure from
+application state. Reset the form only after the server returns a successful,
+canonical input.
+
+A transport failure is not a schema issue. Keep it out of the form error
+summary. If the server identifies invalid field values, adapt that response to
+the schema or the applicable TanStack field error API.
+
+The visible `kit.Submit` prevents normal duplicate clicks. If application code
+calls `form.api.handleSubmit()`, that code must also prevent concurrent calls.
+
+## Send schema output and reset with schema input
+
+Standard Schema can transform data. In that case, editable input and submitted
+output are different contracts.
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:parsed-output]
+```
+
+`onSubmit` receives these values:
+
+- `input` is the current `FormInput<Schema>`.
+- `value` is the parsed `FormOutput<Schema>`.
+- `form` is the current form binding.
+
+Send `value` when the server expects parsed output. Pass schema input to
+`form.api.reset`. If the server returns only output, convert it to editable
+input at the application boundary.
+
+Keep schema parsing deterministic. Form, Please parses once for validation and
+again to obtain output. The same input must have the same validity during one
+submit attempt.
 
 ## Pass request state through context
 
-Fetch before or beside the form. Pass the current request state through the
-form context. `fromResource` converts it into a synchronous UI resolver without
-adding a second cache.
+Load remote data before or beside the form. Convert the current request result
+to `ResourceState`, then pass it through form context. `fromResource` converts
+that state into synchronous UI values.
 
 ```tsx
 // [!include ~/snippets/production-recipes.tsx:context-resource]
 ```
 
-Each resolver sees the complete schema input and current context. This permits
-one resource to drive labels, descriptions, options, visibility, and disabled
-state while the application keeps ownership of retries and cancellation.
+The example derives select options, description text, and disabled state from
+one department resource. Each resolver receives the complete schema input and
+the current context.
+
+`fromResource` does not fetch, cache, retry, or cancel a request. The
+application or request library owns that work. A resolver must return
+immediately and must not update form state.
+
+See [Resource state](/resources) for pending, success, error, refresh, and
+TanStack Query examples.
+
+## Choose disabled or read-only mode
+
+Set form-wide interaction state when permissions or workflow state apply to
+all generated fields.
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:form-modes]
+```
+
+`disabled` disables generated controls and array actions. It also prevents
+`kit.Form` from submitting. `readOnly` requests read-only behavior from each
+control, but it does not disable the submit button.
+
+Omit the submit action outside edit mode. A custom control must implement both
+states according to its platform semantics.
 
 ## Preserve the accessibility contract
 
-Generated fields wire the structural slots to a control. A custom control must
-attach the supplied name, ID, ref, and ARIA relationships to its interactive
-element.
+Generated field slots connect labels, descriptions, and issue output to a
+control. A custom control must attach the supplied properties to its
+interactive element.
 
 ```tsx
 // [!include ~/snippets/production-recipes.tsx:accessible-control]
 ```
 
-Forward `blur`, honor `disabled`, `readOnly`, and `required`, and expose
-`meta.invalid`. Custom slots must preserve semantic grouping, labels, issue
-output, and usable buttons.
+A custom control must:
+
+1. Attach `input.id`, `input.name`, and `input.ref`.
+2. Attach `input["aria-describedby"]` and expose `meta.invalid`.
+3. Call `setValue` after a valid control change.
+4. Call `blur` from its blur event.
+5. Honor `disabled`, `readOnly`, and `required`.
+
+Custom slots must preserve semantic groups, labels, issue output, and usable
+buttons. Test keyboard input, focus, invalid state, and read-only behavior for
+each reusable custom control.
 
 ## Test the public experience
 
 Test the form through public package imports and visible behavior:
 
 1. Render the component that calls `kit.useForm`.
-2. Find controls through labels and roles.
-3. Enter schema input and submit through the visible button.
-4. Assert issues, focus, transformed output, and pending UI.
-5. Exercise application-owned request and resource branches separately.
+2. Find controls by their labels and roles.
+3. Enter schema input and submit with the visible button.
+4. Assert issues, focus, parsed output, and pending UI.
+5. Test request and resource branches as application behavior.
 
-Do not test private definition normalization or focus maps. Test a custom
-control once against the `ControlProps` contract, then test product forms as a
-user would operate them.
+Do not test private definition normalization or focus maps. Test a reusable
+custom control once against `ControlProps`. Test each product form as a user
+operates it.
 
-Read the [API reference](/api) for individual contracts and [Controls and
+Read the [API reference](/api) for individual contracts. Read [Controls and
 slots](/controls) for design-system integration.

@@ -42,7 +42,6 @@ export default defineConfig({
 				{ text: "Conditional fields", link: "/conditional-fields" },
 				{ text: "Arrays", link: "/arrays" },
 				{ text: "Controls & slots", link: "/controls" },
-				{ text: "Async multiselect", link: "/async-multiselect" },
 				{ text: "Resource state", link: "/resources" },
 				{ text: "Styling", link: "/styling" },
 			],
@@ -54,6 +53,10 @@ export default defineConfig({
 				{ text: "Examples", link: "/examples" },
 				{ text: "Material UI with Yup", link: "/examples/mui-yup" },
 				{ text: "Shadcn with Valibot", link: "/examples/shadcn-valibot" },
+				{
+					text: "Async multiselect",
+					link: "/examples/async-multiselect",
+				},
 				{ text: "Research grant", link: "/examples/research-grant" },
 				{ text: "Studio policies", link: "/examples/studio-policies" },
 				{ text: "Makerspace launch", link: "/examples/makerspace-launch" },

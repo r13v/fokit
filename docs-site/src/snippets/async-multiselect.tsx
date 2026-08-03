@@ -38,6 +38,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { z } from "zod"
 
 // [!region control]
+// [!region option-contract]
 export type AsyncMultiSelectOption = {
 	readonly value: string
 	readonly label: string
@@ -57,7 +58,9 @@ export type AsyncMultiSelectOptions = {
 	readonly placeholder?: string
 	readonly searchPlaceholder?: string
 	readonly emptyMessage?: string
+	readonly dialogLabel?: string
 }
+// [!endregion option-contract]
 
 const emptyOptions: readonly AsyncMultiSelectOption[] = []
 
@@ -78,6 +81,7 @@ function AsyncMultiSelectControl({
 	const debouncedSearch = useDebouncedValue(search, options.debounceMs ?? 250)
 	const searchRef = useRef<HTMLInputElement>(null)
 	const listRef = useRef<Array<HTMLElement | null>>([])
+	// [!region label-cache]
 	const optionCache = useRef(
 		new Map(
 			(options.initialOptions ?? []).map(
@@ -86,6 +90,7 @@ function AsyncMultiSelectControl({
 		),
 	)
 
+	// [!region query-state]
 	const optionsQuery = useQuery({
 		queryKey: [...options.queryKey, debouncedSearch],
 		queryFn: ({ signal }) => options.queryFn(debouncedSearch, signal),
@@ -93,6 +98,7 @@ function AsyncMultiSelectControl({
 		placeholderData: keepPreviousData,
 		staleTime: options.staleTime ?? 30_000,
 	})
+	// [!endregion query-state]
 
 	useEffect(() => {
 		for (const option of options.initialOptions ?? []) {
@@ -105,6 +111,7 @@ function AsyncMultiSelectControl({
 			optionCache.current.set(option.value, option)
 		}
 	}, [optionsQuery.data])
+	// [!endregion label-cache]
 
 	const normalizedSearch = normalizeSearch(search)
 	const availableOptions = useMemo(
@@ -281,7 +288,7 @@ function AsyncMultiSelectControl({
 					restoreFocus
 				>
 					<div
-						aria-label="City options"
+						aria-label={options.dialogLabel ?? "Options"}
 						className="async-multiselect__dropdown"
 						ref={refs.setFloating}
 						role="dialog"
@@ -427,19 +434,32 @@ function normalizeSearch(value: string): string {
 // [!endregion control]
 
 // [!region example]
-const cities = [
+// [!region schema-values]
+const initiallySelected = [
 	{ value: "tokyo", label: "Tokyo" },
 	{ value: "istanbul", label: "Istanbul" },
 	{ value: "moscow", label: "Moscow" },
 	{ value: "mumbai", label: "Mumbai" },
+] satisfies readonly AsyncMultiSelectOption[]
+
+const schema = z.object({
+	cityIds: z.array(z.string()).min(1, "Choose at least one city"),
+})
+
+const defaultValues = {
+	cityIds: initiallySelected.map((city) => city.value),
+} satisfies FormInput<typeof schema>
+// [!endregion schema-values]
+
+const cities = [
+	...initiallySelected,
 	{ value: "rome", label: "Rome" },
 	{ value: "berlin", label: "Berlin" },
 	{ value: "lisbon", label: "Lisbon" },
 	{ value: "paris", label: "Paris" },
 ] satisfies readonly AsyncMultiSelectOption[]
 
-const initiallySelected = cities.slice(0, 4)
-
+// [!region demo-query]
 async function searchCities(
 	search: string,
 	signal: AbortSignal,
@@ -451,15 +471,9 @@ async function searchCities(
 		normalizeSearch(city.label).includes(normalizedSearch),
 	)
 }
+// [!endregion demo-query]
 
-const schema = z.object({
-	cityIds: z.array(z.string()).min(1, "Choose at least one city"),
-})
-
-const defaultValues = {
-	cityIds: initiallySelected.map((city) => city.value),
-} satisfies FormInput<typeof schema>
-
+// [!region register-control]
 const kit = createFormKit({
 	controls: {
 		...createNativeControls(),
@@ -467,7 +481,9 @@ const kit = createFormKit({
 	},
 	slots: createDefaultSlots(),
 })
+// [!endregion register-control]
 
+// [!region field-definition]
 const definition = kit.defineForm(schema, {
 	ui: [
 		{
@@ -484,20 +500,25 @@ const definition = kit.defineForm(schema, {
 				placeholder: "Choose cities",
 				searchPlaceholder: "Search cities",
 				emptyMessage: "No cities match this search.",
+				dialogLabel: "City options",
 			},
 		},
 	],
 })
+// [!endregion field-definition]
 
-const queryClient = new QueryClient({
-	defaultOptions: {
-		queries: {
-			retry: false,
-		},
-	},
-})
-
+// [!region provider-submit]
 export function AsyncMultiSelectExample() {
+	const [queryClient] = useState(
+		() =>
+			new QueryClient({
+				defaultOptions: {
+					queries: {
+						retry: false,
+					},
+				},
+			}),
+	)
 	const [savedCityIds, setSavedCityIds] = useState<readonly string[]>()
 	const form = kit.useForm(definition, {
 		defaultValues,
@@ -530,6 +551,7 @@ export function AsyncMultiSelectExample() {
 		</QueryClientProvider>
 	)
 }
+// [!endregion provider-submit]
 
 function abortableDelay(delayMs: number, signal: AbortSignal): Promise<void> {
 	if (signal.aborted) {

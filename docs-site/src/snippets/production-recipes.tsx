@@ -6,6 +6,8 @@ import {
 	type ControlProps,
 	createFormKit,
 	defineControl,
+	type FormInput,
+	type FormOutput,
 	fromResource,
 	type ResourceState,
 	type UiResolver,
@@ -13,6 +15,7 @@ import {
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
 import { nativeFormKit } from "form-please/preset-native"
+import { useState } from "react"
 import { z } from "zod"
 
 const profileSchema = z.object({
@@ -55,11 +58,21 @@ function ProfileForm() {
 	const form = nativeFormKit.useForm(profileDefinition, {
 		defaultValues: emptyProfile,
 	})
+	const Field = form.api.Field
 	const Subscribe = form.api.Subscribe
 
 	return (
 		<nativeFormKit.Form form={form}>
 			<nativeFormKit.Fields />
+			<Field name="email">
+				{(field) => <output>Current email: {field.state.value}</output>}
+			</Field>
+			<button
+				type="button"
+				onClick={() => form.api.setFieldValue("department", "Research")}
+			>
+				Use Research department
+			</button>
 			<Subscribe selector={(state) => state.isDirty}>
 				{(isDirty) => {
 					if (isDirty) return <output>Unsaved changes</output>
@@ -94,19 +107,31 @@ async function updateProfile(profile: Profile): Promise<Profile> {
 	return profile
 }
 
+function getRequestErrorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message
+	return "The profile could not be saved"
+}
+
 // [!region async-submit]
 function SavingProfile({ profile }: { readonly profile: Profile }) {
+	const [requestError, setRequestError] = useState<string>()
 	const form = nativeFormKit.useForm(profileDefinition, {
 		defaultValues: profile,
 		onSubmit: async ({ value, form }) => {
-			const saved = await updateProfile(value)
-			form.api.reset(saved)
+			setRequestError(undefined)
+			try {
+				const saved = await updateProfile(value)
+				form.api.reset(saved)
+			} catch (error) {
+				setRequestError(getRequestErrorMessage(error))
+			}
 		},
 	})
 	const Subscribe = form.api.Subscribe
 
 	return (
 		<nativeFormKit.AutoForm form={form}>
+			{requestError !== undefined && <p role="alert">{requestError}</p>}
 			<Subscribe selector={(state) => state.isSubmitting}>
 				{(isSubmitting) => {
 					if (isSubmitting) {
@@ -121,7 +146,92 @@ function SavingProfile({ profile }: { readonly profile: Profile }) {
 }
 // [!endregion async-submit]
 
-type DepartmentResource = ResourceState<readonly string[], Error>
+// [!region reset-baseline]
+function ResettableProfile({ profile }: { readonly profile: Profile }) {
+	const form = nativeFormKit.useForm(profileDefinition, {
+		defaultValues: profile,
+		onSubmit: async ({ value, form }) => {
+			const saved = await updateProfile(value)
+			form.api.reset(saved)
+		},
+	})
+	const Subscribe = form.api.Subscribe
+
+	return (
+		<nativeFormKit.AutoForm form={form}>
+			<Subscribe selector={(state) => state.isDirty}>
+				{(isDirty) => (
+					<button disabled={!isDirty} type="reset">
+						Discard changes
+					</button>
+				)}
+			</Subscribe>
+			<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
+		</nativeFormKit.AutoForm>
+	)
+}
+// [!endregion reset-baseline]
+
+const normalizedProfileSchema = z.object({
+	id: z.string(),
+	name: z.string().trim().min(1),
+	email: z.email().transform((email) => email.toLowerCase()),
+})
+
+type NormalizedProfileInput = FormInput<typeof normalizedProfileSchema>
+type NormalizedProfileOutput = FormOutput<typeof normalizedProfileSchema>
+
+const normalizedProfileDefinition = nativeFormKit.defineForm(
+	normalizedProfileSchema,
+	{
+		ui: [
+			{ kind: "field", path: "name", control: "text", label: "Name" },
+			{
+				kind: "field",
+				path: "email",
+				control: "text",
+				label: "Email",
+				options: { type: "email" },
+			},
+		],
+	},
+)
+
+async function saveNormalizedProfile(
+	profile: NormalizedProfileOutput,
+): Promise<NormalizedProfileInput> {
+	return profile
+}
+
+// [!region parsed-output]
+function NormalizedProfileEditor({
+	profile,
+}: {
+	readonly profile: NormalizedProfileInput
+}) {
+	const form = nativeFormKit.useForm(normalizedProfileDefinition, {
+		defaultValues: profile,
+		onSubmit: async ({ value, form }) => {
+			// value has trimmed names and lower-case email addresses.
+			const savedInput = await saveNormalizedProfile(value)
+			// reset requires schema input, not transformed schema output.
+			form.api.reset(savedInput)
+		},
+	})
+
+	return (
+		<nativeFormKit.AutoForm form={form}>
+			<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
+		</nativeFormKit.AutoForm>
+	)
+}
+// [!endregion parsed-output]
+
+type DepartmentOption = {
+	readonly value: string
+	readonly label: string
+}
+type DepartmentResource = ResourceState<readonly DepartmentOption[], Error>
 type DirectoryContext = {
 	readonly departments: DepartmentResource
 }
@@ -139,6 +249,21 @@ const departmentDescription = fromResource(selectDepartments, {
 	error: ({ error }) => error.message,
 })
 
+const departmentOptions = fromResource(selectDepartments, {
+	pending: () => ({
+		emptyOption: { label: "Loading departments" },
+		options: [],
+	}),
+	success: ({ value }) => ({
+		emptyOption: { label: "Select a department" },
+		options: value,
+	}),
+	error: () => ({
+		emptyOption: { label: "Departments unavailable" },
+		options: [],
+	}),
+})
+
 const directoryKit = nativeFormKit.forContext<DirectoryContext>()
 
 // [!region context-resource]
@@ -148,11 +273,12 @@ const directoryDefinition = directoryKit.defineForm(profileSchema, {
 		{
 			kind: "field",
 			path: "department",
-			control: "text",
+			control: "select",
 			label: "Department",
 			description: departmentDescription,
+			options: departmentOptions,
 			disabled: (_values, { context }) =>
-				context.departments.status === "pending",
+				context.departments.status !== "success",
 		},
 	],
 })
@@ -165,6 +291,32 @@ function DirectoryProfile({ context }: { readonly context: DirectoryContext }) {
 	return <directoryKit.AutoForm form={form} />
 }
 // [!endregion context-resource]
+
+type ProfileMode = "edit" | "read-only" | "disabled"
+
+// [!region form-modes]
+function ProfileByMode({
+	profile,
+	mode,
+}: {
+	readonly profile: Profile
+	readonly mode: ProfileMode
+}) {
+	const form = nativeFormKit.useForm(profileDefinition, {
+		defaultValues: profile,
+		disabled: mode === "disabled",
+		readOnly: mode === "read-only",
+	})
+
+	return (
+		<nativeFormKit.AutoForm form={form}>
+			{mode === "edit" && (
+				<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
+			)}
+		</nativeFormKit.AutoForm>
+	)
+}
+// [!endregion form-modes]
 
 type CurrencyOptions = {
 	readonly currency: string

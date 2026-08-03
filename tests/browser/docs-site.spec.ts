@@ -34,7 +34,7 @@ test.describe("Form, Please documentation", () => {
 		await expect(
 			page.getByRole("heading", {
 				level: 2,
-				name: "Compose generated and bespoke UI",
+				name: "Compose generated and custom UI",
 			}),
 		).toBeVisible()
 		expect(errors).toEqual([])
@@ -106,7 +106,7 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
-	test("renders and submits the restored guide demos", async ({ page }) => {
+	test("renders and submits the live documentation demos", async ({ page }) => {
 		const errors = pageErrors(page)
 
 		await page.goto("./")
@@ -125,7 +125,7 @@ test.describe("Form, Please documentation", () => {
 			"Saved Ada Lovelace with 1 contact",
 		)
 
-		await page.goto("./async-multiselect")
+		await page.goto("./examples/async-multiselect")
 		await expect(page.getByTestId("async-multiselect-demo")).toBeVisible()
 		await page.getByRole("button", { name: "Save selection" }).click()
 		await expect(page.getByTestId("async-multiselect-output")).toContainText(

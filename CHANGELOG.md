@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/r13v/form-please/compare/v1.0.0...v1.1.0) (2026-08-03)
+
+
+### Features
+
+* use Tanstack Form runtime ([037ad1a](https://github.com/r13v/form-please/commit/037ad1acd5b970cbb7277d14e4052260ae9a86eb))
+
 ## 1.0.0 (2026-07-31)
 
 

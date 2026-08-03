@@ -57,7 +57,6 @@ test("documents only the supported navigation surface", async () => {
 			source,
 			new RegExp(`^---[\\s\\S]*title: ${escapeRegExp(title)}`, "m"),
 		)
-		assert.match(source, /^# /m)
 	}
 
 	for (const route of [

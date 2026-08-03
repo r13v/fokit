@@ -111,7 +111,7 @@ test.describe("Form, Please documentation", () => {
 
 		await page.goto("./")
 		await expect(
-			page.getByLabel("Live Form, Please profile form"),
+			page.getByLabel("Live 'Form, Please' profile form"),
 		).toBeVisible()
 		await page.getByRole("button", { name: "Save profile" }).click()
 		await expect(page.getByTestId("overview-output")).toContainText(

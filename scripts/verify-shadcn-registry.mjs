@@ -53,7 +53,7 @@ try {
 	const item = await loadRegistryItem("shadcn-form-kit", {
 		cwd: rootDirectory,
 	})
-	assert.ok(item.dependencies?.includes("form-please@1.1.0"))
+	assert.ok(item.dependencies?.includes("form-please"))
 	assert.ok(item.dependencies?.includes("lucide-react"))
 	assert.ok(item.registryDependencies?.includes("utils"))
 	assert.equal(item.files?.[0]?.target, "@ui/form-please/shadcn-form-kit.tsx")
@@ -63,18 +63,17 @@ try {
 	for (const controlName of controlNames) {
 		assert.match(source, new RegExp(`\\n\\t${controlName}: defineControl<`))
 	}
-	assert.match(
-		source,
-		/switch: defineControl<boolean, ShadcnSwitchOptions>\(\{[\s\S]*?mode: "native",\n\s*serialize\(value, details\)/,
-		"switch must serialize boolean state when native controls are hidden or disabled",
-	)
+	for (const retiredContract of ["formData", "serialize(", "valuePolicy"]) {
+		assert.doesNotMatch(source, new RegExp(retiredContract.replace("(", "\\(")))
+	}
+	assert.match(source, /export const shadcnFormKit = createFormKit/)
 
 	const tarballPath = await packTarball(tempRoot)
 	const fixtureDirectory = join(tempRoot, "base-ui-app")
 	const installItem = {
 		...item,
 		dependencies: item.dependencies?.filter(
-			(dependency) => dependency !== "form-please@1.1.0",
+			(dependency) => dependency !== "form-please",
 		),
 	}
 	const { server: registryServer, url: registryUrl } =
@@ -185,14 +184,10 @@ async function createFixture(directory, tarballPath, registryUrl) {
 	await writeJson(join(directory, "tsconfig.json"), {
 		compilerOptions: {
 			target: "ES2022",
-			useDefineForClassFields: true,
 			lib: ["ES2022", "DOM", "DOM.Iterable"],
-			allowJs: false,
 			skipLibCheck: true,
 			esModuleInterop: true,
-			allowSyntheticDefaultImports: true,
 			strict: true,
-			forceConsistentCasingInFileNames: true,
 			module: "ESNext",
 			moduleResolution: "Bundler",
 			resolveJsonModule: true,

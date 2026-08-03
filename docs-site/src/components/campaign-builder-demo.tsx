@@ -10,7 +10,7 @@ export const CampaignBuilderDemo = Object.assign(
 	{
 		toMarkdown() {
 			return markdownFallback(
-				"The campaign builder runs in a browser. Seven templates share audience, schedule, payment, cleanup, and create-or-edit network behavior.",
+				"The campaign builder runs in a browser. Seven templates share audience, schedule, payment, preserved conditional values, and create-or-edit network behavior.",
 				"docs-site/src/snippets/complex-campaign-builder.tsx",
 			)
 		},

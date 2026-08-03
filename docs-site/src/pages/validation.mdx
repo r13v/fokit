@@ -1,0 +1,149 @@
+---
+title: Validation and submission
+description: Understand Standard Schema validation, transformed output, errors, and focus behavior.
+showAskAi: false
+---
+
+# Validation and submission
+
+Use the definition schema as the single form-level validation contract. The
+schema validates the complete TanStack Form input. It also produces the value
+that `onSubmit` receives.
+
+## Build the validation schema
+
+Put field rules, cross-field rules, and transforms in the Standard Schema. This
+Zod schema validates reserved seats against the total capacity. It also
+transforms both seat values from strings to numbers.
+
+```tsx
+// [!include ~/snippets/validation-guide.tsx:schema]
+```
+
+Give a cross-field issue the path of the field that the user must change. Form,
+Please converts Standard Schema paths to TanStack paths. Array indexes use
+bracket syntax, such as `contacts[2].email`.
+
+## Connect fields to the schema
+
+Pass the schema to `kit.defineForm`. The generated fields edit the schema input.
+
+```tsx
+// [!include ~/snippets/validation-guide.tsx:definition]
+```
+
+The `required` property changes the rendered control and its accessibility
+state. It does not add a schema rule. The schema must reject a missing value.
+
+`kit.Form` sets `noValidate` on the native form element. Browser constraints,
+such as `required` and `type="email"`, do not replace schema validation.
+
+## Understand validation timing
+
+Form, Please configures this validation sequence:
+
+| User action | Result |
+| --- | --- |
+| Edit before the first submit | The form does not run change validation. |
+| Submit for the first time | TanStack Form validates the complete schema input. |
+| Edit after the first submit attempt | TanStack Form validates on each change. |
+| Submit valid input | Form, Please parses the input again and calls `onSubmit`. |
+
+The first submit attempt can be valid or invalid. After that attempt, each edit
+runs the complete form-level schema. Form, Please does not configure a debounce
+or a separate field-validation cache.
+
+## Display issues
+
+Standard Schema issues become public `FormIssue` values:
+
+```ts
+type FormIssue = {
+	readonly message: string
+	readonly path?: string
+}
+```
+
+A generated control receives all current issues in `meta.errors`. It receives
+the issues that the UI can show in `meta.displayErrors`. The default field slot
+shows issues after the field is touched or after a submit attempt.
+
+`kit.AutoForm` also renders an error summary. The summary contains issues that
+do not belong to a visible generated control. It also contains issues for
+disabled generated controls.
+
+Omit the issue path when the user cannot fix the issue in one field:
+
+```tsx
+// [!include ~/snippets/validation-guide.tsx:form-issue]
+```
+
+Use `kit.Form` and `kit.Fields` for manual composition. In that case, the
+application must render its own summary for form-level and hidden-field issues.
+
+## Focus the first issue
+
+After an invalid submit, Form, Please checks visible generated controls in
+document order. It focuses the first control that has an issue and can receive
+focus.
+
+If no generated control can receive focus, `kit.AutoForm` focuses the first
+error-summary item. A manually composed `kit.Form` has no automatic summary
+fallback.
+
+Hidden fields keep their values and remain part of schema validation. A hidden
+field has no generated control, so its issue appears in the `kit.AutoForm`
+summary. The schema must match the form's visibility rules when a hidden value
+must not block submission.
+
+## Transformed output
+
+Standard Schema validation does not store transformed output in TanStack Form.
+"Form, Please" follows the [TanStack Form submission recommendation](https://tanstack.com/form/v1/docs/framework/react/guides/submission-handling#transforming-data-with-standard-schemas):
+it parses the same input a second time after successful validation.
+
+- The first parse validates through TanStack Form.
+- The second parse produces `FormOutput<Schema>` for `onSubmit`.
+- There is no custom validation cache.
+
+Keep schema validation deterministic. The same input must have the same
+validity during one submit attempt. Form, Please rejects the submit with an
+invariant error if the second parse returns issues after the first parse
+succeeded.
+
+## Submit input and output
+
+`onSubmit` receives three values:
+
+- `value` is the transformed `FormOutput<Schema>`.
+- `input` is the editable `FormInput<Schema>`.
+- `form` is the current form binding.
+
+This example sends the transformed `value` to the server. It resets the editable
+baseline with `input` after a successful request.
+
+```tsx
+// [!include ~/snippets/validation-guide.tsx:submission]
+```
+
+`onSubmit` does not receive submit metadata. It can return a promise.
+`form.api.state.isSubmitting` remains true until the promise settles.
+`kit.Submit` is disabled while the form validates or submits.
+
+Server validation is still required. A request failure is not a Standard Schema
+issue and does not appear in the form summary. Store and render request failures
+in application state, as the example does.
+
+## Set default Zod messages
+
+"Form, Please" displays the messages that the Standard Schema returns. Configure
+Zod once, before form validation runs, when the application needs global
+defaults:
+
+```ts
+// [!include ~/snippets/zod-error-messages.ts]
+```
+
+Return `undefined` for issue types that must use the Zod default. A schema-level
+message has priority over `customError`. Do not call `z.config()` during a
+component render because it changes global Zod configuration.

@@ -1,66 +1,47 @@
 ---
 title: Examples
-description: Explore an official Material UI preset, an application-owned shadcn adapter, production-shaped forms, and live state workflows.
+description: Explore design-system integrations and production-shaped forms built on the TanStack Form runtime.
 showAskAi: false
 ---
 
 # Examples
 
-Use these examples to inspect complete product workflows and development tools.
-All examples use public Form, Please APIs and run without a remote server.
+These examples use the current public "Form, Please" API. Each live form runs in
+the browser with TanStack Form as its state and validation runtime.
 
 ## Design-system integration
 
-- [Material UI with Yup](/examples/mui-yup) — use the official Material UI 9
-  preset, its 22 scenario-specific controls, and direct Standard Schema
-  validation with Yup.
-- [Shadcn with Valibot](/examples/shadcn-valibot) — install an
-  application-owned Base UI adapter, exercise all 18 controls, and validate a
-  workshop proposal through Standard Schema without Zod.
+- [Material UI with Yup](/examples/mui-yup) uses the official Material UI
+  preset and validates the form with Yup through Standard Schema.
+- [Shadcn with Valibot](/examples/shadcn-valibot) uses an application-owned
+  control and slot adapter. Valibot validates the same definition.
 
-## Complex product workflows
+## Custom control integration
 
-Each product example owns a complete Standard Schema and a coherent workflow.
-It sends typed output through deterministic fake requests in TanStack Query.
+- [Async multiselect](/examples/async-multiselect) stores selected IDs in one
+  field. TanStack Query loads options, and Floating UI manages the popup.
 
-- [Research grant application](/examples/research-grant) — conditional
-  applicant identity, an asynchronous registry, cascade cleanup, live preview,
-  and two-step submission.
-- [Creative studio policies](/examples/studio-policies) — two loaded resources,
-  cross-section rules, nested policy groups, a movable equipment array, and two
-  writes.
-- [Makerspace launch wizard](/examples/makerspace-launch) — four form-owned
-  stages, address resolution, coordinates, files, gallery rows, capacity
-  pricing, four promotions, and three writes.
-- [Learning cohort editor](/examples/learning-cohort) — asynchronous title
-  suggestions, session and pricing matrices, media, four offer subforms, and
-  save-conflict recovery.
-- [Membership ladder](/examples/membership-ladder) — four cascading tiers,
-  nested benefit arrays, workspace connection, and calendar-assisted pauses.
-- [Campaign builder](/examples/campaign-builder) — seven payload variants that
-  share audience, schedule, channel, payment, and create-or-edit behavior.
+## Product workflows
 
-## State and developer workflows
+- [Research grant application](/examples/research-grant) combines conditional
+  applicant fields, registry search, a live preview, and two submission steps.
+- [Creative studio policies](/examples/studio-policies) passes an asynchronous
+  equipment catalog through form context and adapts it with `fromResource`.
+- [Makerspace launch wizard](/examples/makerspace-launch) keeps the active stage
+  in form values and combines address lookup, media, pricing, and promotions.
+- [Learning cohort editor](/examples/learning-cohort) combines remote title
+  suggestions, two movable arrays, media, offers, and conflict feedback.
+- [Membership ladder](/examples/membership-ladder) combines nested benefit
+  arrays, a workspace action, pause shortcuts, and cross-tier validation.
+- [Campaign builder](/examples/campaign-builder) supports seven conditional
+  templates with shared audience, schedule, payment, and create-or-edit flows.
 
-- [History workflow](/examples/history) — navigate committed document groups,
-  export a journal, replay it without effects, and validate an import.
-- [Persistent draft workflow](/examples/persistence) — restore, observe, save,
-  and delete a versioned browser draft.
-- [Redux DevTools workflow](/examples/devtools) — inspect committed events,
-  restore known local documents, and disconnect the integration without
-  stopping the form.
+## Runtime ownership
 
-## What to look for
+"Form, Please" resolves definitions and renders controls. TanStack Form owns
+editable state, array operations, validation, and submission. TanStack Query
+owns request state in the examples that load or save data.
 
-Change a discriminator and watch inactive values leave the form transaction.
-Reorder array rows and confirm their state moves with them. Trigger a fake
-request and keep editing while request state remains outside Form, Please.
-
-In the History example, edit the title and navigate the retained groups. In the
-Persistence example, save a note and reload the page. In the DevTools example,
-inspect committed events and restore an earlier document.
-
-The examples make ownership visible. Form, Please owns editable values and
-form semantics. The optional features own their document history, draft
-encoding, or diagnostic connection. TanStack Query owns remote lifecycle and
-cache state.
+Hidden fields preserve their values. Conditional schemas decide which values
+are required for the active branch. Successful submission parses the schema a
+second time and passes transformed output to the submit callback.

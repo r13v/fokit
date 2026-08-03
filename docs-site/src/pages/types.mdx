@@ -1,236 +1,238 @@
 ---
-title: Types
-description: Use the TypeScript contracts that carry schema input and output through definitions, controls, hooks, slots, and server results.
+title: TypeScript
+description: Public types for schema values, field paths, definitions, controls, form bindings, slots, and resources.
 showAskAi: false
 ---
 
-# TypeScript that follows the form
+# TypeScript
 
-Most applications need only a few exported types. Start with schema input and
-output, let `kit.defineForm` infer paths and controls, and reach for explicit
-contracts only at component or server boundaries.
+Import the types on this page from `form-please`.
 
-## Input and output
-
-Standard Schema may transform submitted values. Form, Please keeps the editable input
-and validated output separate:
-
-```ts twoslash
-import type { FormInput, FormOutput } from "form-please"
-import { z } from "zod"
-
-const schema = z.object({
-	name: z.string(),
-	age: z.string().transform(Number),
-})
-
-type Draft = FormInput<typeof schema>
-type Saved = FormOutput<typeof schema>
+```ts
+import type { FieldPath, FormInput, FormOutput } from "form-please"
 ```
 
-The form store contains `Draft`. A successful submit handler receives `Saved`.
-Validation output never replaces editable values automatically.
+This page covers every type exported from the root entry point. Types for
+native controls, default slots, and Material UI use their documented subpath
+entries.
 
-## Typed definitions and paths
+For functions, components, options, and runtime behavior, read the [API
+reference](/api).
 
-`FormDefinition` connects one schema, a control registry, and a readonly UI
-tree. `kit.defineForm` infers the useful version, checks field paths, and
-rejects incompatible controls.
+## Choose the type you need
 
-The UI node families are:
+Start with these types in application code:
 
-- `FieldNode` for one typed field path and control;
-- `SectionNode` for grouping and responsive columns;
-- `ArrayNode` for repeatable data;
-- `RenderNode` for form-local React content with no field contract;
-- `RelativeUiNode` for paths inside an array item.
+| Task | Type |
+| --- | --- |
+| Type form state and `defaultValues`. | `FormInput<Schema>` |
+| Type a successful submit result. | `FormOutput<Schema>` |
+| Accept a valid field name. | `FieldPath<Value>` |
+| Type shared form UI. | `UiNode<Input, Controls, ...>` |
+| Type a custom control component. | `ControlProps<Value, Options, Context>` |
 
-Use path types when an application API accepts a reusable form path:
+Most calls to `defineForm`, `useForm`, and `createFormKit` infer the remaining
+types. Add an explicit type when you export reusable configuration or build a
+library integration.
 
-```ts twoslash
-import type { ArrayFieldPath, FieldPath, PathValue } from "form-please"
+## Schema input and output
 
-type Draft = {
-	contacts: readonly { email: string }[]
-	name: string
-}
+`StandardSchema<Input, Output>` is the common schema contract. Form, Please
+works with any library that implements this contract.
 
-type AnyField = FieldPath<Draft>
-type AnyArray = ArrayFieldPath<Draft>
-type ContactEmail = PathValue<Draft, "contacts.0.email">
+`FormInput<Schema>` is the editable value stored in TanStack Form.
+`FormOutput<Schema>` is the parsed value passed to `onSubmit`. These types can
+be different when the schema transforms data.
+
+```tsx
+// [!include ~/snippets/types-guide.tsx:schema-types]
 ```
 
-At runtime, paths use canonical dotted strings such as
-`contacts.0.email`.
-
-React render components accept `RenderNodeProps`, containing effective
-`disabled` and `readOnly` booleans. Render-node `visible`, `disabled`, and
-`readOnly` resolver functions use the same schema-bound values as other nodes.
-
-## Form instances and context
-
-`FormInstance<Schema, Context>` carries schema and runtime context through
-commands, selectors, and derived UI. `CreateFormOptions<Schema, Context>`
-describes `kit.createForm` options. `FormRuntimeOptions<Schema, Context>` omits
-the fixed `defaultValues` and `middleware` values and is accepted when an
-existing instance is bound to React.
-
-```ts twoslash
-import type {
-	FormInstance,
-	FormRuntimeOptions,
-	CreateFormOptions,
-} from "form-please"
-import { z } from "zod"
-
-const schema = z.object({ name: z.string() })
-type Context = {
-	readonly locked: boolean
-}
-
-type ProfileForm = FormInstance<typeof schema, Context>
-type ProfileOptions = CreateFormOptions<typeof schema, Context>
-type ProfileRuntimeOptions = FormRuntimeOptions<typeof schema, Context>
-```
-
-Bind the contract once with `kit.forContext<Context>()`. That view is the same
-runtime kit object, but its definition, creation, and binding APIs all agree on
-`Context`. A definition records its minimum context requirement. Therefore a
-concrete context is required by `createForm`, `useCreateForm`, `useBindForm`,
-`AutoForm`, and React 19 `ActionForm`; a runtime context may include additional
-fields and the created `FormInstance` preserves their type. Without
-`forContext`, the context contract is `unknown` and the option remains optional.
-
-Use context for loaded option lists, permissions, or product state that affects
-UI but must never become submitted form data.
-
-`UiResolverValues<Input>` maps every canonical `FieldPath<Input>` to its
-`PathValue`. It is the readonly object seen by a UI resolver; schema-bound
-resolvers infer it automatically. `UiResolver<Result, Input, Context>` names the
-complete function type when a standalone resolver needs an annotation.
-
-## Resource states
-
-`ResourceState<Value, Error = unknown>` is the minimal application-owned state
-accepted by `matchResource` and `fromResource`:
-
-```ts twoslash
-import type { ResourceState } from "form-please"
-
-type Cities = ResourceState<
-	readonly { readonly value: string; readonly label: string }[],
-	Error
->
-```
-
-It is a discriminated union of `{ status: "pending" }`,
-`{ status: "success", value }`, and `{ status: "error", error }`. Applications
-may add properties to those branches. For example, a successful query resource
-can add a nested discriminated `refresh` state; the active branch remains fully
-narrowed inside each matcher case.
-
-This type represents current availability only. It does not prescribe cache,
-retry, cancellation, stale-data, or submission policy, and it does not accept a
-promise in place of a resource state.
-
-## Custom control inference
-
-`defineControl` establishes the accepted value, options, and optional context.
-`createFormKit` preserves literal registry names and carries those contracts
-into every definition.
-
-The main control types are:
+Use the input type for `defaultValues`, field paths, controls, and resolvers.
+Use the output type after successful submission. Do not use the output type to
+describe form state.
 
 | Type | Purpose |
 | --- | --- |
-| `ControlProps<Value, Options, Context>` | Props delivered to the adapter component |
-| `ControlValueOf` | Extract the registered value type |
-| `ControlOptionsOf` | Extract the options type |
-| `ControlContextOf` | Extract context requirements |
-| `IsValidControlValue` | Reject values outside the supported Form, Please data model |
+| `StandardSchema<Input, Output>` | Describes a Standard Schema validator. `Output` defaults to `Input`. |
+| `FormInput<Schema>` | Extracts the schema input type. |
+| `FormOutput<Schema>` | Extracts the schema output type. |
+| `DeepReadonly<Value>` | Recursively models a readonly value. It does not freeze data at runtime. |
 
-Import the shipped control option types from `form-please/native-controls`.
-They include `NativeTextOptions`, `NativeTextareaOptions`,
-`NativeSelectOptions`, `NativeSelectEmptyOption`, `NativeNumberOptions`,
-`NativeDateOptions`, `NativeTimeOptions`, and `NativeFileOptions`.
+## Field paths
 
-See [Controls and design systems](/guides/controls) for a complete adapter.
+Path types use the schema input shape and TanStack Form path syntax. Array
+indexes use brackets, such as `contacts[0].email`.
 
-## State and validation
+```ts
+// [!include ~/snippets/types-guide.tsx:path-types]
+```
 
-Selectors receive an immutable `FormSnapshot`:
-
-| Type | Contains |
+| Type | Result |
 | --- | --- |
-| `FormSnapshot` | Values, resolved UI, metadata, raw and visible errors, validation and submission state |
-| `FormIssue` | Client issue with schema, server, or manual source |
-| `DisplayFormErrors` | Only form and field issues currently exposed to the user |
-| `ValidationStatus` | `unvalidated`, `valid`, or `invalid` |
-| `ValidationOptions` | Mode, revalidation mode, and async debounce |
-| `ValueChange<Input>` | A transaction change whose set path stays correlated with its value type |
+| `FieldPath<Value>` | All valid string paths in `Value`. |
+| `PathValue<Value, Path>` | The value at one valid path. |
+| `ArrayFieldPath<Value>` | Only paths whose non-null value is a readonly or mutable array. |
 
-`validatePaths` and `focusFirstError` accept readonly arrays of
-`FieldPath<FormInput<Schema>>`. `extendValueChanges` keeps additions correlated
-with the same input type when a `beforeUpdate` hook extends a proposal.
+Use `FieldPath` when a component or helper accepts any field. Add a second path
+generic when its value type must stay linked to the selected path. The
+`FieldUpdate` type in the example keeps this relationship.
 
-Read [Transaction hooks](/guides/transaction-hooks) before using update event
-types directly.
+## Definition and UI types
 
-Read [Validation and errors](/guides/validation) before using issue types
-directly.
+`kit.defineForm()` accepts a UI tree and returns a normalized
+`FormDefinition`. Let the call infer the type for a definition that stays in
+one file.
 
-## Structural slot props
+Use `UiNode` when the UI tree is declared separately:
 
-Design-system adapters usually need one of six contracts:
+```tsx
+// [!include ~/snippets/types-guide.tsx:ui-types]
+```
 
-- `FieldSlotProps`;
-- `SectionSlotProps`;
-- `ArraySlotProps`;
-- `ArrayItemSlotProps`;
-- `ErrorMessageSlotProps`;
-- `SubmitSlotProps`.
-
-Structural contracts carry root props that preserve the Form, Please DOM
-protocol and accessible relationships. `SubmitSlotProps` carries owned button
-props, current input values, and submission state. The default-slot message contract is described by
-`DefaultSlotsI18n`, `DefaultArrayAddI18nData`,
-`DefaultArrayItemI18nData`, and `DefaultSlotI18nValue`; import those types from
-`form-please/default-slots`.
-
-## Server results
-
-Server APIs return discriminated serializable results:
+The node generics carry the schema input, control registry, context, slot
+options, and grid values through the complete tree.
 
 | Type | Purpose |
 | --- | --- |
-| `ParseResult<Output>` | Parsed output or normalized issues with `reply()` |
-| `FormResult` | Success or error transport understood by `ActionForm` |
-| `SubmissionIssue` | Serializable schema or server issue |
-| `ParseFormDataOptions` | Safety limits for entry count, paths, depth, and array indexes |
+| `UiNode<Input, Controls, ...>` | Union of all supported source nodes. |
+| `FieldNode<Input, Controls, ...>` | Field node with compatible paths, controls, and options. |
+| `SectionNode<Input, Controls, ...>` | Section node with typed child nodes. |
+| `ArrayNode<Input, Controls, ...>` | Array node whose child paths are relative to one item. |
+| `RenderNode<Input, Context>` | React component node with resolved interaction state. |
 
-Import server-only types from `form-please/server`:
+`FormDefinition<Schema, Controls, ...>` is the normalized, readonly result of
+`defineForm`. It contains the schema, grid, and normalized nodes. Do not create
+this object manually. Its generic parameters preserve the kit contracts.
 
-```ts twoslash
-import type {
-	FormResult,
-	ParseFormDataOptions,
-	SubmissionIssue,
-} from "form-please/server"
+### Resolver types
 
-const result: FormResult = {
-	status: "error",
-	issues: [
-		{
-			source: "server",
-			message: "Try again",
-		} satisfies SubmissionIssue,
-	],
-}
+A resolvable UI property accepts a static value or a synchronous resolver.
+Resolvers receive the complete schema input and `{ context }`.
 
-const limits: ParseFormDataOptions = {
-	maxEntries: 500,
-}
+```ts
+type Visibility = UiResolver<boolean, ProfileInput, ProfileContext>
+
+const canShowProfile: Visibility = (values, { context }) =>
+  context.canEdit && values.name.length > 0
 ```
 
-Use the [API reference](/api) for runtime signatures and entry-point
-boundaries.
+| Type | Purpose |
+| --- | --- |
+| `UiResolver<Result, Input, Context>` | Synchronous function that returns a derived UI value. |
+| `UiResolverValues<Input>` | Deeply readonly resolver values. |
+| `UiResolverDetails<Context>` | Object that contains deeply readonly `context`. |
+| `Resolvable<Value, Input, Context>` | Static `Value` or a `UiResolver` that returns it. |
+| `ReactUiContent` | A React element or string accepted by UI content properties. |
+
+`Resolvable` excludes a static function when `Value` is callable. This rule
+prevents Form, Please from confusing a component with a resolver.
+
+`DefaultGridValue` is the default grid union: `1 | 2 | 3 | 4`. A custom kit
+infers its grid union from `createFormKit({ grid })`.
+
+### Render-node types
+
+`RenderNodeComponent` is a React component that receives
+`RenderNodeProps`. The props contain only `disabled` and `readOnly`. Use
+`RenderNode<Input, Context>` to type the complete node.
+
+## Control types
+
+`defineControl<Value, Options, Context>()` returns a typed
+`ControlDefinition`. The value type controls which schema fields can use the
+control. The context type controls which form kits can use it.
+
+```tsx
+// [!include ~/snippets/types-guide.tsx:control-types]
+```
+
+| Type | Purpose |
+| --- | --- |
+| `ControlProps<Value, Options, Context>` | Props passed to a custom control component. |
+| `ControlDefinition<Value, Options, Context>` | Typed control returned by `defineControl`. |
+| `DefineControlInput<Value, Options, Context>` | Input object accepted by `defineControl`. |
+| `ControlDefinitionRegistry` | Readonly record of named control definitions. |
+| `AnyControlDefinition` | Non-specific control type used in registries. |
+
+The extraction types read the hidden contract from a control definition:
+
+| Type | Extracts |
+| --- | --- |
+| `ControlValueOf<Control>` | Field value type. |
+| `ControlOptionsOf<Control>` | Definition-node `options` type. |
+| `ControlContextOf<Control>` | Required form context type. |
+
+Use these extraction types for wrappers and integration tests. Application
+forms usually rely on inference.
+
+## Form-kit and binding types
+
+A form kit is the reusable design-system contract. A form binding is one
+component-local form instance.
+
+```tsx
+// [!include ~/snippets/types-guide.tsx:form-types]
+```
+
+| Type | Purpose |
+| --- | --- |
+| `FormKit<Controls, ...>` | Kit methods, components, controls, slots, grid, and context contract. |
+| `CreateFormKitOptions<Controls, ...>` | Options accepted by `createFormKit`. |
+| `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, and submit handler. |
+| `FormBinding<Schema, Context>` | TanStack API and state shared by one rendered form. |
+| `FormProps<Schema, Context>` | Props for `kit.Form`. |
+
+`AutoFormProps<Schema, Context>` is currently the same contract as
+`FormProps`. It is a separate public name for components that wrap
+`kit.AutoForm`.
+
+Use `form.api` from `FormBinding` for TanStack Form operations. The binding's
+other fields describe the generated form runtime. Read [`FormBinding` on the
+API page](/api#formbinding) for their behavior.
+
+## Slot and structure types
+
+`FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>` describes the six
+required slot components. The three option generics set the corresponding
+`slotOptions` prop types.
+
+```tsx
+// [!include ~/snippets/types-guide.tsx:slot-types]
+```
+
+| Slot props type | Used by |
+| --- | --- |
+| `FieldSlotProps<Options>` | `Field` slot. |
+| `SectionSlotProps<Options>` | `Section` slot. |
+| `ArraySlotProps<Options>` | `Array` slot. |
+| `ArrayItemSlotProps` | `ArrayItem` slot. |
+| `ErrorMessageSlotProps` | `ErrorMessage` slot. |
+
+`SubmitSlotProps` types the `Submit` slot. It provides `buttonProps`, current
+input `values`, and `isSubmitting`.
+
+### Shared structure types
+
+| Type | Purpose |
+| --- | --- |
+| `StructuralRootProps` | Generated attributes, style, and ref for a structural root element. |
+| `StructuralNodeName` | Allowed `data-fp-node` values for generated structure. |
+| `FormPleaseStyle` | React CSS properties plus the supported `--fp-*` variables. |
+| `FormIssue` | Normalized validation issue with `message` and optional `path`. |
+
+Spread `rootProps` on the slot's root element. Do not replace its generated
+attributes or ref. Read [Controls and slots](/controls) for every slot prop.
+
+## Resource state
+
+`ResourceState<Value, Error>` is a readonly tagged union. Its `status` is
+`"pending"`, `"success"`, or `"error"`.
+
+```ts
+// [!include ~/snippets/types-guide.tsx:resource-type]
+```
+
+The type does not fetch or cache data. Use it to expose application-owned
+resource state. Read [Resource state](/resources) for mapping and adapter
+examples.

@@ -25,12 +25,14 @@ definition belongs to the exact TanStack form kit snapshot that created it and
 is not interchangeable with a definition from the original runtime.
 
 Each kit exposes `kit.useForm`, backed by TanStack's ordinary `useForm`, and
-returns the native React TanStack form API with its `Field`, `FormGroup`, and
-`Subscribe` surface intact. The integration does not use TanStack
-`createFormHook`, add a `FormInstance` facade, or initially expose imperative
-form creation. Runtime context, disabled and read-only flags, and callbacks are
-reactive hook options; a definition remains fixed while its `formId` remains
-fixed. Default-value updates follow TanStack semantics.
+returns the Form, Please integration object used by the generated components.
+Context-bound TanStack components remain available as `kit.tf.Field`,
+`kit.tf.FormGroup`, and `kit.tf.Subscribe`; they do not compete with the Form,
+Please component namespace. The integration does not use TanStack
+`createFormHook`, add a standard-runtime `FormInstance` facade, or initially
+expose imperative form creation. Runtime context, disabled and read-only flags,
+and callbacks are reactive hook options; a definition remains fixed while its
+`formId` remains fixed. Default-value updates follow TanStack semantics.
 
 Kits expose `Form`, `Fields`, `Submit`, and `AutoForm`. Generated controls keep
 the existing `ControlProps` and normalized `FormIssue` contracts. The TanStack
@@ -42,7 +44,7 @@ partially emulated.
 The definition's Standard Schema is authoritative. Validation begins on submit
 and revalidates on change after a failed attempt. Generated fields expose
 schema issues after touch or a submit attempt; invalid submission focuses the
-first visible invalid field or the error summary. Successful submission parses
+first visible invalid generated field. Successful submission parses
 the schema a second time and calls `onSubmit` with the transformed `value`, raw
 `input`, TanStack `form`, and submit `meta`. This deliberate double parse avoids
 owning a cache for transformed async results.
@@ -72,8 +74,9 @@ DevTools protocol are outside this runtime's initial scope.
 
 - Applications can compare runtimes without changing the original package
   behavior or abandoning the existing schema-driven authoring vocabulary.
-- Consumers may use native TanStack APIs for manual fields and subscriptions;
-  those APIs and their custom error values are intentionally visible.
+- Consumers may use `kit.tf` for manual TanStack fields, form groups, and
+  subscriptions; those APIs and their custom error values are intentionally
+  visible.
 - The entry point is explicitly experimental because its public types expose a
   versioned third-party API and its product boundary must be validated in real
   forms before stabilization.

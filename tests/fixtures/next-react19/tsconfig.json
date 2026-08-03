@@ -18,18 +18,6 @@
 			"form-please": [
 				"../../../src/index.ts",
 				"./node_modules/form-please/dist/index.d.ts"
-			],
-			"form-please/core": [
-				"../../../src/core/index.ts",
-				"./node_modules/form-please/dist/core.d.ts"
-			],
-			"form-please/react19": [
-				"../../../src/react19/index.ts",
-				"./node_modules/form-please/dist/react19.d.ts"
-			],
-			"form-please/server": [
-				"../../../src/server/index.ts",
-				"./node_modules/form-please/dist/server.d.ts"
 			]
 		}
 	},

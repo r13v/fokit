@@ -1,155 +1,211 @@
 ---
 title: FAQs
-description: Direct answers about when to use Form, Please, validation, defaults, design systems, servers, and React versions.
+description: Answers about validation, submission, hidden values, async data, TanStack Form, context, and form lifetime.
 showAskAi: false
 ---
 
 # FAQs
 
-Use these answers to resolve common setup and integration questions. Form, Please owns
-form state and native form behavior. Your application owns its visual system.
+Use these answers to understand the boundaries between your application,
+TanStack Form, Standard Schema, and "Form, Please."
 
-## Why use Form, Please instead of a smaller form hook?
+## Validation and submission
 
-Use Form, Please to build product forms quickly from an existing design system.
-Wrap product controls and structural slots once, then reuse them across generated
-or manually composed forms. A single typed state model also handles:
+### Why does a valid submit parse the schema twice?
 
-- schema-owned validation and typed transformations;
-- stable arrays;
-- safe server `FormData`;
-- React 19 support.
+TanStack Form performs the first parse to validate the editable input. Standard
+Schema transforms do not replace the values in TanStack Form state.
 
-For a few uncontrolled inputs and one submit handler, the browser can be the
-simpler tool. See [When to reach for Form, Please](/#when-to-reach-for-form-please).
+After successful validation, "Form, Please" parses the same input again. The
+second result supplies the transformed `FormOutput<Schema>` to `onSubmit`.
 
-## Does Form, Please require Zod?
+This sequence has three important effects:
 
-No. Form, Please accepts any schema library that implements Standard Schema. The
-documentation uses Zod because it implements that contract.
+- Invalid input does not reach `onSubmit`.
+- `onSubmit` receives the transformed output without a custom validation cache.
+- The schema must return the same validity for the same input during one submit.
 
-## Are Form, Please controls controlled or uncontrolled?
+Keep schema validation deterministic and free of side effects. "Form, Please"
+throws an invariant error if the second parse returns issues after the first
+parse succeeded. See [Validation and submission](/validation) for the complete
+validation sequence.
 
-The Form, Please store controls product values. Custom controls read `value` and write
-changes through `setValue`.
+### What does `onSubmit` receive?
 
-Explicit control serialization preserves native `FormData` behavior. The
-`file` control is the DOM exception. The browser owns the selected file list,
-and Form, Please stores the first selected `File | undefined`.
+The callback receives three values:
 
-Read [Controls and design systems](/guides/controls) for the adapter contract.
+- `value` is the transformed `FormOutput<Schema>`.
+- `input` is the editable `FormInput<Schema>` from TanStack Form.
+- `form` is the current "Form, Please" binding.
 
-## Why are complete default values required?
+Use `value` for an API request. Use `input` when an operation needs the original
+editable shape. For example, a string input can produce a number output.
 
-A complete editable baseline makes these operations deterministic:
+The callback can return a promise. TanStack Form keeps `isSubmitting` true
+until that promise settles. See [Send schema output and reset with schema
+input](/advanced#send-schema-output-and-reset-with-schema-input) for a complete
+submission example.
 
-- dirty comparison and reset;
-- array metadata;
-- hidden-field policies;
-- native serialization.
+### Does submission use native `FormData`?
 
-Optional schema fields can begin as `undefined` when that is part of
-`FormInput`. Use [TypeScript input and output](/types#input-and-output) to see
-the distinction.
+No. Submission uses the values in TanStack Form state. Nested objects, arrays,
+and `File` values keep their JavaScript types.
 
-## Why does `required: true` not validate an empty field?
+Your application owns transport serialization. Send JSON, construct
+`FormData`, or use another protocol in `onSubmit`. "Form, Please" does not
+select a transport format.
 
-The Standard Schema owns validation. Add the required-value rule to the schema.
+### Does `required: true` add a validation rule?
 
-The UI option `required: true` sets required presentation, native state, and
-ARIA. It does not add a schema rule.
+No. The `required` property changes the control UI and accessibility state.
+The Standard Schema must reject a missing or invalid value.
 
-## How do I load an existing profile?
+The same boundary applies to `visible`, `disabled`, and `readOnly`. These
+properties control the generated UI. They do not change the schema and do not
+remove values from submission.
 
-When possible, load the profile before you create the form. To make newly
-loaded or saved data the clean baseline, call `form.reset(profile)`.
+`kit.Form` disables native browser validation with `noValidate`. Put field and
+cross-field rules in the schema.
 
-Changing the `defaultValues` prop does not silently overwrite user edits. The
-[loaded edit-form recipe](/advanced#load-an-edit-form-baseline) shows the
-deliberate reset path.
+### How do I display server errors?
 
-## Does Form, Please support async validation?
+Keep request failures in application state and render them near the form. A
+network failure is not a Standard Schema issue.
 
-Yes. Standard Schema validation can return a promise. Form, Please exposes
-`isValidating` and ignores stale results. Set `asyncDebounceMs` to debounce
-change-triggered asynchronous validation.
+If the server returns field-validation results, convert them deliberately with
+the applicable TanStack Form error APIs. Do not treat a transport failure as a
+schema result. The server must still validate every submission. See [Keep async
+submission in the
+application](/advanced#keep-async-submission-in-the-application) for a request
+error example.
 
-Blur, imperative validation, and submit are never debounced. Read
-[Validation and errors](/guides/validation) for the complete lifecycle.
+## Conditional UI and values
 
-## Can I use an existing component library?
+### Do hidden fields lose their values?
 
-Yes. Wrap each product input with `defineControl`. Replace a structural slot
-when it needs design-system markup.
+No. A hidden generated field does not render, but its value remains in TanStack
+Form state. The Standard Schema still receives that value during validation and
+submission.
 
-Start with `createNativeControls()`, then replace only the product-specific parts.
+This definition hides `companyName` for a personal account:
 
-## Why is there no built-in theme?
+```tsx
+// [!include ~/snippets/lab-profile-form.tsx:conditional-field]
+```
 
-Form state does not dictate product styling. `createDefaultSlots()` renders
-accessible unstyled structure. `form-please/layout.css` adds only responsive layout.
+Match the schema condition to the visibility condition. Otherwise, an invalid
+hidden value can block submission. `kit.AutoForm` puts an issue for a hidden
+field in the error summary because there is no visible control to focus.
 
-Colors, typography, focus rings, density, and control polish stay in the
-application. Start with the copyable [styling baseline](/guides/styling).
+Use a schema transform when the submitted output must omit an inactive value:
 
-## What happens when a field becomes hidden?
+```tsx
+// [!include ~/snippets/conditional-fields-guide.tsx:conditional-schema]
+```
 
-Visibility and value retention are separate. By default, `valuePolicy`
-preserves the value. Use `"unset"` for an optional value that must leave the
-form when hidden.
+Use `form.api.setFieldValue` when the editable value must be cleared as soon as
+the user changes another field. See [Conditional fields](/conditional-fields)
+for both cleanup strategies.
 
-Preserved hidden values need a serializer when they must participate in
-FormData. See [Conditional fields](/guides/conditional-fields).
+### Does "Form, Please" fetch async options?
 
-## How do I reset a form?
+No. Your application or request library owns requests, retries, cancellation,
+and caching. Pass the current request state through form context.
 
-Call `form.reset()`, or use a native reset button inside `kit.Form`. Form, Please
-resets the store and prevents controlled inputs from resetting independently.
+Use `fromResource` to convert that state into a synchronous UI resolver. Use
+`matchResource` when you need one immediate value outside a definition. See
+[Pass request state through
+context](/advanced#pass-request-state-through-context) for the form pattern.
+See [Resource state](/resources) for a TanStack Query adapter and error-state
+examples.
 
-`form.reset(nextValues)` replaces the baseline. Both forms clear dirty,
-touched, validation, issue, and submission metadata.
+### Can a UI resolver return a promise?
 
-## Why does `onSubmit` not run?
+No. Every UI resolver must return immediately. A promise-like result causes a
+runtime error.
 
-The form contains a schema issue. Form, Please exposes the visible issues and focuses
-the first visible invalid control. Correct the issues, then submit again.
+Load data before or beside the form. Pass the current result through context.
+Resolvers can then derive labels, descriptions, options, visibility, and
+interaction state synchronously.
 
-If the issue belongs to a hidden field, check its schema rule and
-`valuePolicy`. Read [Conditional fields](/guides/conditional-fields) for the
-available retention policies.
+"Form, Please" resolves the complete UI tree after each form value change. Keep
+resolvers small and free of side effects.
 
-## How do server errors reach fields?
+## TanStack Form and manual UI
 
-In a classic flow, call `form.setErrors()` with normalized server issues.
-Editing the matching path clears its stale server issue.
+### How do I use TanStack Form directly?
 
-React 19 `ActionForm` consumes a returned `FormResult` and installs field or
-form issues automatically. Both paths are covered in
-[Validation and errors](/guides/validation#install-server-errors).
+Use the API on `form.api`. This API is the typed TanStack Form instance that
+owns the editable state.
 
-## How do React 18 and React 19 differ?
+Use `form.api.Field` for a custom field, `form.api.FormGroup` for a group path,
+and `form.api.Subscribe` for derived UI. Keep generated and manual UI inside the
+same `kit.Form`.
 
-The main `form-please` entry supports classic submission in React 18 and React 19.
-React 19 Actions are available only from `form-please/react19`. React 18 consumers do
-not load or typecheck Action-only APIs.
+You can also call TanStack Form methods such as `setFieldValue` and `reset`
+through `form.api`. See [Compose generated and custom
+UI](/advanced#compose-generated-and-custom-ui) for a complete example.
 
-Use the [submission ownership table](/guides/react-19-actions#choose-the-submission-owner)
-before choosing a mode.
+### Should I create a second form for custom UI?
 
-## Does every field rerender on each change?
+No. Create one binding with `kit.useForm`. Put `kit.Fields` and custom TanStack
+Form components inside the same `kit.Form`.
 
-No. The store uses external subscriptions. `useValue`, `useField`,
-`useArrayField`, and `useFormState` select focused slices. UI resolvers
-automatically track the paths that they read.
+A second binding creates a second state owner. Changes, validation state, and
+submission state do not automatically synchronize between two bindings.
 
-## Does Form, Please provide wizards or autosave?
+### What happens after an invalid submit?
 
-No. Form, Please does not impose a wizard or autosave abstraction. Keep page
-navigation, draft persistence, and retry policy in application code. Reuse the
-same form instance and typed commands.
+"Form, Please" checks visible generated controls in document order. It focuses
+the first invalid control that can receive focus.
 
-The [production recipes](/advanced) show manual composition without introducing
-a second state model.
+If no invalid generated control can receive focus, `kit.AutoForm` focuses the
+first error-summary item. A manually composed `kit.Form` does not add that
+summary fallback. The application must render its own summary when it does not
+use `kit.AutoForm`.
 
-Still looking for an exact method or type? Use the [API reference](/api) or
-[TypeScript reference](/types).
+## Definitions, kits, and lifetime
+
+### Can I replace a definition while the component stays mounted?
+
+No. `kit.useForm` keeps the first definition for the complete hook lifetime.
+Passing a different definition prop does not replace it.
+
+Define stable definitions at module scope when possible. To load another
+document or definition, remount the editor with a React `key`. Use
+`form.api.reset(nextInput)` when the definition stays the same and you want to
+install a new editable baseline deliberately. See [Load an edit-form
+baseline](/advanced#load-an-edit-form-baseline) for both operations.
+
+### Can a definition use a different form kit?
+
+No. A definition belongs to the exact kit that created it. Pass it back to
+`useForm` on that kit.
+
+`kit.forContext<Context>()` is a type-only view of the same runtime kit. Use it
+to type resolver context and require a context value in `kit.useForm`.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:context-kit]
+```
+
+When the application supplies a new context value, generated UI resolves with
+the current context and current form values.
+
+### Can I add controls or slots to an existing kit?
+
+No. `createFormKit` takes one controls, slots, and grid snapshot. It freezes
+that configuration.
+
+Create the complete registries before you call `createFormKit`. Create another
+kit when the application needs a different registry or grid.
+
+### Which schema libraries can I use?
+
+Use any schema that implements Standard Schema. "Form, Please" does not require
+a library-specific adapter.
+
+The documentation includes complete examples for [Zod](/get-started),
+[Yup](/examples/mui-yup), and [Valibot](/examples/shadcn-valibot). Field paths
+and controls always use the schema input type. `onSubmit.value` uses the schema
+output type.

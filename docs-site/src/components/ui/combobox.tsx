@@ -157,35 +157,6 @@ function ComboboxItem({
 	)
 }
 
-function ComboboxGroup({ className, ...props }: ComboboxPrimitive.Group.Props) {
-	return (
-		<ComboboxPrimitive.Group
-			data-slot="combobox-group"
-			className={cn(className)}
-			{...props}
-		/>
-	)
-}
-
-function ComboboxLabel({
-	className,
-	...props
-}: ComboboxPrimitive.GroupLabel.Props) {
-	return (
-		<ComboboxPrimitive.GroupLabel
-			data-slot="combobox-label"
-			className={cn("px-2 py-1.5 text-xs text-muted-foreground", className)}
-			{...props}
-		/>
-	)
-}
-
-function ComboboxCollection({ ...props }: ComboboxPrimitive.Collection.Props) {
-	return (
-		<ComboboxPrimitive.Collection data-slot="combobox-collection" {...props} />
-	)
-}
-
 function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
 	return (
 		<ComboboxPrimitive.Empty
@@ -194,19 +165,6 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
 				"hidden w-full justify-center py-2 text-center text-sm text-muted-foreground group-data-empty/combobox-content:flex",
 				className,
 			)}
-			{...props}
-		/>
-	)
-}
-
-function ComboboxSeparator({
-	className,
-	...props
-}: ComboboxPrimitive.Separator.Props) {
-	return (
-		<ComboboxPrimitive.Separator
-			data-slot="combobox-separator"
-			className={cn("-mx-1 my-1 h-px bg-border", className)}
 			{...props}
 		/>
 	)
@@ -282,16 +240,11 @@ export {
 	ComboboxChip,
 	ComboboxChips,
 	ComboboxChipsInput,
-	ComboboxCollection,
 	ComboboxContent,
 	ComboboxEmpty,
-	ComboboxGroup,
 	ComboboxInput,
 	ComboboxItem,
-	ComboboxLabel,
 	ComboboxList,
-	ComboboxSeparator,
-	ComboboxTrigger,
 	ComboboxValue,
 	useComboboxAnchor,
 }

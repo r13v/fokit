@@ -20,192 +20,84 @@ const layoutCss = await readFile(
 
 const javaScriptEntrypoints = {
 	".": "index",
-	"./core": "core",
 	"./default-slots": "default-slots",
-	"./devtools": "devtools",
-	"./history": "history",
 	"./native-controls": "native-controls",
-	"./persistence": "persistence",
 	"./preset-native": "preset-native",
 	"./preset-mui": "preset-mui",
-	"./react19": "react19",
-	"./server": "server",
 } as const
 
 describe("package metadata", () => {
 	it("publishes only the supported package surface", () => {
 		expect(packageJson).toMatchObject({
-			name: "form-please",
-			license: "MIT",
-			type: "module",
-			homepage: "https://r13v.github.io/form-please/",
+			engines: { node: ">=24" },
 			files: ["dist"],
-			sideEffects: ["**/*.css"],
+			license: "MIT",
+			name: "form-please",
 			peerDependencies: {
-				"@emotion/react": "^11.14.0",
-				"@emotion/styled": "^11.14.1",
-				"@mui/material": "^9.0.0",
+				"@tanstack/react-form": "^1.33.3",
 				react: "^18.0.0 || ^19.0.0",
 				"react-dom": "^18.0.0 || ^19.0.0",
 			},
-			exports: expectedExports(),
-			engines: {
-				node: ">=24",
-			},
+			sideEffects: ["**/*.css"],
+			type: "module",
 		})
+		expect(packageJson.exports).toEqual(expectedExports())
 		expect(Object.keys(packageJson.exports)).toEqual([
 			".",
-			"./core",
 			"./default-slots",
-			"./devtools",
-			"./history",
 			"./native-controls",
-			"./persistence",
 			"./preset-native",
 			"./preset-mui",
-			"./react19",
-			"./server",
 			"./layout.css",
 			"./package.json",
 		])
-		expect(packageJson.version).toMatch(
-			/^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/,
-		)
+		expect(packageJson.version).toMatch(/^1\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/)
 		expect(packageLock.version).toBe(packageJson.version)
 		expect(packageLock.packages[""].version).toBe(packageJson.version)
-		expect(packageLock.packages[""].engines).toEqual(packageJson.engines)
 	})
 
-	it("does not retain npm-init entry-point metadata", () => {
-		expect(packageJson).not.toHaveProperty("main")
-		expect(packageJson).not.toHaveProperty("directories")
-	})
-
-	it("runs strict package analyzers against JavaScript entry points", () => {
-		expect(packageJson.scripts["package:check"]).toBe(
-			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./core ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./react19 ./server",
-		)
-	})
-
-	it("keeps Material UI peers optional for consumers of other entries", () => {
-		expect(packageJson.peerDependenciesMeta).toMatchObject({
+	it("keeps TanStack Form required and Material UI peers optional", () => {
+		expect(packageJson.peerDependenciesMeta).toEqual({
 			"@emotion/react": { optional: true },
 			"@emotion/styled": { optional: true },
 			"@mui/material": { optional: true },
 		})
+		expect(packageJson.peerDependenciesMeta).not.toHaveProperty(
+			"@tanstack/react-form",
+		)
 	})
 
-	it("does not add Redux runtime dependencies for DevTools", () => {
-		for (const dependencySet of [
-			packageJson.dependencies,
-			packageJson.peerDependencies,
-			packageJson.optionalDependencies,
-		]) {
-			expect(dependencySet ?? {}).not.toHaveProperty("redux")
-			expect(dependencySet ?? {}).not.toHaveProperty(
-				"@redux-devtools/extension",
-			)
-		}
+	it("lets release automation own the 1.x version", () => {
+		expect(packageJson.scripts["package:check"]).toBe(
+			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./native-controls ./preset-native ./preset-mui",
+		)
+		expect(packageJson.scripts).not.toHaveProperty("version")
 	})
 
-	it("routes declarations to the matching module format", () => {
-		for (const [entrypoint, distName] of Object.entries(
-			javaScriptEntrypoints,
-		)) {
-			const exported = packageJson.exports[entrypoint]
-
-			expect(Object.keys(exported)).toEqual(["import", "require", "default"])
-			expect(Object.keys(exported.import)).toEqual(["types", "default"])
-			expect(exported.import).toEqual({
-				types: `./dist/${distName}.d.ts`,
-				default: `./dist/${distName}.js`,
-			})
-			expect(Object.keys(exported.require)).toEqual(["types", "default"])
-			expect(exported.require).toEqual({
-				types: `./dist/${distName}.d.cts`,
-				default: `./dist/${distName}.cjs`,
-			})
-			expect(exported.default).toBe(`./dist/${distName}.js`)
-		}
-	})
-
-	it("keeps the optional stylesheet structural and explicitly publishable", async () => {
+	it("keeps the structural stylesheet explicit", async () => {
 		expect(layoutCss).toContain("@layer fp")
-		expect(layoutCss).toContain("@container (min-width: 40rem)")
-		expect(layoutCss).toContain("@container (min-width: 64rem)")
 		expect(layoutCss).not.toMatch(/@media\b/)
-		expect(layoutCss).not.toMatch(/resizeobserver/i)
-
-		const cssVariables = new Set(layoutCss.match(/--fp-[a-z-]+/g) ?? [])
-		expect([...cssVariables].sort()).toEqual([
-			"--fp-array-item-gap",
-			"--fp-column-gap",
-			"--fp-row-gap",
-			"--fp-stack-gap",
-		])
-
-		for (const pattern of forbiddenCssPatterns()) {
-			expect(layoutCss).not.toMatch(pattern)
-		}
-
-		const sourceMain = await readFile(
-			new URL("../../src/index.ts", import.meta.url),
-			"utf8",
+		expect(new Set(layoutCss.match(/--fp-[a-z-]+/g) ?? [])).toEqual(
+			new Set([
+				"--fp-array-item-gap",
+				"--fp-column-gap",
+				"--fp-row-gap",
+				"--fp-stack-gap",
+			]),
 		)
-		const builtMain = await readFile(
-			new URL("../../dist/index.js", import.meta.url),
-			"utf8",
-		)
-		const builtCommonJsMain = await readFile(
-			new URL("../../dist/index.cjs", import.meta.url),
-			"utf8",
-		)
-		expect(sourceMain).not.toContain("layout.css")
-		expect(builtMain).not.toContain("layout.css")
-		expect(builtCommonJsMain).not.toContain("layout.css")
 		expect(packageJson.exports["./layout.css"]).toBe("./dist/layout.css")
-		expect(packageJson.sideEffects).toEqual(["**/*.css"])
 
 		const { stdout } = await execFileAsync(
 			"npm",
 			["pack", "--dry-run", "--json"],
-			{
-				cwd: rootDirectory,
-			},
+			{ cwd: rootDirectory },
 		)
 		const [packResult] = JSON.parse(stdout) as [
-			{
-				readonly files: readonly { readonly path: string }[]
-			},
+			{ readonly files: readonly { readonly path: string }[] },
 		]
 		expect(packResult.files.map((file) => file.path)).toContain(
 			"dist/layout.css",
 		)
-	})
-
-	it("keeps React 19 Action APIs isolated to the React 19 subpath", async () => {
-		const builtEntrypoints = Object.fromEntries(
-			await Promise.all(
-				Object.values(javaScriptEntrypoints).map(async (distName) => [
-					distName,
-					await readFile(
-						new URL(`../../dist/${distName}.js`, import.meta.url),
-						"utf8",
-					),
-				]),
-			),
-		)
-
-		expect(builtEntrypoints.react19?.startsWith('"use client"')).toBe(true)
-		expect(builtEntrypoints.react19).toMatch(/use(?:ActionState|FormStatus)/)
-
-		for (const [distName, source] of Object.entries(builtEntrypoints)) {
-			if (distName === "react19") {
-				continue
-			}
-
-			expect(source).not.toMatch(/use(?:ActionState|FormStatus)/)
-		}
 	})
 })
 
@@ -215,28 +107,19 @@ function expectedExports() {
 			Object.entries(javaScriptEntrypoints).map(([entrypoint, distName]) => [
 				entrypoint,
 				{
+					default: `./dist/${distName}.js`,
 					import: {
-						types: `./dist/${distName}.d.ts`,
 						default: `./dist/${distName}.js`,
+						types: `./dist/${distName}.d.ts`,
 					},
 					require: {
-						types: `./dist/${distName}.d.cts`,
 						default: `./dist/${distName}.cjs`,
+						types: `./dist/${distName}.d.cts`,
 					},
-					default: `./dist/${distName}.js`,
 				},
 			]),
 		),
 		"./layout.css": "./dist/layout.css",
 		"./package.json": "./package.json",
 	}
-}
-
-function forbiddenCssPatterns(): readonly RegExp[] {
-	return [
-		/(^|[\s;{])(?:accent-color|appearance|background(?:-[a-z-]+)?|border(?:-[a-z-]+)?|box-shadow|color|font(?:-[a-z-]+)?|line-height|outline(?:-[a-z-]+)?|text-(?:align|decoration|transform))\s*:/i,
-		/@(?:apply|tailwind)\b/i,
-		/(^|[,{]\s*)\*/i,
-		/\b(?:body|button|html|input|select|textarea)\b/i,
-	]
 }

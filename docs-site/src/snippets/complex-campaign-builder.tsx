@@ -6,16 +6,7 @@ import {
 	useMutation,
 	useQuery,
 } from "@tanstack/react-query"
-import {
-	type BeforeUpdateEvent,
-	createFormKit,
-	extendValueChanges,
-	type FormInput,
-	type FormOutput,
-	useFormContext,
-	useFormState,
-	type ValueChange,
-} from "form-please"
+import { createFormKit, type FormInput, type FormOutput } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
@@ -344,412 +335,367 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
+const contextualKit = kit.forContext<CampaignContext>()
 
-function CampaignPreview() {
-	const form = useFormContext<typeof campaignSchema, CampaignContext>()
-	const preview = useFormState(form, (snapshot) => ({
-		name: snapshot.values.name,
-		template: snapshot.values.template,
-		channels: Object.entries(snapshot.values.audience.channels)
-			.filter(([, selected]) => selected)
-			.map(([channel]) => channel),
-	}))
-	return (
-		<aside
-			className="form-please-complex__preview"
-			aria-label="Campaign preview"
-		>
-			<strong>{preview.name}</strong>
-			<span>
-				{preview.template} · {preview.channels.join(", ") || "no channels"}
-			</span>
-		</aside>
-	)
-}
-
-const campaignDefinition = kit
-	.forContext<CampaignContext>()
-	.defineForm(campaignSchema, {
-		ui: [
-			{
-				kind: "section",
-				id: "campaign",
-				title: "Campaign foundation",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "name",
-						control: "text",
-						label: "Campaign name",
-						span: "full",
+const campaignDefinition = contextualKit.defineForm(campaignSchema, {
+	ui: [
+		{
+			kind: "section",
+			id: "campaign",
+			title: "Campaign foundation",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					label: "Campaign name",
+					span: "full",
+				},
+				{
+					kind: "field",
+					path: "template",
+					control: "select",
+					label: "Campaign template",
+					options: {
+						options: [
+							{ value: "newsletter", label: "Newsletter" },
+							{ value: "product-launch", label: "Product launch" },
+							{ value: "event-invite", label: "Event invitation" },
+							{ value: "fundraiser", label: "Fundraiser" },
+							{ value: "course-drop", label: "Course release" },
+							{ value: "community-update", label: "Community update" },
+							{ value: "feedback-pulse", label: "Feedback pulse" },
+						],
 					},
-					{
-						kind: "field",
-						path: "template",
-						control: "select",
-						label: "Campaign template",
-						options: {
-							options: [
-								{ value: "newsletter", label: "Newsletter" },
-								{ value: "product-launch", label: "Product launch" },
-								{ value: "event-invite", label: "Event invitation" },
-								{ value: "fundraiser", label: "Fundraiser" },
-								{ value: "course-drop", label: "Course release" },
-								{ value: "community-update", label: "Community update" },
-								{ value: "feedback-pulse", label: "Feedback pulse" },
-							],
-						},
+				},
+				{
+					kind: "field",
+					path: "audience.segmentId",
+					control: "select",
+					label: "Audience segment",
+					options: (_values, { context }) => ({ options: context.segments }),
+				},
+				{
+					kind: "field",
+					path: "audience.deliveryMode",
+					control: "select",
+					label: "Delivery model",
+					options: {
+						options: [
+							{ value: "immediate", label: "Immediate" },
+							{ value: "scheduled", label: "Scheduled window" },
+							{ value: "rolling", label: "Rolling audience entry" },
+						],
 					},
-					{
-						kind: "field",
-						path: "audience.segmentId",
-						control: "select",
-						label: "Audience segment",
-						options: (_values, { context }) => ({ options: context.segments }),
+				},
+				{
+					kind: "field",
+					path: "audience.channels.email",
+					control: "checkbox",
+					label: "Email",
+				},
+				{
+					kind: "field",
+					path: "audience.channels.push",
+					control: "checkbox",
+					label: "Push",
+				},
+				{
+					kind: "field",
+					path: "audience.channels.web",
+					control: "checkbox",
+					label: "Web inbox",
+				},
+				{
+					kind: "field",
+					path: "schedule.startsOn",
+					control: "date",
+					label: "Starts on",
+				},
+				{
+					kind: "field",
+					path: "schedule.endsOn",
+					control: "date",
+					label: "Ends on",
+					visible: (values) => values.audience.deliveryMode !== "immediate",
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "newsletter",
+			title: "Newsletter content",
+			columns: 2,
+			visible: ({ template }) => template === "newsletter",
+			children: [
+				{
+					kind: "field",
+					path: "newsletter.subject",
+					control: "text",
+					label: "Subject",
+				},
+				{
+					kind: "field",
+					path: "newsletter.preheader",
+					control: "text",
+					label: "Preheader",
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "product-launch",
+			title: "Product launch",
+			columns: 2,
+			visible: ({ template }) => template === "product-launch",
+			children: [
+				{
+					kind: "field",
+					path: "productLaunch.productName",
+					control: "text",
+					label: "Product name",
+				},
+				{
+					kind: "field",
+					path: "productLaunch.sku",
+					control: "text",
+					label: "Catalog code",
+				},
+				{
+					kind: "field",
+					path: "productLaunch.initialStock",
+					control: "number",
+					label: "Opening stock",
+					options: { min: 0, step: 1 },
+				},
+				{
+					kind: "field",
+					path: "productLaunch.releaseKind",
+					control: "select",
+					label: "Release kind",
+					options: {
+						options: [
+							{ value: "limited", label: "Limited edition" },
+							{ value: "general", label: "General release" },
+							{ value: "preorder", label: "Preorder" },
+						],
 					},
-					{
-						kind: "field",
-						path: "audience.deliveryMode",
-						control: "select",
-						label: "Delivery model",
-						options: {
-							options: [
-								{ value: "immediate", label: "Immediate" },
-								{ value: "scheduled", label: "Scheduled window" },
-								{ value: "rolling", label: "Rolling audience entry" },
-							],
-						},
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "event-invite",
+			title: "Event invitation",
+			columns: 2,
+			visible: ({ template }) => template === "event-invite",
+			children: [
+				{
+					kind: "field",
+					path: "eventInvite.eventName",
+					control: "text",
+					label: "Event name",
+				},
+				{
+					kind: "field",
+					path: "eventInvite.venue",
+					control: "text",
+					label: "Venue",
+				},
+				{
+					kind: "field",
+					path: "eventInvite.capacity",
+					control: "number",
+					label: "Capacity",
+					options: { min: 1, step: 1 },
+				},
+				{
+					kind: "field",
+					path: "eventInvite.requiresRegistration",
+					control: "checkbox",
+					label: "Registration required",
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "fundraiser",
+			title: "Fundraiser",
+			columns: 2,
+			visible: ({ template }) => template === "fundraiser",
+			children: [
+				{
+					kind: "field",
+					path: "fundraiser.cause",
+					control: "textarea",
+					label: "Cause",
+					span: "full",
+					options: { rows: 3 },
+				},
+				{
+					kind: "field",
+					path: "fundraiser.goalAmount",
+					control: "number",
+					label: "Goal amount",
+					options: { min: 1, step: 100 },
+				},
+				{
+					kind: "field",
+					path: "fundraiser.suggestedContribution",
+					control: "number",
+					label: "Suggested contribution",
+					options: { min: 1, step: 5 },
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "course-drop",
+			title: "Course release",
+			columns: 2,
+			visible: ({ template }) => template === "course-drop",
+			children: [
+				{
+					kind: "field",
+					path: "courseDrop.courseTitle",
+					control: "text",
+					label: "Course title",
+				},
+				{
+					kind: "field",
+					path: "courseDrop.seatLimit",
+					control: "number",
+					label: "Seat limit",
+					options: { min: 1, step: 1 },
+				},
+				{
+					kind: "field",
+					path: "courseDrop.certificateIncluded",
+					control: "checkbox",
+					label: "Include certificate",
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "community-update",
+			title: "Community update",
+			columns: 2,
+			visible: ({ template }) => template === "community-update",
+			children: [
+				{
+					kind: "field",
+					path: "communityUpdate.topic",
+					control: "textarea",
+					label: "Update topic",
+					span: "full",
+					options: { rows: 3 },
+				},
+				{
+					kind: "field",
+					path: "communityUpdate.moderator",
+					control: "text",
+					label: "Moderator",
+				},
+				{
+					kind: "field",
+					path: "communityUpdate.responseWindowDays",
+					control: "number",
+					label: "Response window in days",
+					options: { min: 1, step: 1 },
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "feedback-pulse",
+			title: "Feedback pulse",
+			columns: 2,
+			visible: ({ template }) => template === "feedback-pulse",
+			children: [
+				{
+					kind: "field",
+					path: "feedbackPulse.question",
+					control: "textarea",
+					label: "Question",
+					span: "full",
+					options: { rows: 3 },
+				},
+				{
+					kind: "field",
+					path: "feedbackPulse.responseLimit",
+					control: "number",
+					label: "Response limit",
+					options: { min: 1, step: 1 },
+				},
+				{
+					kind: "field",
+					path: "feedbackPulse.anonymous",
+					control: "checkbox",
+					label: "Allow anonymous responses",
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "payment",
+			title: "Payment model",
+			columns: 2,
+			visible: ({ template }) => paymentApplies(template),
+			children: [
+				{
+					kind: "field",
+					path: "payment.mode",
+					control: "select",
+					label: "Payment mode",
+					options: {
+						options: [
+							{ value: "free", label: "Free" },
+							{ value: "fixed", label: "Fixed" },
+							{ value: "flexible", label: "Flexible contribution" },
+							{ value: "recurring", label: "Recurring" },
+						],
 					},
-					{
-						kind: "field",
-						path: "audience.channels.email",
-						control: "checkbox",
-						label: "Email",
+				},
+				{
+					kind: "field",
+					path: "payment.amount",
+					control: "number",
+					label: "Amount",
+					visible: (values) => values.payment.mode !== "free",
+					options: { min: 1, step: 1 },
+				},
+				{
+					kind: "field",
+					path: "payment.currency",
+					control: "select",
+					label: "Currency",
+					options: {
+						options: [
+							{ value: "USD", label: "USD" },
+							{ value: "EUR", label: "EUR" },
+							{ value: "GBP", label: "GBP" },
+						],
 					},
-					{
-						kind: "field",
-						path: "audience.channels.push",
-						control: "checkbox",
-						label: "Push",
+				},
+				{
+					kind: "field",
+					path: "payment.interval",
+					control: "select",
+					label: "Recurring interval",
+					visible: (values) => values.payment.mode === "recurring",
+					options: {
+						options: [
+							{ value: "monthly", label: "Monthly" },
+							{ value: "annual", label: "Annual" },
+						],
 					},
-					{
-						kind: "field",
-						path: "audience.channels.web",
-						control: "checkbox",
-						label: "Web inbox",
-					},
-					{
-						kind: "field",
-						path: "schedule.startsOn",
-						control: "date",
-						label: "Starts on",
-					},
-					{
-						kind: "field",
-						path: "schedule.endsOn",
-						control: "date",
-						label: "Ends on",
-						visible: ({ "audience.deliveryMode": mode }) =>
-							mode !== "immediate",
-						valuePolicy: "unset",
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "newsletter",
-				title: "Newsletter content",
-				columns: 2,
-				visible: ({ template }) => template === "newsletter",
-				children: [
-					{
-						kind: "field",
-						path: "newsletter.subject",
-						control: "text",
-						label: "Subject",
-						valuePolicy: "unset",
-					},
-					{
-						kind: "field",
-						path: "newsletter.preheader",
-						control: "text",
-						label: "Preheader",
-						valuePolicy: "unset",
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "product-launch",
-				title: "Product launch",
-				columns: 2,
-				visible: ({ template }) => template === "product-launch",
-				children: [
-					{
-						kind: "field",
-						path: "productLaunch.productName",
-						control: "text",
-						label: "Product name",
-						valuePolicy: "unset",
-					},
-					{
-						kind: "field",
-						path: "productLaunch.sku",
-						control: "text",
-						label: "Catalog code",
-						valuePolicy: "unset",
-					},
-					{
-						kind: "field",
-						path: "productLaunch.initialStock",
-						control: "number",
-						label: "Opening stock",
-						valuePolicy: "unset",
-						options: { min: 0, step: 1 },
-					},
-					{
-						kind: "field",
-						path: "productLaunch.releaseKind",
-						control: "select",
-						label: "Release kind",
-						options: {
-							options: [
-								{ value: "limited", label: "Limited edition" },
-								{ value: "general", label: "General release" },
-								{ value: "preorder", label: "Preorder" },
-							],
-						},
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "event-invite",
-				title: "Event invitation",
-				columns: 2,
-				visible: ({ template }) => template === "event-invite",
-				children: [
-					{
-						kind: "field",
-						path: "eventInvite.eventName",
-						control: "text",
-						label: "Event name",
-						valuePolicy: "unset",
-					},
-					{
-						kind: "field",
-						path: "eventInvite.venue",
-						control: "text",
-						label: "Venue",
-						valuePolicy: "unset",
-					},
-					{
-						kind: "field",
-						path: "eventInvite.capacity",
-						control: "number",
-						label: "Capacity",
-						valuePolicy: "unset",
-						options: { min: 1, step: 1 },
-					},
-					{
-						kind: "field",
-						path: "eventInvite.requiresRegistration",
-						control: "checkbox",
-						label: "Registration required",
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "fundraiser",
-				title: "Fundraiser",
-				columns: 2,
-				visible: ({ template }) => template === "fundraiser",
-				children: [
-					{
-						kind: "field",
-						path: "fundraiser.cause",
-						control: "textarea",
-						label: "Cause",
-						valuePolicy: "unset",
-						span: "full",
-						options: { rows: 3 },
-					},
-					{
-						kind: "field",
-						path: "fundraiser.goalAmount",
-						control: "number",
-						label: "Goal amount",
-						valuePolicy: "unset",
-						options: { min: 1, step: 100 },
-					},
-					{
-						kind: "field",
-						path: "fundraiser.suggestedContribution",
-						control: "number",
-						label: "Suggested contribution",
-						valuePolicy: "unset",
-						options: { min: 1, step: 5 },
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "course-drop",
-				title: "Course release",
-				columns: 2,
-				visible: ({ template }) => template === "course-drop",
-				children: [
-					{
-						kind: "field",
-						path: "courseDrop.courseTitle",
-						control: "text",
-						label: "Course title",
-						valuePolicy: "unset",
-					},
-					{
-						kind: "field",
-						path: "courseDrop.seatLimit",
-						control: "number",
-						label: "Seat limit",
-						valuePolicy: "unset",
-						options: { min: 1, step: 1 },
-					},
-					{
-						kind: "field",
-						path: "courseDrop.certificateIncluded",
-						control: "checkbox",
-						label: "Include certificate",
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "community-update",
-				title: "Community update",
-				columns: 2,
-				visible: ({ template }) => template === "community-update",
-				children: [
-					{
-						kind: "field",
-						path: "communityUpdate.topic",
-						control: "textarea",
-						label: "Update topic",
-						valuePolicy: "unset",
-						span: "full",
-						options: { rows: 3 },
-					},
-					{
-						kind: "field",
-						path: "communityUpdate.moderator",
-						control: "text",
-						label: "Moderator",
-						valuePolicy: "unset",
-					},
-					{
-						kind: "field",
-						path: "communityUpdate.responseWindowDays",
-						control: "number",
-						label: "Response window in days",
-						valuePolicy: "unset",
-						options: { min: 1, step: 1 },
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "feedback-pulse",
-				title: "Feedback pulse",
-				columns: 2,
-				visible: ({ template }) => template === "feedback-pulse",
-				children: [
-					{
-						kind: "field",
-						path: "feedbackPulse.question",
-						control: "textarea",
-						label: "Question",
-						valuePolicy: "unset",
-						span: "full",
-						options: { rows: 3 },
-					},
-					{
-						kind: "field",
-						path: "feedbackPulse.responseLimit",
-						control: "number",
-						label: "Response limit",
-						valuePolicy: "unset",
-						options: { min: 1, step: 1 },
-					},
-					{
-						kind: "field",
-						path: "feedbackPulse.anonymous",
-						control: "checkbox",
-						label: "Allow anonymous responses",
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "payment",
-				title: "Payment model",
-				columns: 2,
-				visible: ({ template }) => paymentApplies(template),
-				children: [
-					{
-						kind: "field",
-						path: "payment.mode",
-						control: "select",
-						label: "Payment mode",
-						options: {
-							options: [
-								{ value: "free", label: "Free" },
-								{ value: "fixed", label: "Fixed" },
-								{ value: "flexible", label: "Flexible contribution" },
-								{ value: "recurring", label: "Recurring" },
-							],
-						},
-					},
-					{
-						kind: "field",
-						path: "payment.amount",
-						control: "number",
-						label: "Amount",
-						visible: ({ "payment.mode": mode }) => mode !== "free",
-						valuePolicy: "unset",
-						options: { min: 1, step: 1 },
-					},
-					{
-						kind: "field",
-						path: "payment.currency",
-						control: "select",
-						label: "Currency",
-						options: {
-							options: [
-								{ value: "USD", label: "USD" },
-								{ value: "EUR", label: "EUR" },
-								{ value: "GBP", label: "GBP" },
-							],
-						},
-					},
-					{
-						kind: "field",
-						path: "payment.interval",
-						control: "select",
-						label: "Recurring interval",
-						visible: ({ "payment.mode": mode }) => mode === "recurring",
-						options: {
-							options: [
-								{ value: "monthly", label: "Monthly" },
-								{ value: "annual", label: "Annual" },
-							],
-						},
-					},
-				],
-			},
-			{ kind: "render", id: "campaign-preview", component: CampaignPreview },
-		],
-	})
+				},
+			],
+		},
+	],
+})
 
 export function CampaignBuilderExample() {
 	const [queryClient] = useState(
@@ -764,15 +710,6 @@ export function CampaignBuilderExample() {
 
 function CampaignBuilderForm() {
 	const [mode, setMode] = useState<"create" | "edit">("edit")
-	const initialContext: CampaignContext = { segments: [] }
-	const createForm = kit.useCreateForm(campaignDefinition, {
-		defaultValues: newCampaign,
-		context: initialContext,
-	})
-	const editForm = kit.useCreateForm(campaignDefinition, {
-		defaultValues: savedCampaign,
-		context: initialContext,
-	})
 	const draft = useQuery({
 		queryKey: ["campaign-draft", "campaign-204"],
 		queryFn: () => fakeRequest(savedCampaign, 390),
@@ -798,6 +735,40 @@ function CampaignBuilderForm() {
 			fakeRequest({ id: value.id ?? "campaign-missing" }, 360),
 	})
 	const [notice, setNotice] = useState("Loaded an editable campaign draft.")
+	async function saveCampaign(
+		value: CampaignOutput,
+		target: "create" | "edit",
+	) {
+		try {
+			if (target === "edit") {
+				const result = await updateCampaign.mutateAsync(value)
+				setNotice(
+					`Updated ${result.id} with ${value.selectedChannels.length} channel(s).`,
+				)
+				return
+			}
+
+			const result = await createCampaign.mutateAsync(value)
+			setNotice(
+				`Created ${result.id} with ${value.selectedChannels.length} channel(s).`,
+			)
+		} catch {
+			setNotice(
+				"The campaign API did not respond. The editor remains available.",
+			)
+		}
+	}
+	const context: CampaignContext = { segments: segments.data ?? [] }
+	const createForm = contextualKit.useForm(campaignDefinition, {
+		defaultValues: newCampaign,
+		context,
+		onSubmit: ({ value }) => saveCampaign(value, "create"),
+	})
+	const editForm = contextualKit.useForm(campaignDefinition, {
+		defaultValues: savedCampaign,
+		context,
+		onSubmit: ({ value }) => saveCampaign(value, "edit"),
+	})
 
 	if (draft.isPending || segments.isPending)
 		return (
@@ -853,36 +824,9 @@ function CampaignBuilderForm() {
 				</button>
 			</fieldset>
 			<kit.AutoForm
-				beforeUpdate={clearInactiveTemplate}
 				className="form-please-complex__form"
-				context={{ segments: segments.data }}
 				form={form}
 				key={mode}
-				onSubmit={async ({ value, form }) => {
-					try {
-						form.clearErrors()
-						if (mode === "edit") {
-							const result = await updateCampaign.mutateAsync(value)
-							setNotice(
-								`Updated ${result.id} with ${value.selectedChannels.length} channel(s).`,
-							)
-							return
-						}
-
-						const result = await createCampaign.mutateAsync(value)
-						setNotice(
-							`Created ${result.id} with ${value.selectedChannels.length} channel(s).`,
-						)
-					} catch {
-						form.setErrors([
-							{
-								source: "server",
-								message:
-									"The campaign API did not respond. The editor remains available.",
-							},
-						])
-					}
-				}}
 			>
 				<div className="form-please-complex__actions">
 					<kit.Submit className="form-please-complex__primary">
@@ -891,42 +835,26 @@ function CampaignBuilderForm() {
 					<span aria-live="polite">{status}</span>
 				</div>
 			</kit.AutoForm>
+			<form.api.Subscribe selector={(state) => state.values}>
+				{(values) => {
+					const channels = Object.entries(values.audience.channels)
+						.filter(([, selected]) => selected)
+						.map(([channel]) => channel)
+					return (
+						<aside
+							aria-label="Campaign preview"
+							className="form-please-complex__preview"
+						>
+							<strong>{values.name}</strong>
+							<span>
+								{values.template} · {channels.join(", ") || "no channels"}
+							</span>
+						</aside>
+					)
+				}}
+			</form.api.Subscribe>
 		</section>
 	)
-}
-
-function clearInactiveTemplate(
-	event: BeforeUpdateEvent<CampaignInput, unknown>,
-): readonly ValueChange<CampaignInput>[] | undefined {
-	if (event.currentValues.template === event.nextValues.template)
-		return undefined
-
-	const paths = [
-		"newsletter.subject",
-		"newsletter.preheader",
-		"productLaunch.productName",
-		"productLaunch.sku",
-		"productLaunch.initialStock",
-		"eventInvite.eventName",
-		"eventInvite.venue",
-		"eventInvite.capacity",
-		"fundraiser.cause",
-		"fundraiser.goalAmount",
-		"fundraiser.suggestedContribution",
-		"courseDrop.courseTitle",
-		"courseDrop.seatLimit",
-		"communityUpdate.topic",
-		"communityUpdate.moderator",
-		"communityUpdate.responseWindowDays",
-		"feedbackPulse.question",
-		"feedbackPulse.responseLimit",
-	] as const
-	const additions: ValueChange<CampaignInput>[] = [
-		...paths.map((path) => ({ type: "unset" as const, path })),
-		{ type: "set", path: "payment.mode", value: "free" },
-		{ type: "unset", path: "payment.amount" },
-	]
-	return extendValueChanges(event, additions)
 }
 
 function paymentApplies(template: (typeof templateNames)[number]): boolean {

@@ -1,492 +1,391 @@
 ---
 title: API
-description: Signatures, defaults, results, and entry-point boundaries for React forms, core transactions, history, persistence, Redux DevTools, and server parsing.
+description: Public entries, form-kit methods, controls, components, and resource helpers with type-checked examples.
 showAskAi: false
 ---
 
 # API
 
-This page lists the public runtime APIs and the types that control their
-behavior. Import each optional feature from its own package entry.
+Use this page to find public imports, options, return values, and runtime
+behavior. Form, Please adds typed UI definitions to TanStack Form. Each form
+binding exposes the complete TanStack Form API as `form.api`.
+
+For exported TypeScript types and their relationships, read the
+[TypeScript reference](/types).
+
+All TypeScript examples on this page come from one file. The documentation
+build type-checks that file against the public package entries.
+
+## Install
+
+Install the package, its required TanStack Form peer, and React:
+
+```sh
+npm install form-please @tanstack/react-form react react-dom
+```
+
+Import the optional layout styles when you use the supplied grid contract:
+
+```ts
+import "form-please/layout.css"
+```
 
 ## Entry points
 
-| Import | Public capability |
+| Import | Runtime exports | Purpose |
+| --- | --- | --- |
+| `form-please` | `defineControl`, `createFormKit`, `fromResource`, `matchResource` | Build kits, controls, definitions, and resource resolvers. |
+| `form-please/default-slots` | `createDefaultSlots` | Create accessible, unstyled structural slots. |
+| `form-please/native-controls` | `createNativeControls` | Create the native HTML control registry. |
+| `form-please/preset-native` | `nativeFormKit` | Use the ready-made native kit with English slots. |
+| `form-please/preset-mui` | `createMuiFormKit` | Create a Material UI 9 kit. |
+
+`form-please/layout.css` and `form-please/package.json` are non-JavaScript
+exports. Every JavaScript entry is a React client module.
+
+## `defineControl`
+
+`defineControl<Value, Options, Context>()` creates one control definition. Its
+generic parameters connect the control to compatible schema paths, field
+options, and form context.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:define-control]
+```
+
+The control component receives these props:
+
+| Prop | Meaning |
 | --- | --- |
-| `form-please` | Form kits, React components, hooks, commands, transactions, events, and shared types |
-| `form-please/core` | React-free `createFormStore` plus core types and helpers |
-| `form-please/default-slots` | Accessible structural slot factory and localization types |
-| `form-please/history` | History, journals, cursors, and pure replay |
-| `form-please/native-controls` | Native HTML control factory and option types |
-| `form-please/persistence` | Persistence, adapters, codecs, and migration |
-| `form-please/preset-native` | Ready-to-use native controls and accessible default slots |
-| `form-please/preset-mui` | Material UI 9 controls, slots, localization, and a 12-column grid |
-| `form-please/devtools` | Constrained Redux DevTools integration |
-| `form-please/react19` | `ActionForm` and `ActionSubmit` |
-| `form-please/server` | `parseFormData` and server result types |
+| `path` | Current TanStack field path. Array paths use bracket syntax. |
+| `value` | Current field value. Its type is the first `defineControl` generic. |
+| `setValue(value)` | Replace the current field value. |
+| `blur()` | Mark the field as blurred. Call it from the interactive element. |
+| `input` | Generated `id`, `name`, focus `ref`, and optional `aria-describedby`. |
+| `meta` | Dirty, touched, validating, error, and displayed-error state. |
+| `options` | Deeply readonly options from the field definition. |
+| `context` | Deeply readonly context from `useForm`. |
+| `disabled`, `readOnly` | Resolved form, parent, and field interaction state. |
+| `required` | Resolved presentation state. It does not add schema validation. |
 
-The main entry does not export global `createForm`, `useCreateForm`,
-`useBindForm`, `useForm`, or `createFormStore`. It also does not export
-`KitForm`, a root `Submit` value, `UseFormOptions`, rendering defaults, or
-optional feature code.
+Attach all `input` properties to the interactive element. Call `blur` from its
+blur event. Use `meta.invalid` for `aria-invalid`.
 
-## createFormKit
+`meta.errors` contains all normalized field issues. `meta.displayErrors`
+contains the issues that the generated UI currently displays. Before the first
+submit, the UI displays issues only after the user touches the field.
 
-```ts
+The function freezes the returned definition. It rejects `any`, `unknown`, and
+`never` as the control value type during type checking.
+
+## `createFormKit`
+
+`createFormKit({ controls, slots, grid? })` creates and freezes one complete
+design-system contract.
+
+```tsx
 // [!include ~/snippets/api-reference.tsx:create-form-kit]
 ```
 
-The function freezes one controls, slots, and grid-scale snapshot. The default
-grid is `[1, 2, 3, 4]`. `kit.grid` exposes the sorted frozen scale, and
-`kit.extend` creates a new snapshot. A form belongs to the exact snapshot that
-created it.
+| Option | Requirement |
+| --- | --- |
+| `controls` | A record of control definitions. Control names become definition values. |
+| `slots` | Components for fields, sections, arrays, array items, errors, and submit buttons. |
+| `grid` | Optional positive integer list. It must include `1` and contain no duplicates. |
 
-```tsx twoslash
-import { createFormKit } from "form-please"
-import { createDefaultSlots } from "form-please/default-slots"
-import { createNativeControls } from "form-please/native-controls"
+The default grid is `[1, 2, 3, 4]`. The function sorts a custom grid and freezes
+copies of the controls, slots, and grid. Add all controls before this call. A
+kit does not support runtime extension.
 
-const kit = createFormKit({
-	controls: createNativeControls(),
-	slots: createDefaultSlots(),
-})
+The returned kit has these members:
+
+| Member | Result |
+| --- | --- |
+| `controls`, `slots`, `grid` | Frozen registry snapshots. |
+| `defineForm` | Creates a typed and normalized form definition. |
+| `forContext` | Returns a type-only context view of the same kit. |
+| `useForm` | Creates a component-local form binding. |
+| `Form`, `Fields`, `Submit`, `AutoForm` | Render the form and its generated UI. |
+
+### Native controls
+
+`createNativeControls()` returns a fresh frozen registry on each call.
+
+| Control | Value type | Options |
+| --- | --- | --- |
+| `text` | `string \| undefined` | `type`, `placeholder`, `autoComplete` |
+| `textarea` | `string \| undefined` | `placeholder`, `autoComplete`, `rows` |
+| `select` | `string \| undefined` | Required `options`; optional `emptyOption` |
+| `checkbox` | `boolean` | No options |
+| `number` | `number \| undefined` | `min`, `max`, `step`, `placeholder` |
+| `date` | `string \| undefined` | `min`, `max` |
+| `time` | `string \| undefined` | `min`, `max`, `step` |
+| `file` | `File \| undefined` | `accept` |
+
+Use an `emptyOption` when a select value can be `undefined`. Do not also add an
+option whose value is an empty string.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:native-control-options]
 ```
 
-Control names are add-only. An extension can replace compatible slots, but it
-cannot replace an inherited control. Grid values are also add-only:
-`kit.extend({ grid: [6, 12] })` adds values without removing the inherited
-scale. Base, extended, and sibling kits are different owners.
+Import the option types from `form-please/native-controls`. The entry exports
+`NativeTextOptions`, `NativeTextareaOptions`, `NativeSelectOptions`,
+`NativeNumberOptions`, `NativeDateOptions`, `NativeTimeOptions`, and
+`NativeFileOptions`. It also exports the related select and text types.
 
-A grid must be a non-empty set of unique positive integers and include `1`.
-The same scale types section `columns` and numeric `span`; `"full"` remains a
-universal span. Definitions retain their complete authoring scale, so a base
-definition works with a grid-superset extension while an extended definition
-cannot run through a base kit missing one of its values.
+### Default slots
 
-## nativeFormKit
+`createDefaultSlots()` returns accessible field, section, array, array-item,
+error, and submit structure without a visual theme.
 
-Import `nativeFormKit` from `form-please/preset-native` when the shipped
-native controls and accessible English default slots are the desired baseline:
-
-```tsx twoslash
-import { nativeFormKit as kit } from "form-please/preset-native"
+```tsx
+// [!include ~/snippets/api-reference.tsx:native-factories]
 ```
 
-The preset is a frozen `FormKit`. Extend it to add application controls or
-replace compatible slots. Use `createFormKit`, `createNativeControls`, and
-`createDefaultSlots` directly when localization or complete registry
-construction must be explicit.
+Use `i18n` to replace any English array action label:
 
-## createMuiFormKit
+```tsx
+// [!include ~/snippets/api-reference.tsx:default-slot-i18n]
+```
 
-Import `createMuiFormKit` from `form-please/preset-mui` after you install
-Material UI 9 and its Emotion peer dependencies:
+| Key | Callback data |
+| --- | --- |
+| `arrayAdd` | `{ label }` from the array node |
+| `arrayRemove` | Zero-based `index` and one-based `position` |
+| `arrayMoveUp` | Zero-based `index` and one-based `position` |
+| `arrayMoveDown` | Zero-based `index` and one-based `position` |
+
+Each value can be a string or a callback that returns a string. Import
+`DefaultSlotsI18n` and its related types from `form-please/default-slots`.
+
+### Native preset
+
+Use `nativeFormKit` when the native controls and default English slots are the
+required baseline.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:native-preset]
+```
+
+Use the factories when the application needs localized slots or additional
+controls.
+
+### Material UI preset
+
+Install Material UI 9 and Emotion before you import the preset:
 
 ```sh
-npm install form-please @mui/material @emotion/react @emotion/styled
+npm install @mui/material @emotion/react @emotion/styled
 ```
 
-```tsx twoslash
-import { createMuiFormKit } from "form-please/preset-mui"
+`createMuiFormKit()` returns a new frozen kit with Material UI controls, slots,
+and a 12-column grid.
 
-const kit = createMuiFormKit({
-	i18n: {
-		addItem: "Add item",
-		chooseFile: "Choose file",
-	},
-})
+```tsx
+// [!include ~/snippets/api-reference.tsx:mui-preset]
 ```
 
-Each call returns a new frozen kit with Material UI controls, six structural
-slots, and the `[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]` grid scale. The
-application owns `ThemeProvider`, `CssBaseline`, and theme configuration.
-Control options accept compatible Material UI props. Form, Please keeps
-control of values, names, IDs, refs, interaction state, errors, and ARIA
-relationships.
+The `i18n` object supports `addItem`, `removeItem`, `moveItemUp`,
+`moveItemDown`, and `chooseFile`. All properties are optional.
 
-## kit.forContext
+The registry contains these controls:
 
-`kit.forContext<Context>()` binds one context contract to the complete kit API.
-It is a type-only view: it returns the same frozen kit object and keeps the same
-controls, grid, slots, descriptor, and ownership identity. `kit.extend(...)`
-preserves the bound context.
+| Value type | Control names | Options type |
+| --- | --- | --- |
+| `string \| undefined` | `text`, `textarea`, `password`, `email`, `url`, `tel`, `search`, `date`, `time`, `datetime-local` | `MuiTextFieldOptions` |
+| `number \| undefined` | `number` | `MuiTextFieldOptions` |
+| `string \| undefined` | `select` | `MuiSelectOptions` |
+| `readonly string[]` | `select-multiple` | `MuiSelectMultipleOptions` |
+| `string \| undefined` | `radio` | `MuiRadioOptions` |
+| `boolean` | `checkbox`, `switch` | `MuiCheckboxOptions` or `MuiSwitchOptions` |
+| `string \| undefined` | `autocomplete` | `MuiAutocompleteOptions` |
+| `readonly string[]` | `autocomplete-multiple` | `MuiAutocompleteMultipleOptions` |
+| `File \| undefined` | `file` | `MuiFileOptions` |
+| `readonly File[]` | `files` | `MuiFileOptions` |
+| `number` | `slider` | `MuiSliderOptions` |
+| `readonly number[]` | `range-slider` | `MuiRangeSliderOptions` |
 
-Use that contextual view to define forms, create instances, and bind them to
-React. A concrete context is required at every creation and binding boundary.
-Runtime context may add fields to the authoring contract; those richer fields
-remain available through the resulting `FormInstance`.
+```tsx
+// [!include ~/snippets/api-reference.tsx:mui-fields]
+```
 
-## kit.defineForm
+The preset also exports its option, choice, slot-option, and localization
+types. The application owns `ThemeProvider`, `CssBaseline`, and theme
+configuration. See the [Material UI example](/examples/mui-yup) for a complete
+form.
 
-```ts
+## `defineForm`
+
+`kit.defineForm(schema, { ui })` validates, normalizes, and freezes a typed
+definition. The schema must implement Standard Schema. Field paths and control
+values use the schema input type, before schema transformations.
+
+```tsx
 // [!include ~/snippets/api-reference.tsx:define-form]
 ```
 
-Normalization checks paths, IDs, controls, the kit grid, slots, and array
-defaults. Resolver functions are synchronous. They can read values and runtime
-context.
+The UI array accepts four node kinds:
 
-Nodes use `kind: "field"`, `"section"`, `"array"`, or `"render"`. Field
-options include `visible`, `disabled`, `readOnly`, and `valuePolicy`. An array
-requires `itemDefault` when append or insert needs a default item.
+| Kind | Required properties | Purpose |
+| --- | --- | --- |
+| `field` | `path`, `control` | Connect one schema input path to one registered control. |
+| `section` | `id`, `children` | Group nodes without changing their path scope. |
+| `array` | `path`, `itemDefault`, `children` | Repeat nodes in the scope of one array item. |
+| `render` | `id`, `component` | Insert form-local React content. |
 
-## CreateFormOptions
+Field, section, and array nodes support resolved labels or descriptions. They
+also support `visible`, `disabled`, `readOnly`, `className`, `span`, and typed
+`slotOptions`. Fields add `required` and typed control `options`. Sections add
+`title` and `columns`.
 
-```ts
-// [!include ~/snippets/api-reference.tsx:create-form-options]
-```
+Each supported property accepts a static value or a synchronous resolver. A
+resolver receives the complete deeply readonly schema input and
+`{ context }`. Form, Please resolves the complete tree after each value change.
+It throws when a resolver returns a promise.
 
-`defaultValues` is required. The middleware array is copied and frozen at form
-creation. Duplicate middleware references, invalid first-party cardinality,
-and missing feature dependencies make form creation fail atomically.
+Hidden fields keep their TanStack Form values. The `required` property changes
+the UI state only. Put every data rule in the schema.
 
-Validation defaults are `mode: "submit"`, `revalidateMode: "change"`, and
-`asyncDebounceMs: 0`.
+An array child path is relative to one item. `itemDefault` accepts a complete
+item or a function that returns one. Form, Please clones the value before each
+insertion. Array rows use their current numeric index as path and React
+identity.
 
-## kit.createForm
-
-```ts
-// [!include ~/snippets/api-reference.tsx:create-form]
-```
-
-Create a module-level form only when shared ownership and lifetime are
-intentional.
-
-## kit.useCreateForm
+A render component inherits resolved interaction state:
 
 ```tsx
-// [!include ~/snippets/api-reference.tsx:use-create-form]
+// [!include ~/snippets/api-reference.tsx:render-node]
 ```
 
-This hook creates a component-local form. It retains the first definition and
-creation options; later argument changes do not replace the instance or discard
-in-progress values. Reset the form explicitly or remount the owning component
-with a new key when the logical document changes.
+The runtime rejects malformed schemas, unknown controls, invalid path syntax,
+duplicate node IDs, missing children, and grid values outside the kit grid.
 
-## FormRuntimeOptions
+A definition belongs to the exact kit that created it. Keep the definition
+stable for the hook lifetime. To use another definition, remount the component
+with a different React `key`.
 
-```ts
-// [!include ~/snippets/api-reference.tsx:runtime-options]
-```
+## `forContext`
 
-Runtime options exclude `defaultValues` and `middleware`. A mounted binding
-temporarily owns these values. The base options become active again after
-unmount.
-
-## kit.useBindForm
-
-```ts
-// [!include ~/snippets/api-reference.tsx:use-bind-form]
-```
-
-This hook binds an existing form. It never creates a form. One instance can
-have only one active `kit.useBindForm`, `kit.AutoForm`, or `ActionForm` binding.
-The hook rejects a form from any other kit snapshot.
-
-## Form and AutoForm
+`kit.forContext<Context>()` returns a type-only view of the same runtime kit. It
+makes `context` mandatory in `useForm`. It also types resolvers and compatible
+controls.
 
 ```tsx
-// [!include ~/snippets/api-reference.tsx:form-components]
+// [!include ~/snippets/api-reference.tsx:context-kit]
 ```
 
-`kit.Form` renders native form behavior and its children. It accepts native
-form props and `form`. Call `kit.useBindForm(form, runtimeOptions)` separately
-when a manual form needs a runtime binding. `kit.AutoForm` accepts native form
-props and `FormRuntimeOptions`, and it renders the error summary and definition
-fields. Both components reject a form from another exact kit.
+The method does not create or clone a registry. Its context type must extend
+the current kit context.
 
-Use `kit.Fields` inside `kit.Form` for manual composition. Use `kit.Submit` for
-the kit-owned submit button. Register `slots.Submit` to replace its markup. The
-slot receives `buttonProps`, the immutable current input `values`, and
-`isSubmitting`. Forward `buttonProps` to the actual submit control so the
-owned `type="submit"`, disabled state, children, and native props remain intact.
+## `useForm`
 
-## Hooks
+`kit.useForm(definition, options)` creates a component-local `FormBinding`.
 
-| API | Result |
+| Option | Requirement and effect |
 | --- | --- |
-| `useFormContext()` | The nearest `FormInstance` from `FormProvider` or a form component |
-| `useFormState(form, selector, options?)` | A selected snapshot value |
-| `useSnapshot(handle)` | The current snapshot from a history or persistence handle |
-| `useValue(form, path, options?)` | The typed value at a path |
-| `useField(form, path)` | Value, issues, metadata, and field commands |
-| `useArrayField(form, path)` | Stable rows and typed array commands |
-
-`FormProvider` and `useFormContext` remain public for headless composition.
-Get a history or persistence handle with `feature.handle(form)`. Use
-`useSnapshot(handle)` to subscribe a React component to that handle. Use
-`useFormState` for a form, and subscribe to the smallest state slice that the
-component needs.
-
-## FormInstance
-
-The instance is the primary command API:
-
-```ts
-// [!include ~/snippets/api-reference.tsx:form-instance]
-```
-
-Mutation commands return `void`. `validate()` returns a schema validation
-result. Path validation returns overlapping issues. `focusFirstError` returns
-whether focus moved. `reset(values)` installs a new clean document. `reset()`
-restores the current clean baseline. Use `clearErrors()` for every imperative
-issue or `clearErrors(path)` for one path.
-
-### Classic submission
-
-`onSubmit` can return `void` or `Promise<void>`. The form keeps
-`isSubmitting` true until the promise settles, and concurrent submissions use
-the same in-flight promise. A rejected promise does not become a form issue.
-Catch expected request failures. Call `form.setErrors(...)` when the user needs
-feedback. Call `form.reset(...)` after a save when the saved values must become
-the clean baseline. `form.submit()` uses the same lifecycle as a native classic
-submit.
-
-## Commands
-
-`FormCommand<Input, Context>` is the union accepted by middleware
-`api.dispatch`:
-
-```ts
-// [!include ~/snippets/api-reference.tsx:commands]
-```
-
-Nested dispatch runs after the current transaction completes. It does not
-interrupt the current middleware stack. See
-[Dispatch nested commands](/advanced#dispatch-nested-commands) for an example.
-
-## Transactions
-
-`FormTransaction<Input, Context>` is the immutable transaction union handled
-by middleware:
-
-```ts
-// [!include ~/snippets/api-reference.tsx:transactions]
-```
-
-`DocumentTransaction` has `type: "document/committed"`, a source, grouping,
-value changes, row-identity changes, and baseline disposition.
-`RestoreTransaction` has `type: "document/restored"`, a complete document,
-an origin, and history policy. Runtime transactions describe context,
-validation, submission, touch, blur, issue, and reset transitions.
-
-Transactions are immutable. A middleware handler can forward one unchanged,
-forward a replacement, or cancel it.
-
-## Events
-
-`FormEvent<Input, Context>` is the committed event union:
-
-- `document/committed` and `document/restored`;
-- `runtime/replaced` and `runtime/reset`;
-- `validation/started`, `validation/resolved`, and `validation/failed`;
-- `submission/started` and `submission/finished`;
-- `field/touched` and `field/blurred`;
-- `issues/changed`.
-
-Each event has a monotonic `sequence`. Document events are replayable.
-Runtime events are not stored in history or persistence.
-
-## Middleware
-
-```ts
-// [!include ~/snippets/api-reference.tsx:middleware]
-```
-
-Middleware is synchronous. See [Production recipes](/advanced) for ordering,
-cancellation, replacement, restore, nested dispatch, and error rules.
-
-## History
-
-Create the feature with `createHistoryMiddleware`, then keep its handle with
-the form owner:
-
-```ts
-// [!include ~/snippets/api-reference.tsx:history]
-```
-
-`limit` is an unlimited group count by default. It accepts non-negative
-integers, including `0`. `groupWindow` is `750` milliseconds by default. Set it
-to `0` to disable time-based group closure. Consecutive control commits to one
-path can share a group. A batch is one group. Forwarded blur closes the active
-group.
-
-```ts
-// [!include ~/snippets/api-reference.tsx:history-operations]
-```
-
-`FormJournal` contains checkpoint segments. Each checkpoint and group owns an
-opaque `cursor`. Use `journal.cursor` for the current position,
-`segment.checkpoint.cursor` for a checkpoint, or `group.cursor` for the state
-after that group:
-
-```ts
-// [!include ~/snippets/api-reference.tsx:replay]
-```
-
-An operation result is `"applied"`, `"unavailable"`, `"cancelled"`, or
-`"transformed"`. Import validates untrusted journal structure asynchronously.
-Replay is pure and has no form effects. Live navigation submits one restore
-through middleware. History restores values and row identity, but not the
-dirty baseline, touched state, issues, context, validation, or submission.
-
-See [History and journals](/guides/history) for complete examples.
-
-## Persistence
-
-Create persistence with `createPersistenceMiddleware` and an
-application-owned adapter:
-
-```ts
-// [!include ~/snippets/api-reference.tsx:persistence]
-```
-
-`key` must be non-empty. `version` must be a non-negative integer.
-`saveDelay` defaults to `500` milliseconds. Supply the same `HistoryFeature`
-in `history` and in the form middleware list to persist the journal.
-
-```ts
-// [!include ~/snippets/api-reference.tsx:persistence-operations]
-```
-
-The phase is `"idle"`, `"restoring"`, `"active"`, or `"conflict"`. Save state
-is `"idle"`, `"scheduled"`, `"saving"`, or `"failed"` with an error.
-Restore returns `"applied"`, `"empty"`, `"cancelled"`, `"transformed"`,
-`"unavailable"`, or `"conflict"`.
-
-Construction is idle. Call `restore()` before local edits. A successful or
-empty restore activates saving. Call `start()` when the application skips or
-recovers from restore. A local edit during asynchronous restore produces a
-conflict and remains authoritative.
-
-### Adapters
-
-```ts
-// [!include ~/snippets/api-reference.tsx:persistence-adapter]
-```
-
-The local storage adapter reads storage only when an operation runs, so its
-module is safe to import during SSR. Storage failures do not roll back form
-commits. They reject the operation, set failed save state when applicable, and
-call `onError`.
-
-### Codecs and migration
-
-```ts
-// [!include ~/snippets/api-reference.tsx:persistence-codecs]
-```
-
-Codec tags must be non-empty and unique. `createFileCodec` is opt-in and
-requires the browser `File` API. Migration receives decoded JSON before
-document or journal validation. It must return JSON. The current schema then
-validates hydrated values before restore.
-
-See [Persistence](/guides/persistence) for local storage, nuqs, and TanStack
-Query transports.
-
-## Redux DevTools
-
-Create the optional integration with `createDevToolsMiddleware`:
-
-```ts
-// [!include ~/snippets/api-reference.tsx:devtools]
-```
-
-The feature connects only after the form completes its first retained React
-binding through `kit.useBindForm`, `kit.AutoForm`, or `ActionForm`. A form that is
-never bound does not open a DevTools listener. For manual `kit.Form`
-composition, call `kit.useBindForm(form, runtimeOptions)` in the component.
-
-```ts
-// [!include ~/snippets/api-reference.tsx:devtools-options]
-```
-
-Supported connection options are `name`, `latency`, `maxAge`, `trace`,
-`traceLimit`, `serialize`, `actionSanitizer`, `stateSanitizer`,
-`actionsAllowlist`, `actionsDenylist`, `predicate`, and `autoPause`.
-`onError` receives integration failures. `maxAge` defaults to `50` and must be
-an integer greater than `1`. `autoPause` defaults to `true`.
-
-The integration sends committed events and a diagnostic projection of values
-and logical row identity. It supports `JUMP_TO_STATE`, `JUMP_TO_ACTION`,
-`RESET`, `ROLLBACK`, and `COMMIT`. `COMMIT` changes only the monitor baseline.
-The integration rejects arbitrary dispatch, skip, reorder, import, lock,
-persisted monitor state, and generated tests. Navigation uses only an opaque
-revision token from the bounded local table. The integration adds this token
-after `stateSanitizer` runs, so a sanitizer cannot replace it. Sanitized or
-serialized monitor state is never trusted as form input.
-
-`disconnect()` is idempotent, permanent for that form, and affects only that
-form. It removes the extension listener and the form event listener. The
-feature is inert during SSR or when the extension is absent. See
-[Redux DevTools](/guides/devtools).
-
-## defineControl
-
-`defineControl` connects one product control to typed value, option, focus,
-accessibility, and `FormData` contracts. Use `mode: "native"`, `"hidden"`, or
-`"none"` to declare submission behavior. Native option types include
-`NativeTextOptions`, `NativeSelectOptions`, and `NativeFileOptions`.
-
-## createNativeControls
-
-Import `createNativeControls` and its option types from
-`form-please/native-controls`. Each call returns a fresh frozen registry whose
-control definitions are also frozen.
-
-## createDefaultSlots
-
-```ts
-// [!include ~/snippets/api-reference.tsx:default-slots]
-```
-
-The default slots provide semantic markup and English array action labels.
-Import them from `form-please/default-slots`. They do not provide a visual
-theme.
-
-## React 19
+| `defaultValues` | Required schema input. TanStack Form uses it as the initial value. |
+| `context` | Required after `forContext<Context>()`; otherwise optional. |
+| `disabled` | Disables generated controls and native form submission. |
+| `readOnly` | Locks generated controls but does not disable submission. |
+| `onSubmit` | Receives parsed output, editable input, and the current binding. |
 
 ```tsx
-// [!include ~/snippets/api-reference.tsx:react-19]
+// [!include ~/snippets/api-reference.tsx:use-form]
 ```
 
-`ActionForm` gets its definition, controls, slots, and defaults from `form`.
-It does not accept `kit`, `definition`, or `defaultValues`. It bypasses classic
-client submission validation and reconciles serializable `FormResult` values.
+Submission has this sequence:
 
-## parseFormData
+1. TanStack Form validates the editable input with the Standard Schema.
+2. Form, Please parses the same input again to get the transformed output.
+3. `onSubmit` receives `{ value, input, form }` after both parses succeed.
+4. A returned promise keeps `form.api.state.isSubmitting` true until it settles.
 
-```ts twoslash
-import { parseFormData } from "form-please/server"
-import { z } from "zod"
+The second parse follows the Standard Schema transform flow in TanStack Form.
+Form, Please throws an invariant error if the same input changes validity
+between the two parses.
 
-const schema = z.object({ name: z.string().min(1) })
-const formData = new FormData()
-formData.set("name", "Ada")
+Use form-wide state for review or locked workflows:
 
-const result = await parseFormData(formData, schema)
-
-if (result.success) {
-	result.value.name
-} else {
-	result.reply()
-}
+```tsx
+// [!include ~/snippets/api-reference.tsx:form-wide-state]
 ```
 
-The parser normalizes bounded untrusted `FormData` and runs Standard Schema.
-Defaults are `maxEntries: 1_000`, `maxPathLength: 1_024`, `maxDepth: 32`, and
-`maxArrayIndex: 10_000`. Apply request and file limits before this function.
+## `FormBinding`
 
-## React-free core
+A binding contains these public fields:
 
-```ts
-// [!include ~/snippets/api-reference.tsx:core]
+| Field | Purpose |
+| --- | --- |
+| `api` | Typed TanStack `ReactFormExtendedApi` for values, fields, validation, reset, and subscriptions. |
+| `definition` | Fixed definition captured during the first hook render. |
+| `context` | Current runtime context. |
+| `disabled`, `readOnly` | Current form-wide interaction flags. |
+| `inputRefs`, `errorSummaryRef` | Focus registries used by generated controls and the error summary. |
+
+Treat `inputRefs` and `errorSummaryRef` as kit integration details. Do not
+mutate them in application code. Use `form.api` for form operations.
+
+## `Form`, `Fields`, `Submit`, and `AutoForm`
+
+| Component | Props and behavior |
+| --- | --- |
+| `kit.Form` | Requires `form`. Accepts native form props except owned submit, reset, action, and validation props. |
+| `kit.Fields` | Renders the resolved definition. It renders optional children after generated fields. |
+| `kit.Submit` | Accepts button props except `type`. The configured submit slot always receives `type="submit"`. |
+| `kit.AutoForm` | Renders `Form`, the error summary, `Fields`, and then its children. |
+
+`Fields` and `Submit` must be descendants of the matching `kit.Form`.
+`AutoForm` provides that form context automatically.
+
+`Form` prevents native submission and calls `form.api.handleSubmit()`. A reset
+event calls `form.api.reset()`. It sets `noValidate` because the Standard Schema
+owns validation.
+
+`Submit` becomes disabled while validation or submission runs. It also follows
+the form-wide `disabled` option and its own `disabled` prop.
+
+Use TanStack components directly when generated fields are only part of the
+screen:
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:manual-composition]
 ```
 
-Use this constructor for React-free state. It exposes the imperative store,
-selectors, validation, `resolveUi`, resource helpers such as `fromResource`
-and `matchResource`, the `ResourceState` type, and path helpers such as
-`FieldPath` and `ArrayFieldPath`. These resolver functions stay React-free.
-The public core constructor does not configure the React middleware chain or
-first-party optional feature handles. Read [React-free core](/guides/core) for
-a complete state and subscription example.
+`form.api.Field`, `form.api.FormGroup`, and `form.api.Subscribe` keep their
+TanStack Form behavior and types. Application-owned fields must provide their
+own labels, descriptions, issue output, and focus behavior.
+
+## Resource helpers
+
+`matchResource` and `fromResource` handle the three `ResourceState` branches:
+`pending`, `success`, and `error`.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:resource-states]
+```
+
+| Helper | Behavior |
+| --- | --- |
+| `matchResource(resource, cases)` | Selects one result immediately from a resource value. |
+| `fromResource(select, cases)` | Creates a synchronous UI resolver from application-owned resource state. |
+
+Every `fromResource` branch also receives the complete readonly form values and
+resolver details.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:resource-resolver]
+```
+
+Use `matchResource` when you need a standalone value:
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:resources]
+```
+
+Both helpers require `pending`, `success`, and `error` branches. Neither helper
+fetches, caches, retries, cancels, or retains data. Read [Resource
+state](/resources) for a TanStack Query adapter.
+
+Read [Production recipes](/advanced) for complete composition and submission
+patterns.

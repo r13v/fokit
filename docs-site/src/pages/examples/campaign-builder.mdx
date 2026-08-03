@@ -1,6 +1,6 @@
 ---
 title: Campaign builder
-description: A create-or-edit campaign form with seven conditional templates, shared audience and scheduling, payment variants, transactional cleanup, and fake mutations.
+description: A create-or-edit campaign form with seven conditional templates, shared audience and scheduling, payment variants, and fake mutations.
 showAskAi: false
 ---
 
@@ -8,30 +8,25 @@ import { CampaignBuilderDemo } from "../../components/campaign-builder-demo"
 
 # Campaign builder
 
-Seven campaign templates share one audience, channel, delivery, and scheduling
-model, then diverge into genuinely different payloads. Templates that can
-collect payment reuse a conditional payment section with fixed, flexible, and
-recurring variants.
+Seven campaign templates share an audience, schedule, channel, and payment
+model. Each template shows a different payload section.
 
 ## Try the complete flow
 
-Switch between the loaded edit draft and a new campaign. Change templates to
-see inactive payload fields leave the transaction. Exercise all seven branches:
-newsletter, product launch, event invitation, fundraiser, course release,
-community update, and feedback pulse. Paid templates reveal amount and recurring
-interval rules.
+Switch between the loaded draft and a new campaign. Change the template to see
+the definition resolve a different section. Paid templates also show amount
+and recurring interval fields.
 
 <CampaignBuilderDemo />
 
-## What this form stresses
+## What this form demonstrates
 
-- Seven conditionally validated payload branches in one schema.
-- Shared visibility helpers for audience, schedule, and payment behavior.
-- Typed transaction additions cleaning every inactive variant.
-- Query-backed audience segments and a keyed create/edit baseline.
-- Channel-group validation and conditional date ranges.
-- Separate create and update mutations selected outside editable state.
-- A live preview derived from the same Form, Please snapshot submitted to the API.
+- Conditional sections for seven schema branches.
+- Context-provided audience options.
+- Separate create and update mutations outside form state.
+- `form.api.Subscribe` for the live campaign preview.
+- Transformed submit output with a derived channel list.
+- Preserved values when a conditional section becomes hidden.
 
 ## Copy the source
 
@@ -39,4 +34,4 @@ interval rules.
 // [!include ~/snippets/complex-campaign-builder.tsx]
 ```
 
-Compare the other workflows in [Complex form examples](/examples).
+Compare the other workflows in [Examples](/examples).

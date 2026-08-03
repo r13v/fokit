@@ -32,7 +32,9 @@ at that ownership boundary.
 
 - Registry source is tracked and tested in this repository, then copied into
   the consuming application where it becomes application-owned code.
-- Published install commands use the Form, Please release tag so the adapter
-  and package contract remain reproducible.
+- The registry dependency does not duplicate the package version. Release
+  automation remains the only owner of the exact Form, Please version. Users
+  can append a matching Git release tag to the registry reference when an
+  installation must be reproducible.
 - Additional shadcn bases require separately validated adapters rather than an
   implicit claim that one adapter supports incompatible component contracts.

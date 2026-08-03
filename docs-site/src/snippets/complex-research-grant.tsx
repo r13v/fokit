@@ -7,14 +7,10 @@ import {
 	useQuery,
 } from "@tanstack/react-query"
 import {
-	type BeforeUpdateEvent,
 	createFormKit,
-	extendValueChanges,
+	type FormBinding,
 	type FormInput,
 	type FormOutput,
-	useFormContext,
-	useFormState,
-	type ValueChange,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -177,13 +173,15 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
+type GrantForm = FormBinding<typeof grantSchema>
 
-function OrganizationFinder() {
-	const form = useFormContext<typeof grantSchema>()
-	const selectedId = useFormState(
-		form,
-		(snapshot) => snapshot.values.organization.registryId,
-	)
+function OrganizationFinder({
+	form,
+	selectedId,
+}: {
+	readonly form: GrantForm
+	readonly selectedId: string | undefined
+}) {
 	const [search, setSearch] = useState("")
 	const records = useQuery({
 		queryKey: ["grant-registry", search],
@@ -216,9 +214,12 @@ function OrganizationFinder() {
 						aria-pressed={selectedId === record.id}
 						key={record.id}
 						onClick={() => {
-							form.setValue("organization.registryId", record.id)
-							form.setValue("organization.name", record.name)
-							form.setValue("organization.registrationCountry", record.country)
+							form.api.setFieldValue("organization.registryId", record.id)
+							form.api.setFieldValue("organization.name", record.name)
+							form.api.setFieldValue(
+								"organization.registrationCountry",
+								record.country,
+							)
 						}}
 						type="button"
 					>
@@ -227,31 +228,6 @@ function OrganizationFinder() {
 				))}
 			</div>
 		</section>
-	)
-}
-
-function GrantPreview() {
-	const form = useFormContext<typeof grantSchema>()
-	const summary = useFormState(form, (snapshot) => ({
-		title: snapshot.values.project.title,
-		funds: snapshot.values.project.requestedFunds,
-		months: snapshot.values.project.durationMonths,
-		applicantKind: snapshot.values.applicantKind,
-	}))
-	let applicantLabel = "Individual"
-	if (summary.applicantKind === "collective") applicantLabel = "Collective"
-
-	return (
-		<aside
-			className="form-please-complex__preview"
-			aria-label="Application preview"
-		>
-			<strong>{summary.title || "Untitled application"}</strong>
-			<span>
-				{applicantLabel}
-				{" · "}${summary.funds.toLocaleString()} · {summary.months} months
-			</span>
-		</aside>
 	)
 }
 
@@ -326,40 +302,32 @@ const grantDefinition = kit.defineForm(grantSchema, {
 					},
 				},
 				{
-					kind: "render",
-					id: "organization-finder",
-					component: OrganizationFinder,
-					visible: ({ "organization.path": path }) => path === "registered",
-				},
-				{
 					kind: "field",
 					path: "organization.registryId",
 					control: "text",
 					label: "Registry record ID",
-					visible: ({ "organization.path": path }) => path === "registered",
+					visible: (values) => values.organization.path === "registered",
 					readOnly: true,
-					valuePolicy: "unset",
 				},
 				{
 					kind: "field",
 					path: "organization.name",
 					control: "text",
-					label: ({ "organization.path": path }) => {
-						if (path === "registered") return "Registered name"
+					label: (values) => {
+						if (values.organization.path === "registered")
+							return "Registered name"
 						return "Working name"
 					},
-					visible: ({ "organization.path": path }) => path !== undefined,
-					readOnly: ({ "organization.path": path }) => path === "registered",
-					valuePolicy: "unset",
+					visible: (values) => values.organization.path !== undefined,
+					readOnly: (values) => values.organization.path === "registered",
 				},
 				{
 					kind: "field",
 					path: "organization.registrationCountry",
 					control: "text",
 					label: "Registration country",
-					visible: ({ "organization.path": path }) => path !== undefined,
-					readOnly: ({ "organization.path": path }) => path === "registered",
-					valuePolicy: "unset",
+					visible: (values) => values.organization.path !== undefined,
+					readOnly: (values) => values.organization.path === "registered",
 				},
 			],
 		},
@@ -417,11 +385,6 @@ const grantDefinition = kit.defineForm(grantSchema, {
 			],
 		},
 		{
-			kind: "render",
-			id: "grant-preview",
-			component: GrantPreview,
-		},
-		{
 			kind: "section",
 			id: "settlement",
 			title: "Settlement and reporting",
@@ -444,16 +407,14 @@ const grantDefinition = kit.defineForm(grantSchema, {
 					path: "payout.bankAccount",
 					control: "text",
 					label: "Settlement account",
-					visible: ({ "payout.method": method }) => method === "bank",
-					valuePolicy: "unset",
+					visible: (values) => values.payout.method === "bank",
 				},
 				{
 					kind: "field",
 					path: "payout.walletHandle",
 					control: "text",
 					label: "Wallet handle",
-					visible: ({ "payout.method": method }) => method === "digital-wallet",
-					valuePolicy: "unset",
+					visible: (values) => values.payout.method === "digital-wallet",
 				},
 				{
 					kind: "field",
@@ -473,8 +434,7 @@ const grantDefinition = kit.defineForm(grantSchema, {
 					path: "reporting.reference",
 					control: "text",
 					label: "Reporting reference",
-					visible: ({ "reporting.status": status }) => status === "registered",
-					valuePolicy: "unset",
+					visible: (values) => values.reporting.status === "registered",
 				},
 				{
 					kind: "field",
@@ -505,7 +465,6 @@ export function ResearchGrantExample() {
 
 function ResearchGrantForm() {
 	const [receipt, setReceipt] = useState("No application sent yet.")
-	const form = kit.useCreateForm(grantDefinition, { defaultValues })
 	const preview = useMutation({
 		mutationFn: (value: GrantOutput) =>
 			fakeRequest({ revision: value.reviewKey, accepted: true }, 420),
@@ -513,6 +472,18 @@ function ResearchGrantForm() {
 	const send = useMutation({
 		mutationFn: (value: GrantOutput) =>
 			fakeRequest({ id: `grant-${value.project.durationMonths}-2048` }, 520),
+	})
+	const form = kit.useForm(grantDefinition, {
+		defaultValues,
+		async onSubmit({ value }) {
+			try {
+				await preview.mutateAsync(value)
+				const result = await send.mutateAsync(value)
+				setReceipt(`Application ${result.id} passed preview and was sent.`)
+			} catch {
+				setReceipt("The review service is unavailable. Your values are intact.")
+			}
+		},
 	})
 	let status = receipt
 	if (send.isPending) status = "Sending application…"
@@ -528,28 +499,42 @@ function ResearchGrantForm() {
 				Applicant identity, registry lookup, settlement route, reporting rules,
 				and a two-request submission all share one typed form state.
 			</p>
-			<kit.AutoForm
-				beforeUpdate={preserveGrantInvariants}
-				className="form-please-complex__form"
-				form={form}
-				onSubmit={async ({ value, form }) => {
-					try {
-						form.clearErrors()
-						await preview.mutateAsync(value)
-						const result = await send.mutateAsync(value)
-						setReceipt(`Application ${result.id} passed preview and was sent.`)
-					} catch {
-						form.setErrors([
-							{
-								source: "server",
-								message:
-									"The review service is unavailable. Your values are intact.",
-							},
-						])
-					}
-				}}
-				validation={{ mode: "blur", revalidateMode: "change" }}
-			>
+			<kit.AutoForm className="form-please-complex__form" form={form}>
+				<form.api.Subscribe selector={(state) => state.values}>
+					{(values) => {
+						let finder = null
+						if (values.organization.path === "registered") {
+							finder = (
+								<OrganizationFinder
+									form={form}
+									selectedId={values.organization.registryId}
+								/>
+							)
+						}
+						let applicantLabel = "Individual"
+						if (values.applicantKind === "collective") {
+							applicantLabel = "Collective"
+						}
+						return (
+							<>
+								{finder}
+								<aside
+									aria-label="Application preview"
+									className="form-please-complex__preview"
+								>
+									<strong>
+										{values.project.title || "Untitled application"}
+									</strong>
+									<span>
+										{applicantLabel}
+										{" · "}${values.project.requestedFunds.toLocaleString()} ·{" "}
+										{values.project.durationMonths} months
+									</span>
+								</aside>
+							</>
+						)
+					}}
+				</form.api.Subscribe>
 				<div className="form-please-complex__actions">
 					<kit.Submit className="form-please-complex__primary">
 						Preview and send
@@ -559,41 +544,6 @@ function ResearchGrantForm() {
 			</kit.AutoForm>
 		</section>
 	)
-}
-
-function preserveGrantInvariants(
-	event: BeforeUpdateEvent<GrantInput, unknown>,
-): readonly ValueChange<GrantInput>[] | undefined {
-	const additions: ValueChange<GrantInput>[] = []
-
-	if (event.currentValues.applicantKind !== event.nextValues.applicantKind) {
-		additions.push(
-			{ type: "unset", path: "organization.path" },
-			{ type: "unset", path: "organization.registryId" },
-			{ type: "unset", path: "organization.name" },
-			{ type: "unset", path: "organization.registrationCountry" },
-		)
-	}
-
-	if (
-		event.currentValues.organization.path !== event.nextValues.organization.path
-	) {
-		additions.push(
-			{ type: "unset", path: "organization.registryId" },
-			{ type: "unset", path: "organization.name" },
-			{ type: "unset", path: "organization.registrationCountry" },
-		)
-	}
-
-	if (event.currentValues.payout.method !== event.nextValues.payout.method) {
-		if (event.nextValues.payout.method === "bank") {
-			additions.push({ type: "unset", path: "payout.walletHandle" })
-		} else {
-			additions.push({ type: "unset", path: "payout.bankAccount" })
-		}
-	}
-
-	return extendValueChanges(event, additions)
 }
 
 function fakeRequest<Value>(value: Value, delay = 280): Promise<Value> {

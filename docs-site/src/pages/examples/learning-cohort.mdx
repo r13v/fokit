@@ -8,43 +8,30 @@ import { LearningCohortDemo } from "../../components/learning-cohort-demo"
 
 # Learning cohort editor
 
-This form combines a remotely suggested public identity with several dependent
-collections: session formats, non-overlapping price bands, media references,
-and four distinct enrollment offers. A server-style title conflict returns to
-the exact field that can resolve it.
+This form combines a loaded draft with session formats, price bands, media,
+and four enrollment offers. A fake title service returns suggestions for the
+current title.
 
 ## Try the complete flow
 
-Edit the title and choose one of the query-backed suggestions. Reorder session
-formats, create an overlapping price range, or enable an offer without its
-dependent values. To exercise conflict recovery, enter `Reserved cohort` and
-save; the fake API places a server issue on the title while preserving the rest
-of the draft.
+Edit the title and choose a remote suggestion. Reorder session formats or
+create overlapping price bands. Enter `Reserved cohort` to see save-conflict
+feedback without losing the draft.
 
 <LearningCohortDemo />
 
-## What this form stresses
+## What this form demonstrates
 
-- A loaded edit baseline and a query keyed by a live field value.
-- Render-node controls that update typed Form, Please paths.
-- Two reorderable configuration arrays plus media and a native file.
-- Cross-row price validation rather than row-local validation only.
-- `queryToResource` projecting query-owned title suggestions into exhaustive
-  pending, success, refresh, and error presentation.
-- Three sequential resource mutations.
-- Mapping a typed conflict back into the Form, Please server-error lifecycle.
+- `form.api.Subscribe` for a query key and a live preview.
+- `form.api.setFieldValue` for an application-owned suggestion control.
+- Two generated arrays with cross-row schema validation.
+- Conditional offer fields that preserve hidden values.
+- Three sequential mutations from transformed submit output.
 
 ## Copy the source
-
-The example imports the same application-owned adapter documented in the async
-fields guide:
-
-```ts
-// [!include ~/snippets/query-to-resource.ts]
-```
 
 ```tsx
 // [!include ~/snippets/complex-learning-cohort.tsx]
 ```
 
-Compare the other workflows in [Complex form examples](/examples).
+Compare the other workflows in [Examples](/examples).

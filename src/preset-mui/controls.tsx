@@ -19,17 +19,8 @@ import {
 } from "@mui/material"
 import { type ReactElement, useEffect, useRef, useState } from "react"
 
-import {
-	type ControlProps,
-	defineControl,
-} from "../react/control-definition.js"
-import {
-	serializeBoolean,
-	serializeNumberArray,
-	serializeOptionalNumber,
-	serializeOptionalString,
-	serializeStringArray,
-} from "../react/control-form-data.js"
+import { defineControl } from "../control-definition.js"
+import type { ControlProps } from "../types.js"
 import type {
 	MuiAutocompleteMultipleOptions,
 	MuiAutocompleteOptions,
@@ -63,105 +54,78 @@ const visuallyHiddenInputStyle = {
 export function createMuiControls(i18n: MuiFormKitI18n) {
 	const text = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: createMuiTextControl("text"),
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const textarea = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: MuiTextareaControl,
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const password = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: createMuiTextControl("password"),
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const email = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: createMuiTextControl("email"),
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const url = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: createMuiTextControl("url"),
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const tel = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: createMuiTextControl("tel"),
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const search = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: createMuiTextControl("search"),
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const number = defineControl<number | undefined, MuiTextFieldOptions>({
 		component: MuiNumberControl,
-		formData: { mode: "native", serialize: serializeOptionalNumber },
 	})
 	const date = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: createMuiDateControl("date"),
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const time = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: createMuiDateControl("time"),
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const datetimeLocal = defineControl<string | undefined, MuiTextFieldOptions>({
 		component: createMuiDateControl("datetime-local"),
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const select = defineControl<string | undefined, MuiSelectOptions>({
 		component: MuiSelectControl,
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const selectMultiple = defineControl<
 		readonly string[],
 		MuiSelectMultipleOptions
 	>({
 		component: MuiSelectMultipleControl,
-		formData: { mode: "hidden", serialize: serializeStringArray },
 	})
 	const radio = defineControl<string | undefined, MuiRadioOptions>({
 		component: MuiRadioControl,
-		formData: { mode: "native", serialize: serializeOptionalString },
 	})
 	const checkbox = defineControl<boolean, MuiCheckboxOptions>({
 		component: MuiCheckboxControl,
-		formData: { mode: "native", serialize: serializeBoolean },
 	})
 	const switchControl = defineControl<boolean, MuiSwitchOptions>({
 		component: MuiSwitchControl,
-		formData: { mode: "native", serialize: serializeBoolean },
 	})
 	const autocomplete = defineControl<
 		string | undefined,
 		MuiAutocompleteOptions
 	>({
 		component: MuiAutocompleteControl,
-		formData: { mode: "hidden", serialize: serializeOptionalString },
 	})
 	const autocompleteMultiple = defineControl<
 		readonly string[],
 		MuiAutocompleteMultipleOptions
 	>({
 		component: MuiAutocompleteMultipleControl,
-		formData: { mode: "hidden", serialize: serializeStringArray },
 	})
 	const file = defineControl<File | undefined, MuiFileOptions>({
 		component: (props) => <MuiFileControl {...props} i18n={i18n} />,
-		formData: { mode: "native" },
 	})
 	const files = defineControl<readonly File[], MuiFileOptions>({
 		component: (props) => <MuiFilesControl {...props} i18n={i18n} />,
-		formData: { mode: "native" },
 	})
 	const slider = defineControl<number, MuiSliderOptions>({
 		component: MuiSliderControl,
-		formData: {
-			mode: "hidden",
-			serialize(value, details) {
-				return [{ name: details.name, value: String(value) }]
-			},
-		},
 	})
 	const rangeSlider = defineControl<readonly number[], MuiRangeSliderOptions>({
 		component: MuiRangeSliderControl,
-		formData: { mode: "hidden", serialize: serializeNumberArray },
 	})
 
 	return Object.freeze({
@@ -976,21 +940,18 @@ function MuiFilesControl(
 	}, [hasNativeValue, nativeValue])
 
 	return (
-		<>
-			<input name="__fp.array" type="hidden" value={props.input.name} />
-			<MuiFileButton
-				{...props}
-				hasNativeValue={hasNativeValue && props.value.length > 0}
-				inputElement={inputElement}
-				label={label}
-				multiple
-				onFiles={(files) => {
-					const nextFiles = files === null ? [] : Array.from(files)
-					setNativeValue(nextFiles)
-					props.setValue(nextFiles)
-				}}
-			/>
-		</>
+		<MuiFileButton
+			{...props}
+			hasNativeValue={hasNativeValue && props.value.length > 0}
+			inputElement={inputElement}
+			label={label}
+			multiple
+			onFiles={(files) => {
+				const nextFiles = files === null ? [] : Array.from(files)
+				setNativeValue(nextFiles)
+				props.setValue(nextFiles)
+			}}
+		/>
 	)
 }
 

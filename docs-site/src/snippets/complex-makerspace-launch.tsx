@@ -7,16 +7,10 @@ import {
 	useQuery,
 } from "@tanstack/react-query"
 import {
-	type BeforeUpdateEvent,
 	createFormKit,
-	extendValueChanges,
-	type FieldPath,
+	type FormBinding,
 	type FormInput,
 	type FormOutput,
-	useFormContext,
-	useFormState,
-	useValue,
-	type ValueChange,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -191,12 +185,13 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
+const contextualKit = kit.forContext<LaunchContext>()
 const stages = ["identity", "location", "capacity", "publishing"] as const
 const stageLabels = {
-	identity: "Step 1",
-	location: "Step 2",
-	capacity: "Step 3",
-	publishing: "Step 4",
+	identity: "Identity",
+	location: "Location",
+	capacity: "Capacity & media",
+	publishing: "Publishing",
 } satisfies Record<(typeof stages)[number], string>
 const stageNames = {
 	identity: "Identity",
@@ -204,92 +199,84 @@ const stageNames = {
 	capacity: "Capacity & media",
 	publishing: "Publishing",
 } satisfies Record<(typeof stages)[number], string>
-const stageValidationPaths = {
-	identity: ["identity"],
-	location: ["location"],
-	capacity: ["capacityBands", "media", "amenities", "accessInstructions"],
-	publishing: ["promotions"],
-} as const satisfies Record<
-	(typeof stages)[number],
-	readonly FieldPath<LaunchInput>[]
->
+type LaunchForm = FormBinding<typeof launchSchema, LaunchContext>
 
-function WizardNavigation() {
-	const form = useFormContext<typeof launchSchema, LaunchContext>()
-	const stage = useValue(form, "stage")
-	const index = stages.indexOf(stage)
-	const advance = async (nextStage: LaunchInput["stage"]) => {
-		const paths = stageValidationPaths[stage]
-		const issues = await form.validatePaths(paths)
-		if (issues.length > 0) {
-			queueMicrotask(() => form.focusFirstError(paths))
-			return
-		}
-
-		form.setValue("stage", nextStage)
-	}
-	const nextStage = stages[index + 1] ?? stage
-	let primaryAction = (
-		<kit.Submit className="form-please-complex__primary">
-			Publish makerspace
-		</kit.Submit>
-	)
-	if (index < stages.length - 1) {
-		primaryAction = (
-			<button
-				className="form-please-complex__primary"
-				onClick={() => void advance(nextStage)}
-				type="button"
-			>
-				Continue to {stageNames[nextStage]}
-			</button>
-		)
-	}
-
+function WizardNavigation({ form }: { readonly form: LaunchForm }) {
 	return (
-		<nav className="form-please-complex__wizard" aria-label="Launch stages">
-			<ol>
-				{stages.map((item, itemIndex) => {
-					let ariaCurrent: "step" | undefined
-					if (item === stage) ariaCurrent = "step"
+		<form.api.Subscribe selector={(state) => state.values.stage}>
+			{(stage) => {
+				const index = stages.indexOf(stage)
+				const nextStage = stages[index + 1] ?? stage
+				let primaryAction = (
+					<kit.Submit className="form-please-complex__primary">
+						Publish makerspace
+					</kit.Submit>
+				)
+				if (index < stages.length - 1) {
+					primaryAction = (
+						<button
+							className="form-please-complex__primary"
+							onClick={() => form.api.setFieldValue("stage", nextStage)}
+							type="button"
+						>
+							Continue to {stageNames[nextStage]}
+						</button>
+					)
+				}
+				return (
+					<nav
+						aria-label="Launch stages"
+						className="form-please-complex__wizard"
+					>
+						<ol>
+							{stages.map((item) => {
+								let ariaCurrent: "step" | undefined
+								let color: string | undefined
 
-					return (
-						<li aria-current={ariaCurrent} key={item}>
+								if (item === stage) {
+									ariaCurrent = "step"
+									color = "var(--fp-docs-rust)"
+								}
+
+								return (
+									<li aria-current={ariaCurrent} key={item}>
+										<button
+											style={{ color }}
+											onClick={() => form.api.setFieldValue("stage", item)}
+											type="button"
+										>
+											{stageLabels[item]}
+										</button>
+									</li>
+								)
+							})}
+						</ol>
+						<div className="form-please-complex__actions">
 							<button
-								disabled={itemIndex > index + 1}
-								onClick={() => {
-									if (itemIndex === index + 1) {
-										void advance(item)
-										return
-									}
-
-									form.setValue("stage", item)
-								}}
+								disabled={index === 0}
+								onClick={() =>
+									form.api.setFieldValue("stage", stages[index - 1] ?? stage)
+								}
 								type="button"
 							>
-								{stageLabels[item]}
+								Back
 							</button>
-						</li>
-					)
-				})}
-			</ol>
-			<div className="form-please-complex__actions">
-				<button
-					disabled={index === 0}
-					onClick={() => form.setValue("stage", stages[index - 1] ?? stage)}
-					type="button"
-				>
-					Back
-				</button>
-				{primaryAction}
-			</div>
-		</nav>
+							{primaryAction}
+						</div>
+					</nav>
+				)
+			}}
+		</form.api.Subscribe>
 	)
 }
 
-function AddressLookup() {
-	const form = useFormContext<typeof launchSchema, LaunchContext>()
-	const postalCode = useValue(form, "location.postalCode")
+function AddressLookup({
+	form,
+	postalCode,
+}: {
+	readonly form: LaunchForm
+	readonly postalCode: string
+}) {
 	const lookup = useQuery({
 		queryKey: ["address-lookup", postalCode],
 		queryFn: () => {
@@ -318,9 +305,9 @@ function AddressLookup() {
 				disabled={lookup.data === undefined}
 				onClick={() => {
 					if (lookup.data === undefined) return
-					form.setValue("location.address", lookup.data.address)
-					form.setValue("location.latitude", lookup.data.latitude)
-					form.setValue("location.longitude", lookup.data.longitude)
+					form.api.setFieldValue("location.address", lookup.data.address)
+					form.api.setFieldValue("location.latitude", lookup.data.latitude)
+					form.api.setFieldValue("location.longitude", lookup.data.longitude)
 				}}
 				type="button"
 			>
@@ -330,227 +317,200 @@ function AddressLookup() {
 	)
 }
 
-function CoordinatePreview() {
-	const form = useFormContext<typeof launchSchema, LaunchContext>()
-	const location = useFormState(form, (snapshot) => snapshot.values.location)
-
-	return (
-		<aside
-			className="form-please-complex__preview"
-			aria-label="Coordinate preview"
-		>
-			<strong>{location.address}</strong>
-			<span>
-				{location.latitude.toFixed(3)}, {location.longitude.toFixed(3)} ·{" "}
-				{location.postalCode}
-			</span>
-		</aside>
-	)
-}
-
-const launchDefinition = kit
-	.forContext<LaunchContext>()
-	.defineForm(launchSchema, {
-		ui: [
-			{ kind: "render", id: "wizard-navigation", component: WizardNavigation },
-			{
-				kind: "section",
-				id: "identity",
-				title: "Makerspace identity",
-				visible: ({ stage }) => stage === "identity",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "identity.name",
-						control: "text",
-						label: "Public name",
-						required: true,
-					},
-					{
-						kind: "field",
-						path: "identity.campusId",
-						control: "select",
-						label: "Campus",
-						options: (_values, { context }) => ({ options: context.campuses }),
-					},
-					{
-						kind: "field",
-						path: "identity.description",
-						control: "textarea",
-						label: "Public description",
-						description: "Explain the work this place makes possible.",
-						span: "full",
-						options: { rows: 5 },
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "location",
-				title: "Location",
-				visible: ({ stage }) => stage === "location",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "location.regionId",
-						control: "select",
-						label: "Region",
-						options: (_values, { context }) => ({ options: context.regions }),
-					},
-					{
-						kind: "field",
-						path: "location.postalCode",
-						control: "text",
-						label: "Postal code",
-					},
-					{ kind: "render", id: "address-lookup", component: AddressLookup },
-					{
-						kind: "field",
-						path: "location.address",
-						control: "text",
-						label: "Street address",
-						span: "full",
-					},
-					{
-						kind: "field",
-						path: "location.latitude",
-						control: "number",
-						label: "Latitude",
-						options: { min: -90, max: 90, step: 0.001 },
-					},
-					{
-						kind: "field",
-						path: "location.longitude",
-						control: "number",
-						label: "Longitude",
-						options: { min: -180, max: 180, step: 0.001 },
-					},
-					{
-						kind: "render",
-						id: "coordinate-preview",
-						component: CoordinatePreview,
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "capacity",
-				title: "Capacity, media, and amenities",
-				visible: ({ stage }) => stage === "capacity",
-				children: [
-					{
-						kind: "array",
-						path: "capacityBands",
-						label: "Capacity bands",
-						itemDefault: { label: "", people: 1, hourlyRate: 0 },
-						children: [
-							{
-								kind: "field",
-								path: "label",
-								control: "text",
-								label: "Band name",
-							},
-							{
-								kind: "field",
-								path: "people",
-								control: "number",
-								label: "People",
-								options: { min: 1, max: 500, step: 1 },
-							},
-							{
-								kind: "field",
-								path: "hourlyRate",
-								control: "number",
-								label: "Hourly rate",
-								options: { min: 0, step: 5 },
-							},
-						],
-					},
-					{
-						kind: "field",
-						path: "media.cover",
-						control: "file",
-						label: "Cover image",
-						options: { accept: "image/*" },
-					},
-					{
-						kind: "array",
-						path: "media.gallery",
-						label: "Gallery",
-						description: "Reorder references without losing row state.",
-						itemDefault: { assetUrl: "", caption: "" },
-						children: [
-							{
-								kind: "field",
-								path: "assetUrl",
-								control: "text",
-								label: "Media URL",
-							},
-							{
-								kind: "field",
-								path: "caption",
-								control: "text",
-								label: "Caption",
-							},
-						],
-					},
-					{
-						kind: "section",
-						id: "amenities",
-						title: "Amenities",
-						columns: 2,
-						children: [
-							{
-								kind: "field",
-								path: "amenities.stepFree",
-								control: "checkbox",
-								label: "Step-free",
-							},
-							{
-								kind: "field",
-								path: "amenities.ventilation",
-								control: "checkbox",
-								label: "Extract ventilation",
-							},
-							{
-								kind: "field",
-								path: "amenities.toolLibrary",
-								control: "checkbox",
-								label: "Tool library",
-							},
-							{
-								kind: "field",
-								path: "amenities.quietZone",
-								control: "checkbox",
-								label: "Quiet zone",
-							},
-						],
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "publishing",
-				title: "Publishing rules",
-				visible: ({ stage }) => stage === "publishing",
-				children: [
-					{
-						kind: "field",
-						path: "accessInstructions",
-						control: "textarea",
-						label: "Access instructions",
-						options: { rows: 4 },
-					},
-					promotionSection("launch", "Launch offer"),
-					promotionSection("student", "Student access"),
-					promotionSection("community", "Community partner"),
-					promotionSection("offPeak", "Off-peak hours"),
-				],
-			},
-		],
-	})
+const launchDefinition = contextualKit.defineForm(launchSchema, {
+	ui: [
+		{
+			kind: "section",
+			id: "identity",
+			title: "Makerspace identity",
+			visible: ({ stage }) => stage === "identity",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "identity.name",
+					control: "text",
+					label: "Public name",
+					required: true,
+				},
+				{
+					kind: "field",
+					path: "identity.campusId",
+					control: "select",
+					label: "Campus",
+					options: (_values, { context }) => ({ options: context.campuses }),
+				},
+				{
+					kind: "field",
+					path: "identity.description",
+					control: "textarea",
+					label: "Public description",
+					description: "Explain the work this place makes possible.",
+					span: "full",
+					options: { rows: 5 },
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "location",
+			title: "Location",
+			visible: ({ stage }) => stage === "location",
+			columns: 2,
+			children: [
+				{
+					kind: "field",
+					path: "location.regionId",
+					control: "select",
+					label: "Region",
+					options: (_values, { context }) => ({ options: context.regions }),
+				},
+				{
+					kind: "field",
+					path: "location.postalCode",
+					control: "text",
+					label: "Postal code",
+				},
+				{
+					kind: "field",
+					path: "location.address",
+					control: "text",
+					label: "Street address",
+					span: "full",
+				},
+				{
+					kind: "field",
+					path: "location.latitude",
+					control: "number",
+					label: "Latitude",
+					options: { min: -90, max: 90, step: 0.001 },
+				},
+				{
+					kind: "field",
+					path: "location.longitude",
+					control: "number",
+					label: "Longitude",
+					options: { min: -180, max: 180, step: 0.001 },
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "capacity",
+			title: "Capacity, media, and amenities",
+			visible: ({ stage }) => stage === "capacity",
+			children: [
+				{
+					kind: "array",
+					path: "capacityBands",
+					label: "Capacity bands",
+					itemDefault: { label: "", people: 1, hourlyRate: 0 },
+					children: [
+						{
+							kind: "field",
+							path: "label",
+							control: "text",
+							label: "Band name",
+						},
+						{
+							kind: "field",
+							path: "people",
+							control: "number",
+							label: "People",
+							options: { min: 1, max: 500, step: 1 },
+						},
+						{
+							kind: "field",
+							path: "hourlyRate",
+							control: "number",
+							label: "Hourly rate",
+							options: { min: 0, step: 5 },
+						},
+					],
+				},
+				{
+					kind: "field",
+					path: "media.cover",
+					control: "file",
+					label: "Cover image",
+					options: { accept: "image/*" },
+				},
+				{
+					kind: "array",
+					path: "media.gallery",
+					label: "Gallery",
+					description: "Reorder references without losing row state.",
+					itemDefault: { assetUrl: "", caption: "" },
+					children: [
+						{
+							kind: "field",
+							path: "assetUrl",
+							control: "text",
+							label: "Media URL",
+						},
+						{
+							kind: "field",
+							path: "caption",
+							control: "text",
+							label: "Caption",
+						},
+					],
+				},
+				{
+					kind: "section",
+					id: "amenities",
+					title: "Amenities",
+					columns: 2,
+					children: [
+						{
+							kind: "field",
+							path: "amenities.stepFree",
+							control: "checkbox",
+							label: "Step-free",
+						},
+						{
+							kind: "field",
+							path: "amenities.ventilation",
+							control: "checkbox",
+							label: "Extract ventilation",
+						},
+						{
+							kind: "field",
+							path: "amenities.toolLibrary",
+							control: "checkbox",
+							label: "Tool library",
+						},
+						{
+							kind: "field",
+							path: "amenities.quietZone",
+							control: "checkbox",
+							label: "Quiet zone",
+						},
+					],
+				},
+			],
+		},
+		{
+			kind: "section",
+			id: "publishing",
+			title: "Publishing rules",
+			visible: ({ stage }) => stage === "publishing",
+			children: [
+				{
+					kind: "field",
+					path: "accessInstructions",
+					control: "textarea",
+					label: "Access instructions",
+					options: { rows: 4 },
+				},
+				promotionSection("launch", "Launch offer"),
+				promotionSection("student", "Student access"),
+				promotionSection("community", "Community partner"),
+				promotionSection("offPeak", "Off-peak hours"),
+			],
+		},
+	],
+})
 
 function promotionSection(
 	name: "launch" | "student" | "community" | "offPeak",
@@ -594,11 +554,6 @@ export function MakerspaceLaunchExample() {
 }
 
 function MakerspaceLaunchForm() {
-	const initialContext: LaunchContext = { campuses: [], regions: [] }
-	const form = kit.useCreateForm(launchDefinition, {
-		defaultValues,
-		context: initialContext,
-	})
 	const campuses = useQuery({
 		queryKey: ["maker-campuses"],
 		queryFn: () =>
@@ -634,6 +589,25 @@ function MakerspaceLaunchForm() {
 			fakeRequest({ offers: value.activePromotionCount }, 420),
 	})
 	const [notice, setNotice] = useState("Complete the four stages to publish.")
+	const form = contextualKit.useForm(launchDefinition, {
+		defaultValues,
+		context: {
+			campuses: campuses.data ?? [],
+			regions: regions.data ?? [],
+		},
+		async onSubmit({ value }) {
+			try {
+				const place = await savePlace.mutateAsync(value)
+				const media = await saveMedia.mutateAsync(value)
+				const release = await publish.mutateAsync(value)
+				setNotice(
+					`Space ${place.id} published with ${media.count} gallery item(s) and ${release.offers} offer(s).`,
+				)
+			} catch {
+				setNotice("Publishing paused. The wizard kept every value.")
+			}
+		},
+	})
 
 	if (campuses.isPending || regions.isPending) {
 		return (
@@ -665,51 +639,48 @@ function MakerspaceLaunchForm() {
 				media rows, pricing bands, four offers, and three writes retain one
 				state.
 			</p>
-			<kit.AutoForm
-				beforeUpdate={clearDisabledPromotions}
-				className="form-please-complex__form"
-				context={{ campuses: campuses.data, regions: regions.data }}
-				form={form}
-				onSubmit={async ({ value, form }) => {
-					try {
-						form.clearErrors()
-						const place = await savePlace.mutateAsync(value)
-						const media = await saveMedia.mutateAsync(value)
-						const release = await publish.mutateAsync(value)
-						setNotice(
-							`Space ${place.id} published with ${media.count} gallery item(s) and ${release.offers} offer(s).`,
+			<kit.Form className="form-please-complex__form" form={form}>
+				<form.api.Subscribe selector={(state) => state.values}>
+					{(values) => {
+						let locationDetails = null
+						if (values.stage === "location") {
+							locationDetails = (
+								<>
+									<AddressLookup
+										form={form}
+										postalCode={values.location.postalCode}
+									/>
+									<aside
+										aria-label="Coordinate preview"
+										className="form-please-complex__preview"
+									>
+										<strong>{values.location.address}</strong>
+										<span>
+											{values.location.latitude.toFixed(3)},{" "}
+											{values.location.longitude.toFixed(3)} ·{" "}
+											{values.location.postalCode}
+										</span>
+									</aside>
+								</>
+							)
+						}
+						return (
+							<>
+								<WizardNavigation form={form} />
+								{locationDetails}
+							</>
 						)
-					} catch {
-						form.setErrors([
-							{
-								source: "server",
-								message: "Publishing paused. The wizard kept every value.",
-							},
-						])
-					}
-				}}
-			/>
+					}}
+				</form.api.Subscribe>
+
+				<kit.Fields />
+			</kit.Form>
+
 			<output className="form-please-complex__network" aria-live="polite">
 				{status}
 			</output>
 		</section>
 	)
-}
-
-function clearDisabledPromotions(
-	event: BeforeUpdateEvent<LaunchInput, unknown>,
-): readonly ValueChange<LaunchInput>[] | undefined {
-	const additions: ValueChange<LaunchInput>[] = []
-	for (const name of ["launch", "student", "community", "offPeak"] as const) {
-		if (
-			event.currentValues.promotions[name].enabled &&
-			!event.nextValues.promotions[name].enabled
-		) {
-			additions.push({ type: "unset", path: `promotions.${name}.percent` })
-		}
-	}
-
-	return extendValueChanges(event, additions)
 }
 
 function fakeRequest<Value>(value: Value, delay: number): Promise<Value> {

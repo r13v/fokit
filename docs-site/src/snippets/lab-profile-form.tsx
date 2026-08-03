@@ -119,18 +119,20 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 						],
 					},
 				},
+				// [!region conditional-field]
 				{
 					kind: "field",
 					path: "companyName",
 					control: "text",
 					label: "Company name",
+					required: ({ accountType }) => accountType === "company",
 					visible: ({ accountType }) => accountType === "company",
-					valuePolicy: "unset",
 					options: {
 						placeholder: "Compiler Labs",
 						autoComplete: "organization",
 					},
 				},
+				// [!endregion conditional-field]
 				{
 					kind: "field",
 					path: "country",
@@ -152,19 +154,21 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					path: "avatar",
 					control: "file",
 					label: "Avatar",
-					description: "Choose a PNG file. Form, Please keeps it in FormData.",
+					description:
+						"Choose a PNG file. The File stays in the TanStack Form input.",
 					options: {
 						accept: "image/png",
 					},
 				},
 			],
 		},
+		// [!region array-node]
 		{
 			kind: "array",
 			path: "contacts",
 			label: "Contacts",
 			description:
-				"Add or reorder contacts. Form, Please keeps each row with its state.",
+				"Add or reorder contacts. TanStack Form updates the array by index.",
 			itemDefault: {
 				email: "",
 				label: undefined,
@@ -187,25 +191,28 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					path: "label",
 					control: "text",
 					label: "Label",
-					valuePolicy: "unset",
 					options: {
 						placeholder: "primary",
 					},
 				},
 			],
 		},
+		// [!endregion array-node]
 	],
 })
 
 export function ProfileForm() {
 	const [saved, setSaved] = useState<ProfileOutput>()
-	const form = kit.useCreateForm(profileDefinition, { defaultValues })
+	const form = kit.useForm(profileDefinition, {
+		defaultValues,
+		onSubmit: ({ value }) => setSaved(value),
+	})
 	let output = "Submit the form to see typed output."
 	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
 
 	return (
 		<>
-			<kit.AutoForm form={form} onSubmit={({ value }) => setSaved(value)}>
+			<kit.AutoForm form={form}>
 				<kit.Submit>Save profile</kit.Submit>
 			</kit.AutoForm>
 			<pre aria-live="polite">{output}</pre>

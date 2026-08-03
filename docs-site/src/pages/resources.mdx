@@ -1,0 +1,157 @@
+---
+title: Resource state
+description: Represent application-owned request state and map it into synchronous form UI.
+showAskAi: false
+---
+
+# Resource state
+
+Use resource state when remote data changes labels, options, descriptions, or
+interaction state in a form.
+
+"Form, Please" does not send requests. It also does not own caches, retries,
+cancellation, or previous data. Keep that work in the application or a request
+library. Pass the current result through form context.
+
+| Required result | Helper |
+| --- | --- |
+| Derive a value immediately | `matchResource` |
+| Define a synchronous UI resolver | `fromResource` |
+| Load or refresh remote data | Application code or a request library |
+
+## Define the resource states
+
+`ResourceState<Value, Error>` is a readonly tagged union with three states:
+
+```ts
+type ResourceState<Value, Error = unknown> =
+	| { readonly status: "pending" }
+	| { readonly status: "success"; readonly value: Value }
+	| { readonly status: "error"; readonly error: Error }
+```
+
+Set the `Error` type when a branch must read a known error property. The default
+error type is `unknown`.
+
+```ts
+// [!include ~/snippets/resources-guide.tsx:create-states]
+```
+
+The `status` property selects the branch. A successful state must contain
+`value`. An error state must contain `error`.
+
+## Match a standalone resource
+
+Use `matchResource` when you already have a resource and need one result now.
+For example, create status text outside a form definition:
+
+```ts
+// [!include ~/snippets/resources-guide.tsx:match-resource]
+```
+
+All three callbacks are required. Each callback receives the narrowed state:
+
+| Callback | Available state data |
+| --- | --- |
+| `pending` | `status` |
+| `success` | `status`, `value` |
+| `error` | `status`, `error` |
+
+The result type is the union of the three callback results. Keep the results
+compatible when a caller requires one specific type.
+
+## Build a UI resolver
+
+Use `fromResource` for a property in a form definition. Its first argument
+selects a resource from the current form values or context. Its second argument
+maps each state to the required property value.
+
+```ts
+// [!include ~/snippets/resources-guide.tsx:resource-resolvers]
+```
+
+Each branch receives these arguments in this order:
+
+1. The narrowed resource state.
+2. The complete readonly form input.
+3. Resolver details, which contain the readonly form context.
+
+Use only the arguments that the branch needs. In the example, the success
+description reads the selected plan. The options resolver reads saved options
+from context during pending and error states.
+
+`fromResource` returns a normal synchronous UI resolver. The selector and all
+branches must return synchronously. Load data before or beside the form. Do not
+pass an `async` function to `fromResource`.
+
+## Pass the resource through context
+
+Create a contextual kit. Then pass the current context to `kit.useForm`.
+
+```tsx
+// [!include ~/snippets/resources-guide.tsx:context-form]
+```
+
+The example uses one resource for three properties:
+
+- `options` keeps saved options until the current request succeeds.
+- `description` reports the current state.
+- `disabled` prevents selection without usable remote data.
+
+Form context is runtime input. When the application supplies a new context
+value, the generated UI resolves again with the current resource state.
+
+## Adapt TanStack Query locally
+
+Keep the query result in application code. Convert its states before you pass
+the result through form context.
+
+This adapter preserves background refresh state without adding a TanStack Query
+dependency to "Form, Please":
+
+```ts
+// [!include ~/snippets/query-to-resource.ts]
+```
+
+Use the adapter at the boundary between the query and the form:
+
+```tsx
+// [!include ~/snippets/resources-guide.tsx:query-context]
+```
+
+The adapter maps query states as follows:
+
+| Query result | Resource result |
+| --- | --- |
+| Initial load | `pending` |
+| Loaded data | `success` |
+| Failed background refetch with old data | `success` with `refresh.error` |
+| Failed request without data | `error` |
+
+The background refetch error stays in the success branch because usable data
+still exists. This lets the UI keep saved options and report the refresh error.
+The top-level error branch does not contain previous data.
+
+`QueryResourceState` adds `fetchStatus` and `refresh` properties to the basic
+three-state shape. `matchResource` and `fromResource` preserve these extra
+properties when they narrow a branch.
+
+## Handle invalid states and branch errors
+
+TypeScript prevents unsupported status values in typed application code. At
+runtime, both helpers throw a `TypeError` for an unsupported status. They do not
+catch errors that a selector or branch callback throws.
+
+Keep resource objects inside the supported union. Handle request failures when
+you create the resource. Handle UI conversion failures where you call the
+helper.
+
+## Preserve request ownership
+
+- The request library owns requests, retries, cancellation, and caching.
+- The application converts request results to a resource state.
+- Form context carries the current resource state.
+- `fromResource` converts that state into a synchronous UI property.
+
+See [Creative studio policies](/examples/studio-policies) for a live form with
+saved options and background refresh state.

@@ -1,0 +1,226 @@
+---
+title: Async multiselect
+description: Build a searchable multiselect that stores typed IDs and loads validated options from an API.
+showAskAi: false
+---
+
+import { AsyncMultiSelectDemo } from "../../components/async-multiselect-demo"
+
+# Async multiselect
+
+This example builds one searchable field that stores a `string[]` value.
+TanStack Query loads the options. Floating UI supplies the popup interactions.
+
+Use this pattern when the option set is remote or too large to load in full.
+For a short static list, use a simpler local control without TanStack Query.
+
+## Try the example
+
+1. Open the city list.
+2. Search for `m`.
+3. Select or remove a city.
+4. Select **Save selection** to see the submitted IDs.
+
+The list stays open when you change a selection. Repeated searches use the
+TanStack Query cache.
+
+<AsyncMultiSelectDemo />
+
+## Understand the ownership
+
+Each layer has one responsibility:
+
+| Layer | Responsibility |
+| --- | --- |
+| TanStack Form | Stores selected IDs and field metadata. |
+| "Form, Please" | Connects the field definition to the custom control. |
+| TanStack Query | Loads, cancels, and caches option requests. |
+| Floating UI | Positions the popup and manages its interactions. |
+| Custom control | Stores search text, labels, and popup state. |
+
+The form value contains IDs, not `{ value, label }` objects. A label change
+does not change the form value or make the form dirty.
+
+## Install the dependencies
+
+This example uses Zod as its Standard Schema library. It uses Heroicons for the
+four interface icons.
+
+```sh
+npm install form-please @tanstack/react-form @tanstack/react-query @floating-ui/react @heroicons/react zod
+```
+
+## 1. Model one array field
+
+Define one array value in the schema. Supply the initial IDs through
+`defaultValues`.
+
+```tsx
+// [!include ~/snippets/async-multiselect.tsx:schema-values]
+```
+
+Use a `field` node for this value. Do not use an `array` UI node. An array node
+renders repeatable rows, but this control updates one `string[]` value.
+
+## 2. Define and register the control
+
+The options contract separates request settings from display text:
+
+```tsx
+// [!include ~/snippets/async-multiselect.tsx:option-contract]
+```
+
+Register the control in the same kit that defines the form:
+
+```tsx
+// [!include ~/snippets/async-multiselect.tsx:register-control]
+```
+
+The `defineControl` call binds the control to `string[]`. The form definition
+can use `asyncMultiSelect` only for a compatible field path.
+
+## 3. Load and validate API options
+
+Pass the TanStack Query `AbortSignal` to `fetch`. Check the HTTP status and
+validate the response before you return options:
+
+```tsx
+// [!include ~/snippets/async-multiselect-request.ts]
+```
+
+The request rejects when the server returns an error status or invalid data.
+The control shows a retry action for the rejected query.
+
+The live demo uses a local array and an abortable delay. This data source keeps
+the documentation site deterministic:
+
+```tsx
+// [!include ~/snippets/async-multiselect.tsx:demo-query]
+```
+
+Replace the demo query with the API request in application code.
+
+## 4. Connect search to TanStack Query
+
+The control appends the debounced search text to the supplied query key:
+
+```tsx
+// [!include ~/snippets/async-multiselect.tsx:query-state]
+```
+
+The query starts only while the popup is open. `keepPreviousData` keeps the
+previous result available while the next request loads.
+
+Add every value that changes the response to the base `queryKey`. For example,
+use `queryKey: ["cities", tenantId, locale]` when the tenant and locale change
+the option list.
+
+"Form, Please" resolves field options synchronously. Pass the asynchronous
+function as `queryFn`. Do not return a promise from the `options` resolver.
+
+## 5. Configure the field
+
+Add the field to the form definition:
+
+```tsx
+// [!include ~/snippets/async-multiselect.tsx:field-definition]
+```
+
+The control requires these request options:
+
+| Option | Purpose |
+| --- | --- |
+| `queryKey` | Identifies the option source and its request context. |
+| `queryFn` | Returns options for one search and supports cancellation. |
+
+These options control request and label behavior:
+
+| Option | Default | Purpose |
+| --- | --- | --- |
+| `initialOptions` | `[]` | Supplies labels for initial selected IDs. |
+| `debounceMs` | `250` | Delays a query after the search text changes. |
+| `staleTime` | `30_000` | Sets the option cache freshness period. |
+
+These options control visible text and tag count:
+
+| Option | Default |
+| --- | --- |
+| `maxVisibleTags` | `3` |
+| `placeholder` | `"Choose options"` |
+| `searchPlaceholder` | `"Search options"` |
+| `emptyMessage` | `"No options found."` |
+| `dialogLabel` | `"Options"` |
+
+## Preserve labels for selected IDs
+
+A new search can replace the current option result. The control keeps every
+loaded option in a local label cache:
+
+```tsx
+// [!include ~/snippets/async-multiselect.tsx:label-cache]
+```
+
+For an edit form, load the selected records with the form baseline. Pass those
+records through `initialOptions`. If a label is not available, the control
+shows the ID until it loads that option.
+
+The cache stores labels for display only. Submission still uses the ID array.
+
+## Provide TanStack Query and submit the IDs
+
+Reuse the application `QueryClientProvider` when one already exists. The live
+example creates one client for its own component:
+
+```tsx
+// [!include ~/snippets/async-multiselect.tsx:provider-submit]
+```
+
+`setValue` replaces the complete array when a selection changes. TanStack Form
+stores that array as input. The Standard Schema validates it during submit.
+
+The submit callback receives the validated `cityIds`. The server must confirm
+that each submitted ID exists and that the user can select it.
+
+## Handle interaction and failure states
+
+The control has these states:
+
+| State | Result |
+| --- | --- |
+| Closed | The option query is disabled. |
+| Loading | The popup shows `Loading…` and keeps available prior data. |
+| Error | The popup shows `Could not load options.` and **Try again**. |
+| Empty | The popup shows the configured `emptyMessage`. |
+| Read-only | The user can inspect options but cannot change the search or value. |
+
+Floating UI supplies click, dismiss, focus-return, positioning, and list
+navigation behavior. The control handles ID toggling and keeps the popup open.
+It also forwards the field ID, description relation, invalid state, disabled
+state, read-only state, and focus ref from `ControlProps`.
+
+## Copy the control implementation
+
+The file below contains the control and the live demo wiring. Its CSS class
+names have no library styles. Add application styles for those class names, or
+replace them with your design-system components.
+
+<details>
+<summary>Copy async-multiselect.tsx</summary>
+
+```tsx
+// [!include ~/snippets/async-multiselect.tsx]
+```
+
+</details>
+
+Before production use, confirm these requirements:
+
+- Include all request context in `queryKey`.
+- Validate the option response at the API boundary.
+- Supply labels for initial selected IDs.
+- Test loading, error, empty, disabled, and read-only states.
+- Validate submitted IDs and authorization on the server.
+
+Read [Controls and slots](/controls) for the control contract. Read
+[Validation and submission](/validation) for the submit sequence. Read
+[Styling](/styling) for application-owned control styles.

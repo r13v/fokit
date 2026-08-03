@@ -9,7 +9,7 @@
 			"title": "Shadcn form-kit adapter",
 			"description": "An application-owned Base UI adapter that connects shadcn components to Form, Please controls and slots.",
 			"dependencies": [
-				"form-please@1.1.0",
+				"form-please",
 				"class-variance-authority",
 				"lucide-react"
 			],
@@ -36,7 +36,7 @@
 					"target": "@ui/form-please/shadcn-form-kit.tsx"
 				}
 			],
-			"docs": "This item targets shadcn's Base UI implementation. The adapter is copied into the application so its imports and component props can be adjusted when the local shadcn components differ. It provides text, textarea, select, checkbox, number, date, time, file, radio, switch, slider, rangeSlider, multiSlider, combobox, multiCombobox, datePicker, dateRangePicker, and inputOtp controls."
+			"docs": "This item targets shadcn's Base UI implementation. The adapter is copied into the application so its imports and component props can be adjusted when local shadcn components differ. It provides text, textarea, select, checkbox, number, date, time, file, radio, switch, slider, rangeSlider, multiSlider, combobox, multiCombobox, datePicker, dateRangePicker, and inputOtp controls. Form submission uses TanStack Form values and the form definition's Standard Schema."
 		}
 	]
 }

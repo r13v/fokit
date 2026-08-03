@@ -16,10 +16,6 @@
 			"form-please": [
 				"../../../src/index.ts",
 				"./node_modules/form-please/dist/index.d.ts"
-			],
-			"form-please/core": [
-				"../../../src/core/index.ts",
-				"./node_modules/form-please/dist/core.d.ts"
 			]
 		}
 	},

@@ -1,0 +1,305 @@
+---
+title: Styling
+description: Add responsive layout, theme structural elements, and replace markup when CSS is not enough.
+showAskAi: false
+---
+
+import { TailwindProfileDemo } from "../components/tailwind-profile-demo"
+
+# Styling
+
+Form, Please separates layout, structural markup, and control markup. Choose the
+narrowest styling method that gives you the required result.
+
+| Requirement | Use |
+| --- | --- |
+| Responsive columns and spacing | Import `form-please/layout.css`. |
+| Colors, borders, typography, and state styles | Select the generated `data-*` attributes in your CSS. |
+| A class for one field, section, or array | Set its `className` property. |
+| Different structural markup | Replace one or more slots. |
+| Different control markup | Register a custom control. |
+
+The native preset uses native HTML controls and the default slots. It does not
+include a visual theme. The Material UI preset uses Material UI controls and
+slots. Your application still owns the Material UI theme.
+
+## Add the responsive layout
+
+Import the layout CSS once in your application entry point or root layout:
+
+```tsx
+import "form-please/layout.css"
+import "./forms.css"
+```
+
+The import is optional. It adds only structural grid and spacing rules. It does
+not set colors, typography, borders, or control appearance.
+
+The file uses the `fp` cascade layer and low-specificity `:where()` selectors.
+Unlayered application CSS overrides these rules. If your CSS uses layers, put
+your theme layer after `fp`.
+
+### Configure columns and spans
+
+Set `columns` on a section. Set `span` on a field, nested section, or array:
+
+```tsx
+{
+	kind: "section",
+	id: "contact",
+	title: "Contact details",
+	columns: 2,
+	children: [
+		{
+			kind: "field",
+			path: "email",
+			control: "text",
+			label: "Email",
+		},
+		{
+			kind: "field",
+			path: "notes",
+			control: "textarea",
+			label: "Notes",
+			span: "full",
+		},
+	],
+}
+```
+
+The default grid accepts `1`, `2`, `3`, and `4`. The layout responds to the
+width of the current section, not the viewport width.
+
+The packaged CSS implements only these four column counts. If a custom kit
+uses other values, its slots or application CSS must implement that grid. The
+Material UI preset implements its 12-column grid with Material UI.
+
+| Section width | Result |
+| --- | --- |
+| Less than `40rem` | One column. |
+| At least `40rem` | Up to two columns. |
+| At least `64rem` | Up to the requested three or four columns. |
+
+A numeric `span` uses the available columns at each width. `span: "full"`
+always uses the full row. Nested sections respond to their own width.
+
+### Change the layout gaps
+
+Set the layout variables on the form or on a structural node. Descendants
+inherit the values.
+
+```tsx
+// [!include ~/snippets/styling-guide.tsx:form-root]
+```
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `--fp-stack-gap` | `0.75rem` | Space between content in forms, fields, sections, and arrays. |
+| `--fp-array-item-gap` | `1rem` | Space between content in one array item. |
+| `--fp-column-gap` | `1rem` | Horizontal space in a section grid. |
+| `--fp-row-gap` | `1rem` | Vertical space in a section grid. |
+
+## Add an application theme
+
+Add a class to `kit.Form` or `kit.AutoForm`. Scope your selectors to that
+class so multiple form themes can exist on one page.
+
+```css
+.account-form {
+	--fp-stack-gap: 1rem;
+	color: #172033;
+	font: 1rem/1.5 system-ui, sans-serif;
+}
+
+.account-form [data-fp-node="section"] {
+	border: 1px solid #d8deea;
+	border-radius: 0.75rem;
+	padding: 1.25rem;
+}
+
+.account-form [data-fp-node="field"] > label {
+	font-weight: 650;
+}
+
+.account-form
+	[data-fp-node="field"]
+	> :is(input:not([type="checkbox"]), select, textarea) {
+	box-sizing: border-box;
+	width: 100%;
+	border: 1px solid #9aa7bd;
+	border-radius: 0.5rem;
+	padding: 0.625rem 0.75rem;
+}
+
+.account-form [data-fp-node="error-message"] {
+	color: #b42318;
+	font-size: 0.875rem;
+}
+```
+
+This example targets the markup from `createDefaultSlots()` and the native
+controls. A custom slot or control can use different elements.
+
+### Style one path
+
+Use `data-fp-path` when the field path is the stable styling identifier:
+
+```css
+.account-form [data-fp-node="field"][data-fp-path="email"] {
+	grid-column: 1 / -1;
+}
+
+.account-form
+	[data-fp-node="field"][data-fp-path^="contacts["][data-fp-path$=".email"] {
+	background: #f7f9fc;
+}
+```
+
+Array paths contain the current item index, such as `contacts[0].email`. The
+index changes when a user moves or removes an item.
+
+## Use structural attributes
+
+Generated elements expose stable attributes. Custom slots preserve the
+contract only when they spread `rootProps` and `layoutProps`.
+
+| Attribute | Location and meaning |
+| --- | --- |
+| `data-fp-node` | Identifies `form`, `field`, `section`, `array`, `array-item`, or `error-message`. |
+| `data-fp-path` | Contains the current path on fields, arrays, array items, and path-specific errors. |
+| `data-fp-span` | Contains the resolved span on fields, sections, and arrays. |
+| `data-fp-layout="grid"` | Identifies the element that arranges section children. |
+| `data-fp-columns` | Contains the resolved column count on the section layout element. |
+
+The default and Material UI slots also add hooks for array controls:
+
+```css
+.account-form [data-fp-array-action="add"] { /* Add button */ }
+.account-form [data-fp-array-action="move-up"] { /* Move-up button */ }
+.account-form [data-fp-array-action="move-down"] { /* Move-down button */ }
+.account-form [data-fp-array-action="remove"] { /* Remove button */ }
+.account-form [data-fp-array-item-actions] { /* Item action group */ }
+.account-form [data-fp-array-item-position] { /* Visible item position */ }
+```
+
+### Style state
+
+Boolean state attributes have an empty value when the state is true. The
+attribute is absent when the state is false. Test for presence:
+
+```css
+/* Correct */
+.account-form [data-fp-node="field"][data-invalid] {
+	color: #b42318;
+}
+
+/* This selector does not match. */
+.account-form [data-invalid="true"] {
+	color: #b42318;
+}
+```
+
+| Attribute | Generated state |
+| --- | --- |
+| `data-invalid` | A field or array has validation issues that the form displays. |
+| `data-dirty`, `data-touched` | A field or array has the matching interaction state. |
+| `data-validating` | A field or array is validating. |
+| `data-disabled`, `data-readonly` | The form, field, section, array, or array item has the resolved restriction. |
+| `data-required` | A field has the resolved required state. |
+
+`data-invalid` does not appear for a hidden validation issue. It appears after
+the field is touched or after the first submit attempt.
+
+Native controls also receive `aria-invalid="true"` when their displayed errors
+make them invalid:
+
+```css
+.account-form :is(input, select, textarea)[aria-invalid="true"] {
+	border-color: #b42318;
+	outline-color: #b42318;
+}
+```
+
+## Add static or resolved classes
+
+Field, section, and array definitions accept `className`. Use a string for a
+fixed class. Use a synchronous resolver when the class depends on form input.
+
+```tsx
+// [!include ~/snippets/styling-guide.tsx:node-classes]
+```
+
+The resolver receives the complete form input as its first argument. It
+receives `{ context }` as its second argument:
+
+```tsx
+// [!include ~/snippets/styling-guide.tsx:context-class]
+```
+
+The kit resolves the class again when form input changes. It puts the result in
+the node's `rootProps`. A custom slot must spread `rootProps`. If the slot adds
+a class, it must also preserve `rootProps.className`.
+
+## Resolve classes from form values
+
+Change the account type to **Company**. The resolver changes the section
+classes and shows the company-name field.
+
+<TailwindProfileDemo />
+
+Return complete class strings from each branch. Tailwind can then discover all
+utilities at build time.
+
+```tsx
+// [!include ~/snippets/lab-profile-form.tsx:tailwind-class-name]
+```
+
+Do not construct utility names from fragments such as `bg-${color}-50`.
+
+## Replace structural markup
+
+Slots own the markup around controls. They do not own the control markup. Start
+with `createDefaultSlots()` and replace only the slot that needs different
+markup.
+
+```tsx
+// [!include ~/snippets/styling-guide.tsx:custom-field-slot]
+```
+
+Spread `rootProps` on the slot root. Spread `labelProps`, `descriptionProps`,
+and `layoutProps` on their matching elements. These props preserve generated
+IDs, accessibility relationships, state hooks, and layout hooks.
+
+Read [Controls and slots](/controls#slots) for all six slot contracts and
+complete array and submit examples.
+
+## Style Material UI forms
+
+The Material UI preset uses its own responsive `Grid`. Use the application
+theme for shared styles. Use `options.sx` for a control and `slotOptions` for a
+field, section, or array.
+
+```tsx
+{
+	kind: "section",
+	id: "proposal",
+	title: "Conference proposal",
+	columns: 12,
+	slotOptions: {
+		sx: { width: "100%" },
+		layoutSx: { alignItems: "start" },
+	},
+	children: [
+		{
+			kind: "field",
+			path: "title",
+			control: "text",
+			label: "Proposal title",
+			span: 7,
+			options: { sx: { bgcolor: "background.paper" } },
+		},
+	],
+}
+```
+
+Read [Material UI with Yup](/examples/mui-yup) for a complete themed example.

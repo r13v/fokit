@@ -1,10 +1,10 @@
 "use client"
 
-import { useFormContext, useFormState } from "form-please"
-import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { type ReactNode, useEffect, useState } from "react"
 import {
 	defaultValues,
 	kit,
+	type ProfileInput,
 	type ProfileOutput,
 	profileDefinition,
 } from "../snippets/lab-profile-form"
@@ -13,35 +13,32 @@ export function InteractiveLabClient() {
 	const [lastSubmit, setLastSubmit] = useState(
 		"Submit the form to see the result.",
 	)
-	const form = kit.useCreateForm(profileDefinition, { defaultValues })
+	const form = kit.useForm(profileDefinition, {
+		defaultValues,
+		onSubmit: ({ value }) => setLastSubmit(formatSavedMessage(value)),
+	})
 
 	return (
 		<section
 			aria-labelledby="interactive-form-please-lab"
-			className="form-please-lab"
+			className="form-please-complex form-please-lab"
 			data-testid="lab"
 		>
 			<p className="form-please-lab__kicker">Interactive lab</p>
 			<p className="form-please-lab__summary">
-				Edit the generated form. Compare its values, visible issues, and
-				FormData. All panels use the same Form, Please instance.
+				Edit the generated form. Compare its values and visible issues with a
+				diagnostic browser FormData snapshot. Submission uses the TanStack
+				values.
 			</p>
 			<kit.AutoForm
 				className="form-please-lab__form"
 				form={form}
 				id="interactive-form-please-lab-form"
-				onSubmit={({ value }) => {
-					setLastSubmit(formatSavedMessage(value))
-				}}
 				style={{
 					"--fp-array-item-gap": "0.85rem",
 					"--fp-column-gap": "1rem",
 					"--fp-row-gap": "0.95rem",
 					"--fp-stack-gap": "1rem",
-				}}
-				validation={{
-					mode: "blur",
-					revalidateMode: "change",
 				}}
 			>
 				<div className="form-please-lab__actions">
@@ -52,23 +49,44 @@ export function InteractiveLabClient() {
 						Reset lab
 					</button>
 				</div>
-				<LabInspector lastSubmit={lastSubmit} />
+				<form.api.Subscribe
+					selector={(state) => ({
+						errors: state.errors,
+						isDirty: state.isDirty,
+						isTouched: state.isTouched,
+						isValidating: state.isValidating,
+						submissionAttempts: state.submissionAttempts,
+						values: state.values,
+					})}
+				>
+					{(snapshot) => (
+						<LabInspector lastSubmit={lastSubmit} snapshot={snapshot} />
+					)}
+				</form.api.Subscribe>
 			</kit.AutoForm>
 		</section>
 	)
 }
 
-function LabInspector({ lastSubmit }: { readonly lastSubmit: string }) {
-	const form = useFormContext()
-	const snapshot = useFormState(form, (state) => state)
+function LabInspector({
+	lastSubmit,
+	snapshot,
+}: {
+	readonly lastSubmit: string
+	readonly snapshot: {
+		readonly errors: readonly unknown[]
+		readonly isDirty: boolean
+		readonly isTouched: boolean
+		readonly isValidating: boolean
+		readonly submissionAttempts: number
+		readonly values: ProfileInput
+	}
+}) {
 	const [formDataLines, setFormDataLines] = useState<readonly string[]>([])
-	const issueLines = useMemo(() => formatIssues(snapshot), [snapshot])
-	const rowKeys =
-		snapshot.metadata.arraysByPath.contacts?.items
-			.map((item) => item.key)
-			.join(", ") ?? ""
-	let issueOutput = issueLines.join("\n")
-	if (issueLines.length === 0) issueOutput = "No visible issues"
+	let issueOutput = JSON.stringify(snapshot.errors, null, 2)
+	if (snapshot.errors.length === 0) issueOutput = "No visible issues"
+	let validationStatus = "idle"
+	if (snapshot.isValidating) validationStatus = "validating"
 
 	useEffect(() => {
 		const element = document.getElementById("interactive-form-please-lab-form")
@@ -107,15 +125,15 @@ function LabInspector({ lastSubmit }: { readonly lastSubmit: string }) {
 						</div>
 						<div>
 							<dt>Validation</dt>
-							<dd>{snapshot.validationStatus}</dd>
+							<dd>{validationStatus}</dd>
 						</div>
 						<div>
 							<dt>Submits</dt>
-							<dd>{snapshot.submitCount}</dd>
+							<dd>{snapshot.submissionAttempts}</dd>
 						</div>
 						<div>
 							<dt>Rows</dt>
-							<dd>{rowKeys}</dd>
+							<dd>{snapshot.values.contacts.length}</dd>
 						</div>
 					</dl>
 				</InspectorPanel>
@@ -124,7 +142,7 @@ function LabInspector({ lastSubmit }: { readonly lastSubmit: string }) {
 						<code>{issueOutput}</code>
 					</pre>
 				</InspectorPanel>
-				<InspectorPanel title="Current FormData">
+				<InspectorPanel title="Browser FormData (diagnostic)">
 					<pre data-testid="lab-form-data">
 						<code>{formDataLines.join("\n")}</code>
 					</pre>
@@ -164,30 +182,6 @@ function linesEqual(
 	}
 
 	return left.every((value, index) => value === right[index])
-}
-
-function formatIssues(snapshot: {
-	readonly displayErrors: {
-		readonly form: readonly { readonly message: string }[]
-		readonly fields: ReadonlyMap<
-			string,
-			readonly { readonly message: string }[]
-		>
-	}
-}): string[] {
-	const lines: string[] = []
-
-	for (const issue of snapshot.displayErrors.form) {
-		lines.push(`form: ${issue.message}`)
-	}
-
-	for (const [path, issues] of snapshot.displayErrors.fields) {
-		for (const issue of issues) {
-			lines.push(`${path}: ${issue.message}`)
-		}
-	}
-
-	return lines
 }
 
 function formatFormData(formData: FormData): string[] {

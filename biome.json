@@ -39,7 +39,7 @@
 			"linter": {
 				"rules": {
 					"style": {
-						"noNestedTernary": "off",
+						"noNestedTernary": "error",
 						"noTernary": "error"
 					}
 				}

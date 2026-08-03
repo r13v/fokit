@@ -1,6 +1,6 @@
 "use client"
 
-import { createFormKit } from "../react/create-form-kit.js"
+import { createFormKit } from "../create-form-kit.js"
 import { createMuiControls } from "./controls.js"
 import { createMuiSlots } from "./slots.js"
 import type { CreateMuiFormKitOptions, MuiFormKitI18n } from "./types.js"

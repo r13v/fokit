@@ -5,5 +5,10 @@
 	"type": "module",
 	"scripts": {
 		"runtime": "node index.mjs"
+	},
+	"dependencies": {
+		"@tanstack/react-form": "1.33.3",
+		"react": "19.2.8",
+		"react-dom": "19.2.8"
 	}
 }

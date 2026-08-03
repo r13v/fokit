@@ -8,15 +8,8 @@ import {
 	useState,
 } from "react"
 
-import {
-	type ControlProps,
-	defineControl,
-} from "../react/control-definition.js"
-import {
-	serializeBoolean,
-	serializeOptionalNumber,
-	serializeOptionalString,
-} from "../react/control-form-data.js"
+import { defineControl } from "../control-definition.js"
+import type { ControlProps } from "../types.js"
 
 export type NativeTextType =
 	| "text"
@@ -467,65 +460,34 @@ function NativeFileControl({
 export function createNativeControls() {
 	const text = defineControl<string | undefined, NativeTextOptions>({
 		component: NativeTextControl,
-		formData: {
-			mode: "native",
-			serialize: serializeOptionalString,
-		},
 	})
 
 	const textarea = defineControl<string | undefined, NativeTextareaOptions>({
 		component: NativeTextareaControl,
-		formData: {
-			mode: "native",
-			serialize: serializeOptionalString,
-		},
 	})
 
 	const number = defineControl<number | undefined, NativeNumberOptions>({
 		component: NativeNumberControl,
-		formData: {
-			mode: "native",
-			serialize: serializeOptionalNumber,
-		},
 	})
 
 	const date = defineControl<string | undefined, NativeDateOptions>({
 		component: NativeDateControl,
-		formData: {
-			mode: "native",
-			serialize: serializeOptionalString,
-		},
 	})
 
 	const time = defineControl<string | undefined, NativeTimeOptions>({
 		component: NativeTimeControl,
-		formData: {
-			mode: "native",
-			serialize: serializeOptionalString,
-		},
 	})
 
 	const select = defineControl<string | undefined, NativeSelectOptions>({
 		component: NativeSelectControl,
-		formData: {
-			mode: "native",
-			serialize: serializeOptionalString,
-		},
 	})
 
 	const checkbox = defineControl<boolean>({
 		component: NativeCheckboxControl,
-		formData: {
-			mode: "native",
-			serialize: serializeBoolean,
-		},
 	})
 
 	const file = defineControl<File | undefined, NativeFileOptions>({
 		component: NativeFileControl,
-		formData: {
-			mode: "native",
-		},
 	})
 
 	return Object.freeze({

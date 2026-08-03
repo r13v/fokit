@@ -7,17 +7,11 @@ import {
 	useQuery,
 } from "@tanstack/react-query"
 import {
-	type BeforeUpdateEvent,
 	createFormKit,
-	extendValueChanges,
+	type FormBinding,
 	type FormInput,
 	type FormOutput,
 	type UiNode,
-	useArrayField,
-	useFormContext,
-	useFormState,
-	useValue,
-	type ValueChange,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -138,29 +132,15 @@ const kit = createFormKit({
 	slots: createDefaultSlots(),
 })
 const contextualKit = kit.forContext<MembershipContext>()
+type MembershipForm = FormBinding<typeof membershipSchema, MembershipContext>
 
-function LadderPreview() {
-	const form = useFormContext<typeof membershipSchema, MembershipContext>()
-	const tiers = useFormState(form, (snapshot) => snapshot.values.tiers)
-	return (
-		<aside
-			className="form-please-complex__preview"
-			aria-label="Membership ladder preview"
-		>
-			<strong>Reduction ladder</strong>
-			<span>
-				Seed {tiers.seed.discountPercent}% → Sprout{" "}
-				{tiers.sprout.discountPercent}% → Canopy {tiers.canopy.discountPercent}%
-				→ Founder {tiers.founder.discountPercent}%
-			</span>
-		</aside>
-	)
-}
-
-function PauseCalendar() {
-	const form = useFormContext<typeof membershipSchema, MembershipContext>()
-	const pauses = useArrayField(form, "pauseWindows")
-	const values = useValue(form, "pauseWindows")
+function PauseCalendar({
+	form,
+	count,
+}: {
+	readonly form: MembershipForm
+	readonly count: number
+}) {
 	return (
 		<section
 			className="form-please-complex__embedded"
@@ -170,7 +150,7 @@ function PauseCalendar() {
 			<div className="form-please-complex__choice-list">
 				<button
 					onClick={() =>
-						pauses.append({
+						form.api.pushFieldValue("pauseWindows", {
 							startsOn: "2027-12-24",
 							endsOn: "2027-12-31",
 							reason: "Winter closure",
@@ -182,7 +162,7 @@ function PauseCalendar() {
 				</button>
 				<button
 					onClick={() =>
-						pauses.append({
+						form.api.pushFieldValue("pauseWindows", {
 							startsOn: "2028-04-10",
 							endsOn: "2028-04-12",
 							reason: "System migration",
@@ -192,16 +172,21 @@ function PauseCalendar() {
 				>
 					Add migration window
 				</button>
-				<span>{values.length} pause window(s) scheduled</span>
+				<span>{count} pause window(s) scheduled</span>
 			</div>
 		</section>
 	)
 }
 
-function WorkspaceConnection() {
-	const form = useFormContext<typeof membershipSchema, MembershipContext>()
-	const workspaceId = useValue(form, "workspaceId")
-	const connected = useValue(form, "connection.enabled")
+function WorkspaceConnection({
+	form,
+	workspaceId,
+	connected,
+}: {
+	readonly form: MembershipForm
+	readonly workspaceId: string
+	readonly connected: boolean
+}) {
 	const mutation = useMutation({
 		mutationFn: (nextConnected: boolean) =>
 			fakeRequest({ workspaceId, connected: nextConnected }, 360),
@@ -224,7 +209,7 @@ function WorkspaceConnection() {
 				disabled={mutation.isPending}
 				onClick={async () => {
 					const result = await mutation.mutateAsync(!connected)
-					form.setValue("connection.enabled", result.connected)
+					form.api.setFieldValue("connection.enabled", result.connected)
 				}}
 				type="button"
 			>
@@ -276,15 +261,9 @@ const membershipDefinition = contextualKit.defineForm(membershipSchema, {
 					control: "checkbox",
 					label: "Sync existing members",
 				},
-				{
-					kind: "render",
-					id: "workspace-connection",
-					component: WorkspaceConnection,
-				},
 			],
 		},
 		...tierSections(),
-		{ kind: "render", id: "ladder-preview", component: LadderPreview },
 		{
 			kind: "array",
 			path: "pauseWindows",
@@ -298,7 +277,6 @@ const membershipDefinition = contextualKit.defineForm(membershipSchema, {
 				{ kind: "field", path: "reason", control: "text", label: "Reason" },
 			],
 		},
-		{ kind: "render", id: "pause-calendar", component: PauseCalendar },
 	],
 })
 
@@ -448,11 +426,6 @@ export function MembershipLadderExample() {
 }
 
 function MembershipLadderForm() {
-	const initialContext: MembershipContext = { workspaces: [] }
-	const form = kit.useCreateForm(membershipDefinition, {
-		defaultValues: membershipDraft,
-		context: initialContext,
-	})
 	const loadedDraft = useQuery({
 		queryKey: ["membership-draft"],
 		queryFn: () => fakeRequest(membershipDraft, 380),
@@ -474,6 +447,20 @@ function MembershipLadderForm() {
 			fakeRequest({ revision: value.benefitCount + 500 }, 440),
 	})
 	const [notice, setNotice] = useState("Membership draft loaded.")
+	const form = contextualKit.useForm(membershipDefinition, {
+		defaultValues: membershipDraft,
+		context: { workspaces: workspaces.data ?? [] },
+		async onSubmit({ value }) {
+			try {
+				const result = await save.mutateAsync(value)
+				setNotice(`Membership revision ${result.revision} saved.`)
+			} catch {
+				setNotice(
+					"The membership service did not respond. Your edits remain local.",
+				)
+			}
+		},
+	})
 
 	if (loadedDraft.isPending || workspaces.isPending)
 		return (
@@ -500,27 +487,31 @@ function MembershipLadderForm() {
 				Four nested benefit arrays, monotonic reductions, a remote workspace
 				connection, and calendar-assisted pause windows stay synchronized.
 			</p>
-			<kit.AutoForm
-				beforeUpdate={preserveTierOrder}
-				className="form-please-complex__form"
-				context={{ workspaces: workspaces.data }}
-				form={form}
-				onSubmit={async ({ value, form }) => {
-					try {
-						form.clearErrors()
-						const result = await save.mutateAsync(value)
-						setNotice(`Membership revision ${result.revision} saved.`)
-					} catch {
-						form.setErrors([
-							{
-								source: "server",
-								message:
-									"The membership service did not respond. Your edits remain local.",
-							},
-						])
-					}
-				}}
-			>
+			<kit.AutoForm className="form-please-complex__form" form={form}>
+				<form.api.Subscribe selector={(state) => state.values}>
+					{(values) => (
+						<>
+							<WorkspaceConnection
+								connected={values.connection.enabled}
+								form={form}
+								workspaceId={values.workspaceId}
+							/>
+							<aside
+								aria-label="Membership ladder preview"
+								className="form-please-complex__preview"
+							>
+								<strong>Reduction ladder</strong>
+								<span>
+									Seed {values.tiers.seed.discountPercent}% → Sprout{" "}
+									{values.tiers.sprout.discountPercent}% → Canopy{" "}
+									{values.tiers.canopy.discountPercent}% → Founder{" "}
+									{values.tiers.founder.discountPercent}%
+								</span>
+							</aside>
+							<PauseCalendar count={values.pauseWindows.length} form={form} />
+						</>
+					)}
+				</form.api.Subscribe>
 				<div className="form-please-complex__actions">
 					<kit.Submit className="form-please-complex__primary">
 						Save membership ladder
@@ -530,35 +521,6 @@ function MembershipLadderForm() {
 			</kit.AutoForm>
 		</section>
 	)
-}
-
-function preserveTierOrder(
-	event: BeforeUpdateEvent<MembershipInput, unknown>,
-): readonly ValueChange<MembershipInput>[] | undefined {
-	const additions: ValueChange<MembershipInput>[] = []
-	const seed = event.nextValues.tiers.seed.discountPercent
-	const sprout = Math.max(seed, event.nextValues.tiers.sprout.discountPercent)
-	const canopy = Math.max(sprout, event.nextValues.tiers.canopy.discountPercent)
-	const founder = Math.max(
-		canopy,
-		event.nextValues.tiers.founder.discountPercent,
-	)
-	const normalized = { sprout, canopy, founder }
-
-	for (const [name, value] of Object.entries(normalized) as readonly [
-		"sprout" | "canopy" | "founder",
-		number,
-	][]) {
-		if (event.nextValues.tiers[name].discountPercent !== value) {
-			additions.push({
-				type: "set",
-				path: `tiers.${name}.discountPercent`,
-				value,
-			})
-		}
-	}
-
-	return extendValueChanges(event, additions)
 }
 
 function fakeRequest<Value>(value: Value, delay: number): Promise<Value> {

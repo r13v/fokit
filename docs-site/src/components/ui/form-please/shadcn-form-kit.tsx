@@ -12,15 +12,14 @@ import {
 	type SectionSlotProps,
 	type SubmitSlotProps,
 } from "form-please"
-import {
-	createNativeControls,
-	type NativeDateOptions,
-	type NativeFileOptions,
-	type NativeNumberOptions,
-	type NativeSelectOptions,
-	type NativeTextareaOptions,
-	type NativeTextOptions,
-	type NativeTimeOptions,
+import type {
+	NativeDateOptions,
+	NativeFileOptions,
+	NativeNumberOptions,
+	NativeSelectOptions,
+	NativeTextareaOptions,
+	NativeTextOptions,
+	NativeTimeOptions,
 } from "form-please/native-controls"
 import {
 	ArrowDownIcon,
@@ -77,23 +76,23 @@ import { Slider } from "../slider"
 import { Switch } from "../switch"
 import { Textarea } from "../textarea"
 
-export type ShadcnChoiceOption = {
+type ShadcnChoiceOption = {
 	readonly value: string
 	readonly label: string
 	readonly description?: string
 	readonly disabled?: boolean
 }
 
-export type ShadcnRadioOptions = {
+type ShadcnRadioOptions = {
 	readonly options: readonly ShadcnChoiceOption[]
 	readonly orientation?: "horizontal" | "vertical"
 }
 
-export type ShadcnSwitchOptions = {
+type ShadcnSwitchOptions = {
 	readonly size?: "default" | "sm"
 }
 
-export type ShadcnSliderOptions = {
+type ShadcnSliderOptions = {
 	readonly min?: number
 	readonly max?: number
 	readonly step?: number
@@ -105,7 +104,7 @@ export type ShadcnSliderOptions = {
 	readonly thumbCollisionBehavior?: "none" | "push" | "swap"
 }
 
-export type ShadcnComboboxOptions = {
+type ShadcnComboboxOptions = {
 	readonly options: readonly ShadcnChoiceOption[]
 	readonly placeholder?: string
 	readonly emptyText?: string
@@ -114,12 +113,12 @@ export type ShadcnComboboxOptions = {
 	readonly showClear?: boolean
 }
 
-export type ShadcnDatePreset = {
+type ShadcnDatePreset = {
 	readonly value: string
 	readonly label: string
 }
 
-export type ShadcnDatePickerOptions = {
+type ShadcnDatePickerOptions = {
 	readonly placeholder?: string
 	readonly min?: string
 	readonly max?: string
@@ -131,19 +130,16 @@ export type ShadcnDatePickerOptions = {
 	readonly presets?: readonly ShadcnDatePreset[]
 }
 
-export type ShadcnDateRange = {
+type ShadcnDateRange = {
 	readonly from?: string
 	readonly to?: string
 }
 
-export type ShadcnDateRangePickerOptions = Omit<
-	ShadcnDatePickerOptions,
-	"presets"
-> & {
+type ShadcnDateRangePickerOptions = Omit<ShadcnDatePickerOptions, "presets"> & {
 	readonly numberOfMonths?: number
 }
 
-export type ShadcnInputOtpOptions = {
+type ShadcnInputOtpOptions = {
 	readonly maxLength: number
 	readonly pattern?: string
 	readonly groups?: readonly number[]
@@ -979,123 +975,62 @@ function ShadcnInputOtpControl({
 	)
 }
 
-const nativeControls = createNativeControls()
-
 const controls = Object.freeze({
 	text: defineControl<string | undefined, NativeTextOptions>({
 		component: ShadcnTextControl,
-		formData: nativeControls.text.formData,
 	}),
 	textarea: defineControl<string | undefined, NativeTextareaOptions>({
 		component: ShadcnTextareaControl,
-		formData: nativeControls.textarea.formData,
 	}),
 	select: defineControl<string | undefined, NativeSelectOptions>({
 		component: ShadcnSelectControl,
-		formData: nativeControls.select.formData,
 	}),
 	checkbox: defineControl<boolean>({
 		component: ShadcnCheckboxControl,
-		formData: nativeControls.checkbox.formData,
 	}),
 	number: defineControl<number | undefined, NativeNumberOptions>({
 		component: ShadcnNumberControl,
-		formData: nativeControls.number.formData,
 	}),
 	date: defineControl<string | undefined, NativeDateOptions>({
 		component: ShadcnDateControl,
-		formData: nativeControls.date.formData,
 	}),
 	time: defineControl<string | undefined, NativeTimeOptions>({
 		component: ShadcnTimeControl,
-		formData: nativeControls.time.formData,
 	}),
 	file: defineControl<File | undefined, NativeFileOptions>({
 		component: ShadcnFileControl,
-		formData: nativeControls.file.formData,
 	}),
 	radio: defineControl<string | undefined, ShadcnRadioOptions>({
 		component: ShadcnRadioControl,
-		formData: nativeControls.select.formData,
 	}),
 	switch: defineControl<boolean, ShadcnSwitchOptions>({
 		component: ShadcnSwitchControl,
-		formData: {
-			mode: "native",
-			serialize(value, details) {
-				return [{ name: details.name, value: String(value) }]
-			},
-		},
 	}),
 	slider: defineControl<number, ShadcnSliderOptions>({
 		component: ShadcnSliderControl,
-		formData: {
-			mode: "hidden",
-			serialize(value, details) {
-				return [{ name: details.name, value: String(value) }]
-			},
-		},
 	}),
 	rangeSlider: defineControl<readonly [number, number], ShadcnSliderOptions>({
 		component: ShadcnRangeSliderControl,
-		formData: {
-			mode: "hidden",
-			serialize: serializeNumberArray,
-		},
 	}),
 	multiSlider: defineControl<readonly number[], ShadcnSliderOptions>({
 		component: ShadcnMultiSliderControl,
-		formData: {
-			mode: "hidden",
-			serialize: serializeNumberArray,
-		},
 	}),
 	combobox: defineControl<string | undefined, ShadcnComboboxOptions>({
 		component: ShadcnComboboxControl,
-		formData: {
-			mode: "hidden",
-			serialize(value, details) {
-				return value === undefined ? [] : [{ name: details.name, value }]
-			},
-		},
 	}),
 	multiCombobox: defineControl<readonly string[], ShadcnComboboxOptions>({
 		component: ShadcnMultiComboboxControl,
-		formData: {
-			mode: "hidden",
-			serialize: serializeStringArray,
-		},
 	}),
 	datePicker: defineControl<string | undefined, ShadcnDatePickerOptions>({
 		component: ShadcnDatePickerControl,
-		formData: {
-			mode: "hidden",
-			serialize(value, details) {
-				return value === undefined ? [] : [{ name: details.name, value }]
-			},
-		},
 	}),
 	dateRangePicker: defineControl<ShadcnDateRange, ShadcnDateRangePickerOptions>(
 		{
 			component: ShadcnDateRangePickerControl,
-			formData: {
-				mode: "hidden",
-				serialize(value, details) {
-					return [
-						...(value.from === undefined
-							? []
-							: [{ name: `${details.name}.from`, value: value.from }]),
-						...(value.to === undefined
-							? []
-							: [{ name: `${details.name}.to`, value: value.to }]),
-					]
-				},
-			},
 		},
 	),
 	inputOtp: defineControl<string, ShadcnInputOtpOptions>({
 		component: ShadcnInputOtpControl,
-		formData: nativeControls.text.formData,
 	}),
 })
 
@@ -1317,26 +1252,6 @@ function ShadcnErrorMessageSlot({
 
 function ShadcnSubmitSlot({ buttonProps }: SubmitSlotProps): ReactElement {
 	return <Button {...buttonProps} />
-}
-
-function serializeNumberArray(
-	value: readonly number[],
-	details: { readonly name: string },
-) {
-	return [
-		{ kind: "array" as const, name: details.name },
-		...value.map((item) => ({ name: details.name, value: String(item) })),
-	]
-}
-
-function serializeStringArray(
-	value: readonly string[],
-	details: { readonly name: string },
-) {
-	return [
-		{ kind: "array" as const, name: details.name },
-		...value.map((item) => ({ name: details.name, value: item })),
-	]
 }
 
 function validateSelectOptions(

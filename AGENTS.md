@@ -5,6 +5,8 @@ submission, or serialization, read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Run `npm run check` and `npm run knip` before reporting a task done.
 
+Use `i-have-adhd` skill.
+
 ## Reuse Before Adding Helpers
 
 Before creating a helper, search `src` for the same behavior, including helpers

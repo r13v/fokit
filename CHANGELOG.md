@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/r13v/form-please/compare/v1.1.0...v1.2.0) (2026-08-04)
+
+
+### Features
+
+* use RHF as runtime ([#10](https://github.com/r13v/form-please/issues/10)) ([d041c11](https://github.com/r13v/form-please/commit/d041c11c86b296e1634c23b36f3ec6a2aef785c7))
+
 ## [1.1.0](https://github.com/r13v/form-please/compare/v1.0.0...v1.1.0) (2026-08-03)
 
 

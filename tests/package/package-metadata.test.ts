@@ -34,9 +34,9 @@ describe("package metadata", () => {
 			license: "MIT",
 			name: "form-please",
 			peerDependencies: {
-				"@tanstack/react-form": "^1.33.3",
 				react: "^18.0.0 || ^19.0.0",
 				"react-dom": "^18.0.0 || ^19.0.0",
+				"react-hook-form": "^7.55.0",
 			},
 			sideEffects: ["**/*.css"],
 			type: "module",
@@ -56,14 +56,14 @@ describe("package metadata", () => {
 		expect(packageLock.packages[""].version).toBe(packageJson.version)
 	})
 
-	it("keeps TanStack Form required and Material UI peers optional", () => {
+	it("keeps React Hook Form required and Material UI peers optional", () => {
 		expect(packageJson.peerDependenciesMeta).toEqual({
 			"@emotion/react": { optional: true },
 			"@emotion/styled": { optional: true },
 			"@mui/material": { optional: true },
 		})
 		expect(packageJson.peerDependenciesMeta).not.toHaveProperty(
-			"@tanstack/react-form",
+			"react-hook-form",
 		)
 	})
 

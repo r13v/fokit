@@ -155,7 +155,7 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					control: "file",
 					label: "Avatar",
 					description:
-						"Choose a PNG file. The File stays in the TanStack Form input.",
+						"Choose a PNG file. The File stays in the React Hook Form input.",
 					options: {
 						accept: "image/png",
 					},
@@ -168,7 +168,7 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 			path: "contacts",
 			label: "Contacts",
 			description:
-				"Add or reorder contacts. TanStack Form updates the array by index.",
+				"Add or reorder contacts. React Hook Form updates the array by index.",
 			itemDefault: {
 				email: "",
 				label: undefined,

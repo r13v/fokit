@@ -1,6 +1,12 @@
 "use client"
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import {
+	Controller,
+	useFormContext,
+	useFormState,
+	useWatch,
+} from "react-hook-form"
 import { describe, expect, expectTypeOf, it, vi } from "vitest"
 import { z } from "zod"
 import { defineControl } from "./control-definition.js"
@@ -142,28 +148,65 @@ const definition = kit.defineForm(schema, {
 })
 
 describe("form kit", () => {
-	it("types array items with TanStack bracket paths", () => {
-		type Input = { readonly speakers: readonly { readonly name: string }[] }
+	it("rejects a form binding owned by another form kit", () => {
+		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
 
-		expectTypeOf<"speakers[0].name">().toMatchTypeOf<FieldPath<Input>>()
-		expectTypeOf<PathValue<Input, "speakers[0].name">>().toEqualTypeOf<string>()
+		function View() {
+			const form = kit.useForm(definition, { defaultValues: { name: "Ada" } })
+			return <otherKit.Form form={form} />
+		}
+
+		expect(() => render(<View />)).toThrow(
+			"Form binding is not mounted by this form kit",
+		)
 	})
 
-	it("exposes TanStack components on form.api and submits parsed output", async () => {
+	it("uses React Hook Form dot paths for array items", () => {
+		type Input = { readonly speakers: readonly { readonly name: string }[] }
+
+		expectTypeOf<"speakers.0.name">().toMatchTypeOf<FieldPath<Input>>()
+		expectTypeOf<PathValue<Input, "speakers.0.name">>().toEqualTypeOf<string>()
+
+		expect(() =>
+			kit.defineForm(
+				z.object({ speakers: z.array(z.object({ name: z.string() })) }),
+				{
+					ui: [
+						{
+							kind: "field",
+							path: "speakers[0].name" as never,
+							control: "text",
+						},
+					],
+				},
+			),
+		).toThrow("invalid React Hook Form syntax")
+	})
+
+	it("provides raw RHF context and submits parsed output", async () => {
 		const onSubmit = vi.fn()
+
+		function ManualState() {
+			const api = useFormContext<{ name: string }>()
+			const name = useWatch({ control: api.control, name: "name" })
+			const state = useFormState({ control: api.control })
+			return (
+				<>
+					<output aria-label="Watched name">{name}</output>
+					<output aria-label="Attempts">{state.submitCount}</output>
+				</>
+			)
+		}
 
 		function View() {
 			const form = kit.useForm(definition, {
 				defaultValues: { name: "" },
 				onSubmit,
 			})
-			const Subscribe = form.api.Subscribe
 
 			return (
 				<kit.AutoForm form={form}>
-					<Subscribe selector={(state) => state.submissionAttempts}>
-						{(attempts) => <output aria-label="Attempts">{attempts}</output>}
-					</Subscribe>
+					<ManualState />
 					<kit.Submit>Save</kit.Submit>
 				</kit.AutoForm>
 			)
@@ -181,6 +224,7 @@ describe("form kit", () => {
 		fireEvent.change(screen.getByLabelText("Name"), {
 			target: { value: "  Ada  " },
 		})
+		expect(screen.getByLabelText("Watched name").textContent).toBe("  Ada  ")
 		const submit = screen.getByRole("button", { name: "Save" })
 		await waitFor(() => {
 			expect(screen.queryByText("Enter at least two characters")).toBeNull()
@@ -198,7 +242,125 @@ describe("form kit", () => {
 		})
 	})
 
-	it("keeps conditional fields, array operations, and nested validation on TanStack state", async () => {
+	it("supports manual register and Controller fields in FormProvider", async () => {
+		const ecosystemSchema = z.object({
+			controlled: z.string().min(1),
+			generated: z.string().min(1),
+			manual: z.string().min(1),
+		})
+		type EcosystemInput = z.input<typeof ecosystemSchema>
+		const ecosystemDefinition = kit.defineForm(ecosystemSchema, {
+			ui: [
+				{
+					kind: "field",
+					path: "generated",
+					control: "text",
+					label: "Generated field",
+				},
+			],
+		})
+		const onSubmit = vi.fn()
+
+		function ManualFields() {
+			const form = useFormContext<EcosystemInput>()
+			return (
+				<>
+					<input aria-label="Registered field" {...form.register("manual")} />
+					<Controller
+						control={form.control}
+						name="controlled"
+						render={({ field }) => (
+							<input aria-label="Controller field" {...field} />
+						)}
+					/>
+				</>
+			)
+		}
+
+		function View() {
+			const form = kit.useForm(ecosystemDefinition, {
+				defaultValues: { controlled: "", generated: "Ada", manual: "" },
+				onSubmit,
+			})
+			return (
+				<kit.AutoForm form={form}>
+					<ManualFields />
+					<kit.Submit>Submit ecosystem form</kit.Submit>
+				</kit.AutoForm>
+			)
+		}
+
+		render(<View />)
+		fireEvent.change(screen.getByLabelText("Registered field"), {
+			target: { value: "Grace" },
+		})
+		fireEvent.change(screen.getByLabelText("Controller field"), {
+			target: { value: "Lin" },
+		})
+		fireEvent.click(
+			screen.getByRole("button", { name: "Submit ecosystem form" }),
+		)
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({
+				input: { controlled: "Lin", generated: "Ada", manual: "Grace" },
+				value: { controlled: "Lin", generated: "Ada", manual: "Grace" },
+			}),
+		)
+	})
+
+	it("keeps disabled generated values in validation and blocks a disabled form", async () => {
+		const disabledSchema = z.object({
+			editable: z.string(),
+			locked: z.string().min(1),
+		})
+		const disabledDefinition = kit.defineForm(disabledSchema, {
+			ui: [
+				{
+					kind: "field",
+					path: "locked",
+					control: "text",
+					label: "Locked value",
+					disabled: true,
+				},
+			],
+		})
+		const onSubmit = vi.fn()
+
+		function View({ disabled }: { readonly disabled: boolean }) {
+			const form = kit.useForm(disabledDefinition, {
+				defaultValues: { editable: "open", locked: "preserved" },
+				disabled,
+				onSubmit,
+			})
+			return (
+				<kit.AutoForm form={form}>
+					<kit.Submit>Submit disabled state</kit.Submit>
+				</kit.AutoForm>
+			)
+		}
+
+		const view = render(<View disabled />)
+		fireEvent.submit(
+			screen.getByRole("button").closest("form") as HTMLFormElement,
+		)
+		expect(onSubmit).not.toHaveBeenCalled()
+
+		view.rerender(<View disabled={false} />)
+		fireEvent.click(
+			screen.getByRole("button", { name: "Submit disabled state" }),
+		)
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({
+				input: { editable: "open", locked: "preserved" },
+				value: { editable: "open", locked: "preserved" },
+			}),
+		)
+	})
+
+	it("keeps conditional fields, RHF arrays, and nested validation in one store", async () => {
 		const complexSchema = z.object({
 			format: z.enum(["remote", "in-person"]),
 			room: z.string(),
@@ -240,6 +402,20 @@ describe("form kit", () => {
 				},
 			],
 		})
+		type ComplexInput = z.input<typeof complexSchema>
+
+		function ComplexState() {
+			const api = useFormContext<ComplexInput>()
+			const values = useWatch({ control: api.control })
+			return (
+				<>
+					<output aria-label="Manual format">{values.format}</output>
+					<output aria-label="Speaker order">
+						{values.speakers?.map((speaker) => speaker?.name).join(",") ?? ""}
+					</output>
+				</>
+			)
+		}
 
 		function View() {
 			const form = kit.useForm(complexDefinition, {
@@ -249,27 +425,10 @@ describe("form kit", () => {
 					speakers: [{ name: "Ada" }, { name: "Grace" }],
 				},
 			})
-			const Field = form.api.Field
-			const FormGroup = form.api.FormGroup
-			const Subscribe = form.api.Subscribe
 			return (
 				<kit.Form form={form}>
 					<kit.Fields />
-					<Field name="format">
-						{(field) => (
-							<output aria-label="Manual format">{field.state.value}</output>
-						)}
-					</Field>
-					<FormGroup name="speakers">
-						{(group) => <output aria-label="Form group">{group.name}</output>}
-					</FormGroup>
-					<Subscribe>
-						{(state) => (
-							<output aria-label="Speaker order">
-								{state.values.speakers.map((speaker) => speaker.name).join(",")}
-							</output>
-						)}
-					</Subscribe>
+					<ComplexState />
 					<kit.Submit>Save complex form</kit.Submit>
 				</kit.Form>
 			)
@@ -278,7 +437,6 @@ describe("form kit", () => {
 		render(<View />)
 		expect(screen.queryByLabelText("Room")).toBeNull()
 		expect(screen.getByLabelText("Manual format").textContent).toBe("remote")
-		expect(screen.getByLabelText("Form group").textContent).toBe("speakers")
 
 		fireEvent.click(screen.getByRole("button", { name: "Move speaker 1 down" }))
 		expect(screen.getByLabelText("Speaker order").textContent).toBe("Grace,Ada")
@@ -291,17 +449,17 @@ describe("form kit", () => {
 		if (invalidSpeaker === undefined) {
 			throw new Error("Expected the added speaker field")
 		}
-		expect(invalidSpeaker.getAttribute("name")).toBe("speakers[2].name")
+		expect(invalidSpeaker.getAttribute("name")).toBe("speakers.2.name")
 		expect(
 			invalidSpeaker
 				.closest('[data-fp-node="field"]')
 				?.getAttribute("data-fp-path"),
-		).toBe("speakers[2].name")
+		).toBe("speakers.2.name")
 		expect(
 			invalidSpeaker
 				.closest('[data-fp-node="array-item"]')
 				?.getAttribute("data-fp-path"),
-		).toBe("speakers[2]")
+		).toBe("speakers.2")
 		expect(document.activeElement).toBe(invalidSpeaker)
 		fireEvent.change(invalidSpeaker, {
 			target: { value: "Lin" },
@@ -318,47 +476,149 @@ describe("form kit", () => {
 		).toBe("A-12")
 	})
 
-	it("rejects when the second parse changes validity", async () => {
+	it("parses once and keeps raw handleSubmit independent from the wrapper", async () => {
 		let validations = 0
-		const unstableSchema: StandardSchema<{ readonly name: string }> = {
+		const oneParseSchema: StandardSchema<
+			{ readonly name: string },
+			{ readonly normalizedName: string }
+		> = {
 			"~standard": {
 				version: 1,
-				vendor: "unstable-test",
+				vendor: "one-parse-test",
 				validate(value) {
 					validations += 1
-					return validations === 1
-						? { value: value as { readonly name: string } }
-						: { issues: [{ message: "Changed validity" }] }
+					return {
+						value: {
+							normalizedName: String(
+								(value as { readonly name: string }).name,
+							).trim(),
+						},
+					}
 				},
 			},
 		}
-		const unstableDefinition = kit.defineForm(unstableSchema, { ui: [] })
-		let submit: (() => Promise<unknown>) | undefined
+		const oneParseDefinition = kit.defineForm(oneParseSchema, { ui: [] })
+		const onSubmit = vi.fn()
+		const onRawSubmit = vi.fn()
+		let submitRaw: (() => Promise<void>) | undefined
 
 		function View() {
-			const form = kit.useForm(unstableDefinition, {
-				defaultValues: { name: "Ada" },
+			const form = kit.useForm(oneParseDefinition, {
+				defaultValues: { name: "  Ada  " },
+				onSubmit,
 			})
-			submit = () => form.api.handleSubmit()
-			return <kit.Form form={form} />
+			submitRaw = form.api.handleSubmit(async (value) => {
+				onRawSubmit(value)
+			})
+			return (
+				<kit.Form form={form}>
+					<kit.Submit>Submit once</kit.Submit>
+				</kit.Form>
+			)
 		}
 
 		render(<View />)
-		let failure: unknown
-		await act(async () => {
-			try {
-				await submit?.()
-			} catch (error) {
-				failure = error
-			}
-		})
-
-		expect(validations).toBe(2)
-		expect(failure).toEqual(
+		fireEvent.click(screen.getByRole("button", { name: "Submit once" }))
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+		expect(validations).toBe(1)
+		expect(onSubmit).toHaveBeenCalledWith(
 			expect.objectContaining({
-				message: "Standard Schema validity changed during one submit attempt",
+				input: { name: "  Ada  " },
+				value: { normalizedName: "Ada" },
 			}),
 		)
+
+		await act(async () => {
+			await submitRaw?.()
+		})
+		expect(validations).toBe(2)
+		expect(onRawSubmit).toHaveBeenCalledWith({ normalizedName: "Ada" })
+		expect(onSubmit).toHaveBeenCalledTimes(1)
+	})
+
+	it("submits matching input and output while async validation is pending", async () => {
+		let release: () => void = () => undefined
+		const gate = new Promise<void>((resolve) => {
+			release = resolve
+		})
+		const asyncSchema: StandardSchema<{ readonly name: string }> = {
+			"~standard": {
+				version: 1,
+				vendor: "async-submit-snapshot-test",
+				async validate(value) {
+					await gate
+					return {
+						value: { name: (value as { readonly name: string }).name },
+					}
+				},
+			},
+		}
+		const asyncDefinition = kit.defineForm(asyncSchema, {
+			ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+		})
+		const onSubmit = vi.fn()
+
+		function View() {
+			const form = kit.useForm(asyncDefinition, {
+				defaultValues: { name: "Before validation" },
+				onSubmit,
+			})
+			return (
+				<kit.AutoForm form={form}>
+					<kit.Submit>Submit async form</kit.Submit>
+				</kit.AutoForm>
+			)
+		}
+
+		render(<View />)
+		fireEvent.click(screen.getByRole("button", { name: "Submit async form" }))
+		fireEvent.change(screen.getByLabelText("Name"), {
+			target: { value: "Changed while validating" },
+		})
+		await act(async () => release())
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({
+				input: { name: "Before validation" },
+				value: { name: "Before validation" },
+			}),
+		)
+	})
+
+	it("preserves browser values in the editable input snapshot", async () => {
+		const upload = new File(["notes"], "notes.txt", { type: "text/plain" })
+		const fileSchema: StandardSchema<{
+			readonly attachment: File
+		}> = {
+			"~standard": {
+				version: 1,
+				vendor: "file-snapshot-test",
+				validate(value) {
+					return { value: value as { readonly attachment: File } }
+				},
+			},
+		}
+		const fileDefinition = kit.defineForm(fileSchema, { ui: [] })
+		const onSubmit = vi.fn()
+
+		function View() {
+			const form = kit.useForm(fileDefinition, {
+				defaultValues: { attachment: upload },
+				onSubmit,
+			})
+			return (
+				<kit.Form form={form}>
+					<kit.Submit>Submit file</kit.Submit>
+				</kit.Form>
+			)
+		}
+
+		render(<View />)
+		fireEvent.click(screen.getByRole("button", { name: "Submit file" }))
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+		expect(onSubmit.mock.calls[0]?.[0].input.attachment).toBe(upload)
+		expect(onSubmit.mock.calls[0]?.[0].value.attachment).toBe(upload)
 	})
 
 	it("focuses the error summary when no generated control owns the issue", async () => {
@@ -394,7 +654,88 @@ describe("form kit", () => {
 		expect(summary.getAttribute("data-fp-path")).toBeNull()
 	})
 
-	it("focuses invalid controls in current document order after visibility changes", async () => {
+	it("summarizes hidden fields whose paths overlap RHF error metadata", async () => {
+		const metadataSchema = z.object({
+			message: z.string().min(1, "Enter the hidden message"),
+			group: z.object({ root: z.string().min(1, "Enter the nested root") }),
+		})
+		const metadataDefinition = kit.defineForm(metadataSchema, {
+			ui: [
+				{
+					kind: "field",
+					path: "message",
+					control: "text",
+					visible: false,
+				},
+				{
+					kind: "field",
+					path: "group.root",
+					control: "text",
+					visible: false,
+				},
+			],
+		})
+
+		function View() {
+			const form = kit.useForm(metadataDefinition, {
+				defaultValues: { message: "", group: { root: "" } },
+			})
+			return (
+				<kit.AutoForm form={form}>
+					<kit.Submit>Submit hidden metadata fields</kit.Submit>
+				</kit.AutoForm>
+			)
+		}
+
+		render(<View />)
+		fireEvent.click(
+			screen.getByRole("button", { name: "Submit hidden metadata fields" }),
+		)
+
+		const message = await screen.findByText("Enter the hidden message")
+		const root = await screen.findByText("Enter the nested root")
+		expect(message.getAttribute("data-fp-path")).toBe("message")
+		expect(root.getAttribute("data-fp-path")).toBe("group.root")
+	})
+
+	it("does not lose schema errors for a top-level root field", async () => {
+		const rootSchema = z.object({
+			root: z.object({ name: z.string().min(1, "Enter the root name") }),
+		})
+		const rootDefinition = kit.defineForm(rootSchema, {
+			ui: [
+				{
+					kind: "field",
+					path: "root.name",
+					control: "text",
+					label: "Root name",
+				},
+			],
+		})
+		const onSubmit = vi.fn()
+
+		function View() {
+			const form = kit.useForm(rootDefinition, {
+				defaultValues: { root: { name: "" } },
+				onSubmit,
+			})
+			return (
+				<kit.AutoForm form={form}>
+					<kit.Submit>Submit root field</kit.Submit>
+				</kit.AutoForm>
+			)
+		}
+
+		render(<View />)
+		fireEvent.click(screen.getByRole("button", { name: "Submit root field" }))
+		const summary = await screen.findByText("Enter the root name", {
+			selector: '[data-fp-node="error-message"][tabindex="-1"]',
+		})
+		expect(summary.getAttribute("data-fp-path")).toBe("root.name")
+		expect(onSubmit).not.toHaveBeenCalled()
+	})
+
+	it("leaves invalid focus order to RHF registration order", async () => {
 		const conditionalSchema = z.object({
 			first: z.string().min(1, "Enter first"),
 			mode: z.enum(["hide", "show"]),
@@ -441,14 +782,15 @@ describe("form kit", () => {
 		fireEvent.change(screen.getByLabelText("Conditional mode"), {
 			target: { value: "show" },
 		})
-		const first = await screen.findByLabelText("First conditional field")
+		await screen.findByLabelText("First conditional field")
 		fireEvent.click(
 			screen.getByRole("button", { name: "Submit conditional form" }),
 		)
-		await waitFor(() => expect(document.activeElement).toBe(first))
+		const second = screen.getByLabelText("Second conditional field")
+		await waitFor(() => expect(document.activeElement).toBe(second))
 	})
 
-	it("skips invalid generated controls that cannot receive focus", async () => {
+	it("falls back to the summary when RHF cannot focus its first error", async () => {
 		const disabledSchema = z.object({
 			first: z.string().min(1, "Enter first"),
 			second: z.string().min(1, "Enter second"),
@@ -486,9 +828,12 @@ describe("form kit", () => {
 		fireEvent.click(
 			screen.getByRole("button", { name: "Submit disabled form" }),
 		)
-		const focusable = screen.getByLabelText("Focusable invalid field")
-		await waitFor(() => expect(document.activeElement).toBe(focusable))
+		const summary = await screen.findByText("Enter first", {
+			selector: '[data-fp-node="error-message"][tabindex="-1"]',
+		})
+		await waitFor(() => expect(document.activeElement).toBe(summary))
 
+		const focusable = screen.getByLabelText("Focusable invalid field")
 		fireEvent.change(focusable, { target: { value: "Valid" } })
 		await waitFor(() => {
 			expect(screen.queryByText("Enter second")).toBeNull()
@@ -496,11 +841,11 @@ describe("form kit", () => {
 		fireEvent.click(
 			screen.getByRole("button", { name: "Submit disabled form" }),
 		)
-		const summary = document.querySelector(
+		const remainingSummary = document.querySelector(
 			'[data-fp-node="error-message"][tabindex="-1"]',
 		)
-		expect(summary).toBeInstanceOf(HTMLElement)
-		await waitFor(() => expect(document.activeElement).toBe(summary))
+		expect(remainingSummary).toBeInstanceOf(HTMLElement)
+		await waitFor(() => expect(document.activeElement).toBe(remainingSummary))
 	})
 
 	it("keeps the initial definition until React remounts the hook", () => {

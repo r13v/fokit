@@ -8,26 +8,72 @@ import { InteractiveLab } from "../components/interactive-lab"
 
 # Get started
 
+Build and submit a working form in three steps. This example uses the native
+preset, Zod, and the default validation timing.
+
 ## Install
 
-Install "Form, Please", TanStack Form, and a Standard Schema library. This example
-uses Zod.
+Install "Form, Please", React Hook Form, and a Standard Schema library. This
+example uses Zod.
 
 ```sh
-npm install form-please @tanstack/react-form zod
+npm install form-please react-hook-form zod
 ```
 
 React 18 and React 19 are supported peer dependencies.
 
-## Create a form
+## 1. Define the data contract
+
+Create a Standard Schema for the editable input. This schema keeps the editable
+values unchanged. It adds `slug` only to the successful submit output.
+
+```tsx
+// [!include ~/snippets/profile-form.tsx:schema]
+```
+
+The schema input is `{ name: string; email: string }`. The schema output also
+contains `slug`. Generated fields always edit the schema input.
+
+## 2. Define the generated fields
+
+Connect each schema path to a control from the native preset:
+
+```tsx
+// [!include ~/snippets/profile-form.tsx:definition]
+```
+
+`path` must exist in the schema input. The selected control must accept the
+value at that path. `required: true` changes the UI state only. The Zod schema
+still owns the validation rule.
+
+## 3. Bind and render the form
+
+Create the form binding inside a React component. Supply one complete schema
+input as `defaultValues`.
+
+```tsx
+// [!include ~/snippets/profile-form.tsx:component]
+```
+
+`kit.AutoForm` renders the native `<form>`, an error summary, and the generated
+fields. Add `kit.Submit` as a child to render the submit button.
+
+After a valid submit, `value` contains the schema output, including `slug`.
+Use the `input` callback property when you also need the editable input.
+
+All JavaScript package entries are React client modules. In a Next.js App
+Router project, put `"use client"` at the start of the component file.
+
+<details>
+<summary>Copy the complete first form</summary>
 
 ```tsx
 // [!include ~/snippets/profile-form.tsx]
 ```
 
-Render `<ProfileForm />`. Submit values with an invalid name or email to see
-schema issues. After a valid submit, the handler receives the transformed
-output, including `slug`.
+</details>
+
+## Add the optional layout
 
 Import the optional structural stylesheet once if you want baseline spacing:
 
@@ -41,9 +87,9 @@ and slots, or use the Material UI preset.
 ## Try the interactive lab
 
 The lab adds conditional fields, an editable contact array, reset, live
-TanStack Form state, and a diagnostic snapshot of native browser `FormData`.
-Submission uses the TanStack values, not that snapshot. Submit the form to see
-the transformed output.
+React Hook Form state, and a diagnostic snapshot of native browser `FormData`.
+Submission uses the React Hook Form values, not that snapshot. Submit the form
+to see the transformed output.
 
 <InteractiveLab />
 

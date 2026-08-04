@@ -53,10 +53,10 @@ const defaultValues = {
 // [!endregion schema-types]
 
 // [!region path-types]
-const contactEmailPath = "contacts[0].email" satisfies FieldPath<ProfileInput>
+const contactEmailPath = "contacts.0.email" satisfies FieldPath<ProfileInput>
 const contactsPath = "contacts" satisfies ArrayFieldPath<ProfileInput>
 
-type ContactEmail = PathValue<ProfileInput, "contacts[0].email">
+type ContactEmail = PathValue<ProfileInput, "contacts.0.email">
 // string
 
 type FieldUpdate<Value, Path extends FieldPath<Value>> = {
@@ -65,9 +65,9 @@ type FieldUpdate<Value, Path extends FieldPath<Value>> = {
 }
 
 const emailUpdate = {
-	path: "contacts[0].email",
+	path: "contacts.0.email",
 	value: "grace@example.com",
-} satisfies FieldUpdate<ProfileInput, "contacts[0].email">
+} satisfies FieldUpdate<ProfileInput, "contacts.0.email">
 // [!endregion path-types]
 
 type ProfileContext = {

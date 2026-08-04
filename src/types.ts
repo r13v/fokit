@@ -1,5 +1,4 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
-import type { DeepKeys, DeepValue } from "@tanstack/react-form"
 import type {
 	ComponentPropsWithoutRef,
 	ComponentType,
@@ -9,20 +8,34 @@ import type {
 	ReactElement,
 	ReactNode,
 } from "react"
+import type {
+	FieldArrayPathValue,
+	FieldPathValue,
+	FieldValues,
+	FieldArrayPath as RhfFieldArrayPath,
+	FieldPath as RhfFieldPath,
+} from "react-hook-form"
 
+/** A Standard Schema validator used by a form definition. */
 export type StandardSchema<Input = unknown, Output = Input> = StandardSchemaV1<
 	Input,
 	Output
 >
+/** The editable input value accepted by a form schema. */
 export type FormInput<Schema extends StandardSchemaV1> =
 	StandardSchemaV1.InferInput<Schema>
+/** The validated and possibly transformed value produced by a form schema. */
 export type FormOutput<Schema extends StandardSchemaV1> =
 	StandardSchemaV1.InferOutput<Schema>
 
+/** A value that recursive readonly conversion must preserve. */
 type Primitive = bigint | boolean | null | number | string | symbol | undefined
+/** A browser or language object that recursive readonly conversion must preserve. */
 type NativeLeaf = Blob | Date | File | RegExp
+/** A terminal value in a recursively readonly data structure. */
 type Leaf = ((...args: never[]) => unknown) | NativeLeaf | Primitive
 
+/** Makes nested objects and arrays readonly while preserving leaf values. */
 export type DeepReadonly<Value> = Value extends Leaf
 	? Value
 	: Value extends readonly (infer Item)[]
@@ -31,113 +44,173 @@ export type DeepReadonly<Value> = Value extends Leaf
 			? { readonly [Key in keyof Value]: DeepReadonly<Value[Key]> }
 			: Value
 
-export type FieldPath<Value> = Extract<DeepKeys<Value>, string>
-export type PathValue<Value, Path extends FieldPath<Value>> = DeepValue<
+/** A React Hook Form dot path that selects a field in `Value`. */
+export type FieldPath<Value> = Value extends FieldValues
+	? RhfFieldPath<Value>
+	: never
+/** The value selected from `Value` by a React Hook Form dot path. */
+export type PathValue<
 	Value,
-	Path
->
-export type ArrayFieldPath<Value> = {
-	[Path in FieldPath<Value>]: NonNullable<
-		PathValue<Value, Path>
-	> extends readonly unknown[]
-		? Path
-		: never
-}[FieldPath<Value>]
+	Path extends FieldPath<Value>,
+> = Value extends FieldValues
+	? FieldPathValue<Value, Extract<Path, RhfFieldPath<Value>>>
+	: never
+/** A React Hook Form dot path that selects an object array in `Value`. */
+export type ArrayFieldPath<Value> = Value extends FieldValues
+	? RhfFieldArrayPath<Value>
+	: never
 
+/** A validation problem that the form can display. */
 export type FormIssue = {
+	/** The user-facing validation message. */
 	readonly message: string
+	/** The input path related to the issue, when one exists. */
 	readonly path?: string
 }
 
+/** Values, metadata, and actions supplied to a registered control component. */
 export type ControlProps<
 	Value,
 	Options = Record<string, never>,
 	Context = unknown,
 > = {
+	/** The absolute React Hook Form path for this control. */
 	readonly path: string
+	/** The current field value. */
 	readonly value: Value
+	/** Replaces the current field value. */
 	setValue(value: Value): void
+	/** Marks the field as touched through its blur handler. */
 	blur(): void
+	/** Native input attributes and the registration reference. */
 	readonly input: {
+		/** The unique DOM ID for the generated input. */
 		readonly id: string
+		/** The input name used by React Hook Form. */
 		readonly name: string
+		/** Connects a focusable input element to React Hook Form. */
 		ref(element: HTMLElement | null): void
+		/** IDs of elements that describe the input. */
 		readonly "aria-describedby"?: string
 	}
+	/** Validation and interaction state for the field. */
 	readonly meta: {
+		/** Whether the current value differs from its default value. */
 		readonly dirty: boolean
+		/** Whether the user has blurred the field. */
 		readonly touched: boolean
+		/** Whether React Hook Form is validating the field. */
 		readonly validating: boolean
+		/** All current validation issues for the field. */
 		readonly errors: readonly FormIssue[]
+		/** Validation issues that the UI should show now. */
 		readonly displayErrors: readonly FormIssue[]
+		/** Whether the field has at least one validation issue. */
 		readonly invalid: boolean
 	}
+	/** Control-specific options from the field definition. */
 	readonly options: Readonly<Options>
+	/** The deeply readonly runtime context for the form. */
 	readonly context: DeepReadonly<Context>
+	/** Whether the control must reject user input. */
 	readonly disabled: boolean
+	/** Whether the control must prevent value changes while remaining interactive. */
 	readonly readOnly: boolean
+	/** Whether the definition marks the field as required. */
 	readonly required: boolean
 }
 
+/** A private key that carries control type information without runtime data. */
 declare const controlTypes: unique symbol
+/** Type information retained by a control definition for inference. */
 type ControlTypes<Value, Options, Context> = {
+	/** The field value accepted by the control. */
 	readonly value: Value
+	/** The configuration accepted by the control. */
 	readonly options: Options
+	/** The runtime context required by the control. */
 	readonly context: Context
 }
 
+/** A registered control component and its inferred type contract. */
 export type ControlDefinition<
 	Value,
 	Options = Record<string, never>,
 	Context = unknown,
 > = {
+	/** The React component that renders the control. */
 	readonly component: ComponentType<ControlProps<Value, Options, Context>>
+	/** Phantom type data used to infer the control contract. */
 	readonly [controlTypes]?: ControlTypes<Value, Options, Context>
 }
+/** A control definition with an unknown contract. */
 export type AnyControlDefinition = {
+	/** The registered control component. */
 	readonly component: unknown
+	/** Phantom type data used to infer the control contract. */
 	readonly [controlTypes]?: ControlTypes<unknown, unknown, unknown>
 }
+/** A readonly registry of named control definitions. */
 export type ControlDefinitionRegistry = Readonly<
 	Record<string, AnyControlDefinition>
 >
+/** Extracts the field value accepted by a control definition. */
 export type ControlValueOf<Control> = Control extends {
+	/** Phantom type data retained by a control definition. */
 	readonly [controlTypes]?: ControlTypes<infer Value, unknown, unknown>
 }
 	? Value
 	: never
+/** Extracts the configuration accepted by a control definition. */
 export type ControlOptionsOf<Control> = Control extends {
+	/** Phantom type data retained by a control definition. */
 	readonly [controlTypes]?: ControlTypes<unknown, infer Options, unknown>
 }
 	? Options
 	: never
+/** Extracts the runtime context required by a control definition. */
 export type ControlContextOf<Control> = Control extends {
+	/** Phantom type data retained by a control definition. */
 	readonly [controlTypes]?: ControlTypes<unknown, unknown, infer Context>
 }
 	? Context
 	: never
 
+/** A column count or span in the default form grid. */
 export type DefaultGridValue = 1 | 2 | 3 | 4
+/** The deeply readonly form input supplied to a UI resolver. */
 export type UiResolverValues<Input> = DeepReadonly<Input>
+/** Additional runtime data supplied to a UI resolver. */
 export type UiResolverDetails<Context = unknown> = {
+	/** The deeply readonly context for the current form. */
 	readonly context: DeepReadonly<Context>
 }
+/** Computes UI configuration from the current form input and context. */
 export type UiResolver<Result, Input = unknown, Context = unknown> = (
 	values: UiResolverValues<Input>,
 	details: UiResolverDetails<Context>,
 ) => Result
+/** A fixed value or a synchronous resolver that computes the value. */
 export type Resolvable<Value, Input, Context> =
 	| (Value extends (...args: never[]) => unknown ? never : Value)
 	| UiResolver<Value, Input, Context>
+/** Content that a form definition can place in labels and descriptions. */
 export type ReactUiContent = ReactElement | string
+/** Interaction state supplied to a custom render node. */
 export type RenderNodeProps = {
+	/** Whether an ancestor or the form disables this node. */
 	readonly disabled: boolean
+	/** Whether an ancestor or the form makes this node read-only. */
 	readonly readOnly: boolean
 }
+/** A component inserted directly into the generated form tree. */
 export type RenderNodeComponent = ComponentType<RenderNodeProps>
 
+/** Detects the TypeScript `any` type. */
 type IsAny<Value> = 0 extends 1 & Value ? true : false
+/** Detects the TypeScript `never` type. */
 type IsNever<Value> = [Value] extends [never] ? true : false
+/** Detects the TypeScript `unknown` type without matching `any`. */
 type IsUnknown<Value> =
 	IsAny<Value> extends true
 		? false
@@ -146,17 +219,21 @@ type IsUnknown<Value> =
 				? true
 				: false
 			: false
+/** Detects a missing or unresolved type contract. */
 type IsUntyped<Value> = IsNever<Value> extends true ? true : IsUnknown<Value>
+/** Tests whether a kit context satisfies a control context requirement. */
 type ContextMatches<Context, Requirement> =
 	IsUntyped<Requirement> extends true
 		? true
 		: [Context] extends [Requirement]
 			? true
 			: false
+/** Extracts string keys from a control registry. */
 type ControlName<Controls extends ControlDefinitionRegistry> = Extract<
 	keyof Controls,
 	string
 >
+/** Selects controls whose value and context contracts match a field path. */
 type CompatibleControlName<
 	Scope,
 	Controls extends ControlDefinitionRegistry,
@@ -176,19 +253,32 @@ type CompatibleControlName<
 				: never
 }[ControlName<Controls>]
 
+/** Properties shared by all field nodes before path and control selection. */
 type FieldNodeBase<Root, Context, FieldOptions, Grid extends number> = {
+	/** Identifies this node as a field. */
 	readonly kind: "field"
+	/** Overrides the stable node ID derived from the path. */
 	readonly id?: string
+	/** Provides the field label or a resolver that computes it. */
 	readonly label?: Resolvable<ReactUiContent, Root, Context>
+	/** Provides supporting content below the field label. */
 	readonly description?: Resolvable<ReactUiContent, Root, Context>
+	/** Configures the registered field slot. */
 	readonly slotOptions?: Resolvable<FieldOptions, Root, Context>
+	/** Marks the field as required for presentation and accessibility. */
 	readonly required?: Resolvable<boolean, Root, Context>
+	/** Prevents user interaction with the control. */
 	readonly disabled?: Resolvable<boolean, Root, Context>
+	/** Prevents value changes without disabling the control. */
 	readonly readOnly?: Resolvable<boolean, Root, Context>
+	/** Controls whether the field is rendered. Hidden values remain registered. */
 	readonly visible?: Resolvable<boolean, Root, Context>
+	/** Adds a class to the field slot root. */
 	readonly className?: Resolvable<string, Root, Context>
+	/** Sets the field span in its parent grid. */
 	readonly span?: Resolvable<Grid | "full", Root, Context>
 }
+/** Builds a field node for one path and its compatible controls. */
 type FieldNodeForPath<
 	Root,
 	Scope,
@@ -198,13 +288,16 @@ type FieldNodeForPath<
 	Path extends FieldPath<Scope>,
 	Grid extends number,
 > = FieldNodeBase<Root, Context, FieldOptions, Grid> & {
+	/** The field path relative to the current array scope. */
 	readonly path: Path
 } & {
 		[Name in CompatibleControlName<Scope, Controls, Context, Path>]: {
+			/** The registered control used to edit this field. */
 			readonly control: Name
 			// biome-ignore lint/complexity/noBannedTypes: This conditional detects whether the options type has required properties.
 		} & ({} extends ControlOptionsOf<Controls[Name]>
 			? {
+					/** Configures the selected control. */
 					readonly options?: Resolvable<
 						ControlOptionsOf<Controls[Name]>,
 						Root,
@@ -212,6 +305,7 @@ type FieldNodeForPath<
 					>
 				}
 			: {
+					/** Configures the selected control. */
 					readonly options: Resolvable<
 						ControlOptionsOf<Controls[Name]>,
 						Root,
@@ -220,6 +314,7 @@ type FieldNodeForPath<
 				})
 	}[CompatibleControlName<Scope, Controls, Context, Path>]
 
+/** Creates the union of valid field nodes in the current scope. */
 type FieldNodeInScope<
 	Root,
 	Scope,
@@ -239,6 +334,7 @@ type FieldNodeInScope<
 	>
 }[FieldPath<Scope>]
 
+/** A typed field node at the form root. */
 export type FieldNode<
 	Input,
 	Controls extends ControlDefinitionRegistry,
@@ -247,6 +343,7 @@ export type FieldNode<
 	Grid extends number = DefaultGridValue,
 > = FieldNodeInScope<Input, Input, Controls, Context, FieldOptions, Grid>
 
+/** A section that groups child nodes in the current path scope. */
 type SectionNodeInScope<
 	Root,
 	Scope,
@@ -257,17 +354,29 @@ type SectionNodeInScope<
 	ArrayOptions,
 	Grid extends number,
 > = {
+	/** Identifies this node as a section. */
 	readonly kind: "section"
+	/** A stable ID that is unique within the current scope. */
 	readonly id: string
+	/** Provides the section heading or a resolver that computes it. */
 	readonly title?: Resolvable<ReactUiContent, Root, Context>
+	/** Provides supporting content for the section. */
 	readonly description?: Resolvable<ReactUiContent, Root, Context>
+	/** Configures the registered section slot. */
 	readonly slotOptions?: Resolvable<SectionOptions, Root, Context>
+	/** Controls whether the section and its children are rendered. */
 	readonly visible?: Resolvable<boolean, Root, Context>
+	/** Disables controls in this section. */
 	readonly disabled?: Resolvable<boolean, Root, Context>
+	/** Makes controls in this section read-only. */
 	readonly readOnly?: Resolvable<boolean, Root, Context>
+	/** Adds a class to the section slot root. */
 	readonly className?: Resolvable<string, Root, Context>
+	/** Sets the number of columns in the section grid. */
 	readonly columns?: Resolvable<Grid, Root, Context>
+	/** Sets the section span in its parent grid. */
 	readonly span?: Resolvable<Grid | "full", Root, Context>
+	/** Nodes rendered inside the section. */
 	readonly children: readonly UiNodeInScope<
 		Root,
 		Scope,
@@ -280,6 +389,7 @@ type SectionNodeInScope<
 	>[]
 }
 
+/** A typed section node at the form root. */
 export type SectionNode<
 	Input,
 	Controls extends ControlDefinitionRegistry,
@@ -299,10 +409,18 @@ export type SectionNode<
 	Grid
 >
 
-type ArrayItem<Scope, Path extends ArrayFieldPath<Scope>> =
-	NonNullable<PathValue<Scope, Path>> extends readonly (infer Item)[]
+/** Extracts the item type from an object-array path. */
+type ArrayItem<
+	Scope,
+	Path extends ArrayFieldPath<Scope>,
+> = Scope extends FieldValues
+	? NonNullable<
+			FieldArrayPathValue<Scope, Extract<Path, RhfFieldArrayPath<Scope>>>
+		> extends readonly (infer Item)[]
 		? Item
 		: never
+	: never
+/** Creates the union of valid array nodes in the current scope. */
 type ArrayNodeInScope<
 	Root,
 	Scope,
@@ -314,20 +432,33 @@ type ArrayNodeInScope<
 	Grid extends number,
 > = {
 	[Path in ArrayFieldPath<Scope>]: {
+		/** Identifies this node as an array. */
 		readonly kind: "array"
+		/** Overrides the stable node ID derived from the path. */
 		readonly id?: string
+		/** The object-array path relative to the current array scope. */
 		readonly path: Path
+		/** Provides the array label or a resolver that computes it. */
 		readonly label?: Resolvable<ReactUiContent, Root, Context>
+		/** Provides supporting content for the array. */
 		readonly description?: Resolvable<ReactUiContent, Root, Context>
+		/** Configures the registered array slot. */
 		readonly slotOptions?: Resolvable<ArrayOptions, Root, Context>
+		/** Controls whether the array and its items are rendered. */
 		readonly visible?: Resolvable<boolean, Root, Context>
+		/** Prevents changes to this array and its controls. */
 		readonly disabled?: Resolvable<boolean, Root, Context>
+		/** Prevents value changes without disabling the array controls. */
 		readonly readOnly?: Resolvable<boolean, Root, Context>
+		/** Adds a class to the array slot root. */
 		readonly className?: Resolvable<string, Root, Context>
+		/** Sets the array span in its parent grid. */
 		readonly span?: Resolvable<Grid | "full", Root, Context>
+		/** A new item value or a factory that creates one for each append action. */
 		readonly itemDefault:
 			| ArrayItem<Scope, Path>
 			| (() => ArrayItem<Scope, Path>)
+		/** Nodes rendered for each array item. */
 		readonly children: readonly UiNodeInScope<
 			Root,
 			ArrayItem<Scope, Path>,
@@ -341,6 +472,7 @@ type ArrayNodeInScope<
 	}
 }[ArrayFieldPath<Scope>]
 
+/** A typed object-array node at the form root. */
 export type ArrayNode<
 	Input,
 	Controls extends ControlDefinitionRegistry,
@@ -360,15 +492,23 @@ export type ArrayNode<
 	Grid
 >
 
+/** A custom component node in the generated form tree. */
 export type RenderNode<Input, Context = unknown> = {
+	/** Identifies this node as custom rendered content. */
 	readonly kind: "render"
+	/** A stable ID that is unique within the current scope. */
 	readonly id: string
+	/** The React component rendered for this node. */
 	readonly component: RenderNodeComponent
+	/** Controls whether the component is rendered. */
 	readonly visible?: Resolvable<boolean, Input, Context>
+	/** Supplies disabled state to the component and its descendants. */
 	readonly disabled?: Resolvable<boolean, Input, Context>
+	/** Supplies read-only state to the component and its descendants. */
 	readonly readOnly?: Resolvable<boolean, Input, Context>
 }
 
+/** A valid UI node in a form or nested array scope. */
 type UiNodeInScope<
 	Root,
 	Scope,
@@ -402,6 +542,7 @@ type UiNodeInScope<
 			Grid
 	  >
 
+/** Any typed node that a form definition can contain at its root. */
 export type UiNode<
 	Input,
 	Controls extends ControlDefinitionRegistry,
@@ -421,6 +562,7 @@ export type UiNode<
 	Grid
 >
 
+/** User-authored UI content accepted by `defineForm`. */
 export type FormDefinitionSource<
 	Schema extends StandardSchema,
 	Controls extends ControlDefinitionRegistry,
@@ -430,6 +572,7 @@ export type FormDefinitionSource<
 	ArrayOptions,
 	Grid extends number,
 > = {
+	/** The ordered nodes rendered by `Fields` and `AutoForm`. */
 	readonly ui: readonly UiNode<
 		FormInput<Schema>,
 		Controls,
@@ -441,14 +584,21 @@ export type FormDefinitionSource<
 	>[]
 }
 
+/** A validated UI node with stable ownership and scope metadata. */
 export type NormalizedNode = Readonly<Record<string, unknown>> & {
+	/** The node ID, unique within its definition. */
 	readonly id: string
+	/** The node category used by the renderer. */
 	readonly kind: "array" | "field" | "render" | "section"
+	/** The containing section or array node ID, when one exists. */
 	readonly parentId?: string
+	/** The array path that contains relative field paths for this node. */
 	readonly scopePath: string
 }
 
+/** A private key that carries definition type information without runtime data. */
 declare const definitionTypes: unique symbol
+/** A schema and normalized UI tree owned by one form kit. */
 export type FormDefinition<
 	Schema extends StandardSchema = StandardSchema,
 	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
@@ -458,25 +608,37 @@ export type FormDefinition<
 	ArrayOptions = unknown,
 	Grid extends number = number,
 > = {
+	/** The Standard Schema validator for form input and submit output. */
 	readonly schema: Schema
+	/** The allowed column counts and spans for this definition. */
 	readonly grid: readonly Grid[]
+	/** The normalized root UI nodes in render order. */
 	readonly ui: readonly NormalizedNode[]
+	/** All normalized nodes in depth-first order. */
 	readonly nodes: readonly NormalizedNode[]
+	/** Phantom type data used to preserve the owning kit contract. */
 	readonly [definitionTypes]?: {
+		/** The control registry that accepts this definition. */
 		readonly controls: Controls
+		/** The runtime context required by this definition. */
 		readonly context: Context
+		/** The field slot configuration type. */
 		readonly fieldOptions: FieldOptions
+		/** The section slot configuration type. */
 		readonly sectionOptions: SectionOptions
+		/** The array slot configuration type. */
 		readonly arrayOptions: ArrayOptions
 	}
 }
 
+/** A structural element that receives Form Please data attributes. */
 export type StructuralNodeName =
 	| "array"
 	| "array-item"
 	| "error-message"
 	| "field"
 	| "section"
+/** CSS properties for Form Please structural elements and layout variables. */
 export type FormPleaseStyle = CSSProperties &
 	Partial<
 		Record<
@@ -487,80 +649,146 @@ export type FormPleaseStyle = CSSProperties &
 			string
 		>
 	>
+/** DOM props for the root element of a structural slot. */
 export type StructuralRootProps = Omit<HTMLAttributes<HTMLElement>, "style"> & {
+	/** Identifies the structural role for styling and diagnostics. */
 	readonly "data-fp-node": StructuralNodeName
+	/** Connects the structural element to runtime focus handling. */
 	ref?(element: HTMLElement | null): void
+	/** Standard CSS plus Form Please layout variables. */
 	readonly style?: FormPleaseStyle
 }
+/** Content and behavior supplied to a field slot component. */
 export type FieldSlotProps<Options = never> = {
+	/** Props for the field wrapper element. */
 	readonly rootProps: StructuralRootProps
+	/** The resolved field label. */
 	readonly label?: ReactNode
+	/** Props that connect the label to the control. */
 	readonly labelProps: LabelHTMLAttributes<HTMLLabelElement>
+	/** The resolved supporting content. */
 	readonly description?: ReactNode
+	/** Props for the supporting-content element. */
 	readonly descriptionProps: HTMLAttributes<HTMLElement>
+	/** Resolved field-slot configuration from the definition. */
 	readonly slotOptions?: Readonly<Options>
+	/** The rendered registered control. */
 	readonly control: ReactNode
+	/** Rendered validation messages for the field. */
 	readonly errors: readonly ReactNode[]
+	/** Whether user interaction with the control is disabled. */
 	readonly disabled: boolean
+	/** Whether the control prevents value changes without being disabled. */
 	readonly readOnly: boolean
+	/** Whether the definition marks the field as required. */
 	readonly required: boolean
 }
+/** Content and layout props supplied to a section slot component. */
 export type SectionSlotProps<Options = never> = {
+	/** Props for the section wrapper element. */
 	readonly rootProps: StructuralRootProps
+	/** Props for the section grid element. */
 	readonly layoutProps: HTMLAttributes<HTMLElement> & {
+		/** Identifies the element as a Form Please grid. */
 		readonly "data-fp-layout": "grid"
+		/** The resolved number of grid columns. */
 		readonly "data-fp-columns": number
 	}
+	/** The resolved section heading. */
 	readonly title?: ReactNode
+	/** The resolved supporting content. */
 	readonly description?: ReactNode
+	/** Resolved section-slot configuration from the definition. */
 	readonly slotOptions?: Readonly<Options>
+	/** The rendered child nodes. */
 	readonly children: ReactNode
 }
+/** Content and actions supplied to an array slot component. */
 export type ArraySlotProps<Options = never> = {
+	/** Props for the array wrapper element. */
 	readonly rootProps: StructuralRootProps
+	/** The resolved array label. */
 	readonly label?: ReactNode
+	/** Props for the array label element. */
 	readonly labelProps: HTMLAttributes<HTMLElement>
+	/** The resolved supporting content. */
 	readonly description?: ReactNode
+	/** Props for the supporting-content element. */
 	readonly descriptionProps: HTMLAttributes<HTMLElement>
+	/** Resolved array-slot configuration from the definition. */
 	readonly slotOptions?: Readonly<Options>
+	/** Rendered validation messages for the array. */
 	readonly errors: readonly ReactNode[]
+	/** Whether the array has at least one visible validation issue. */
 	readonly invalid: boolean
+	/** Whether the user can append an item. */
 	readonly canAdd: boolean
+	/** Appends a cloned item default to the array. */
 	add(): void
+	/** The rendered array items. */
 	readonly children: ReactNode
 }
+/** State and actions supplied to an array-item slot component. */
 export type ArrayItemSlotProps = {
+	/** Props for the item wrapper element. */
 	readonly rootProps: StructuralRootProps
+	/** The zero-based position of the item. */
 	readonly index: number
+	/** Whether changes to this item are disabled. */
 	readonly disabled: boolean
+	/** Whether value changes to this item are read-only. */
 	readonly readOnly: boolean
+	/** Whether the item can move one position toward the start. */
 	readonly canMoveUp: boolean
+	/** Whether the item can move one position toward the end. */
 	readonly canMoveDown: boolean
+	/** Removes this item from the array. */
 	remove(): void
+	/** Moves this item to a zero-based array position. */
 	move(toIndex: number): void
+	/** The rendered nodes for this array item. */
 	readonly children: ReactNode
 }
+/** A validation issue supplied to an error-message slot component. */
 export type ErrorMessageSlotProps = {
+	/** Props for the error message element. */
 	readonly rootProps: StructuralRootProps
+	/** The validation issue to display. */
 	readonly issue: FormIssue
 }
+/** Form state and button props supplied to a submit slot component. */
 export type SubmitSlotProps = {
+	/** Native button props with runtime-owned submit and disabled values. */
 	readonly buttonProps: Omit<
 		ComponentPropsWithoutRef<"button">,
 		"disabled" | "type"
-	> & { readonly disabled: boolean; readonly type: "submit" }
+	> & {
+		/** Whether the runtime prevents submission. */
+		readonly disabled: boolean
+		/** The runtime-owned native button type. */
+		readonly type: "submit"
+	}
+	/** The current editable form values. */
 	readonly values: Readonly<Record<string, unknown>>
+	/** Whether the form is running its submit handler. */
 	readonly isSubmitting: boolean
 }
+/** Structural components used by a form kit. */
 export type FormKitSlots<
 	FieldOptions = never,
 	SectionOptions = never,
 	ArrayOptions = never,
 > = {
+	/** Renders the wrapper, label, description, control, and errors for a field. */
 	readonly Field: ComponentType<FieldSlotProps<FieldOptions>>
+	/** Renders a section and its child layout. */
 	readonly Section: ComponentType<SectionSlotProps<SectionOptions>>
+	/** Renders an object array and its append action. */
 	readonly Array: ComponentType<ArraySlotProps<ArrayOptions>>
+	/** Renders one object-array item and its item actions. */
 	readonly ArrayItem: ComponentType<ArrayItemSlotProps>
+	/** Renders one validation issue. */
 	readonly ErrorMessage: ComponentType<ErrorMessageSlotProps>
+	/** Renders the form submit button. */
 	readonly Submit: ComponentType<SubmitSlotProps>
 }

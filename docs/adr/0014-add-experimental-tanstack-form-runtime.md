@@ -1,6 +1,6 @@
 # ADR 0014: Add an experimental TanStack Form runtime
 
-- Status: Accepted
+- Status: Superseded by [ADR 0015](0015-replace-tanstack-form-with-react-hook-form.md)
 - Date: 2026-08-02
 
 ## Context

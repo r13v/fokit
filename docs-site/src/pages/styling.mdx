@@ -150,12 +150,12 @@ Use `data-fp-path` when the field path is the stable styling identifier:
 }
 
 .account-form
-	[data-fp-node="field"][data-fp-path^="contacts["][data-fp-path$=".email"] {
+	[data-fp-node="field"][data-fp-path^="contacts."][data-fp-path$=".email"] {
 	background: #f7f9fc;
 }
 ```
 
-Array paths contain the current item index, such as `contacts[0].email`. The
+Array paths contain the current item index, such as `contacts.0.email`. The
 index changes when a user moves or removes an item.
 
 ## Use structural attributes

@@ -295,7 +295,7 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 						case "error":
 							return "Catalog refresh failed; saved options remain available."
 						case "idle":
-							return "Rows use TanStack Form index identity while they move."
+							return "RHF keeps stable row keys while indexed paths move."
 					}
 				},
 				error: () =>
@@ -474,6 +474,19 @@ function StudioPoliciesForm() {
 	if (saveRules.isPending || publishSummary.isPending) {
 		status = "Publishing two resources…"
 	}
+	const values = form.api.watch()
+	const accessOptions =
+		Number(values.access.earlyEnabled) + Number(values.access.lateEnabled)
+	const restrictedEquipment = values.equipment.filter(
+		(item) => item.mandatoryBriefing,
+	).length
+	let deposit = 0
+	if (
+		values.safeguard.depositRequired &&
+		values.safeguard.amount !== undefined
+	) {
+		deposit = values.safeguard.amount
+	}
 
 	return (
 		<section
@@ -486,43 +499,24 @@ function StudioPoliciesForm() {
 				conditional policy groups and a reorderable equipment matrix are
 				published to two endpoints.
 			</p>
-			<kit.AutoForm className="form-please-complex__form" form={form}>
-				<form.api.Subscribe selector={(state) => state.values}>
-					{(values) => {
-						const accessOptions =
-							Number(values.access.earlyEnabled) +
-							Number(values.access.lateEnabled)
-						const restrictedEquipment = values.equipment.filter(
-							(item) => item.mandatoryBriefing,
-						).length
-						let deposit = 0
-						if (
-							values.safeguard.depositRequired &&
-							values.safeguard.amount !== undefined
-						) {
-							deposit = values.safeguard.amount
-						}
-						return (
-							<aside
-								aria-label="Policy balance"
-								className="form-please-complex__preview"
-							>
-								<strong>Live policy balance</strong>
-								<span>
-									{accessOptions} access exception(s) · {restrictedEquipment}{" "}
-									briefing rule(s) · {deposit} held as safeguard
-								</span>
-							</aside>
-						)
-					}}
-				</form.api.Subscribe>
+			<contextualKit.AutoForm className="form-please-complex__form" form={form}>
+				<aside
+					aria-label="Policy balance"
+					className="form-please-complex__preview"
+				>
+					<strong>Live policy balance</strong>
+					<span>
+						{accessOptions} access exception(s) · {restrictedEquipment} briefing
+						rule(s) · {deposit} held as safeguard
+					</span>
+				</aside>
 				<div className="form-please-complex__actions">
-					<kit.Submit className="form-please-complex__primary">
+					<contextualKit.Submit className="form-please-complex__primary">
 						Publish policies
-					</kit.Submit>
+					</contextualKit.Submit>
 					<span aria-live="polite">{status}</span>
 				</div>
-			</kit.AutoForm>
+			</contextualKit.AutoForm>
 		</section>
 	)
 }

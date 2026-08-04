@@ -13,12 +13,15 @@ import type {
 import type { SxProps, Theme } from "@mui/material/styles"
 import type { ComponentPropsWithoutRef, ReactNode } from "react"
 
+/** Removes owned properties from each member of a MUI prop union. */
 type DistributiveOmit<Value, Keys extends PropertyKey> = Value extends unknown
 	? Omit<Value, Keys>
 	: never
 
+/** Represents a MUI component without application-added props. */
 type NoAdditionalProps = Record<never, never>
 
+/** Text field props controlled by Form Please or the selected control. */
 type TextFieldOwnedProps =
 	| "defaultValue"
 	| "disabled"
@@ -33,17 +36,23 @@ type TextFieldOwnedProps =
 	| "type"
 	| "value"
 
+/** Application-owned MUI TextField props for text, number, and date controls. */
 export type MuiTextFieldOptions = DistributiveOmit<
 	TextFieldProps,
 	TextFieldOwnedProps
 >
 
+/** One choice rendered by a MUI select control. */
 export type MuiSelectChoice = {
+	/** The string field value represented by this choice. */
 	readonly value: string
+	/** The content shown to the user. */
 	readonly label: ReactNode
+	/** Whether the user cannot select this choice. */
 	readonly disabled?: boolean
 }
 
+/** Select props controlled by Form Please or the selected control. */
 type SelectOwnedProps =
 	| "defaultValue"
 	| "disabled"
@@ -57,28 +66,38 @@ type SelectOwnedProps =
 	| "required"
 	| "value"
 
+/** Application-owned props and optional choices for the MUI select control. */
 export type MuiSelectOptions = DistributiveOmit<
 	SelectProps<string>,
 	SelectOwnedProps
 > & {
+	/** Choices rendered as MUI MenuItem elements instead of custom children. */
 	readonly choices?: readonly MuiSelectChoice[]
 }
 
+/** Application-owned props and choices for the MUI multi-select control. */
 export type MuiSelectMultipleOptions = DistributiveOmit<
 	SelectProps<readonly string[]>,
 	SelectOwnedProps
 > & {
+	/** Choices rendered as MUI MenuItem elements instead of custom children. */
 	readonly choices?: readonly MuiSelectChoice[]
 }
 
+/** One value and its presentation in a MUI radio group. */
 export type MuiRadioChoice = {
+	/** The string field value represented by this radio. */
 	readonly value: string
+	/** The content shown beside the radio. */
 	readonly label: ReactNode
+	/** Whether the user cannot select this radio. */
 	readonly disabled?: boolean
+	/** Application-owned props for this MUI Radio element. */
 	readonly radioProps?: Omit<
 		RadioProps,
 		"checked" | "disabled" | "id" | "inputRef" | "name" | "required" | "value"
 	>
+	/** Application-owned props for this MUI FormControlLabel element. */
 	readonly labelProps?: Omit<
 		FormControlLabelProps,
 		| "checked"
@@ -92,13 +111,16 @@ export type MuiRadioChoice = {
 	>
 }
 
+/** Application-owned MUI RadioGroup props and optional radio choices. */
 export type MuiRadioOptions = Omit<
 	RadioGroupProps,
 	"defaultValue" | "name" | "value"
 > & {
+	/** Radios rendered by the control instead of custom children. */
 	readonly choices?: readonly MuiRadioChoice[]
 }
 
+/** Application-owned props for the MUI checkbox control. */
 export type MuiCheckboxOptions = Omit<
 	CheckboxProps,
 	| "checked"
@@ -112,6 +134,7 @@ export type MuiCheckboxOptions = Omit<
 	| "value"
 >
 
+/** Application-owned props for the MUI switch control. */
 export type MuiSwitchOptions = Omit<
 	SwitchProps,
 	| "checked"
@@ -125,6 +148,7 @@ export type MuiSwitchOptions = Omit<
 	| "value"
 >
 
+/** Autocomplete props controlled by Form Please or the selected control. */
 type AutocompleteOwnedProps =
 	| "defaultValue"
 	| "disabled"
@@ -134,25 +158,31 @@ type AutocompleteOwnedProps =
 	| "renderInput"
 	| "value"
 
+/** Application-owned TextField props used inside a MUI autocomplete control. */
 export type MuiAutocompleteTextFieldProps = DistributiveOmit<
 	TextFieldProps,
 	TextFieldOwnedProps | "onBlur"
 >
 
+/** Application-owned props for the MUI single-value autocomplete control. */
 export type MuiAutocompleteOptions = Omit<
 	AutocompleteProps<string, false, boolean, boolean>,
 	AutocompleteOwnedProps
 > & {
+	/** Props for the TextField rendered by the autocomplete. */
 	readonly textFieldProps?: MuiAutocompleteTextFieldProps
 }
 
+/** Application-owned props for the MUI multi-value autocomplete control. */
 export type MuiAutocompleteMultipleOptions = Omit<
 	AutocompleteProps<string, true, boolean, boolean>,
 	AutocompleteOwnedProps
 > & {
+	/** Props for the TextField rendered by the autocomplete. */
 	readonly textFieldProps?: MuiAutocompleteTextFieldProps
 }
 
+/** Slider props controlled by Form Please or the selected control. */
 type SliderOwnedProps =
 	| "defaultValue"
 	| "disabled"
@@ -161,24 +191,31 @@ type SliderOwnedProps =
 	| "readOnly"
 	| "value"
 
+/** Application-owned props for the MUI scalar slider control. */
 export type MuiSliderOptions = Omit<
 	SliderProps<"span", NoAdditionalProps, number>,
 	SliderOwnedProps
 >
 
+/** Application-owned props for the MUI range slider control. */
 export type MuiRangeSliderOptions = Omit<
 	SliderProps<"span", NoAdditionalProps, readonly number[]>,
 	SliderOwnedProps
 >
 
+/** Native file input props used to define the file option boundary. */
 type FileInputProps = ComponentPropsWithoutRef<"input">
 
+/** Presentation and native input props for MUI file controls. */
 export type MuiFileOptions = {
+	/** MUI system styles applied to the file control wrapper. */
 	readonly sx?: SxProps<Theme>
+	/** Application-owned props for the file-selection button. */
 	readonly buttonProps?: Omit<
 		ButtonProps<"label">,
 		"component" | "disabled" | "role" | "tabIndex" | "type"
 	>
+	/** Application-owned props for the hidden native file input. */
 	readonly inputProps?: Omit<
 		FileInputProps,
 		| "defaultValue"
@@ -194,28 +231,44 @@ export type MuiFileOptions = {
 	>
 }
 
+/** MUI system styles for a field slot. */
 export type MuiFieldSlotOptions = {
+	/** Styles applied to the MUI FormControl root. */
 	readonly sx?: SxProps<Theme>
 }
 
+/** MUI system styles for a section slot and its child grid. */
 export type MuiSectionSlotOptions = {
+	/** Styles applied to the section root. */
 	readonly sx?: SxProps<Theme>
+	/** Styles applied to the section grid. */
 	readonly layoutSx?: SxProps<Theme>
 }
 
+/** MUI system styles for an array slot and its item list. */
 export type MuiArraySlotOptions = {
+	/** Styles applied to the array root. */
 	readonly sx?: SxProps<Theme>
+	/** Styles applied to the array item list. */
 	readonly itemsSx?: SxProps<Theme>
 }
 
+/** User-facing messages used by MUI controls and slots. */
 export type MuiFormKitI18n = {
+	/** Labels the button that appends an array item. */
 	readonly addItem: string
+	/** Labels removal of the item at a one-based position. */
 	readonly removeItem: (position: number) => string
+	/** Labels an upward move for the item at a one-based position. */
 	readonly moveItemUp: (position: number) => string
+	/** Labels a downward move for the item at a one-based position. */
 	readonly moveItemDown: (position: number) => string
+	/** Labels the file-selection button. */
 	readonly chooseFile: string
 }
 
+/** Optional localization overrides for `createMuiFormKit`. */
 export type CreateMuiFormKitOptions = {
+	/** Overrides one or more default English messages. */
 	readonly i18n?: Partial<MuiFormKitI18n>
 }

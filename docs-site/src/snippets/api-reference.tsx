@@ -19,6 +19,8 @@ import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
 import { createMuiFormKit } from "form-please/preset-mui"
 import { nativeFormKit } from "form-please/preset-native"
+import { useId } from "react"
+import { useController, useFormState, useWatch } from "react-hook-form"
 import { z } from "zod"
 
 // [!region define-control]
@@ -220,6 +222,7 @@ const profileSchema = z.object({
 	plan: z.enum(["solo", "team"]),
 	teamName: z.string().optional(),
 	country: z.string().optional(),
+	billingReference: z.string().optional(),
 	speakers: z.array(z.object({ name: z.string() })),
 })
 
@@ -341,6 +344,7 @@ const defaultValues = {
 	plan: "solo",
 	teamName: undefined,
 	country: undefined,
+	billingReference: undefined,
 	speakers: [],
 } satisfies ProfileInput
 
@@ -352,7 +356,7 @@ function ProfileEditor({ context }: { readonly context: ProfileContext }) {
 		defaultValues,
 		context,
 		onSubmit: async ({ value, input, form }) => {
-			// `input.yearsOfExperience` is a string from TanStack Form.
+			// `input.yearsOfExperience` is a string from React Hook Form.
 			// `value.yearsOfExperience` is the transformed number.
 			await saveProfile(value)
 			form.api.reset(input)
@@ -386,6 +390,35 @@ function ProfileReview({ context }: { readonly context: ProfileContext }) {
 // [!endregion form-wide-state]
 
 // [!region manual-composition]
+function BillingReferenceField() {
+	const id = useId()
+	const { field, fieldState } = useController<ProfileInput, "billingReference">(
+		{
+			name: "billingReference",
+		},
+	)
+	let errorId: string | undefined
+	if (fieldState.error !== undefined) errorId = `${id}-error`
+
+	return (
+		<div>
+			<label htmlFor={id}>Billing reference</label>
+			<input
+				{...field}
+				aria-describedby={errorId}
+				aria-invalid={fieldState.invalid || undefined}
+				id={id}
+				value={field.value ?? ""}
+			/>
+			{fieldState.error !== undefined && (
+				<p id={errorId} role="alert">
+					{fieldState.error.message}
+				</p>
+			)}
+		</div>
+	)
+}
+
 function ProfileWithCustomSummary({
 	context,
 }: {
@@ -395,25 +428,19 @@ function ProfileWithCustomSummary({
 		defaultValues,
 		context,
 	})
-	const Field = form.api.Field
-	const FormGroup = form.api.FormGroup
-	const Subscribe = form.api.Subscribe
+	const plan = useWatch({ control: form.api.control, name: "plan" })
+	const speakers = useWatch({ control: form.api.control, name: "speakers" })
+	const state = useFormState({ control: form.api.control })
+	let dirtyState = <output>Saved</output>
+	if (state.isDirty) dirtyState = <output>Unsaved changes</output>
 
 	return (
 		<profileKit.Form form={form}>
 			<profileKit.Fields />
-			<Field name="plan">
-				{(field) => <output>Selected plan: {field.state.value}</output>}
-			</Field>
-			<FormGroup name="speakers">
-				{(group) => <output>Array path: {group.name}</output>}
-			</FormGroup>
-			<Subscribe selector={(state) => state.isDirty}>
-				{(isDirty) => {
-					if (isDirty) return <output>Unsaved changes</output>
-					return <output>Saved</output>
-				}}
-			</Subscribe>
+			<BillingReferenceField />
+			<output>Selected plan: {plan}</output>
+			<output>{speakers.length} speakers</output>
+			{dirtyState}
 			<profileKit.Submit>Save profile</profileKit.Submit>
 		</profileKit.Form>
 	)

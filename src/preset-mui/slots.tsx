@@ -31,6 +31,7 @@ import type {
 } from "./types.js"
 import { mergeSx } from "./utils.js"
 
+/** Creates the structural slot registry used by the Material UI preset. */
 export function createMuiSlots(
 	i18n: MuiFormKitI18n,
 ): FormKitSlots<
@@ -38,6 +39,7 @@ export function createMuiSlots(
 	MuiSectionSlotOptions,
 	MuiArraySlotOptions
 > {
+	/** Renders a MUI array wrapper, item grid, and append action. */
 	function MuiArraySlot({
 		rootProps,
 		label,
@@ -89,6 +91,7 @@ export function createMuiSlots(
 		)
 	}
 
+	/** Renders a MUI array item card and its item actions. */
 	function MuiArrayItemSlot({
 		rootProps,
 		index,
@@ -171,6 +174,7 @@ export function createMuiSlots(
 	})
 }
 
+/** Renders a MUI field grid item with its label, control, and errors. */
 function MuiFieldSlot({
 	rootProps,
 	label,
@@ -218,6 +222,7 @@ function MuiFieldSlot({
 	)
 }
 
+/** Renders a MUI section grid item and its responsive child grid. */
 function MuiSectionSlot({
 	rootProps,
 	layoutProps,
@@ -259,6 +264,7 @@ function MuiSectionSlot({
 	)
 }
 
+/** Renders one validation issue with MUI error styling and alert semantics. */
 function MuiErrorMessageSlot({
 	rootProps,
 	issue,
@@ -270,6 +276,7 @@ function MuiErrorMessageSlot({
 	)
 }
 
+/** Renders the MUI submit button. */
 function MuiSubmitSlot({ buttonProps }: SubmitSlotProps): ReactElement {
 	const { children, ...props } = buttonProps
 	return (
@@ -279,6 +286,7 @@ function MuiSubmitSlot({ buttonProps }: SubmitSlotProps): ReactElement {
 	)
 }
 
+/** Converts a structural span to responsive MUI Grid size props. */
 function gridItemProps(
 	rootProps: StructuralRootProps,
 ): Pick<GridProps, "size"> {
@@ -290,14 +298,19 @@ function gridItemProps(
 		: {}
 }
 
+/** Expands a full-span structural node across the complete MUI grid row. */
 function gridItemSx(rootProps: StructuralRootProps) {
 	return structuralSpan(rootProps) === "full"
 		? { flexBasis: "100%", maxWidth: "100%", width: "100%" }
 		: undefined
 }
 
+/** Reads a resolved span from structural data props. */
 function structuralSpan(rootProps: StructuralRootProps): string | undefined {
-	return (rootProps as StructuralRootProps & { "data-fp-span"?: string })[
-		"data-fp-span"
-	]
+	return (
+		rootProps as StructuralRootProps & {
+			/** The resolved grid span serialized for structural slots. */
+			"data-fp-span"?: string
+		}
+	)["data-fp-span"]
 }

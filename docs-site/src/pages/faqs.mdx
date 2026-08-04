@@ -1,59 +1,65 @@
 ---
 title: FAQs
-description: Answers about validation, submission, hidden values, async data, TanStack Form, context, and form lifetime.
+description: Answers about validation, submission, hidden values, async data, React Hook Form, context, and form lifetime.
 showAskAi: false
 ---
 
 # FAQs
 
 Use these answers to understand the boundaries between your application,
-TanStack Form, Standard Schema, and "Form, Please."
+React Hook Form, Standard Schema, and "Form, Please."
 
 ## Validation and submission
 
-### Why does a valid submit parse the schema twice?
+### Why does a valid submit parse the schema once?
 
-TanStack Form performs the first parse to validate the editable input. Standard
-Schema transforms do not replace the values in TanStack Form state.
+"Form, Please" supplies a small Standard Schema resolver to React Hook Form. The
+resolver validates the editable input and returns transformed output in the
+same parse.
 
-After successful validation, "Form, Please" parses the same input again. The
-second result supplies the transformed `FormOutput<Schema>` to `onSubmit`.
+`kit.Form` captures the editable input before raw RHF submission. The resolver
+then supplies transformed `FormOutput<Schema>` to the same submit attempt.
 
 This sequence has three important effects:
 
 - Invalid input does not reach `onSubmit`.
-- `onSubmit` receives the transformed output without a custom validation cache.
-- The schema must return the same validity for the same input during one submit.
+- `onSubmit` receives both the captured input and transformed output.
+- Direct `form.api.handleSubmit` remains ordinary RHF behavior.
 
-Keep schema validation deterministic and free of side effects. "Form, Please"
-throws an invariant error if the second parse returns issues after the first
-parse succeeded. See [Validation and submission](/validation) for the complete
-validation sequence.
+Keep schema validation deterministic and free of side effects. See [Validation
+and submission](/validation) for the complete validation sequence.
 
 ### What does `onSubmit` receive?
 
 The callback receives three values:
 
 - `value` is the transformed `FormOutput<Schema>`.
-- `input` is the editable `FormInput<Schema>` from TanStack Form.
+- `input` is the editable `FormInput<Schema>` from React Hook Form.
 - `form` is the current "Form, Please" binding.
 
 Use `value` for an API request. Use `input` when an operation needs the original
 editable shape. For example, a string input can produce a number output.
 
-The callback can return a promise. TanStack Form keeps `isSubmitting` true
+The callback can return a promise. React Hook Form keeps `isSubmitting` true
 until that promise settles. See [Send schema output and reset with schema
 input](/advanced#send-schema-output-and-reset-with-schema-input) for a complete
 submission example.
 
 ### Does submission use native `FormData`?
 
-No. Submission uses the values in TanStack Form state. Nested objects, arrays,
+No. Submission uses the values in React Hook Form state. Nested objects, arrays,
 and `File` values keep their JavaScript types.
 
 Your application owns transport serialization. Send JSON, construct
 `FormData`, or use another protocol in `onSubmit`. "Form, Please" does not
 select a transport format.
+
+```ts
+// [!include ~/snippets/production-recipes.tsx:multipart-body]
+```
+
+Pass the returned object as the `fetch` body. Do not set the `content-type`
+header because the browser must add the multipart boundary.
 
 ### Does `required: true` add a validation rule?
 
@@ -73,19 +79,20 @@ Keep request failures in application state and render them near the form. A
 network failure is not a Standard Schema issue.
 
 If the server returns field-validation results, convert them deliberately with
-the applicable TanStack Form error APIs. Do not treat a transport failure as a
+the applicable React Hook Form error APIs. Do not treat a transport failure as a
 schema result. The server must still validate every submission. See [Keep async
 submission in the
 application](/advanced#keep-async-submission-in-the-application) for a request
-error example.
+error example. See [Apply server field
+errors](/advanced#apply-server-field-errors) for a typed `setError` example.
 
 ## Conditional UI and values
 
 ### Do hidden fields lose their values?
 
-No. A hidden generated field does not render, but its value remains in TanStack
-Form state. The Standard Schema still receives that value during validation and
-submission.
+No. A hidden generated field does not render, but its value remains in React
+Hook Form state. The Standard Schema still receives that value during
+validation and submission.
 
 This definition hides `companyName` for a personal account:
 
@@ -103,7 +110,7 @@ Use a schema transform when the submitted output must omit an inactive value:
 // [!include ~/snippets/conditional-fields-guide.tsx:conditional-schema]
 ```
 
-Use `form.api.setFieldValue` when the editable value must be cleared as soon as
+Use `form.api.setValue` when the editable value must be cleared as soon as
 the user changes another field. See [Conditional fields](/conditional-fields)
 for both cleanup strategies.
 
@@ -131,33 +138,34 @@ interaction state synchronously.
 "Form, Please" resolves the complete UI tree after each form value change. Keep
 resolvers small and free of side effects.
 
-## TanStack Form and manual UI
+## React Hook Form and manual UI
 
-### How do I use TanStack Form directly?
+### How do I use React Hook Form directly?
 
-Use the API on `form.api`. This API is the typed TanStack Form instance that
+Use the API on `form.api`. This API is the typed React Hook Form instance that
 owns the editable state.
 
-Use `form.api.Field` for a custom field, `form.api.FormGroup` for a group path,
-and `form.api.Subscribe` for derived UI. Keep generated and manual UI inside the
-same `kit.Form`.
+Use `register`, `Controller`, or `useController` for custom fields. Use
+`useWatch`, `useFormState`, or `useFieldArray` for derived and array UI. Keep
+generated and manual UI inside the same `kit.Form`; it provides RHF
+`FormProvider` automatically.
 
-You can also call TanStack Form methods such as `setFieldValue` and `reset`
+You can also call React Hook Form methods such as `setValue` and `reset`
 through `form.api`. See [Compose generated and custom
 UI](/advanced#compose-generated-and-custom-ui) for a complete example.
 
 ### Should I create a second form for custom UI?
 
-No. Create one binding with `kit.useForm`. Put `kit.Fields` and custom TanStack
-Form components inside the same `kit.Form`.
+No. Create one binding with `kit.useForm`. Put `kit.Fields` and custom RHF
+components inside the same `kit.Form`.
 
 A second binding creates a second state owner. Changes, validation state, and
 submission state do not automatically synchronize between two bindings.
 
 ### What happens after an invalid submit?
 
-"Form, Please" checks visible generated controls in document order. It focuses
-the first invalid control that can receive focus.
+RHF focuses the first registered invalid field, including manual fields. Focus
+order follows RHF registration order.
 
 If no invalid generated control can receive focus, `kit.AutoForm` focuses the
 first error-summary item. A manually composed `kit.Form` does not add that

@@ -5,6 +5,7 @@ import { createMuiControls } from "./controls.js"
 import { createMuiSlots } from "./slots.js"
 import type { CreateMuiFormKitOptions, MuiFormKitI18n } from "./types.js"
 
+/** English messages used when no MUI preset translations are supplied. */
 const defaultI18n = /* @__PURE__ */ Object.freeze({
 	addItem: "Add item",
 	removeItem: (position) => `Remove item ${position}`,
@@ -13,10 +14,16 @@ const defaultI18n = /* @__PURE__ */ Object.freeze({
 	chooseFile: "Choose file",
 } satisfies MuiFormKitI18n)
 
+/** The 12-column scale supported by the MUI preset. */
 const muiGrid = /* @__PURE__ */ Object.freeze([
 	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 ] as const)
 
+/**
+ * Creates a ready-to-use form kit with Material UI controls and slots.
+ *
+ * @see https://r13v.github.io/form-please/examples/mui-yup
+ */
 export function createMuiFormKit(options?: CreateMuiFormKitOptions) {
 	const i18n = Object.freeze({
 		addItem: options?.i18n?.addItem ?? defaultI18n.addItem,

@@ -141,6 +141,13 @@ function PauseCalendar({
 	readonly form: MembershipForm
 	readonly count: number
 }) {
+	const addPause = (pause: MembershipInput["pauseWindows"][number]) => {
+		form.api.setValue(
+			"pauseWindows",
+			[...form.api.getValues("pauseWindows"), pause],
+			{ shouldDirty: true },
+		)
+	}
 	return (
 		<section
 			className="form-please-complex__embedded"
@@ -150,7 +157,7 @@ function PauseCalendar({
 			<div className="form-please-complex__choice-list">
 				<button
 					onClick={() =>
-						form.api.pushFieldValue("pauseWindows", {
+						addPause({
 							startsOn: "2027-12-24",
 							endsOn: "2027-12-31",
 							reason: "Winter closure",
@@ -162,7 +169,7 @@ function PauseCalendar({
 				</button>
 				<button
 					onClick={() =>
-						form.api.pushFieldValue("pauseWindows", {
+						addPause({
 							startsOn: "2028-04-10",
 							endsOn: "2028-04-12",
 							reason: "System migration",
@@ -209,7 +216,7 @@ function WorkspaceConnection({
 				disabled={mutation.isPending}
 				onClick={async () => {
 					const result = await mutation.mutateAsync(!connected)
-					form.api.setFieldValue("connection.enabled", result.connected)
+					form.api.setValue("connection.enabled", result.connected)
 				}}
 				type="button"
 			>
@@ -476,6 +483,7 @@ function MembershipLadderForm() {
 		)
 	let status = notice
 	if (save.isPending) status = "Saving ladder…"
+	const values = form.api.watch()
 
 	return (
 		<section
@@ -487,38 +495,32 @@ function MembershipLadderForm() {
 				Four nested benefit arrays, monotonic reductions, a remote workspace
 				connection, and calendar-assisted pause windows stay synchronized.
 			</p>
-			<kit.AutoForm className="form-please-complex__form" form={form}>
-				<form.api.Subscribe selector={(state) => state.values}>
-					{(values) => (
-						<>
-							<WorkspaceConnection
-								connected={values.connection.enabled}
-								form={form}
-								workspaceId={values.workspaceId}
-							/>
-							<aside
-								aria-label="Membership ladder preview"
-								className="form-please-complex__preview"
-							>
-								<strong>Reduction ladder</strong>
-								<span>
-									Seed {values.tiers.seed.discountPercent}% → Sprout{" "}
-									{values.tiers.sprout.discountPercent}% → Canopy{" "}
-									{values.tiers.canopy.discountPercent}% → Founder{" "}
-									{values.tiers.founder.discountPercent}%
-								</span>
-							</aside>
-							<PauseCalendar count={values.pauseWindows.length} form={form} />
-						</>
-					)}
-				</form.api.Subscribe>
+			<contextualKit.AutoForm className="form-please-complex__form" form={form}>
+				<WorkspaceConnection
+					connected={values.connection.enabled}
+					form={form}
+					workspaceId={values.workspaceId}
+				/>
+				<aside
+					aria-label="Membership ladder preview"
+					className="form-please-complex__preview"
+				>
+					<strong>Reduction ladder</strong>
+					<span>
+						Seed {values.tiers.seed.discountPercent}% → Sprout{" "}
+						{values.tiers.sprout.discountPercent}% → Canopy{" "}
+						{values.tiers.canopy.discountPercent}% → Founder{" "}
+						{values.tiers.founder.discountPercent}%
+					</span>
+				</aside>
+				<PauseCalendar count={values.pauseWindows.length} form={form} />
 				<div className="form-please-complex__actions">
-					<kit.Submit className="form-please-complex__primary">
+					<contextualKit.Submit className="form-please-complex__primary">
 						Save membership ladder
-					</kit.Submit>
+					</contextualKit.Submit>
 					<span aria-live="polite">{status}</span>
 				</div>
-			</kit.AutoForm>
+			</contextualKit.AutoForm>
 		</section>
 	)
 }

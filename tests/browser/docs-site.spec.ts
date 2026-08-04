@@ -44,7 +44,9 @@ test.describe("Form, Please documentation", () => {
 		const errors = pageErrors(page)
 		await page.goto("./validation")
 		await expect(
-			page.getByText("The first parse validates through TanStack Form."),
+			page.getByText(
+				"The resolver validates through React Hook Form once per validation run.",
+			),
 		).toBeVisible()
 		await page.goto("./resources")
 		await expect(
@@ -136,6 +138,49 @@ test.describe("Form, Please documentation", () => {
 		await expect(
 			page.getByLabel("Tailwind resolver profile form"),
 		).toBeVisible()
+
+		expect(errors).toEqual([])
+	})
+
+	test("runs the production recipe previews", async ({ page }) => {
+		const errors = pageErrors(page)
+		await page.goto("./advanced")
+
+		const baseline = page.getByRole("region", {
+			name: "Saved baseline recipe preview",
+		})
+		await expect(baseline).toHaveAttribute("data-demo-client-ready", "true")
+		await baseline.getByLabel("Name").fill("Saved name")
+		await baseline.getByRole("button", { name: "Save current values" }).click()
+		await baseline.getByLabel("Name").fill("Later edit")
+		await expect(baseline.getByText("Saved baseline: Saved name")).toBeVisible()
+		await expect(baseline.getByText("Unsaved changes")).toBeVisible()
+
+		const atomic = page.getByRole("region", {
+			name: "Atomic values recipe preview",
+		})
+		await atomic.getByLabel("Name").fill("Manual edit")
+		await expect(atomic.getByText("No template applied")).toBeVisible()
+		await atomic.getByRole("button", { name: "Apply profile template" }).click()
+		await expect(atomic.getByLabel("Name")).toHaveValue("Grace Hopper")
+		await expect(atomic.getByLabel("Department")).toHaveValue("Compilers")
+		await expect(atomic.getByText("Profile template applied.")).toBeVisible()
+
+		const draft = page.getByRole("region", {
+			name: "Draft subscription recipe preview",
+		})
+		await draft.getByLabel("Name").fill("Draft name")
+		await expect(draft.getByText("Draft saved for Draft name.")).toBeVisible()
+
+		const wizard = page.getByRole("region", {
+			name: "Step validation recipe preview",
+		})
+		await wizard.getByRole("button", { name: "Continue" }).click()
+		await expect(wizard.getByLabel("Name")).toBeFocused()
+		await wizard.getByLabel("Name").fill("Ada Lovelace")
+		await wizard.getByLabel("Email").fill("ada@example.com")
+		await wizard.getByRole("button", { name: "Continue" }).click()
+		await expect(wizard.getByLabel("Department")).toBeVisible()
 
 		expect(errors).toEqual([])
 	})

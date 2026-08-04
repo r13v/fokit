@@ -53,9 +53,10 @@ test("Vocs emits every supported Markdown route and index artifact", async () =>
 
 test("generated LLM documentation describes the current runtime", async () => {
 	const full = await readFile(new URL("llms-full.txt", publicRoot), "utf8")
-	assert.match(full, /form\.api\.Field/)
+	assert.match(full, /FormProvider/)
+	assert.match(full, /useWatch/)
 	assert.match(full, /fromResource/)
-	assert.match(full, /TanStack Form submission recommendation/)
+	assert.match(full, /parses once/i)
 	assert.doesNotMatch(full, /form-please\/core/)
 	assert.doesNotMatch(full, /valuePolicy/)
 })

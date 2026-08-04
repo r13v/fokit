@@ -36,7 +36,7 @@
 					"target": "@ui/form-please/shadcn-form-kit.tsx"
 				}
 			],
-			"docs": "This item targets shadcn's Base UI implementation. The adapter is copied into the application so its imports and component props can be adjusted when local shadcn components differ. It provides text, textarea, select, checkbox, number, date, time, file, radio, switch, slider, rangeSlider, multiSlider, combobox, multiCombobox, datePicker, dateRangePicker, and inputOtp controls. Form submission uses TanStack Form values and the form definition's Standard Schema."
+			"docs": "This item targets shadcn's Base UI implementation. The adapter is copied into the application so its imports and component props can be adjusted when local shadcn components differ. It provides text, textarea, select, checkbox, number, date, time, file, radio, switch, slider, rangeSlider, multiSlider, combobox, multiCombobox, datePicker, dateRangePicker, and inputOtp controls. Form submission uses React Hook Form values and the form definition's Standard Schema."
 		}
 	]
 }

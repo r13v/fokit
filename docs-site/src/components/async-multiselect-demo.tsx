@@ -10,7 +10,7 @@ export const AsyncMultiSelectDemo = Object.assign(
 	{
 		toMarkdown() {
 			return markdownFallback(
-				"The live async multiselect runs only in a browser. It stores selected IDs in TanStack Form, loads matching options through TanStack Query, and manages the popup with Floating UI.",
+				"The live async multiselect runs only in a browser. It stores selected IDs in React Hook Form, loads matching options through TanStack Query, and manages the popup with Floating UI.",
 				"docs-site/src/snippets/async-multiselect.tsx",
 			)
 		},

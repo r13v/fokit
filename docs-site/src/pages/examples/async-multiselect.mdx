@@ -32,7 +32,7 @@ Each layer has one responsibility:
 
 | Layer | Responsibility |
 | --- | --- |
-| TanStack Form | Stores selected IDs and field metadata. |
+| React Hook Form | Stores selected IDs and field metadata. |
 | "Form, Please" | Connects the field definition to the custom control. |
 | TanStack Query | Loads, cancels, and caches option requests. |
 | Floating UI | Positions the popup and manages its interactions. |
@@ -47,7 +47,7 @@ This example uses Zod as its Standard Schema library. It uses Heroicons for the
 four interface icons.
 
 ```sh
-npm install form-please @tanstack/react-form @tanstack/react-query @floating-ui/react @heroicons/react zod
+npm install form-please react-hook-form @tanstack/react-query @floating-ui/react @heroicons/react zod
 ```
 
 ## 1. Model one array field
@@ -175,7 +175,7 @@ example creates one client for its own component:
 // [!include ~/snippets/async-multiselect.tsx:provider-submit]
 ```
 
-`setValue` replaces the complete array when a selection changes. TanStack Form
+`setValue` replaces the complete array when a selection changes. React Hook Form
 stores that array as input. The Standard Schema validates it during submit.
 
 The submit callback receives the validated `cityIds`. The server must confirm

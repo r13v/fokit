@@ -1,6 +1,6 @@
 ---
 title: Form, Please
-description: Build typed, schema-validated React forms with TanStack Form state and your own design system.
+description: Build typed, schema-validated React forms with React Hook Form state and your own design system.
 showAskAi: false
 ---
 
@@ -36,8 +36,8 @@ or review the [API](/api).
 
 ## See it work
 
-Edit the profile and submit it. TanStack Form validates the input. Form,
-Please parses the successful input again and displays the typed output.
+Edit the profile and submit it. The React Hook Form resolver validates and
+transforms the input once, then "Form, Please" displays the typed output.
 
 <OverviewDemo />
 
@@ -46,10 +46,10 @@ Please parses the successful input again and displays the typed output.
 - Your Standard Schema owns validation and transformed submit output.
 - Your definition owns fields, sections, arrays, labels, and conditional UI.
 - Your controls and slots own the rendered design system.
-- TanStack Form owns editable state and its low-level API.
+- React Hook Form owns editable state and its low-level API.
 
-Use `form.api.Field`, `form.api.FormGroup`, and `form.api.Subscribe` when a
-generated definition is not enough.
+Use RHF `register`, `Controller`, and hooks such as `useWatch` when a generated
+definition is not enough. `kit.Form` supplies `FormProvider`.
 
 ## Supported package entries
 

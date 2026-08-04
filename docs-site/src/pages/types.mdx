@@ -40,7 +40,7 @@ library integration.
 `StandardSchema<Input, Output>` is the common schema contract. Form, Please
 works with any library that implements this contract.
 
-`FormInput<Schema>` is the editable value stored in TanStack Form.
+`FormInput<Schema>` is the editable value stored in React Hook Form.
 `FormOutput<Schema>` is the parsed value passed to `onSubmit`. These types can
 be different when the schema transforms data.
 
@@ -61,8 +61,8 @@ describe form state.
 
 ## Field paths
 
-Path types use the schema input shape and TanStack Form path syntax. Array
-indexes use brackets, such as `contacts[0].email`.
+Path types use the schema input shape and React Hook Form path syntax. Array
+indexes use dot segments, such as `contacts.0.email`.
 
 ```ts
 // [!include ~/snippets/types-guide.tsx:path-types]
@@ -72,7 +72,7 @@ indexes use brackets, such as `contacts[0].email`.
 | --- | --- |
 | `FieldPath<Value>` | All valid string paths in `Value`. |
 | `PathValue<Value, Path>` | The value at one valid path. |
-| `ArrayFieldPath<Value>` | Only paths whose non-null value is a readonly or mutable array. |
+| `ArrayFieldPath<Value>` | RHF field-array paths whose items are objects. |
 
 Use `FieldPath` when a component or helper accepts any field. Add a second path
 generic when its value type must stay linked to the selected path. The
@@ -180,16 +180,16 @@ component-local form instance.
 | `FormKit<Controls, ...>` | Kit methods, components, controls, slots, grid, and context contract. |
 | `CreateFormKitOptions<Controls, ...>` | Options accepted by `createFormKit`. |
 | `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, and submit handler. |
-| `FormBinding<Schema, Context>` | TanStack API and state shared by one rendered form. |
+| `FormBinding<Schema, Context>` | Raw RHF API, fixed definition, and context shared by one rendered form. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
 `AutoFormProps<Schema, Context>` is currently the same contract as
 `FormProps`. It is a separate public name for components that wrap
 `kit.AutoForm`.
 
-Use `form.api` from `FormBinding` for TanStack Form operations. The binding's
-other fields describe the generated form runtime. Read [`FormBinding` on the
-API page](/api#formbinding) for their behavior.
+Use `form.api` from `FormBinding` for unchanged React Hook Form operations. The
+other public fields are the fixed `definition` and current `context`. Read
+[`FormBinding` on the API page](/api#formbinding) for their behavior.
 
 ## Slot and structure types
 

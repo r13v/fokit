@@ -1,6 +1,7 @@
 "use client"
 
 import { type ReactNode, useEffect, useState } from "react"
+import { useFormState, useWatch } from "react-hook-form"
 import {
 	defaultValues,
 	kit,
@@ -17,6 +18,16 @@ export function InteractiveLabClient() {
 		defaultValues,
 		onSubmit: ({ value }) => setLastSubmit(formatSavedMessage(value)),
 	})
+	const values = useWatch({ control: form.api.control }) as ProfileInput
+	const state = useFormState({ control: form.api.control })
+	const snapshot = {
+		errors: state.errors as Record<string, unknown>,
+		isDirty: state.isDirty,
+		isTouched: Object.keys(state.touchedFields).length > 0,
+		isValidating: state.isValidating,
+		submissionAttempts: state.submitCount,
+		values,
+	}
 
 	return (
 		<section
@@ -27,7 +38,7 @@ export function InteractiveLabClient() {
 			<p className="form-please-lab__kicker">Interactive lab</p>
 			<p className="form-please-lab__summary">
 				Edit the generated form. Compare its values and visible issues with a
-				diagnostic browser FormData snapshot. Submission uses the TanStack
+				diagnostic browser FormData snapshot. Submission uses React Hook Form
 				values.
 			</p>
 			<kit.AutoForm
@@ -49,20 +60,7 @@ export function InteractiveLabClient() {
 						Reset lab
 					</button>
 				</div>
-				<form.api.Subscribe
-					selector={(state) => ({
-						errors: state.errors,
-						isDirty: state.isDirty,
-						isTouched: state.isTouched,
-						isValidating: state.isValidating,
-						submissionAttempts: state.submissionAttempts,
-						values: state.values,
-					})}
-				>
-					{(snapshot) => (
-						<LabInspector lastSubmit={lastSubmit} snapshot={snapshot} />
-					)}
-				</form.api.Subscribe>
+				<LabInspector lastSubmit={lastSubmit} snapshot={snapshot} />
 			</kit.AutoForm>
 		</section>
 	)
@@ -74,7 +72,7 @@ function LabInspector({
 }: {
 	readonly lastSubmit: string
 	readonly snapshot: {
-		readonly errors: readonly unknown[]
+		readonly errors: Readonly<Record<string, unknown>>
 		readonly isDirty: boolean
 		readonly isTouched: boolean
 		readonly isValidating: boolean
@@ -84,7 +82,9 @@ function LabInspector({
 }) {
 	const [formDataLines, setFormDataLines] = useState<readonly string[]>([])
 	let issueOutput = JSON.stringify(snapshot.errors, null, 2)
-	if (snapshot.errors.length === 0) issueOutput = "No visible issues"
+	if (Object.keys(snapshot.errors).length === 0) {
+		issueOutput = "No visible issues"
+	}
 	let validationStatus = "idle"
 	if (snapshot.isValidating) validationStatus = "validating"
 

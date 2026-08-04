@@ -1,13 +1,5 @@
-// biome-ignore-all lint/suspicious/noArrayIndexKey: This runtime intentionally follows TanStack Form index identity for mutable array rows.
-
 "use client"
 
-import {
-	type AnyFieldApi,
-	type ReactFormExtendedApi,
-	revalidateLogic,
-	useForm as useTanStackForm,
-} from "@tanstack/react-form"
 import {
 	type ComponentPropsWithoutRef,
 	type ComponentType,
@@ -21,6 +13,19 @@ import {
 	useMemo,
 	useRef,
 } from "react"
+import {
+	type DefaultValues,
+	type FieldErrors,
+	type FieldValues,
+	FormProvider,
+	type Mode,
+	type UseFormReturn,
+	useController,
+	useFieldArray,
+	useFormState,
+	useForm as useReactHookForm,
+	useWatch,
+} from "react-hook-form"
 
 import {
 	normalizeDefinition,
@@ -28,6 +33,13 @@ import {
 	type ResolvedNode,
 	resolveDefinition,
 } from "./definition.js"
+import { cloneFormValue } from "./form-value.js"
+import {
+	createStandardSchemaResolver,
+	fieldErrorsToIssues,
+	fieldErrorToIssues,
+	hasFieldError,
+} from "./standard-schema-resolver.js"
 import type {
 	ArraySlotProps,
 	ControlDefinitionRegistry,
@@ -47,85 +59,135 @@ import type {
 	StructuralRootProps,
 } from "./types.js"
 
-type NativeApi<Schema extends StandardSchema> = ReactFormExtendedApi<
+/** Narrows schema input to the object shape required by React Hook Form. */
+type FormValues<Schema extends StandardSchema> = Extract<
 	FormInput<Schema>,
-	undefined,
-	undefined,
-	undefined,
-	undefined,
-	undefined,
-	undefined,
-	undefined,
-	undefined,
-	Schema,
-	undefined,
-	undefined
+	FieldValues
+>
+/** A schema shape used when a concrete form schema is unknown. */
+type AnyFormSchema = StandardSchema<FieldValues, unknown>
+
+/** The typed React Hook Form API exposed by a form binding. */
+type NativeApi<Schema extends StandardSchema, Context> = UseFormReturn<
+	FormValues<Schema>,
+	Context,
+	FormOutput<Schema>
 >
 
+/** Makes runtime context optional only when its type is unknown. */
 type ContextOption<Context> = unknown extends Context
-	? { readonly context?: Context }
-	: { readonly context: Context }
+	? {
+			/** Application data available to resolvers and controls. */
+			readonly context?: Context
+		}
+	: {
+			/** Application data available to resolvers and controls. */
+			readonly context: Context
+		}
 
+/** Configuration used to bind a definition to React Hook Form. */
 export type UseFormOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
 > = ContextOption<Context> & {
+	/** Initial editable values, fixed for the hook lifetime. */
 	readonly defaultValues: FormInput<Schema>
+	/** Milliseconds to delay the display of validation errors. */
+	readonly delayError?: number
+	/** Whether all generated controls reject user interaction. */
 	readonly disabled?: boolean
+	/** The React Hook Form validation mode. */
+	readonly mode?: Mode
+	/** Whether all generated controls prevent value changes. */
 	readonly readOnly?: boolean
+	/** The validation mode used after the first submit attempt. */
+	readonly reValidateMode?: Exclude<Mode, "all" | "onTouched">
+	/** Handles successful validation with output and matching input values. */
 	readonly onSubmit?: (details: {
+		/** The validated and possibly transformed schema output. */
 		readonly value: FormOutput<Schema>
+		/** The editable input snapshot used for this submission. */
 		readonly input: FormInput<Schema>
+		/** The binding that submitted the form. */
 		readonly form: FormBinding<Schema, Context>
 	}) => unknown | Promise<unknown>
 }
 
+/** A form definition bound to a React Hook Form instance and runtime context. */
 export type FormBinding<
-	Schema extends StandardSchema = StandardSchema,
+	Schema extends StandardSchema = AnyFormSchema,
 	Context = unknown,
 > = {
-	readonly api: NativeApi<Schema>
+	/** The unchanged typed React Hook Form API. */
+	readonly api: NativeApi<Schema, Context>
+	/** The normalized definition fixed for this binding. */
 	readonly definition: FormDefinition<Schema>
+	/** Application data available to resolvers and controls. */
 	readonly context: Context
-	readonly disabled: boolean
-	readonly readOnly: boolean
-	readonly inputRefs: Map<string, HTMLElement>
-	readonly errorSummaryRef: RefObject<HTMLElement | null>
 }
 
+/** Native form props that remain under application control. */
 type NativeFormProps = Omit<
 	ComponentPropsWithoutRef<"form">,
 	"action" | "children" | "noValidate" | "onReset" | "onSubmit" | "style"
-> & { readonly style?: FormPleaseStyle }
+> & {
+	/** Native CSS plus Form Please layout variables. */
+	readonly style?: FormPleaseStyle
+}
 
+/** Props for the form provider and native form element. */
 export type FormProps<
-	Schema extends StandardSchema = StandardSchema,
+	Schema extends StandardSchema = AnyFormSchema,
 	Context = unknown,
 > = NativeFormProps & {
+	/** The form binding created by this exact kit. */
 	readonly form: FormBinding<Schema, Context>
+	/** Form content rendered inside the providers. */
 	readonly children?: ReactNode
 }
 
+/** Props for a form that automatically renders its errors and fields. */
 export type AutoFormProps<
-	Schema extends StandardSchema = StandardSchema,
+	Schema extends StandardSchema = AnyFormSchema,
 	Context = unknown,
 > = FormProps<Schema, Context>
 
-type RuntimeFieldProps = {
-	readonly name: string
-	readonly mode?: "array"
-	readonly children: (field: AnyFieldApi) => ReactNode
-	readonly [key: string]: unknown
+/** Private form data used by generated runtime components. */
+type RuntimeForm = {
+	/** The React Hook Form API with erased public type parameters. */
+	readonly api: UseFormReturn<FieldValues, unknown, unknown>
+	/** Application data supplied to controls and resolvers. */
+	readonly context: unknown
+	/** The normalized definition fixed for this form. */
+	readonly definition: FormDefinition
+	/** Whether all generated controls are disabled. */
+	readonly disabled: boolean
+	/** Whether all generated controls are read-only. */
+	readonly readOnly: boolean
+	/** Focusable generated inputs indexed by absolute path. */
+	readonly inputRefs: Map<string, HTMLElement>
+	/** The first summary issue used as a focus fallback. */
+	readonly errorSummaryRef: RefObject<HTMLElement | null>
+	/** The configured successful-submit handler. */
+	readonly onSubmit?: (details: {
+		/** The validated schema output. */
+		readonly value: unknown
+		/** The editable input snapshot. */
+		readonly input: FieldValues
+		/** The public form binding. */
+		readonly form: FormBinding
+	}) => unknown | Promise<unknown>
 }
-
-type RuntimeForm = FormBinding<StandardSchema, unknown>
+/** Erased slot options used by runtime renderers. */
 type RuntimeSlotOptions = Record<string, unknown>
+/** Form kit slots with erased application option types. */
 type RuntimeSlots = FormKitSlots<
 	RuntimeSlotOptions,
 	RuntimeSlotOptions,
 	RuntimeSlotOptions
 >
 
+/** The typed `defineForm` method exposed by a form kit. */
 type DefineForm<
 	Controls extends ControlDefinitionRegistry,
 	FieldOptions,
@@ -134,7 +196,7 @@ type DefineForm<
 	Context,
 	Grid extends number,
 > = <Schema extends StandardSchema>(
-	schema: Schema,
+	schema: FormInput<Schema> extends FieldValues ? Schema : never,
 	source: FormDefinitionSource<
 		Schema,
 		Controls,
@@ -154,6 +216,7 @@ type DefineForm<
 	Grid
 >
 
+/** The typed `useForm` hook exposed by a form kit. */
 type UseForm<
 	Controls extends ControlDefinitionRegistry,
 	FieldOptions,
@@ -174,6 +237,7 @@ type UseForm<
 	options: UseFormOptions<Schema, Context>,
 ) => FormBinding<Schema, Context>
 
+/** A fixed registry, renderer, and React Hook Form integration. */
 export interface FormKit<
 	Controls extends ControlDefinitionRegistry,
 	FieldOptions = never,
@@ -182,9 +246,13 @@ export interface FormKit<
 	Context = unknown,
 	Grid extends number = 1 | 2 | 3 | 4,
 > {
+	/** The immutable named control registry. */
 	readonly controls: Controls
+	/** The immutable structural slot registry. */
 	readonly slots: FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>
+	/** The allowed grid column counts and node spans. */
 	readonly grid: readonly Grid[]
+	/** Validates and binds a typed definition to this kit. */
 	readonly defineForm: DefineForm<
 		Controls,
 		FieldOptions,
@@ -193,6 +261,7 @@ export interface FormKit<
 		Context,
 		Grid
 	>
+	/** Creates a React Hook Form binding for a definition from this kit. */
 	readonly useForm: UseForm<
 		Controls,
 		FieldOptions,
@@ -201,16 +270,24 @@ export interface FormKit<
 		Context,
 		Grid
 	>
+	/** Provides form contexts and owns native submit and reset events. */
 	readonly Form: <Schema extends StandardSchema>(
 		props: FormProps<Schema, Context>,
 	) => ReactElement
-	readonly Fields: (props: { readonly children?: ReactNode }) => ReactElement
+	/** Renders resolved definition nodes followed by optional application content. */
+	readonly Fields: (props: {
+		/** Content rendered after the generated fields. */
+		readonly children?: ReactNode
+	}) => ReactElement
+	/** Renders the configured submit slot with current form state. */
 	readonly Submit: (
 		props: Omit<ComponentPropsWithoutRef<"button">, "type">,
 	) => ReactElement
+	/** Composes `Form`, the error summary, and generated fields. */
 	readonly AutoForm: <Schema extends StandardSchema>(
 		props: AutoFormProps<Schema, Context>,
 	) => ReactElement
+	/** Returns a type-only view of this kit for a narrower context contract. */
 	readonly forContext: <NextContext extends Context>() => FormKit<
 		Controls,
 		FieldOptions,
@@ -221,6 +298,7 @@ export interface FormKit<
 	>
 }
 
+/** Registries and optional grid used to create an immutable form kit. */
 export type CreateFormKitOptions<
 	Controls extends ControlDefinitionRegistry,
 	FieldOptions = never,
@@ -228,14 +306,30 @@ export type CreateFormKitOptions<
 	ArrayOptions = never,
 	Grid extends number = 1 | 2 | 3 | 4,
 > = {
+	/** The complete named control registry. */
 	readonly controls: Controls
+	/** The complete structural slot registry. */
 	readonly slots: FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>
+	/** Allowed grid column counts and spans. Defaults to `1` through `4`. */
 	readonly grid?: readonly Grid[]
 }
 
+/** Provides private form runtime data to generated components. */
 const FormContext = createContext<RuntimeForm | null>(null)
+/** Provides the current native form ID to generated components. */
 const FormIdContext = createContext<string | null>(null)
 
+/**
+ * Creates an immutable form kit from control and slot registries.
+ *
+ * @example
+ * ```tsx
+ * const kit = createFormKit({ controls, slots })
+ * const definition = kit.defineForm(schema, { ui: [] })
+ * ```
+ *
+ * @see https://r13v.github.io/form-please/get-started
+ */
 export function createFormKit<
 	Controls extends ControlDefinitionRegistry,
 	FieldOptions = never,
@@ -281,6 +375,7 @@ export function createFormKit<
 	>
 }
 
+/** Assembles one runtime kit and its exact-definition ownership checks. */
 function assembleKit(
 	controls: ControlDefinitionRegistry,
 	slots: RuntimeSlots,
@@ -294,6 +389,7 @@ function assembleKit(
 	number
 > {
 	const definitions = new WeakSet<object>()
+	const runtimeForms = new WeakMap<object, RuntimeForm>()
 	const defineForm = ((schema: StandardSchema, source: unknown) => {
 		const definition = normalizeDefinition(schema, source, controls, grid)
 		definitions.add(definition)
@@ -317,63 +413,61 @@ function assembleKit(
 				"kit.useForm requires a definition from this exact form kit",
 			)
 		}
+		const fixedDefaultValues = useRef(options.defaultValues).current
+		if (!isFieldValues(fixedDefaultValues)) {
+			throw new TypeError("Form defaultValues must be an object")
+		}
 
 		const inputRefs = useRef(new Map<string, HTMLElement>())
 		const errorSummaryRef = useRef<HTMLElement | null>(null)
-		const instanceRef = useRef<FormBinding<Schema, unknown> | null>(null)
-		const api = useTanStackForm({
-			defaultValues: options.defaultValues,
-			validationLogic: revalidateLogic({
-				mode: "submit",
-				modeAfterSubmission: "change",
-			}),
-			validators: {
-				onDynamicAsync: fixedDefinition.schema,
-			},
-			onSubmit: async ({ value }) => {
-				const result = await fixedDefinition.schema["~standard"].validate(value)
-				if (result.issues !== undefined) {
-					throw new Error(
-						"Standard Schema validity changed during one submit attempt",
-					)
-				}
-				const instance = instanceRef.current
-				if (instance === null) {
-					throw new Error("TanStack form instance is not mounted")
-				}
-				await options.onSubmit?.({
-					value: result.value,
-					input: value,
-					form: instance,
-				})
-			},
-			onSubmitInvalid: ({ formApi }) => {
-				queueMicrotask(() => {
-					focusFirstInvalid(formApi, inputRefs.current, errorSummaryRef.current)
-				})
-			},
-		}) as NativeApi<Schema>
+		const api = useReactHookForm<
+			FormValues<Schema>,
+			unknown,
+			FormOutput<Schema>
+		>({
+			context: options.context,
+			criteriaMode: "all",
+			defaultValues: fixedDefaultValues as DefaultValues<FormValues<Schema>>,
+			delayError: options.delayError,
+			mode: options.mode ?? "onSubmit",
+			reValidateMode: options.reValidateMode ?? "onChange",
+			resolver: createStandardSchemaResolver(
+				fixedDefinition.schema as StandardSchema<
+					FormValues<Schema>,
+					FormOutput<Schema>
+				>,
+			),
+			shouldFocusError: true,
+			shouldUnregister: false,
+		})
 
-		const instance = useMemo<FormBinding<Schema, unknown>>(
-			() => ({
+		const binding = useMemo(() => {
+			const instance: FormBinding<Schema, unknown> = {
 				api,
 				definition: fixedDefinition,
 				context: options.context,
-				disabled: options.disabled === true,
-				readOnly: options.readOnly === true,
-				inputRefs: inputRefs.current,
-				errorSummaryRef,
-			}),
-			[
-				api,
-				fixedDefinition,
-				options.context,
-				options.disabled,
-				options.readOnly,
-			],
-		)
-		instanceRef.current = instance
-		return instance
+			}
+			return {
+				instance,
+				runtime: {
+					...instance,
+					disabled: options.disabled === true,
+					errorSummaryRef,
+					inputRefs: inputRefs.current,
+					onSubmit: options.onSubmit as RuntimeForm["onSubmit"],
+					readOnly: options.readOnly === true,
+				} as unknown as RuntimeForm,
+			}
+		}, [
+			api,
+			fixedDefinition,
+			options.context,
+			options.disabled,
+			options.onSubmit,
+			options.readOnly,
+		])
+		runtimeForms.set(binding.instance, binding.runtime)
+		return binding.instance
 	}) as UseForm<
 		ControlDefinitionRegistry,
 		unknown,
@@ -383,6 +477,7 @@ function assembleKit(
 		number
 	>
 
+	/** Provides the binding contexts and renders the native form element. */
 	function Form<Schema extends StandardSchema>({
 		form,
 		children,
@@ -391,86 +486,106 @@ function assembleKit(
 	}: FormProps<Schema, unknown>) {
 		const generatedId = `form-please-${useId().replaceAll(":", "")}`
 		const formId = id ?? generatedId
-		const runtimeForm = form as unknown as RuntimeForm
+		const runtimeForm = runtimeForms.get(form)
+		if (runtimeForm === undefined) {
+			throw new Error("Form binding is not mounted by this form kit")
+		}
 
 		return (
-			<FormContext.Provider value={runtimeForm}>
-				<FormIdContext.Provider value={formId}>
-					<form
-						{...nativeProps}
-						data-disabled={booleanData(form.disabled)}
-						data-fp-node="form"
-						data-readonly={booleanData(form.readOnly)}
-						id={formId}
-						noValidate
-						onReset={(event) => {
-							event.preventDefault()
-							form.api.reset()
-						}}
-						onSubmit={(event) => {
-							event.preventDefault()
-							if (!form.disabled) {
-								void form.api.handleSubmit()
-							}
-						}}
-					>
-						{children}
-					</form>
-				</FormIdContext.Provider>
-			</FormContext.Provider>
+			<FormProvider {...form.api}>
+				<FormContext.Provider value={runtimeForm}>
+					<FormIdContext.Provider value={formId}>
+						<form
+							{...nativeProps}
+							data-disabled={booleanData(runtimeForm.disabled)}
+							data-fp-node="form"
+							data-readonly={booleanData(runtimeForm.readOnly)}
+							id={formId}
+							noValidate
+							onReset={(event) => {
+								event.preventDefault()
+								form.api.reset()
+							}}
+							onSubmit={(event) => {
+								event.preventDefault()
+								if (runtimeForm.disabled) return
+								const formElement = event.currentTarget
+								const input = cloneFormValue(
+									form.api.getValues(),
+								) as FormValues<Schema>
+								void form.api.handleSubmit(
+									async (value) => {
+										await runtimeForm.onSubmit?.({
+											form: form as unknown as FormBinding,
+											input,
+											value,
+										})
+									},
+									(errors) => {
+										setTimeout(() => {
+											focusErrorSummaryFallback(
+												errors,
+												formElement,
+												runtimeForm,
+											)
+										}, 0)
+									},
+								)(event)
+							}}
+						>
+							{children}
+						</form>
+					</FormIdContext.Provider>
+				</FormContext.Provider>
+			</FormProvider>
 		)
 	}
 
-	function Fields({ children }: { readonly children?: ReactNode }) {
+	/** Resolves and renders generated fields for the current form context. */
+	function Fields({
+		children,
+	}: {
+		/** Content rendered after the generated fields. */
+		readonly children?: ReactNode
+	}) {
 		const form = useRuntimeForm()
-		const Subscribe = form.api.Subscribe
+		const values = useWatch({ control: form.api.control })
 		return (
-			<Subscribe selector={(state) => state.values}>
-				{(values) => (
-					<ResolvedFields
-						controls={controls}
-						form={form}
-						slots={slots}
-						values={values}
-					>
-						{children}
-					</ResolvedFields>
-				)}
-			</Subscribe>
+			<ResolvedFields
+				controls={controls}
+				form={form}
+				slots={slots}
+				values={values}
+			>
+				{children}
+			</ResolvedFields>
 		)
 	}
 
+	/** Renders the kit submit slot with live form state. */
 	function Submit(props: Omit<ComponentPropsWithoutRef<"button">, "type">) {
 		const form = useRuntimeForm()
-		const Subscribe = form.api.Subscribe
+		const state = useFormState({ control: form.api.control })
+		const values = useWatch({ control: form.api.control })
 		const Slot = slots.Submit
 		return (
-			<Subscribe
-				selector={(state) => ({
-					isSubmitting: state.isSubmitting,
-					isValidating: state.isValidating,
-					values: state.values,
-				})}
-			>
-				{(state) => (
-					<Slot
-						buttonProps={{
-							...props,
-							disabled:
-								props.disabled === true ||
-								form.disabled ||
-								state.isValidating ||
-								state.isSubmitting,
-							type: "submit",
-						}}
-						isSubmitting={state.isSubmitting}
-						values={state.values as Readonly<Record<string, unknown>>}
-					/>
-				)}
-			</Subscribe>
+			<Slot
+				buttonProps={{
+					...props,
+					disabled:
+						props.disabled === true ||
+						form.disabled ||
+						state.isValidating ||
+						state.isSubmitting,
+					type: "submit",
+				}}
+				isSubmitting={state.isSubmitting}
+				values={values as Readonly<Record<string, unknown>>}
+			/>
 		)
 	}
 
+	/** Composes a native form, its error summary, and generated fields. */
 	function AutoForm<Schema extends StandardSchema>(
 		props: AutoFormProps<Schema, unknown>,
 	) {
@@ -508,6 +623,7 @@ function assembleKit(
 	return result
 }
 
+/** Resolves the current definition and renders its root nodes. */
 function ResolvedFields({
 	form,
 	controls,
@@ -515,10 +631,15 @@ function ResolvedFields({
 	values,
 	children,
 }: {
+	/** Private runtime form data. */
 	readonly form: RuntimeForm
+	/** Controls available to resolved field nodes. */
 	readonly controls: ControlDefinitionRegistry
+	/** Structural components used by generated nodes. */
 	readonly slots: RuntimeSlots
+	/** Current React Hook Form input values. */
 	readonly values: unknown
+	/** Content rendered after the generated fields. */
 	readonly children?: ReactNode
 }) {
 	const resolved = useMemo(
@@ -547,15 +668,20 @@ function ResolvedFields({
 	)
 }
 
+/** Selects and renders the component for one resolved node. */
 function GeneratedNode({
 	form,
 	controls,
 	slots,
 	node,
 }: {
+	/** Private runtime form data. */
 	readonly form: RuntimeForm
+	/** Controls available to resolved field nodes. */
 	readonly controls: ControlDefinitionRegistry
+	/** Structural components used by this node. */
 	readonly slots: RuntimeSlots
+	/** The resolved node to render. */
 	readonly node: ResolvedNode
 }): ReactNode {
 	if (!node.visible) {
@@ -613,357 +739,245 @@ function GeneratedNode({
 	}
 }
 
+/** Connects one resolved field node to its control and structural slot. */
 function GeneratedField({
 	form,
 	controls,
 	slots,
 	node,
 }: {
+	/** Private runtime form data. */
 	readonly form: RuntimeForm
+	/** Controls available to the field node. */
 	readonly controls: ControlDefinitionRegistry
+	/** Structural components used by the field. */
 	readonly slots: RuntimeSlots
+	/** The resolved field node. */
 	readonly node: ResolvedNode
 }) {
 	const path = String(node.path)
 	const inputId = createDomId(useFormId(), path)
 	const descriptionId =
 		node.description === undefined ? undefined : `${inputId}-description`
-	const FieldApi = form.api.Field as ComponentType<RuntimeFieldProps>
-	const Subscribe = form.api.Subscribe
 	const Slot = slots.Field as ComponentType<FieldSlotProps<unknown>>
+	const { field, fieldState, formState } = useController({
+		control: form.api.control,
+		name: path,
+	})
+	const errors = fieldErrorToIssues(fieldState.error, path)
+	const touched = fieldState.isTouched
+	const displayErrors = touched || formState.submitCount > 0 ? errors : []
+	const errorIds = displayErrors.map(
+		(_issue, index) => `${inputId}-error-${index}`,
+	)
+	const control = controls[String(node.control)]
+	if (control === undefined || typeof control.component !== "function") {
+		throw new TypeError(`Unknown control "${String(node.control)}"`)
+	}
+	const Control = control.component as ComponentType<
+		ControlProps<unknown, unknown, unknown>
+	>
 
 	return (
-		<Subscribe selector={(state) => state.submissionAttempts}>
-			{(attempts) => (
-				<FieldApi name={path}>
-					{(field) => {
-						const errors = normalizeErrors(
-							field.state.meta.errors,
-							path,
-							form.api.state.values,
-						)
-						const touched = field.state.meta.isTouched
-						const displayErrors = touched || attempts > 0 ? errors : []
-						const errorIds = displayErrors.map(
-							(_issue, index) => `${inputId}-error-${index}`,
-						)
-						const control = controls[String(node.control)]
-						if (
-							control === undefined ||
-							typeof control.component !== "function"
-						) {
-							throw new TypeError(`Unknown control "${String(node.control)}"`)
-						}
-						const Control = control.component as ComponentType<
-							ControlProps<unknown, unknown, unknown>
-						>
-						return (
-							<Slot
-								control={
-									<Control
-										context={form.context}
-										disabled={node.disabled}
-										input={{
-											id: inputId,
-											name: path,
-											ref(element) {
-												if (element === null) {
-													form.inputRefs.delete(path)
-												} else {
-													form.inputRefs.set(path, element)
-												}
-											},
-											...(joinIds([descriptionId, ...errorIds]) === undefined
-												? {}
-												: {
-														"aria-describedby": joinIds([
-															descriptionId,
-															...errorIds,
-														]),
-													}),
-										}}
-										meta={{
-											dirty: field.state.meta.isDirty,
-											touched,
-											validating: field.state.meta.isValidating,
-											errors,
-											displayErrors,
-											invalid: displayErrors.length > 0,
-										}}
-										options={(node.options ?? {}) as Readonly<unknown>}
-										path={path}
-										readOnly={node.readOnly}
-										required={node.required === true}
-										value={field.state.value}
-										blur={field.handleBlur}
-										setValue={(value) => field.handleChange(value)}
-									/>
-								}
-								description={node.description as ReactNode}
-								descriptionProps={
-									descriptionId === undefined ? {} : { id: descriptionId }
-								}
-								disabled={node.disabled}
-								errors={renderErrors(displayErrors, errorIds, slots, path)}
-								label={node.label as ReactNode}
-								labelProps={{ htmlFor: inputId, id: `${inputId}-label` }}
-								readOnly={node.readOnly}
-								required={node.required === true}
-								rootProps={structuralProps("field", {
-									...node,
-									path,
-									invalid: displayErrors.length > 0,
-									dirty: field.state.meta.isDirty,
-									touched,
-									validating: field.state.meta.isValidating,
-								})}
-								slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
-							/>
-						)
+		<Slot
+			control={
+				<Control
+					context={form.context}
+					disabled={node.disabled}
+					input={{
+						id: inputId,
+						name: path,
+						ref(element) {
+							field.ref(element)
+							if (element === null) {
+								form.inputRefs.delete(path)
+							} else {
+								form.inputRefs.set(path, element)
+							}
+						},
+						...(joinIds([descriptionId, ...errorIds]) === undefined
+							? {}
+							: {
+									"aria-describedby": joinIds([descriptionId, ...errorIds]),
+								}),
 					}}
-				</FieldApi>
-			)}
-		</Subscribe>
+					meta={{
+						dirty: fieldState.isDirty,
+						touched,
+						validating: fieldState.isValidating,
+						errors,
+						displayErrors,
+						invalid: displayErrors.length > 0,
+					}}
+					options={(node.options ?? {}) as Readonly<unknown>}
+					path={path}
+					readOnly={node.readOnly}
+					required={node.required === true}
+					value={field.value}
+					blur={field.onBlur}
+					setValue={field.onChange}
+				/>
+			}
+			description={node.description as ReactNode}
+			descriptionProps={
+				descriptionId === undefined ? {} : { id: descriptionId }
+			}
+			disabled={node.disabled}
+			errors={renderErrors(displayErrors, errorIds, slots, path)}
+			label={node.label as ReactNode}
+			labelProps={{ htmlFor: inputId, id: `${inputId}-label` }}
+			readOnly={node.readOnly}
+			required={node.required === true}
+			rootProps={structuralProps("field", {
+				...node,
+				path,
+				invalid: displayErrors.length > 0,
+				dirty: fieldState.isDirty,
+				touched,
+				validating: fieldState.isValidating,
+			})}
+			slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
+		/>
 	)
 }
 
+/** Connects one resolved array node to React Hook Form array operations. */
 function GeneratedArray({
 	form,
 	controls,
 	slots,
 	node,
 }: {
+	/** Private runtime form data. */
 	readonly form: RuntimeForm
+	/** Controls available to nested field nodes. */
 	readonly controls: ControlDefinitionRegistry
+	/** Structural components used by the array. */
 	readonly slots: RuntimeSlots
+	/** The resolved array node. */
 	readonly node: ResolvedNode
 }) {
 	const path = String(node.path)
 	const arrayId = createDomId(useFormId(), path)
-	const FieldApi = form.api.Field as ComponentType<RuntimeFieldProps>
-	const Subscribe = form.api.Subscribe
 	const Slot = slots.Array as ComponentType<ArraySlotProps<unknown>>
 	const Item = slots.ArrayItem
+	const { append, fields, move, remove } = useFieldArray({
+		control: form.api.control,
+		name: path,
+	})
+	const formState = useFormState({ control: form.api.control, name: path })
+	const fieldState = form.api.getFieldState(path, formState)
+	const errors = fieldErrorToIssues(fieldState.error, path)
+	const displayErrors =
+		fieldState.isTouched || formState.submitCount > 0 ? errors : []
+	const errorIds = displayErrors.map(
+		(_issue, index) => `${arrayId}-error-${index}`,
+	)
+	const canAdd = !node.disabled && !node.readOnly
 	return (
-		<Subscribe selector={(state) => state.submissionAttempts}>
-			{(attempts) => (
-				<FieldApi mode="array" name={path}>
-					{(field) => {
-						const values = Array.isArray(field.state.value)
-							? field.state.value
-							: []
-						const errors = normalizeErrors(
-							field.state.meta.errors,
-							path,
-							form.api.state.values,
-						)
-						const displayErrors =
-							field.state.meta.isTouched || attempts > 0 ? errors : []
-						const errorIds = displayErrors.map(
-							(_issue, index) => `${arrayId}-error-${index}`,
-						)
-						const canAdd = !node.disabled && !node.readOnly
-						return (
-							<Slot
-								add={() => {
-									if (canAdd) {
-										field.pushValue(cloneItemDefault(node.itemDefault))
-									}
-								}}
-								canAdd={canAdd}
-								description={node.description as ReactNode}
-								descriptionProps={{ id: `${arrayId}-description` }}
-								errors={renderErrors(displayErrors, errorIds, slots, path)}
-								invalid={displayErrors.length > 0}
-								label={node.label as ReactNode}
-								labelProps={{ id: `${arrayId}-label` }}
-								rootProps={structuralProps("array", {
-									...node,
-									id: arrayId,
-									path,
-									invalid: displayErrors.length > 0,
-									dirty: field.state.meta.isDirty,
-									touched: field.state.meta.isTouched,
-									validating: field.state.meta.isValidating,
-								})}
-								slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
-							>
-								{values.map((_value, index) => {
-									return (
-										<Item
-											canMoveDown={canAdd && index < values.length - 1}
-											canMoveUp={canAdd && index > 0}
-											disabled={node.disabled}
-											index={index}
-											key={index}
-											move={(toIndex) => {
-												if (
-													canAdd &&
-													Number.isSafeInteger(toIndex) &&
-													toIndex >= 0 &&
-													toIndex < values.length
-												) {
-													field.moveValue(index, toIndex)
-												}
-											}}
-											readOnly={node.readOnly}
-											remove={() => {
-												if (canAdd) {
-													field.removeValue(index)
-												}
-											}}
-											rootProps={structuralProps("array-item", {
-												path: `${path}[${index}]`,
-												disabled: node.disabled,
-												readOnly: node.readOnly,
-											})}
-										>
-											{node.itemChildren?.[index]?.map((child) => (
-												<GeneratedNode
-													controls={controls}
-													form={form}
-													key={child.id}
-													node={child}
-													slots={slots}
-												/>
-											))}
-										</Item>
-									)
-								})}
-							</Slot>
-						)
+		<Slot
+			add={() => {
+				if (canAdd) append(cloneItemDefault(node.itemDefault))
+			}}
+			canAdd={canAdd}
+			description={node.description as ReactNode}
+			descriptionProps={{ id: `${arrayId}-description` }}
+			errors={renderErrors(displayErrors, errorIds, slots, path)}
+			invalid={displayErrors.length > 0}
+			label={node.label as ReactNode}
+			labelProps={{ id: `${arrayId}-label` }}
+			rootProps={structuralProps("array", {
+				...node,
+				id: arrayId,
+				path,
+				invalid: displayErrors.length > 0,
+				dirty: fieldState.isDirty,
+				touched: fieldState.isTouched,
+				validating: fieldState.isValidating,
+			})}
+			slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
+		>
+			{fields.map((field, index) => (
+				<Item
+					canMoveDown={canAdd && index < fields.length - 1}
+					canMoveUp={canAdd && index > 0}
+					disabled={node.disabled}
+					index={index}
+					key={field.id}
+					move={(toIndex) => {
+						if (
+							canAdd &&
+							Number.isSafeInteger(toIndex) &&
+							toIndex >= 0 &&
+							toIndex < fields.length
+						) {
+							move(index, toIndex)
+						}
 					}}
-				</FieldApi>
-			)}
-		</Subscribe>
+					readOnly={node.readOnly}
+					remove={() => {
+						if (canAdd) remove(index)
+					}}
+					rootProps={structuralProps("array-item", {
+						path: `${path}.${index}`,
+						disabled: node.disabled,
+						readOnly: node.readOnly,
+					})}
+				>
+					{node.itemChildren?.[index]?.map((child) => (
+						<GeneratedNode
+							controls={controls}
+							form={form}
+							key={child.id}
+							node={child}
+							slots={slots}
+						/>
+					))}
+				</Item>
+			))}
+		</Slot>
 	)
 }
 
-function ErrorSummary({ slots }: { readonly slots: RuntimeSlots }) {
+/** Renders issues that cannot be focused through a generated enabled input. */
+function ErrorSummary({
+	slots,
+}: {
+	/** Structural components used for issue messages. */
+	readonly slots: RuntimeSlots
+}) {
 	const form = useRuntimeForm()
 	const formId = useFormId()
-	const Subscribe = form.api.Subscribe
+	const state = useFormState({ control: form.api.control })
 	const Slot = slots.ErrorMessage
-	return (
-		<Subscribe
-			selector={(state) => ({
-				errors: state.errors,
-				submissionAttempts: state.submissionAttempts,
-				values: state.values,
-			})}
-		>
-			{(state) => {
-				if (state.submissionAttempts === 0) {
-					return null
-				}
-				const summaryIssues = normalizeErrors(
-					state.errors,
-					undefined,
-					state.values,
-				).filter((issue) => {
-					const input =
-						issue.path === undefined
-							? undefined
-							: form.inputRefs.get(issue.path)
-					return input === undefined || input.matches(":disabled")
-				})
-				return summaryIssues.map((issue, index) => (
-					<Slot
-						issue={issue}
-						key={`${issue.path ?? "form"}:${issue.message}`}
-						rootProps={{
-							...errorProps(`${formId}-summary-error-${index}`, issue.path),
-							...(index === 0
-								? {
-										ref(element: HTMLElement | null) {
-											form.errorSummaryRef.current = element
-										},
-										tabIndex: -1,
-									}
-								: {}),
-						}}
-					/>
-				))
+	if (state.submitCount === 0) return null
+
+	const summaryIssues = fieldErrorsToIssues(state.errors).filter((issue) => {
+		if (issue.path === "root" || issue.path?.startsWith("root.")) return true
+		const input =
+			issue.path === undefined ? undefined : form.inputRefs.get(issue.path)
+		return input === undefined || input.matches(":disabled")
+	})
+	return summaryIssues.map((issue, index) => (
+		<Slot
+			issue={issue}
+			key={`${issue.path ?? "form"}:${issue.message}`}
+			rootProps={{
+				...errorProps(`${formId}-summary-error-${index}`, issue.path),
+				...(index === 0
+					? {
+							ref(element: HTMLElement | null) {
+								form.errorSummaryRef.current = element
+							},
+							tabIndex: -1,
+						}
+					: {}),
 			}}
-		</Subscribe>
-	)
+		/>
+	))
 }
 
-function normalizeErrors(
-	errors: unknown,
-	fallbackPath?: string,
-	values?: unknown,
-): FormIssue[] {
-	const issues: FormIssue[] = []
-	const visit = (value: unknown, inheritedPath?: string): void => {
-		if (Array.isArray(value)) {
-			for (const item of value) {
-				visit(item, inheritedPath)
-			}
-			return
-		}
-		if (value === null || typeof value !== "object") {
-			return
-		}
-		if ("message" in value && typeof value.message === "string") {
-			const path = standardPath(
-				"path" in value ? value.path : undefined,
-				values,
-			)
-			issues.push(
-				Object.freeze({
-					message: value.message,
-					...((path ?? inheritedPath ?? fallbackPath) === undefined
-						? {}
-						: { path: path ?? inheritedPath ?? fallbackPath }),
-				}),
-			)
-			return
-		}
-		for (const [key, child] of Object.entries(value)) {
-			visit(
-				child,
-				key === "" || key === "form" || key === "fields" ? inheritedPath : key,
-			)
-		}
-	}
-	visit(errors, fallbackPath)
-	return issues.filter(
-		(issue, index) =>
-			issues.findIndex(
-				(candidate) =>
-					candidate.path === issue.path && candidate.message === issue.message,
-			) === index,
-	)
-}
-
-function standardPath(value: unknown, values: unknown): string | undefined {
-	if (!Array.isArray(value) || value.length === 0) {
-		return undefined
-	}
-	let current = values
-	let result = ""
-	for (const pathSegment of value) {
-		const segment =
-			pathSegment !== null &&
-			typeof pathSegment === "object" &&
-			"key" in pathSegment
-				? pathSegment.key
-				: pathSegment
-		const segmentAsNumber = Number(segment)
-		if (Array.isArray(current) && !Number.isNaN(segmentAsNumber)) {
-			result += `[${segmentAsNumber}]`
-		} else {
-			result += result.length === 0 ? String(segment) : `.${String(segment)}`
-		}
-		current =
-			current !== null && typeof current === "object"
-				? (current as Record<PropertyKey, unknown>)[segment as PropertyKey]
-				: undefined
-	}
-	return result
-}
-
+/** Renders field issues through the configured error-message slot. */
 function renderErrors(
 	issues: readonly FormIssue[],
 	ids: readonly string[],
@@ -980,61 +994,64 @@ function renderErrors(
 	))
 }
 
-function focusFirstInvalid(
-	formApi: {
-		getFieldMeta(path: string): { readonly errors: unknown } | undefined
-		readonly state: { readonly values: unknown }
-	},
-	inputRefs: ReadonlyMap<string, HTMLElement>,
-	errorSummary: HTMLElement | null,
-): void {
-	const inputsInDocumentOrder = [...inputRefs].sort(([, left], [, right]) => {
-		const position = left.compareDocumentPosition(right)
-		if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1
-		if (position & Node.DOCUMENT_POSITION_PRECEDING) return 1
-		return 0
-	})
-	for (const [path, input] of inputsInDocumentOrder) {
-		if (
-			normalizeErrors(
-				formApi.getFieldMeta(path)?.errors,
-				path,
-				formApi.state.values,
-			).length > 0
-		) {
-			input.focus()
-			const activeElement = input.ownerDocument.activeElement
-			if (activeElement === input || input.contains(activeElement)) return
-		}
-	}
-	errorSummary?.focus()
-}
-
+/** Creates an independent value from an array node item default. */
 function cloneItemDefault(value: unknown): unknown {
 	const candidate = typeof value === "function" ? value() : value
-	return structuredClone(candidate)
+	return cloneFormValue(candidate)
 }
 
+/** Focuses the summary when React Hook Form did not focus an invalid input. */
+function focusErrorSummaryFallback(
+	errors: FieldErrors<FieldValues>,
+	formElement: HTMLFormElement,
+	form: RuntimeForm,
+): void {
+	const activeElement = formElement.ownerDocument.activeElement
+	if (activeElement instanceof HTMLElement) {
+		for (const [path, input] of form.inputRefs) {
+			if (
+				(activeElement === input || input.contains(activeElement)) &&
+				hasFieldError(errors, path)
+			) {
+				return
+			}
+		}
+		const fieldName = activeElement.getAttribute("name")
+		if (fieldName !== null && hasFieldError(errors, fieldName)) return
+		if (activeElement === form.errorSummaryRef.current) return
+	}
+	form.errorSummaryRef.current?.focus()
+}
+
+/** Tests whether a value can serve as React Hook Form field values. */
+function isFieldValues(value: unknown): value is FieldValues {
+	return value !== null && typeof value === "object" && !Array.isArray(value)
+}
+
+/** Reads private form data from the current generated form context. */
 function useRuntimeForm(): RuntimeForm {
 	const form = useContext(FormContext)
 	if (form === null) {
-		throw new Error("TanStack form context is missing")
+		throw new Error("React Hook Form context is missing")
 	}
 	return form
 }
 
+/** Reads the native form ID from the current generated form context. */
 function useFormId(): string {
 	const id = useContext(FormIdContext)
 	if (id === null) {
-		throw new Error("TanStack form id context is missing")
+		throw new Error("React Hook Form id context is missing")
 	}
 	return id
 }
 
+/** Creates a DOM-safe ID for an input path within a form. */
 function createDomId(prefix: string, value: string): string {
 	return `${prefix}-${encodeURIComponent(value).replaceAll(".", "%2E")}`
 }
 
+/** Converts resolved node state to structural DOM props and data attributes. */
 function structuralProps(
 	kind: StructuralNodeName,
 	value: Readonly<Record<string, unknown>>,
@@ -1058,6 +1075,7 @@ function structuralProps(
 	return props as StructuralRootProps
 }
 
+/** Creates structural DOM props for one validation message. */
 function errorProps(id: string, path?: string): StructuralRootProps {
 	return {
 		"data-fp-node": "error-message",
@@ -1066,15 +1084,18 @@ function errorProps(id: string, path?: string): StructuralRootProps {
 	}
 }
 
+/** Converts boolean state to a presence-only data attribute value. */
 function booleanData(value: boolean): "" | undefined {
 	return value ? "" : undefined
 }
 
+/** Joins defined accessibility IDs into one attribute value. */
 function joinIds(values: readonly (string | undefined)[]): string | undefined {
 	const joined = values.filter((value) => value !== undefined).join(" ")
 	return joined.length === 0 ? undefined : joined
 }
 
+/** Verifies that every required structural slot is registered. */
 function assertSlots(slots: Readonly<Record<string, unknown>>): void {
 	for (const key of [
 		"Field",

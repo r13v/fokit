@@ -4,17 +4,41 @@ import type {
 	UiResolverValues,
 } from "./types.js"
 
+/** The loading, successful, or failed state of application-owned data. */
 export type ResourceState<Value, Error = unknown> =
-	| { readonly status: "pending" }
-	| { readonly status: "success"; readonly value: Value }
-	| { readonly status: "error"; readonly error: Error }
+	| {
+			/** Indicates that the resource has no result yet. */
+			readonly status: "pending"
+	  }
+	| {
+			/** Indicates that the resource contains a successful value. */
+			readonly status: "success"
+			/** The loaded resource value. */
+			readonly value: Value
+	  }
+	| {
+			/** Indicates that the resource contains an error. */
+			readonly status: "error"
+			/** The failure value reported by the resource owner. */
+			readonly error: Error
+	  }
 
+/** A resource state with unknown success and error values. */
 type AnyResourceState = ResourceState<unknown, unknown>
+/** A valid resource status discriminator. */
 type ResourceStatus = AnyResourceState["status"]
+/** Extracts one discriminated branch from a resource state. */
 type ResourceBranch<
 	Resource extends AnyResourceState,
 	Status extends ResourceStatus,
-> = Extract<Resource, { readonly status: Status }>
+> = Extract<
+	Resource,
+	{
+		/** The resource branch discriminator to select. */
+		readonly status: Status
+	}
+>
+/** Handlers that map each resource branch to an application value. */
 type ResourceCases<
 	Resource extends AnyResourceState,
 	PendingResult,
@@ -22,20 +46,35 @@ type ResourceCases<
 	ErrorResult,
 	Arguments extends readonly unknown[],
 > = {
+	/** Handles a pending resource. */
 	readonly pending: (
 		state: ResourceBranch<Resource, "pending">,
 		...args: Arguments
 	) => PendingResult
+	/** Handles a successful resource. */
 	readonly success: (
 		state: ResourceBranch<Resource, "success">,
 		...args: Arguments
 	) => SuccessResult
+	/** Handles a failed resource. */
 	readonly error: (
 		state: ResourceBranch<Resource, "error">,
 		...args: Arguments
 	) => ErrorResult
 }
 
+/**
+ * Maps a resource state through its matching case handler.
+ *
+ * @example
+ * ```ts
+ * const label = matchResource(user, {
+ *   pending: () => "Loading",
+ *   success: ({ value }) => value.name,
+ *   error: () => "Unavailable",
+ * })
+ * ```
+ */
 export function matchResource<
 	Resource extends AnyResourceState,
 	const PendingResult,
@@ -54,6 +93,13 @@ export function matchResource<
 	return matchResourceWithArguments(resource, cases, [])
 }
 
+/**
+ * Creates a synchronous UI resolver that branches on application resource state.
+ *
+ * Each handler also receives the resolver values and details.
+ *
+ * @see https://r13v.github.io/form-please/definitions
+ */
 export function fromResource<
 	Resource extends AnyResourceState,
 	Input,
@@ -78,6 +124,7 @@ export function fromResource<
 		])
 }
 
+/** Maps a resource state and forwards shared arguments to its matching handler. */
 function matchResourceWithArguments<
 	Resource extends AnyResourceState,
 	PendingResult,
@@ -109,7 +156,11 @@ function matchResourceWithArguments<
 		case "error":
 			return cases.error(resource as ResourceBranch<Resource, "error">, ...args)
 		default: {
-			const unsupported = resource as { readonly status?: unknown }
+			/** A runtime value with a status outside the typed resource union. */
+			const unsupported = resource as {
+				/** The unsupported runtime discriminator. */
+				readonly status?: unknown
+			}
 			throw new TypeError(
 				`Unsupported resource status "${String(unsupported.status)}"`,
 			)

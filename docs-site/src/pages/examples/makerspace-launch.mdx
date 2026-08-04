@@ -9,7 +9,7 @@ import { MakerspaceLaunchDemo } from "../../components/makerspace-launch-demo"
 # Makerspace launch wizard
 
 The active stage is a normal form value. Conditional sections and the stage
-navigation read the same TanStack Form state.
+navigation read the same React Hook Form state.
 
 ## Try the complete flow
 
@@ -22,9 +22,9 @@ writes.
 
 ## What this form demonstrates
 
-- Form-owned navigation through `form.api.setFieldValue`.
+- Form-owned navigation through `form.api.setValue`.
 - Context-provided campus and region options.
-- Address lookup driven by `form.api.Subscribe`.
+- Address lookup driven by `useWatch`.
 - Typed coordinate updates from an application-owned control.
 - Native file input and generated arrays.
 - One transformed output used by three sequential mutations.

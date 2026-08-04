@@ -91,7 +91,7 @@ test("documents only the supported navigation surface", async () => {
 	}
 })
 
-test("documents the TanStack runtime decisions", async () => {
+test("documents the React Hook Form runtime decisions", async () => {
 	const allPages = (
 		await Promise.all(
 			pages.map(([path]) => readFile(new URL(path, siteRoot), "utf8")),
@@ -99,14 +99,15 @@ test("documents the TanStack runtime decisions", async () => {
 	).join("\n")
 
 	for (const term of [
-		"form.api.Field",
-		"form.api.FormGroup",
-		"form.api.Subscribe",
+		"FormProvider",
+		"Controller",
+		"useWatch",
+		"useFormState",
 		"fromResource",
 		"complete schema input",
 		"Hidden fields preserve",
-		"index identity",
-		"parses the same input a second time",
+		"stable field-array ID",
+		"parses once",
 	]) {
 		assert.match(
 			allPages,
@@ -141,8 +142,10 @@ test("does not teach retired runtime entries or APIs", async () => {
 		"form-please/devtools",
 		"useCreateForm",
 		"useBindForm",
-		"useFormContext",
-		"useFormState",
+		"form.api.Field",
+		"form.api.FormGroup",
+		"form.api.Subscribe",
+		"form.api.pushFieldValue",
 		"useArrayField",
 		"valuePolicy",
 		"kit.tf",
@@ -230,6 +233,10 @@ test("keeps controls, API, and production guidance executable", async () => {
 		new URL("src/pages/advanced.mdx", siteRoot),
 		"utf8",
 	)
+	const styling = await readFile(
+		new URL("src/pages/styling.mdx", siteRoot),
+		"utf8",
+	)
 
 	for (const region of [
 		"define-control",
@@ -251,17 +258,45 @@ test("keeps controls, API, and production guidance executable", async () => {
 	for (const region of [
 		"composition",
 		"edit-baseline",
+		"saved-baseline",
+		"atomic-values",
+		"draft-subscription",
+		"step-validation",
 		"async-submit",
+		"server-response",
+		"server-field-errors",
 		"reset-baseline",
 		"parsed-output",
+		"json-request",
+		"multipart-body",
 		"context-resource",
 		"form-modes",
 		"accessible-control",
 	]) {
 		assert.match(advanced, new RegExp(`production-recipes\\.tsx:${region}`))
 	}
+	for (const preview of [
+		"SavedBaselineRecipePreview",
+		"AtomicValuesRecipePreview",
+		"DraftSubscriptionRecipePreview",
+		"StepValidationRecipePreview",
+	]) {
+		assert.match(advanced, new RegExp(`<${preview} />`))
+	}
+	for (const version of ["7.77.0", "7.74.0", "7.55.0"]) {
+		assert.match(advanced, new RegExp(`React Hook Form ${version}`))
+	}
+	assert.doesNotMatch(advanced, /parses once for validation and\s+again/)
+	assert.doesNotMatch(styling, /data-fp-path\^="contacts\["/)
 
 	assert.match(controls, /controls-and-slots-control\.tsx/)
+	for (const region of ["schema", "definition", "component"]) {
+		const getStarted = await readFile(
+			new URL("src/pages/get-started.mdx", siteRoot),
+			"utf8",
+		)
+		assert.match(getStarted, new RegExp(`profile-form\\.tsx:${region}`))
+	}
 	for (const region of [
 		"register-control",
 		"control-options",
@@ -306,8 +341,8 @@ test("does not present native FormData as the submission source", async () => {
 	])
 	const source = sources.join("\n")
 	assert.doesNotMatch(source, /Form, Please keeps it in FormData/)
-	assert.match(source, /Submission uses the TanStack values/)
-	assert.match(source, /File stays in the TanStack Form input/)
+	assert.match(source, /Submission uses (?:the )?React Hook Form values/)
+	assert.match(source, /File stays in the React Hook Form input/)
 })
 
 test("keeps the shadcn adapter installable and release-version agnostic", async () => {
@@ -395,13 +430,13 @@ test("the physical example uses only public package imports", async () => {
 	const packageJson = JSON.parse(
 		await readFile(new URL("package.json", siteRoot), "utf8"),
 	)
-	assert.equal(packageJson.dependencies["@tanstack/react-form"], "1.33.3")
+	assert.equal(packageJson.dependencies["react-hook-form"], "7.84.0")
 	assert.equal(packageJson.dependencies["form-please"], "file:..")
 
 	const rootPackage = JSON.parse(
 		await readFile(new URL("package.json", repositoryRoot), "utf8"),
 	)
-	assert.equal(rootPackage.peerDependencies["@tanstack/react-form"], "^1.33.3")
+	assert.equal(rootPackage.peerDependencies["react-hook-form"], "^7.55.0")
 })
 
 function escapeRegExp(value) {

@@ -9,6 +9,7 @@ import { createMuiFormKit } from "form-please/preset-mui"
 import { nativeFormKit } from "form-please/preset-native"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+import { useFormContext, useWatch } from "react-hook-form"
 
 type Input = {
 	readonly name?: string
@@ -103,17 +104,19 @@ function App() {
 			void value.slug
 		},
 	})
-	const Subscribe = form.api.Subscribe
-
 	return (
 		<kit.Form form={form} id="profile-form">
 			<kit.Fields />
-			<Subscribe>
-				{(state) => <output>{state.values.speakers.length} speakers</output>}
-			</Subscribe>
+			<SpeakerCount />
 			<kit.Submit>Save</kit.Submit>
 		</kit.Form>
 	)
+}
+
+function SpeakerCount() {
+	const form = useFormContext<Input>()
+	const speakers = useWatch({ control: form.control, name: "speakers" })
+	return <output>{speakers.length} speakers</output>
 }
 
 createRoot(document.getElementById("root") ?? document.body).render(

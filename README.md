@@ -5,7 +5,7 @@
 </p>
 
 Form, Please turns a Standard Schema and a typed UI definition into a React
-form. TanStack Form owns state, validation, subscriptions, and array updates.
+form. React Hook Form owns state, validation, subscriptions, and array updates.
 Your controls and slots own the rendered design system.
 
 React 18 and React 19 are supported.
@@ -13,7 +13,7 @@ React 18 and React 19 are supported.
 ## Install
 
 ```sh
-npm install form-please @tanstack/react-form zod
+npm install form-please react-hook-form zod
 ```
 
 Form, Please accepts any Standard Schema implementation. This example uses Zod.
@@ -58,22 +58,22 @@ export function ContactForm() {
 }
 ```
 
-Use `form.api.Field`, `form.api.FormGroup`, and `form.api.Subscribe` for direct
-TanStack Form composition.
+Use RHF `register`, `Controller`, `useWatch`, `useFormState`, `useFieldArray`,
+and the unchanged `form.api` for direct composition. `kit.Form` supplies
+`FormProvider`.
 
 ## Runtime behavior
 
 - The Standard Schema validates on submit, then on change after the first
   submit.
-- A successful submit parses the schema a second time to obtain transformed
-  output. This follows the TanStack Form recommendation and does not add a
-  validation cache.
+- The RHF resolver parses the Standard Schema once and returns transformed
+  output while the submit wrapper preserves the editable input snapshot.
 - UI resolvers receive the complete deeply readonly schema input and runtime
   context. They must be synchronous.
 - Hidden fields preserve their values.
-- Array rows use index identity and TanStack bracket paths.
-- Invalid submit focuses the first invalid visible generated control that can
-  receive focus, or a focusable error summary when no generated control can.
+- Array paths use RHF dot notation and rows use stable RHF keys.
+- RHF focuses the first registered invalid field. A focusable error summary is
+  the fallback when no invalid field receives focus.
 - A definition is fixed for the `useForm` hook lifetime. Use a React `key` to
   remount with another definition.
 

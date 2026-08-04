@@ -8,9 +8,9 @@
 		"runtime": "node index.cjs"
 	},
 	"dependencies": {
-		"@tanstack/react-form": "1.33.3",
 		"react": "19.2.8",
-		"react-dom": "19.2.8"
+		"react-dom": "19.2.8",
+		"react-hook-form": "7.84.0"
 	},
 	"devDependencies": {
 		"@types/node": "26.1.2",

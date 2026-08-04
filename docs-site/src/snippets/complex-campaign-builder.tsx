@@ -792,6 +792,10 @@ function CampaignBuilderForm() {
 	if (createCampaign.isPending || updateCampaign.isPending) {
 		status = "Saving campaign…"
 	}
+	const values = form.api.watch()
+	const channels = Object.entries(values.audience.channels)
+		.filter(([, selected]) => selected)
+		.map(([channel]) => channel)
 
 	return (
 		<section
@@ -823,36 +827,27 @@ function CampaignBuilderForm() {
 					Start new campaign
 				</button>
 			</fieldset>
-			<kit.AutoForm
+			<contextualKit.AutoForm
 				className="form-please-complex__form"
 				form={form}
 				key={mode}
 			>
 				<div className="form-please-complex__actions">
-					<kit.Submit className="form-please-complex__primary">
+					<contextualKit.Submit className="form-please-complex__primary">
 						{submitLabel}
-					</kit.Submit>
+					</contextualKit.Submit>
 					<span aria-live="polite">{status}</span>
 				</div>
-			</kit.AutoForm>
-			<form.api.Subscribe selector={(state) => state.values}>
-				{(values) => {
-					const channels = Object.entries(values.audience.channels)
-						.filter(([, selected]) => selected)
-						.map(([channel]) => channel)
-					return (
-						<aside
-							aria-label="Campaign preview"
-							className="form-please-complex__preview"
-						>
-							<strong>{values.name}</strong>
-							<span>
-								{values.template} · {channels.join(", ") || "no channels"}
-							</span>
-						</aside>
-					)
-				}}
-			</form.api.Subscribe>
+			</contextualKit.AutoForm>
+			<aside
+				aria-label="Campaign preview"
+				className="form-please-complex__preview"
+			>
+				<strong>{values.name}</strong>
+				<span>
+					{values.template} · {channels.join(", ") || "no channels"}
+				</span>
+			</aside>
 		</section>
 	)
 }

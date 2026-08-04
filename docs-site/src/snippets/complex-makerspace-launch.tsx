@@ -15,6 +15,7 @@ import {
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
+import { useWatch } from "react-hook-form"
 import { z } from "zod"
 
 const launchSchema = z
@@ -202,71 +203,88 @@ const stageNames = {
 type LaunchForm = FormBinding<typeof launchSchema, LaunchContext>
 
 function WizardNavigation({ form }: { readonly form: LaunchForm }) {
+	const stage = useWatch({ control: form.api.control, name: "stage" })
+	const index = stages.indexOf(stage)
+	const nextStage = stages[index + 1] ?? stage
+	let primaryAction = (
+		<contextualKit.Submit className="form-please-complex__primary">
+			Publish makerspace
+		</contextualKit.Submit>
+	)
+	if (index < stages.length - 1) {
+		primaryAction = (
+			<button
+				className="form-please-complex__primary"
+				onClick={() => form.api.setValue("stage", nextStage)}
+				type="button"
+			>
+				Continue to {stageNames[nextStage]}
+			</button>
+		)
+	}
 	return (
-		<form.api.Subscribe selector={(state) => state.values.stage}>
-			{(stage) => {
-				const index = stages.indexOf(stage)
-				const nextStage = stages[index + 1] ?? stage
-				let primaryAction = (
-					<kit.Submit className="form-please-complex__primary">
-						Publish makerspace
-					</kit.Submit>
-				)
-				if (index < stages.length - 1) {
-					primaryAction = (
-						<button
-							className="form-please-complex__primary"
-							onClick={() => form.api.setFieldValue("stage", nextStage)}
-							type="button"
-						>
-							Continue to {stageNames[nextStage]}
-						</button>
-					)
-				}
-				return (
-					<nav
-						aria-label="Launch stages"
-						className="form-please-complex__wizard"
-					>
-						<ol>
-							{stages.map((item) => {
-								let ariaCurrent: "step" | undefined
-								let color: string | undefined
-
-								if (item === stage) {
-									ariaCurrent = "step"
-									color = "var(--fp-docs-rust)"
-								}
-
-								return (
-									<li aria-current={ariaCurrent} key={item}>
-										<button
-											style={{ color }}
-											onClick={() => form.api.setFieldValue("stage", item)}
-											type="button"
-										>
-											{stageLabels[item]}
-										</button>
-									</li>
-								)
-							})}
-						</ol>
-						<div className="form-please-complex__actions">
+		<nav aria-label="Launch stages" className="form-please-complex__wizard">
+			<ol>
+				{stages.map((item) => {
+					let ariaCurrent: "step" | undefined
+					let color: string | undefined
+					if (item === stage) {
+						ariaCurrent = "step"
+						color = "var(--fp-docs-rust)"
+					}
+					return (
+						<li aria-current={ariaCurrent} key={item}>
 							<button
-								disabled={index === 0}
-								onClick={() =>
-									form.api.setFieldValue("stage", stages[index - 1] ?? stage)
-								}
+								style={{ color }}
+								onClick={() => form.api.setValue("stage", item)}
 								type="button"
 							>
-								Back
+								{stageLabels[item]}
 							</button>
-							{primaryAction}
-						</div>
-					</nav>
-				)
-			}}
-		</form.api.Subscribe>
+						</li>
+					)
+				})}
+			</ol>
+			<div className="form-please-complex__actions">
+				<button
+					disabled={index === 0}
+					onClick={() => form.api.setValue("stage", stages[index - 1] ?? stage)}
+					type="button"
+				>
+					Back
+				</button>
+				{primaryAction}
+			</div>
+		</nav>
+	)
+}
+
+function LaunchLiveDetails({ form }: { readonly form: LaunchForm }) {
+	const values = useWatch({ control: form.api.control }) as LaunchInput
+	let locationDetails = null
+	if (values.stage === "location") {
+		locationDetails = (
+			<>
+				<AddressLookup form={form} postalCode={values.location.postalCode} />
+				<aside
+					aria-label="Coordinate preview"
+					className="form-please-complex__preview"
+				>
+					<strong>{values.location.address}</strong>
+					<span>
+						{values.location.latitude.toFixed(3)},{" "}
+						{values.location.longitude.toFixed(3)} ·{" "}
+						{values.location.postalCode}
+					</span>
+				</aside>
+			</>
+		)
+	}
+	return (
+		<>
+			<WizardNavigation form={form} />
+			{locationDetails}
+		</>
 	)
 }
 
@@ -305,9 +323,9 @@ function AddressLookup({
 				disabled={lookup.data === undefined}
 				onClick={() => {
 					if (lookup.data === undefined) return
-					form.api.setFieldValue("location.address", lookup.data.address)
-					form.api.setFieldValue("location.latitude", lookup.data.latitude)
-					form.api.setFieldValue("location.longitude", lookup.data.longitude)
+					form.api.setValue("location.address", lookup.data.address)
+					form.api.setValue("location.latitude", lookup.data.latitude)
+					form.api.setValue("location.longitude", lookup.data.longitude)
 				}}
 				type="button"
 			>
@@ -639,42 +657,11 @@ function MakerspaceLaunchForm() {
 				media rows, pricing bands, four offers, and three writes retain one
 				state.
 			</p>
-			<kit.Form className="form-please-complex__form" form={form}>
-				<form.api.Subscribe selector={(state) => state.values}>
-					{(values) => {
-						let locationDetails = null
-						if (values.stage === "location") {
-							locationDetails = (
-								<>
-									<AddressLookup
-										form={form}
-										postalCode={values.location.postalCode}
-									/>
-									<aside
-										aria-label="Coordinate preview"
-										className="form-please-complex__preview"
-									>
-										<strong>{values.location.address}</strong>
-										<span>
-											{values.location.latitude.toFixed(3)},{" "}
-											{values.location.longitude.toFixed(3)} ·{" "}
-											{values.location.postalCode}
-										</span>
-									</aside>
-								</>
-							)
-						}
-						return (
-							<>
-								<WizardNavigation form={form} />
-								{locationDetails}
-							</>
-						)
-					}}
-				</form.api.Subscribe>
+			<contextualKit.Form className="form-please-complex__form" form={form}>
+				<LaunchLiveDetails form={form} />
 
-				<kit.Fields />
-			</kit.Form>
+				<contextualKit.Fields />
+			</contextualKit.Form>
 
 			<output className="form-please-complex__network" aria-live="polite">
 				{status}

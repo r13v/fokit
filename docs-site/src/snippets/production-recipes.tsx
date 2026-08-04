@@ -15,7 +15,8 @@ import {
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
 import { nativeFormKit } from "form-please/preset-native"
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useFormState, useWatch } from "react-hook-form"
 import { z } from "zod"
 
 const profileSchema = z.object({
@@ -58,27 +59,22 @@ function ProfileForm() {
 	const form = nativeFormKit.useForm(profileDefinition, {
 		defaultValues: emptyProfile,
 	})
-	const Field = form.api.Field
-	const Subscribe = form.api.Subscribe
+	const email = useWatch({ control: form.api.control, name: "email" })
+	const state = useFormState({ control: form.api.control })
+	let dirtyState = <output>No changes</output>
+	if (state.isDirty) dirtyState = <output>Unsaved changes</output>
 
 	return (
 		<nativeFormKit.Form form={form}>
 			<nativeFormKit.Fields />
-			<Field name="email">
-				{(field) => <output>Current email: {field.state.value}</output>}
-			</Field>
+			<output>Current email: {email}</output>
 			<button
 				type="button"
-				onClick={() => form.api.setFieldValue("department", "Research")}
+				onClick={() => form.api.setValue("department", "Research")}
 			>
 				Use Research department
 			</button>
-			<Subscribe selector={(state) => state.isDirty}>
-				{(isDirty) => {
-					if (isDirty) return <output>Unsaved changes</output>
-					return <output>No changes</output>
-				}}
-			</Subscribe>
+			{dirtyState}
 			<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
 		</nativeFormKit.Form>
 	)
@@ -127,24 +123,97 @@ function SavingProfile({ profile }: { readonly profile: Profile }) {
 			}
 		},
 	})
-	const Subscribe = form.api.Subscribe
+	const state = useFormState({ control: form.api.control })
+	let submitState = <output aria-live="polite">Ready</output>
+	if (state.isSubmitting) {
+		submitState = <output aria-live="polite">Saving…</output>
+	}
 
 	return (
 		<nativeFormKit.AutoForm form={form}>
 			{requestError !== undefined && <p role="alert">{requestError}</p>}
-			<Subscribe selector={(state) => state.isSubmitting}>
-				{(isSubmitting) => {
-					if (isSubmitting) {
-						return <output aria-live="polite">Saving…</output>
-					}
-					return <output aria-live="polite">Ready</output>
-				}}
-			</Subscribe>
+			{submitState}
 			<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
 		</nativeFormKit.AutoForm>
 	)
 }
 // [!endregion async-submit]
+
+// [!region server-response]
+const serverProfileResultSchema = z.discriminatedUnion("ok", [
+	z.object({
+		ok: z.literal(true),
+		input: profileSchema,
+	}),
+	z.object({
+		ok: z.literal(false),
+		formError: z.string().optional(),
+		fieldErrors: z.array(
+			z.object({
+				path: z.enum(["name", "email", "department"]),
+				message: z.string(),
+			}),
+		),
+	}),
+])
+
+type ServerProfileResult = z.output<typeof serverProfileResultSchema>
+
+async function saveProfileWithValidation(
+	profile: Profile,
+): Promise<ServerProfileResult> {
+	const response = await fetch(`/api/profiles/${profile.id}`, {
+		method: "PUT",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(profile),
+	})
+	const body: unknown = await response.json()
+	return serverProfileResultSchema.parse(body)
+}
+// [!endregion server-response]
+
+// [!region server-field-errors]
+function ProfileWithServerValidation({
+	profile,
+}: {
+	readonly profile: Profile
+}) {
+	const [requestError, setRequestError] = useState<string>()
+	const form = nativeFormKit.useForm(profileDefinition, {
+		defaultValues: profile,
+		onSubmit: async ({ value, form }) => {
+			setRequestError(undefined)
+			form.api.clearErrors(["name", "email", "department"])
+
+			try {
+				const result = await saveProfileWithValidation(value)
+				if (result.ok) {
+					form.api.reset(result.input)
+					return
+				}
+
+				setRequestError(result.formError)
+				for (const [index, issue] of result.fieldErrors.entries()) {
+					form.api.setError(
+						issue.path,
+						{ type: "server", message: issue.message },
+						{ shouldFocus: index === 0 },
+					)
+				}
+			} catch {
+				setRequestError("The profile could not be saved")
+			}
+		},
+	})
+
+	return (
+		<nativeFormKit.AutoForm form={form}>
+			{requestError !== undefined && <p role="alert">{requestError}</p>}
+			<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
+		</nativeFormKit.AutoForm>
+	)
+}
+// [!endregion server-field-errors]
 
 // [!region reset-baseline]
 function ResettableProfile({ profile }: { readonly profile: Profile }) {
@@ -155,22 +224,279 @@ function ResettableProfile({ profile }: { readonly profile: Profile }) {
 			form.api.reset(saved)
 		},
 	})
-	const Subscribe = form.api.Subscribe
+	const state = useFormState({ control: form.api.control })
 
 	return (
 		<nativeFormKit.AutoForm form={form}>
-			<Subscribe selector={(state) => state.isDirty}>
-				{(isDirty) => (
-					<button disabled={!isDirty} type="reset">
-						Discard changes
-					</button>
-				)}
-			</Subscribe>
+			<button disabled={!state.isDirty} type="reset">
+				Discard changes
+			</button>
 			<nativeFormKit.Submit>Save profile</nativeFormKit.Submit>
 		</nativeFormKit.AutoForm>
 	)
 }
 // [!endregion reset-baseline]
+
+const recipeProfile = {
+	id: "profile-1",
+	name: "Ada Lovelace",
+	email: "ada@example.com",
+	department: "Research",
+} satisfies Profile
+
+async function saveProfileSnapshot(_profile: Profile): Promise<void> {
+	await new Promise((resolve) => setTimeout(resolve, 700))
+}
+
+function useClientReady(): boolean {
+	const [isReady, setIsReady] = useState(false)
+	useEffect(() => setIsReady(true), [])
+	return isReady
+}
+
+// [!region saved-baseline]
+export function SavedBaselineRecipe() {
+	const [savedName, setSavedName] = useState<string>()
+	const isClientReady = useClientReady()
+	const form = nativeFormKit.useForm(profileDefinition, {
+		defaultValues: recipeProfile,
+		onSubmit: async ({ input, value, form }) => {
+			await saveProfileSnapshot(value)
+			form.api.resetDefaultValues(input)
+			setSavedName(value.name)
+		},
+	})
+	const state = useFormState({ control: form.api.control })
+	let status = "No unsaved changes"
+	if (state.isDirty) status = "Unsaved changes"
+	if (state.isSubmitting) status = "Saving. You can continue to edit."
+
+	return (
+		<section
+			aria-label="Saved baseline recipe preview"
+			className="form-please-complex"
+			data-demo-client-ready={isClientReady}
+		>
+			<p className="form-please-complex__kicker">Live preview</p>
+			<p className="form-please-complex__summary">
+				Submit the form. Change the name before the save operation finishes.
+			</p>
+			<nativeFormKit.AutoForm form={form}>
+				<div className="form-please-complex__actions">
+					<nativeFormKit.Submit className="form-please-complex__primary">
+						Save current values
+					</nativeFormKit.Submit>
+					<output aria-live="polite">{status}</output>
+				</div>
+			</nativeFormKit.AutoForm>
+			{savedName !== undefined && (
+				<output aria-live="polite">Saved baseline: {savedName}</output>
+			)}
+		</section>
+	)
+}
+// [!endregion saved-baseline]
+
+// [!region atomic-values]
+export function AtomicValuesRecipe() {
+	const isClientReady = useClientReady()
+	const form = nativeFormKit.useForm(profileDefinition, {
+		defaultValues: recipeProfile,
+	})
+	const [templateApplied, setTemplateApplied] = useState(false)
+	let status = "No template applied"
+	if (templateApplied) status = "Profile template applied."
+
+	return (
+		<section
+			aria-label="Atomic values recipe preview"
+			className="form-please-complex"
+			data-demo-client-ready={isClientReady}
+		>
+			<p className="form-please-complex__kicker">Live preview</p>
+			<p className="form-please-complex__summary">
+				Apply one template to multiple fields.
+			</p>
+			<nativeFormKit.AutoForm form={form}>
+				<div className="form-please-complex__actions">
+					<button
+						type="button"
+						onClick={() => {
+							form.api.setValues(
+								{
+									name: "Grace Hopper",
+									email: "grace@example.com",
+									department: "Compilers",
+								},
+								{ shouldDirty: true, shouldValidate: true },
+							)
+							setTemplateApplied(true)
+						}}
+					>
+						Apply profile template
+					</button>
+					<output aria-live="polite">{status}</output>
+				</div>
+			</nativeFormKit.AutoForm>
+		</section>
+	)
+}
+// [!endregion atomic-values]
+
+// [!region draft-subscription]
+export function DraftSubscriptionRecipe() {
+	const [savedDraft, setSavedDraft] = useState<Profile>()
+	const isClientReady = useClientReady()
+	const form = nativeFormKit.useForm(profileDefinition, {
+		defaultValues: recipeProfile,
+	})
+	const api = form.api
+
+	useEffect(() => {
+		let saveTimer: ReturnType<typeof setTimeout> | undefined
+		const unsubscribe = api.subscribe({
+			formState: { values: true },
+			callback: ({ values }) => {
+				if (saveTimer !== undefined) clearTimeout(saveTimer)
+				saveTimer = setTimeout(() => {
+					// Replace this state update with your draft storage call.
+					setSavedDraft(values)
+				}, 400)
+			},
+		})
+
+		return () => {
+			if (saveTimer !== undefined) clearTimeout(saveTimer)
+			unsubscribe()
+		}
+	}, [api])
+	let status = "Edit a field to save a draft."
+	if (savedDraft !== undefined) {
+		let draftName = savedDraft.name
+		if (draftName === "") draftName = "the unnamed profile"
+		status = `Draft saved for ${draftName}.`
+	}
+
+	return (
+		<section
+			aria-label="Draft subscription recipe preview"
+			className="form-please-complex"
+			data-demo-client-ready={isClientReady}
+		>
+			<p className="form-please-complex__kicker">Live preview</p>
+			<p className="form-please-complex__summary">
+				Edit a field. The preview saves the draft after 400 ms.
+			</p>
+			<nativeFormKit.AutoForm form={form} />
+			<output aria-live="polite">{status}</output>
+		</section>
+	)
+}
+// [!endregion draft-subscription]
+
+type WizardStep = "identity" | "details"
+type WizardContext = { readonly step: WizardStep }
+
+const wizardSchema = z.object({
+	name: z.string().min(1, "Enter a name"),
+	email: z.email("Enter a valid email"),
+	department: z.string().optional(),
+})
+
+const wizardKit = nativeFormKit.forContext<WizardContext>()
+const wizardDefinition = wizardKit.defineForm(wizardSchema, {
+	ui: [
+		{
+			kind: "field",
+			path: "name",
+			control: "text",
+			label: "Name",
+			visible: (_values, { context }) => context.step === "identity",
+		},
+		{
+			kind: "field",
+			path: "email",
+			control: "text",
+			label: "Email",
+			options: { type: "email" },
+			visible: (_values, { context }) => context.step === "identity",
+		},
+		{
+			kind: "field",
+			path: "department",
+			control: "text",
+			label: "Department",
+			visible: (_values, { context }) => context.step === "details",
+		},
+	],
+})
+
+const identityFields = ["name", "email"] as const
+
+// [!region step-validation]
+export function StepValidationRecipe() {
+	const [step, setStep] = useState<WizardStep>("identity")
+	const [saved, setSaved] = useState(false)
+	const isClientReady = useClientReady()
+	const context = useMemo(() => ({ step }), [step])
+	const form = wizardKit.useForm(wizardDefinition, {
+		context,
+		defaultValues: { name: "", email: "", department: "" },
+		onSubmit: () => setSaved(true),
+	})
+
+	async function showDetails() {
+		for (const path of identityFields) {
+			form.api.setValue(path, form.api.getValues(path), { shouldTouch: true })
+		}
+		const valid = await form.api.trigger(identityFields)
+		if (!valid) {
+			const firstInvalid = identityFields.find(
+				(path) => form.api.getFieldState(path).invalid,
+			)
+			if (firstInvalid !== undefined) form.api.setFocus(firstInvalid)
+			return
+		}
+		setStep("details")
+	}
+	let stepLabel = "1 of 2: identity"
+	let actions = (
+		<button type="button" onClick={() => void showDetails()}>
+			Continue
+		</button>
+	)
+	if (step === "details") {
+		stepLabel = "2 of 2: details"
+		actions = (
+			<>
+				<button type="button" onClick={() => setStep("identity")}>
+					Back
+				</button>
+				<wizardKit.Submit className="form-please-complex__primary">
+					Save profile
+				</wizardKit.Submit>
+			</>
+		)
+	}
+	let status = "Complete the current step."
+	if (saved) status = "Profile saved."
+
+	return (
+		<section
+			aria-label="Step validation recipe preview"
+			className="form-please-complex"
+			data-demo-client-ready={isClientReady}
+		>
+			<p className="form-please-complex__kicker">Live preview</p>
+			<p className="form-please-complex__summary">Step {stepLabel}</p>
+			<wizardKit.AutoForm form={form}>
+				<div className="form-please-complex__actions">{actions}</div>
+			</wizardKit.AutoForm>
+			<output aria-live="polite">{status}</output>
+		</section>
+	)
+}
+// [!endregion step-validation]
 
 const normalizedProfileSchema = z.object({
 	id: z.string(),
@@ -226,6 +552,36 @@ function NormalizedProfileEditor({
 	)
 }
 // [!endregion parsed-output]
+
+// [!region json-request]
+async function postProfile(value: FormOutput<typeof profileSchema>) {
+	const response = await fetch("/api/profiles", {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(value),
+	})
+
+	if (!response.ok) {
+		throw new Error("The profile could not be saved")
+	}
+}
+// [!endregion json-request]
+
+// [!region multipart-body]
+const uploadSchema = z.object({
+	title: z.string().trim().min(1),
+	attachment: z.file().optional(),
+})
+
+function createUploadBody(value: FormOutput<typeof uploadSchema>): FormData {
+	const body = new FormData()
+	body.set("title", value.title)
+	if (value.attachment !== undefined) {
+		body.set("attachment", value.attachment)
+	}
+	return body
+}
+// [!endregion multipart-body]
 
 type DepartmentOption = {
 	readonly value: string

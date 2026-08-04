@@ -187,16 +187,17 @@ const eventDefinition = nativeFormKit.defineForm(eventSchema, {
 })
 ```
 
-Generated field paths use TanStack bracket syntax. The title above can resolve
-to `speakers[2].sessions[0].title`.
+Generated field paths use React Hook Form dot syntax. The title above can resolve to
+`speakers.2.sessions.0.title`.
 
 `itemDefault` accepts a complete item or a function that returns one. Form,
 Please clones the result before each insertion. Use a function when the default
 needs a new value, such as a generated ID. This function takes no arguments and
 is not a UI resolver.
 
-Array rows use their current index as identity. Moving or removing a row changes
-later paths. Put a durable ID in the schema when state must survive reordering.
+Array paths use their current index, while RHF supplies a stable row key.
+Moving or removing a row changes later paths. Put a durable ID in the schema
+when identity must survive serialization or remounting.
 See [Arrays](/arrays) for custom array actions.
 
 ## Resolver values
@@ -272,7 +273,7 @@ descendants.
 
 When a parent is disabled or read-only, a child cannot override that state.
 When a parent is hidden, Form, Please does not render its descendants. Hidden
-fields keep their TanStack Form values.
+fields keep their React Hook Form values.
 
 These properties control the UI only. They do not change the schema or remove
 values from submission.
@@ -346,11 +347,11 @@ Sections and render nodes require an explicit `id`. Fields and arrays derive an
 ID from their path when you omit `id`. IDs must be non-empty and unique in the
 same path scope.
 
-Use dot syntax for object properties and bracket syntax for array indexes:
+Use RHF dot syntax for both object properties and array indexes:
 
 ```tsx
 { kind: "field", path: "profile.email", control: "text" }
-{ kind: "field", path: "speakers[0].name", control: "text" }
+{ kind: "field", path: "speakers.0.name", control: "text" }
 ```
 
 Do not put a root path in an array child. Use the path relative to one item:
@@ -361,7 +362,7 @@ Do not put a root path in an array child. Use the path relative to one item:
 	path: "speakers",
 	itemDefault: { name: "" },
 	children: [
-		// Correct: resolves to speakers[0].name for the first item.
+		// Correct: resolves to speakers.0.name for the first item.
 		{ kind: "field", path: "name", control: "text" },
 	],
 }
@@ -379,8 +380,8 @@ component receives the resolved inherited `disabled` and `readOnly` flags.
 A render node also accepts resolver-based `visible`, `disabled`, and
 `readOnly`. It requires an explicit `id` and a `component`.
 
-Use direct TanStack composition outside `kit.Fields` when content needs the
-form API. Render nodes deliberately receive only interaction state.
+Use direct RHF composition outside `kit.Fields` when content needs the form
+API. Render nodes deliberately receive only interaction state.
 
 ## Definition lifetime
 

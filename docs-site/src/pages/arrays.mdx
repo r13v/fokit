@@ -36,7 +36,7 @@ These four parts have different purposes:
 must start with one or more rows.
 
 Child paths are relative to one item. In the example, `path: "email"` produces
-`contacts[0].email`, `contacts[1].email`, and later paths.
+`contacts.0.email`, `contacts.1.email`, and later paths.
 
 <details>
 <summary>See the contact array from the interactive lab</summary>
@@ -65,12 +65,12 @@ itemDefault: () => ({
 })
 ```
 
-The generated add action calls the function for each insertion. It then clones
-the result with `structuredClone`. Nested objects in two generated rows do not
-share references.
+The generated add action calls the function for each insertion. It then deeply
+clones the result while preserving browser values such as `File`. Nested
+objects in two generated rows do not share references.
 
-A manual TanStack Form operation does not use `itemDefault`. Supply the new
-item when you call `field.pushValue()` or `field.insertValue()`.
+A manual React Hook Form operation does not use `itemDefault`. Supply the new
+item when you call `append()` or `insert()` from `useFieldArray`.
 
 ## Define nested arrays
 
@@ -86,11 +86,12 @@ The same definition produces these paths at runtime:
 | Definition path | Example runtime path |
 | --- | --- |
 | `speakers` | `speakers` |
-| `sessions` | `speakers[2].sessions` |
-| `title` | `speakers[2].sessions[0].title` |
+| `sessions` | `speakers.2.sessions` |
+| `title` | `speakers.2.sessions.0.title` |
 
-Generated paths use TanStack bracket syntax for array indexes. `FieldPath`,
-`ArrayFieldPath`, and `PathValue` use the same syntax.
+Generated paths use RHF dot notation for array indexes. `FieldPath`,
+`ArrayFieldPath`, and `PathValue` use the same syntax. Generated arrays contain
+object rows; use one custom control for a primitive array value.
 
 ## Validate arrays and rows
 
@@ -101,8 +102,8 @@ example reports a duplicate email on the specific row that must change:
 // [!include ~/snippets/arrays-guide.tsx:array-validation]
 ```
 
-"Form, Please" converts numeric issue paths to bracket syntax. The duplicate
-issue above resolves to a path such as `contacts[2].email`.
+"Form, Please" converts numeric issue paths to dot notation. The duplicate
+issue above resolves to a path such as `contacts.2.email`.
 
 After an invalid submit, the form focuses the first visible generated control
 with an issue. Array-level issues remain available through the array slot and
@@ -117,7 +118,7 @@ The default array slots provide these actions:
 - Remove a row.
 
 The generated add action uses `itemDefault`. Move and remove operations update
-TanStack Form state by index.
+React Hook Form state by index.
 
 When an array is disabled or read-only, the kit also disables its add, move,
 and remove actions. Child fields inherit that state. A hidden array keeps its
@@ -125,8 +126,9 @@ value and does not render. See [Conditional fields](/conditional-fields).
 
 ## Add custom array operations
 
-Use `form.api.Field` with `mode="array"` for application-owned operations. This
-example adds a toolbar after the generated fields:
+Use RHF `useFieldArray({ control: form.api.control, name })` for
+application-owned operations. This example adds a toolbar after the generated
+fields:
 
 ```tsx
 // [!include ~/snippets/arrays-guide.tsx:custom-operations]
@@ -136,28 +138,29 @@ Use these methods to add or update rows:
 
 | Method | Result |
 | --- | --- |
-| `pushValue(item)` | Adds an item at the end. |
-| `insertValue(index, item)` | Adds an item at an index. |
-| `replaceValue(index, item)` | Replaces one item. |
+| `append(item)` | Adds an item at the end. |
+| `insert(index, item)` | Adds an item at an index. |
+| `update(index, item)` | Replaces one item. |
 
 Use these methods to reorder or remove rows:
 
 | Method | Result |
 | --- | --- |
-| `moveValue(from, to)` | Moves one item to another index. |
-| `swapValues(a, b)` | Exchanges two items. |
-| `removeValue(index)` | Removes one item. |
-| `clearValues()` | Removes all items. |
+| `move(from, to)` | Moves one item to another index. |
+| `swap(a, b)` | Exchanges two items. |
+| `remove(index)` | Removes one item. |
+| `replace([])` | Removes all items. |
 
-These methods update the same TanStack Form state as the generated actions.
+These methods update the same React Hook Form state as the generated actions.
 They do not replace the generated array markup. Customize the `Array` and
 `ArrayItem` slots when you must replace that markup or its buttons. See
 [Controls and slots](/controls#implement-an-array-slot).
 
 ## Preserve row identity
 
-Rows use index identity. A move or removal changes later paths. For example,
-the item at `contacts[2]` can become `contacts[1]`.
+RHF supplies a stable `field.id` for each rendered row key. A move or removal
+still changes indexed public paths. For example, `contacts.2` can become
+`contacts.1`.
 
 Put a durable ID in each item when identity must survive reordering. Generate
 the ID in an `itemDefault` function. Do not store identity-sensitive external

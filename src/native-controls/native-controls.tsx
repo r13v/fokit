@@ -11,6 +11,7 @@ import {
 import { defineControl } from "../control-definition.js"
 import type { ControlProps } from "../types.js"
 
+/** A supported HTML input type for the native text control. */
 export type NativeTextType =
 	| "text"
 	| "email"
@@ -19,56 +20,89 @@ export type NativeTextType =
 	| "tel"
 	| "url"
 
+/** HTML behavior supported by the native text control. */
 export type NativeTextOptions = {
+	/** The semantic HTML input type. Defaults to `text`. */
 	readonly type?: NativeTextType
+	/** A short hint shown when the input has no value. */
 	readonly placeholder?: string
+	/** A browser autofill token or token list. */
 	readonly autoComplete?: string
 }
 
+/** HTML behavior supported by the native textarea control. */
 export type NativeTextareaOptions = {
+	/** A short hint shown when the textarea has no value. */
 	readonly placeholder?: string
+	/** A browser autofill token or token list. */
 	readonly autoComplete?: string
+	/** The visible text-line height of the textarea. */
 	readonly rows?: number
 }
 
+/** HTML constraints and presentation for the native number control. */
 export type NativeNumberOptions = {
+	/** The minimum accepted number. */
 	readonly min?: number
+	/** The maximum accepted number. */
 	readonly max?: number
+	/** The valid interval, or `any` for unrestricted precision. */
 	readonly step?: number | "any"
+	/** A short hint shown when the input has no value. */
 	readonly placeholder?: string
 }
 
+/** ISO date limits for the native date control. */
 export type NativeDateOptions = {
+	/** The earliest accepted date in `YYYY-MM-DD` format. */
 	readonly min?: string
+	/** The latest accepted date in `YYYY-MM-DD` format. */
 	readonly max?: string
 }
 
+/** Time limits and precision for the native time control. */
 export type NativeTimeOptions = {
+	/** The earliest accepted time as a valid HTML time value. */
 	readonly min?: string
+	/** The latest accepted time as a valid HTML time value. */
 	readonly max?: string
+	/** The valid interval in seconds, or `any` for unrestricted precision. */
 	readonly step?: number | "any"
 }
 
+/** One selectable value in a native select control. */
 export type NativeSelectOption<Value extends string | undefined = string> = {
+	/** The non-undefined field value represented by this option. */
 	readonly value: Exclude<Value, undefined>
+	/** The text shown to the user. */
 	readonly label: string
+	/** Whether the user cannot select this option. */
 	readonly disabled?: boolean
 }
 
+/** The select option that represents an undefined field value. */
 export type NativeSelectEmptyOption = {
+	/** The text shown for the undefined value. */
 	readonly label: string
+	/** Whether the user cannot return to the undefined value. */
 	readonly disabled?: boolean
 }
 
+/** Choices rendered by the native select control. */
 export type NativeSelectOptions<Value extends string | undefined = string> = {
+	/** The optional choice that maps an empty HTML value to `undefined`. */
 	readonly emptyOption?: NativeSelectEmptyOption
+	/** The non-empty choices available to the user. */
 	readonly options: readonly NativeSelectOption<Value>[]
 }
 
+/** Accepted file types for the native single-file control. */
 export type NativeFileOptions = {
+	/** A comma-separated HTML file-type filter. */
 	readonly accept?: string
 }
 
+/** Renders the native single-line text control. */
 function NativeTextControl({
 	value,
 	setValue,
@@ -100,6 +134,7 @@ function NativeTextControl({
 	)
 }
 
+/** Renders the native multiline text control. */
 function NativeTextareaControl({
 	value,
 	setValue,
@@ -131,6 +166,7 @@ function NativeTextareaControl({
 	)
 }
 
+/** Renders the native number control and preserves `undefined` for empty input. */
 function NativeNumberControl({
 	value,
 	setValue,
@@ -142,6 +178,7 @@ function NativeNumberControl({
 	readOnly,
 	required,
 }: ControlProps<number | undefined, NativeNumberOptions>): ReactElement {
+	/** Converts an HTML number input change to the field value contract. */
 	function handleChange(event: ChangeEvent<HTMLInputElement>): void {
 		if (event.currentTarget.value === "") {
 			setValue(undefined)
@@ -176,6 +213,7 @@ function NativeNumberControl({
 	)
 }
 
+/** Renders the native ISO date control. */
 function NativeDateControl({
 	value,
 	setValue,
@@ -213,6 +251,7 @@ function NativeDateControl({
 	)
 }
 
+/** Renders the native time control. */
 function NativeTimeControl({
 	value,
 	setValue,
@@ -251,6 +290,7 @@ function NativeTimeControl({
 	)
 }
 
+/** Renders the native single-value select control. */
 function NativeSelectControl({
 	value,
 	setValue,
@@ -337,6 +377,7 @@ function NativeSelectControl({
 	)
 }
 
+/** Renders the native boolean checkbox control. */
 function NativeCheckboxControl({
 	value,
 	setValue,
@@ -384,6 +425,7 @@ function NativeCheckboxControl({
 	)
 }
 
+/** Renders the native single-file control and tracks browser-owned file state. */
 function NativeFileControl({
 	value,
 	setValue,
@@ -457,6 +499,11 @@ function NativeFileControl({
 	)
 }
 
+/**
+ * Creates the built-in registry of native HTML controls.
+ *
+ * @see https://r13v.github.io/form-please/controls
+ */
 export function createNativeControls() {
 	const text = defineControl<string | undefined, NativeTextOptions>({
 		component: NativeTextControl,
@@ -502,14 +549,18 @@ export function createNativeControls() {
 	})
 }
 
+/** Cancels a value-changing event for a read-only native control. */
 function preventReadOnlyEvent(event: {
+	/** Cancels the browser default action. */
 	preventDefault(): void
+	/** Prevents ancestor handlers from receiving the event. */
 	stopPropagation(): void
 }): void {
 	event.preventDefault()
 	event.stopPropagation()
 }
 
+/** Tests whether a keyboard key can change a native select value. */
 function isSelectMutationKey(key: string): boolean {
 	return [
 		" ",
@@ -523,6 +574,7 @@ function isSelectMutationKey(key: string): boolean {
 	].includes(key)
 }
 
+/** Tests whether a keyboard key activates a button-like control. */
 function isActivationKey(key: string): boolean {
 	return key === " " || key === "Enter"
 }

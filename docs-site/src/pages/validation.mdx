@@ -7,7 +7,7 @@ showAskAi: false
 # Validation and submission
 
 Use the definition schema as the single form-level validation contract. The
-schema validates the complete TanStack Form input. It also produces the value
+schema validates the complete React Hook Form input. It also produces the value
 that `onSubmit` receives.
 
 ## Build the validation schema
@@ -21,8 +21,8 @@ transforms both seat values from strings to numbers.
 ```
 
 Give a cross-field issue the path of the field that the user must change. Form,
-Please converts Standard Schema paths to TanStack paths. Array indexes use
-bracket syntax, such as `contacts[2].email`.
+Please converts Standard Schema paths to RHF dot paths, such as
+`contacts.2.email`.
 
 ## Connect fields to the schema
 
@@ -40,18 +40,20 @@ such as `required` and `type="email"`, do not replace schema validation.
 
 ## Understand validation timing
 
+The resolver validates through React Hook Form once per validation run.
+
 Form, Please configures this validation sequence:
 
 | User action | Result |
 | --- | --- |
 | Edit before the first submit | The form does not run change validation. |
-| Submit for the first time | TanStack Form validates the complete schema input. |
-| Edit after the first submit attempt | TanStack Form validates on each change. |
-| Submit valid input | Form, Please parses the input again and calls `onSubmit`. |
+| Submit for the first time | React Hook Form validates the complete schema input. |
+| Edit after the first submit attempt | React Hook Form validates on each change. |
+| Submit valid input | The resolver returns transformed output and "Form, Please" calls `onSubmit`. |
 
 The first submit attempt can be valid or invalid. After that attempt, each edit
-runs the complete form-level schema. Form, Please does not configure a debounce
-or a separate field-validation cache.
+runs the complete form-level schema. `useForm` can override `mode`,
+`reValidateMode`, and `delayError`; it does not expose a replacement resolver.
 
 ## Display issues
 
@@ -83,9 +85,9 @@ application must render its own summary for form-level and hidden-field issues.
 
 ## Focus the first issue
 
-After an invalid submit, Form, Please checks visible generated controls in
-document order. It focuses the first control that has an issue and can receive
-focus.
+After an invalid submit, RHF focuses its first registered invalid field,
+including an application-owned field. Focus order follows RHF registration
+order.
 
 If no generated control can receive focus, `kit.AutoForm` focuses the first
 error-summary item. A manually composed `kit.Form` has no automatic summary
@@ -98,18 +100,10 @@ must not block submission.
 
 ## Transformed output
 
-Standard Schema validation does not store transformed output in TanStack Form.
-"Form, Please" follows the [TanStack Form submission recommendation](https://tanstack.com/form/v1/docs/framework/react/guides/submission-handling#transforming-data-with-standard-schemas):
-it parses the same input a second time after successful validation.
-
-- The first parse validates through TanStack Form.
-- The second parse produces `FormOutput<Schema>` for `onSubmit`.
-- There is no custom validation cache.
-
-Keep schema validation deterministic. The same input must have the same
-validity during one submit attempt. Form, Please rejects the submit with an
-invariant error if the second parse returns issues after the first parse
-succeeded.
+The internal RHF resolver validates and produces `FormOutput<Schema>` in one
+Standard Schema parse. Editable `FormInput<Schema>` remains in RHF state;
+transformed output is passed only to a successful submit callback. No custom
+validation cache is required.
 
 ## Submit input and output
 
@@ -127,7 +121,7 @@ baseline with `input` after a successful request.
 ```
 
 `onSubmit` does not receive submit metadata. It can return a promise.
-`form.api.state.isSubmitting` remains true until the promise settles.
+`form.api.formState.isSubmitting` remains true until the promise settles.
 `kit.Submit` is disabled while the form validates or submits.
 
 Server validation is still required. A request failure is not a Standard Schema

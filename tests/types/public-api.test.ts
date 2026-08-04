@@ -4,9 +4,13 @@ import {
 	createFormKit,
 	defineControl,
 	type FieldPath,
+	type FormBinding,
 	type FormKitSlots,
 	type PathValue,
 } from "../../src/index.js"
+
+declare const untypedBinding: FormBinding
+void untypedBinding.api.getValues().unknownField
 
 type Input = {
 	readonly name: string
@@ -114,12 +118,13 @@ function useTypedBinding() {
 		onSubmit({ value, input, form: binding }) {
 			value.accepted satisfies true
 			input.name satisfies string
-			binding.api.Field satisfies object
+			binding.api.control satisfies object
+			binding.api.register satisfies object
 			// @ts-expect-error Submit metadata is not part of Form Please.
 			value.meta
 		},
 	})
-	form.api.Subscribe satisfies object
+	form.api.subscribe satisfies object
 	return form
 }
 
@@ -134,7 +139,7 @@ void useMissingContext
 
 // @ts-expect-error The kit has no extension runtime.
 void kit.extend
-// @ts-expect-error Raw TanStack components live on form.api, not kit.tf.
+// @ts-expect-error There is no second or compatibility runtime on the kit.
 void kit.tf
 
 kit.defineForm(schema, {
@@ -184,8 +189,15 @@ kit.defineForm(schema, {
 })
 
 type _NestedPath =
-	"speakers[0].sessions[0].title" extends FieldPath<Input> ? true : false
+	"speakers.0.sessions.0.title" extends FieldPath<Input> ? true : false
 const nestedPath: _NestedPath = true
-const nestedValue: PathValue<Input, "speakers[0].sessions[0].title"> = "Talk"
+const nestedValue: PathValue<Input, "speakers.0.sessions.0.title"> = "Talk"
 void nestedPath
 void nestedValue
+
+// @ts-expect-error Bracket paths are not part of the public RHF path contract.
+type _BracketValue = PathValue<Input, "speakers[0].name">
+
+const primitiveSchema = {} as StandardSchemaV1<string>
+// @ts-expect-error RHF form roots must be objects.
+kit.defineForm(primitiveSchema, { ui: [] })

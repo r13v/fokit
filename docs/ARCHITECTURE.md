@@ -5,12 +5,12 @@ surface.
 
 ## System boundary
 
-Form, Please is a React integration over TanStack Form.
+Form, Please is a React integration over React Hook Form.
 
 | Owner | Responsibility |
 | --- | --- |
 | Standard Schema | Input validity, issues, and transformed submit output |
-| TanStack Form | Editable values, field metadata, validation scheduling, subscriptions, submission state, and array operations |
+| React Hook Form | Editable values, field metadata, validation scheduling, subscriptions, submission state, context, and array operations |
 | Form, Please | Typed UI definitions, definition resolution, generated fields, controls, slots, context, and accessibility wiring |
 | Application | Product workflow, requests, caches, authorization, storage, server transport, and visual design |
 
@@ -22,7 +22,7 @@ validation cache.
 
 ```mermaid
 flowchart TD
-    Root["form-please"] --> TanStack["@tanstack/react-form"]
+    Root["form-please"] --> RHF["react-hook-form"]
     NativePreset["form-please/preset-native"] --> Root
     NativePreset --> NativeControls["form-please/native-controls"]
     NativePreset --> DefaultSlots["form-please/default-slots"]
@@ -39,8 +39,9 @@ Public JavaScript entries are limited to:
 - `form-please/preset-mui`.
 
 `form-please/layout.css` and `form-please/package.json` are explicit non-code
-exports. All JavaScript entries are React client modules. TanStack Form is a
-required peer. Material UI and Emotion peers remain optional because only the
+exports. All JavaScript entries are React client modules. React Hook Form 7.55
+or newer within major version 7 is a required peer. Material UI and Emotion
+peers remain optional because only the
 Material UI preset uses them.
 
 ## Canonical modules
@@ -50,7 +51,8 @@ Material UI preset uses them.
 | `src/types.ts` | Schema, path, control, definition, resolver, slot, and structural types |
 | `src/control-definition.ts` | Validate and freeze a typed control definition |
 | `src/definition.ts` | Validate, normalize, and synchronously resolve UI definitions |
-| `src/create-form-kit.tsx` | Create kits, bind TanStack Form, render generated UI, submit, normalize issues, and focus errors |
+| `src/standard-schema-resolver.ts` | Validate through Standard Schema once and translate all issues to and from RHF errors |
+| `src/create-form-kit.tsx` | Create kits, bind React Hook Form, render generated UI, submit, and focus errors |
 | `src/resource.ts` | Pure `ResourceState`, `matchResource`, and `fromResource` helpers |
 | `src/index.ts` | Canonical root exports |
 
@@ -80,15 +82,17 @@ A definition contains a Standard Schema and a recursive UI tree.
 - A render node inserts a component that receives inherited `disabled` and
   `readOnly` state.
 
-Sections and arrays can nest recursively. Array paths use TanStack bracket
-syntax. `FieldPath` and `PathValue` use TanStack `DeepKeys` and `DeepValue`.
+Sections and arrays can nest recursively. Paths use RHF dot notation, including
+numeric array segments such as `speakers.0.name`. `FieldPath`, `PathValue`, and
+`ArrayFieldPath` delegate to RHF path types. Generated arrays contain object
+items; primitive arrays can use an application-owned control.
 
 The type system aligns field paths with control values, control options,
 control context, slot options, array item defaults, and grid values.
 
 ## Resolution
 
-`kit.Fields` subscribes to the complete TanStack Form value. Each change
+`kit.Fields` watches the complete React Hook Form value. Each change
 resolves the complete UI tree. Form, Please does not maintain a dependency
 graph or resolution cache.
 
@@ -101,74 +105,85 @@ Resolvers must return synchronously. Promise-like results cause an explicit
 error. Readonly is a TypeScript contract; the runtime does not deep-clone or
 proxy resolver input.
 
-Visibility affects rendering only. Hidden fields preserve their TanStack Form
-values.
+Visibility affects rendering only. Hidden fields preserve their React Hook
+Form values because unregistration is disabled.
 
 ## Form binding and lifetime
 
 `kit.useForm` creates a thin `FormBinding`:
 
-- `api`: the typed TanStack Form API;
+- `api`: the unchanged typed RHF `UseFormReturn`;
 - `definition`: the fixed normalized definition;
-- `context`, `disabled`, and `readOnly`: Form, Please runtime inputs;
-- internal generated-control and error-summary references for focus.
+- `context`: the Form, Please runtime context.
+
+The binding belongs to the exact kit that created it. Another kit's `Form`
+rejects it before rendering.
+
+Disabled and read-only state, generated-control references, the submit wrapper,
+and the error-summary reference remain private runtime data.
 
 The definition is fixed for the hook lifetime. Passing another definition does
 not replace it. A caller must change a React `key` to remount the component and
 create another form.
 
-Manual TanStack composition uses `form.api.Field`, `form.api.FormGroup`, and
-`form.api.Subscribe` directly.
+`kit.Form` provides the same API through RHF `FormProvider`. Manual composition
+uses ordinary RHF APIs such as `register`, `Controller`, `useController`,
+`useWatch`, `useFormState`, `useFieldArray`, and `useFormContext`.
 
 ## Validation and submission
 
-The definition Standard Schema is the only form-level validator. TanStack Form
-uses submit validation before the first submit and change validation after it.
+The definition Standard Schema is the only form-level validator. The internal
+RHF resolver collects all issues, including issues without a path. Validation
+defaults to submit mode and change revalidation after the first submit.
 
 On a successful submit:
 
-1. TanStack Form validates the editable input.
-2. Form, Please validates the same input again.
-3. The second result supplies transformed `FormOutput<Schema>`.
-4. Form, Please calls `onSubmit({ value, input, form })`.
+1. `kit.Form` captures a deep editable-input snapshot while preserving browser
+   values such as `File` and `Blob`.
+2. RHF invokes the internal Standard Schema resolver once.
+3. The resolver returns transformed `FormOutput<Schema>`.
+4. Form, Please calls `onSubmit({ value, input, form })` with the matching
+   snapshot and output.
 
-This double parse follows TanStack Form's Standard Schema transform guidance.
-There is no custom validation cache. If the second parse returns issues after
-the first parse succeeded, Form, Please rejects with an invariant error because
-one input changed validity within one submit attempt.
+Direct `form.api.handleSubmit(onValid, onInvalid)` remains raw RHF behavior and
+does not invoke the configured Form Please wrapper. Resolver ownership,
+`criteriaMode: "all"`, retained hidden values, and RHF error focus are runtime
+invariants. Callers can choose `mode`, `reValidateMode`, and `delayError` but
+cannot replace the resolver.
 
 Public issues contain only `message` and optional `path`.
 
 ## Generated rendering
 
-`kit.Form` provides the binding context and owns native submit and reset event
-handling. `kit.Fields` resolves and renders the definition. `kit.AutoForm`
-composes the error summary and generated fields. `kit.Submit` delegates to the
-configured submit slot.
+`kit.Form` provides RHF and Form Please contexts and owns native submit and
+reset event handling. `kit.Fields` resolves and renders the definition.
+`kit.AutoForm` composes the error summary and generated fields. `kit.Submit`
+delegates to the configured submit slot.
 
 Controls receive typed values and updates plus accessibility IDs, metadata,
 options, context, and interaction flags. The control contract has no browser
-serialization mode. Submission uses TanStack Form input values.
+serialization mode. Submission uses React Hook Form values.
 
 Slots own structural markup for fields, sections, arrays, array items, errors,
 and submit buttons.
 
 ## Arrays
 
-Generated array rows use current numeric indexes as React and path identity.
-Add, remove, and move delegate to TanStack Form array field operations. Item
-defaults are cloned before insertion.
-
-Stable logical row IDs are outside the runtime contract. Applications that
-need durable row identity must include it in the schema value.
+Generated arrays use RHF `useFieldArray`. Paths contain current numeric indexes,
+while each React row key uses RHF's stable `field.id`. Add, remove, and move
+delegate to `append`, `remove`, and `move`. Item defaults are cloned before
+insertion. Applications still need a schema-owned ID when row identity must
+survive serialization or a new form instance.
 
 ## Error focus
 
-Generated visible controls register their focusable element by current field
-path. After invalid submit, Form, Please visits registered controls in rendered
-order and focuses the first one with an issue that can receive focus. If none
-can, it focuses the first rendered error-summary item. Issues for disabled
-controls remain in that summary.
+RHF focuses the first registered invalid field, including application-owned
+fields, and therefore owns focus order. After RHF's focus attempts, Form Please
+focuses the first error-summary item only when focus did not land on an invalid
+field. Issues without a path and issues for disabled generated controls remain
+in that summary. Because RHF reserves the top-level `errors.root` key, schema
+issues for input paths under `root` are mirrored internally and use the summary
+fallback without losing their original path.
 
 ## Resource helpers
 

@@ -4,6 +4,7 @@
 import { createFormKit, type FormInput } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
+import { useFieldArray } from "react-hook-form"
 import { z } from "zod"
 
 const kit = createFormKit({
@@ -136,39 +137,35 @@ export function ContactsForm() {
 	const form = kit.useForm(contactsDefinition, {
 		defaultValues: contactDefaultValues,
 	})
-	const Field = form.api.Field
+	const { fields, insert, move, replace } = useFieldArray({
+		control: form.api.control,
+		name: "contacts",
+	})
 
 	return (
 		<kit.Form form={form}>
 			<kit.Fields />
 
-			<Field name="contacts" mode="array">
-				{(field) => (
-					<fieldset>
-						<legend>Contact actions</legend>
-						<button
-							type="button"
-							onClick={() => field.insertValue(0, createContact())}
-						>
-							Add primary contact
-						</button>
-						<button
-							disabled={field.state.value.length < 2}
-							type="button"
-							onClick={() => field.moveValue(field.state.value.length - 1, 0)}
-						>
-							Move last contact first
-						</button>
-						<button
-							disabled={field.state.value.length === 0}
-							type="button"
-							onClick={() => field.clearValues()}
-						>
-							Remove all contacts
-						</button>
-					</fieldset>
-				)}
-			</Field>
+			<fieldset>
+				<legend>Contact actions</legend>
+				<button type="button" onClick={() => insert(0, createContact())}>
+					Add primary contact
+				</button>
+				<button
+					disabled={fields.length < 2}
+					type="button"
+					onClick={() => move(fields.length - 1, 0)}
+				>
+					Move last contact first
+				</button>
+				<button
+					disabled={fields.length === 0}
+					type="button"
+					onClick={() => replace([])}
+				>
+					Remove all contacts
+				</button>
+			</fieldset>
 
 			<kit.Submit>Save contacts</kit.Submit>
 		</kit.Form>

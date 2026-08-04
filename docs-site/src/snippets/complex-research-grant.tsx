@@ -214,9 +214,9 @@ function OrganizationFinder({
 						aria-pressed={selectedId === record.id}
 						key={record.id}
 						onClick={() => {
-							form.api.setFieldValue("organization.registryId", record.id)
-							form.api.setFieldValue("organization.name", record.name)
-							form.api.setFieldValue(
+							form.api.setValue("organization.registryId", record.id)
+							form.api.setValue("organization.name", record.name)
+							form.api.setValue(
 								"organization.registrationCountry",
 								record.country,
 							)
@@ -488,6 +488,18 @@ function ResearchGrantForm() {
 	let status = receipt
 	if (send.isPending) status = "Sending application…"
 	if (preview.isPending) status = "Building preview…"
+	const values = form.api.watch()
+	let finder = null
+	if (values.organization.path === "registered") {
+		finder = (
+			<OrganizationFinder
+				form={form}
+				selectedId={values.organization.registryId}
+			/>
+		)
+	}
+	let applicantLabel = "Individual"
+	if (values.applicantKind === "collective") applicantLabel = "Collective"
 
 	return (
 		<section
@@ -500,41 +512,18 @@ function ResearchGrantForm() {
 				and a two-request submission all share one typed form state.
 			</p>
 			<kit.AutoForm className="form-please-complex__form" form={form}>
-				<form.api.Subscribe selector={(state) => state.values}>
-					{(values) => {
-						let finder = null
-						if (values.organization.path === "registered") {
-							finder = (
-								<OrganizationFinder
-									form={form}
-									selectedId={values.organization.registryId}
-								/>
-							)
-						}
-						let applicantLabel = "Individual"
-						if (values.applicantKind === "collective") {
-							applicantLabel = "Collective"
-						}
-						return (
-							<>
-								{finder}
-								<aside
-									aria-label="Application preview"
-									className="form-please-complex__preview"
-								>
-									<strong>
-										{values.project.title || "Untitled application"}
-									</strong>
-									<span>
-										{applicantLabel}
-										{" · "}${values.project.requestedFunds.toLocaleString()} ·{" "}
-										{values.project.durationMonths} months
-									</span>
-								</aside>
-							</>
-						)
-					}}
-				</form.api.Subscribe>
+				{finder}
+				<aside
+					aria-label="Application preview"
+					className="form-please-complex__preview"
+				>
+					<strong>{values.project.title || "Untitled application"}</strong>
+					<span>
+						{applicantLabel}
+						{" · "}${values.project.requestedFunds.toLocaleString()} ·{" "}
+						{values.project.durationMonths} months
+					</span>
+				</aside>
 				<div className="form-please-complex__actions">
 					<kit.Submit className="form-please-complex__primary">
 						Preview and send

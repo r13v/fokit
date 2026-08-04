@@ -4,6 +4,13 @@ description: Compose custom UI, manage edit baselines, submit safely, handle rem
 showAskAi: false
 ---
 
+import {
+	AtomicValuesRecipePreview,
+	DraftSubscriptionRecipePreview,
+	SavedBaselineRecipePreview,
+	StepValidationRecipePreview,
+} from "../components/production-recipes-demo"
+
 # Production recipes
 
 Use this page after the first generated form works. Choose the recipe that
@@ -14,27 +21,32 @@ matches the problem in your application.
 | Add product UI around generated fields | One binding with `kit.Form` and `kit.Fields` |
 | Replace the document being edited | A React `key` or `form.api.reset(nextInput)` |
 | Discard edits | A `type="reset"` button |
+| Save a new baseline without replacing later edits | `form.api.resetDefaultValues(input)` |
+| Apply one update to multiple fields | `form.api.setValues(values)` |
+| Observe values without a form render subscription | `form.api.subscribe` |
+| Validate one wizard step | `form.api.trigger` and `form.api.setFocus` |
 | Save parsed data | The `value` argument in `onSubmit` |
 | Show a request failure | Application state with `role="alert"` |
+| Show a server field issue | `form.api.setError` |
 | Use remote options | Form context and `fromResource` |
 | Lock the complete form | The `disabled` or `readOnly` option |
 | Add a design-system control | `defineControl` and the full `ControlProps` contract |
 
-TanStack Form owns editable form state. The application owns requests, caches,
+React Hook Form owns editable form state. The application owns requests, caches,
 persistence, navigation, permissions, and product workflow state.
 
 ## Compose generated and custom UI
 
 Create one form binding for one form. Put generated fields, application
-actions, TanStack fields, and subscriptions inside the same `kit.Form`.
+actions, RHF fields, and watched state inside the same `kit.Form`.
 
 ```tsx
 // [!include ~/snippets/production-recipes.tsx:composition]
 ```
 
-Use `form.api.Field` when custom UI needs one field API. Use
-`form.api.Subscribe` when UI needs selected form state. Use methods such as
-`form.api.setFieldValue` for application actions that change form values.
+Use RHF `Controller`, `useController`, or `register` for custom fields. Use
+`useWatch` and `useFormState` for derived UI. The unchanged methods on
+`form.api`, such as `setValue`, remain available for application actions.
 
 Do not copy a form value into React state. Two editable copies can become
 inconsistent. Do not create a second form binding for another panel that edits
@@ -53,9 +65,8 @@ Use the document ID as a React `key` when navigation can replace the document.
 // [!include ~/snippets/production-recipes.tsx:edit-baseline]
 ```
 
-The form definition is fixed for one component mount. A changed
-`defaultValues` object updates TanStack Form values only while the form is
-untouched. After a user touches the form, TanStack Form preserves their work.
+The form definition and synchronous `defaultValues` are fixed for one component
+mount. Changing either prop does not replace current values.
 
 Do not use this conditional update as a document navigation workflow. Remount
 the editor for a different document. Call `form.api.reset(nextInput)` only when
@@ -79,12 +90,91 @@ Use these operations for different results:
 | --- | --- |
 | `form.api.reset()` | Restore the current baseline and clear form metadata. |
 | `form.api.reset(nextInput)` | Install `nextInput` as the clean baseline. |
-| Change `defaultValues` | Update an untouched form only. |
+| Change `defaultValues` | No effect until the hook remounts. |
 | Change the editor `key` | Create a new form for another document. |
+
+## Update the saved baseline without replacing new edits
+
+Requires React Hook Form 7.77.0 or newer.
+
+Use `resetDefaultValues` after the server saves the submitted input. This
+operation changes the clean baseline. It does not replace the current field
+values.
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:saved-baseline]
+```
+
+The preview waits before it completes the save operation. Submit the form, then
+change the name. The new name stays in the field and the form stays dirty.
+
+<SavedBaselineRecipePreview />
+
+Use the submitted `input` when the server accepts that exact input. Use the
+server's canonical schema input when the server returns different editable
+values.
+
+## Apply one update to multiple fields
+
+Requires React Hook Form 7.74.0 or newer.
+
+Use `setValues` when one action changes multiple fields. One call updates the
+fields and applies the same dirty, touch, and validation options to each value.
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:atomic-values]
+```
+
+The preview applies one profile template to three fields.
+
+<AtomicValuesRecipePreview />
+
+Pass only the fields that the action owns. Do not use `setValues` to install a
+new document baseline. Use `reset(nextInput)` for that operation.
+
+## Save a draft with a subscription
+
+Requires React Hook Form 7.55.0 or newer.
+
+Use `subscribe` when an external process needs current form values. The
+subscription does not rerender the form when values change. This preview
+updates application state only to show the saved draft.
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:draft-subscription]
+```
+
+The preview waits 400 ms after the last change, then stores the current draft.
+
+<DraftSubscriptionRecipePreview />
+
+Return the unsubscribe function from the effect cleanup. Do not call form
+mutation methods from the subscription callback.
+
+## Validate one wizard step
+
+Requires React Hook Form 7.55.0 or newer. This version is the minimum version
+that Form, Please supports.
+
+Use `trigger` with the paths for the current step. Use `setFocus` when the step
+contains an invalid field. Hidden fields keep their values when the next step
+renders.
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:step-validation]
+```
+
+The preview marks the current fields as touched before validation. This action
+makes their validation messages visible without a form submission.
+
+<StepValidationRecipePreview />
+
+Keep the complete form rules in the Standard Schema. The path list controls
+step navigation. It does not create a second validation contract.
 
 ## Keep async submission in the application
 
-Return the request promise from `onSubmit`. TanStack Form keeps
+Return the request promise from `onSubmit`. React Hook Form keeps
 `isSubmitting` true until that promise settles. `kit.Submit` disables its button
 while validation or submission is in progress.
 
@@ -98,10 +188,36 @@ canonical input.
 
 A transport failure is not a schema issue. Keep it out of the form error
 summary. If the server identifies invalid field values, adapt that response to
-the schema or the applicable TanStack field error API.
+the schema or RHF `setError`.
 
 The visible `kit.Submit` prevents normal duplicate clicks. If application code
-calls `form.api.handleSubmit()`, that code must also prevent concurrent calls.
+calls `form.api.handleSubmit(onValid, onInvalid)`, that code must also prevent
+concurrent calls. Raw `handleSubmit` does not invoke the configured
+"Form, Please" wrapper.
+
+## Apply server field errors
+
+Use `form.api.setError` when the server identifies a specific editable field.
+Keep request and form-level failures in application state.
+
+First, define and validate the server response:
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:server-response]
+```
+
+Then apply only the validated field paths:
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:server-field-errors]
+```
+
+Validate the server response before you apply it. Map only known server paths
+to schema input paths. A generated control displays the error after the submit
+attempt. `shouldFocus` moves focus to the first server field error.
+
+Clear old server errors before the next request. Do not convert network,
+authorization, or service failures into field errors.
 
 ## Send schema output and reset with schema input
 
@@ -123,8 +239,28 @@ Send `value` when the server expects parsed output. Pass schema input to
 input at the application boundary.
 
 Keep schema parsing deterministic. Form, Please parses once for validation and
-again to obtain output. The same input must have the same validity during one
-submit attempt.
+returns the transformed output from that parse. The schema must still be free
+of side effects because React Hook Form can validate it again after later user
+actions.
+
+## Choose the transport format
+
+"Form, Please" does not serialize the submit value. Send JSON when the server
+accepts the parsed object:
+
+```ts
+// [!include ~/snippets/production-recipes.tsx:json-request]
+```
+
+Build `FormData` explicitly when the request includes a file:
+
+```ts
+// [!include ~/snippets/production-recipes.tsx:multipart-body]
+```
+
+Do not set the `content-type` header when `fetch` sends `FormData`. The browser
+adds the multipart boundary. Handle non-success responses with the async
+submission pattern above.
 
 ## Pass request state through context
 

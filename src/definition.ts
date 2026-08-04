@@ -6,34 +6,56 @@ import type {
 	StandardSchema,
 } from "./types.js"
 
+/** A supported UI node discriminator. */
 type NodeKind = "array" | "field" | "render" | "section"
+/** A normalized node used by the definition resolver. */
 type RuntimeNode = NormalizedNode & {
+	/** Preserves normalized node properties without widening their contracts. */
 	readonly [key: string]: unknown
+	/** The node category used by resolution. */
 	readonly kind: NodeKind
+	/** Normalized child templates for sections and arrays. */
 	readonly children?: readonly RuntimeNode[]
 }
 
+/** A normalized UI node with all dynamic properties resolved. */
 export type ResolvedNode = {
+	/** Preserves resolved node properties for runtime renderers. */
 	readonly [key: string]: unknown
+	/** The unique runtime ID, including any array item prefix. */
 	readonly id: string
+	/** The node category used by the renderer. */
 	readonly kind: NodeKind
+	/** The absolute input path for a field or array node. */
 	readonly path?: string
+	/** Whether the renderer includes this node. */
 	readonly visible: boolean
+	/** Whether user interaction with this node is disabled. */
 	readonly disabled: boolean
+	/** Whether value changes in this node are read-only. */
 	readonly readOnly: boolean
+	/** The runtime context supplied to controls and render nodes. */
 	readonly context: unknown
+	/** Resolved section children. */
 	readonly children?: readonly ResolvedNode[]
+	/** Resolved child nodes for each current array item. */
 	readonly itemChildren?: readonly (readonly ResolvedNode[])[]
 }
 
+/** The root UI tree and flat index produced by definition resolution. */
 export type ResolvedDefinition = {
+	/** Resolved root nodes in render order. */
 	readonly ui: readonly ResolvedNode[]
+	/** All resolved nodes in depth-first order. */
 	readonly nodes: readonly ResolvedNode[]
 }
 
+/** The default column and span scale for a form kit. */
 const defaultGrid = Object.freeze([1, 2, 3, 4])
+/** Path segments rejected to prevent prototype traversal. */
 const reservedSegments = new Set(["__proto__", "constructor", "prototype"])
 
+/** Validates, sorts, and freezes a form kit grid scale. */
 export function normalizeGrid(
 	grid: readonly unknown[] | undefined,
 	owner: "createFormKit",
@@ -62,6 +84,7 @@ export function normalizeGrid(
 	return Object.freeze([...unique].sort((left, right) => left - right))
 }
 
+/** Validates and freezes a user-authored form definition. */
 export function normalizeDefinition<Schema extends StandardSchema>(
 	schema: Schema,
 	source: unknown,
@@ -88,11 +111,15 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 	}) as FormDefinition<Schema>
 }
 
+/** Validates and normalizes one nested list of UI nodes. */
 function normalizeNodes(
 	source: readonly unknown[],
 	state: {
+		/** Controls available to field nodes. */
 		readonly controls: ControlDefinitionRegistry
+		/** Scoped IDs already claimed by normalized nodes. */
 		readonly ids: Set<string>
+		/** Flat destination for normalized nodes. */
 		readonly nodes: RuntimeNode[]
 	},
 	scopePath: string,
@@ -167,11 +194,17 @@ function normalizeNodes(
 	)
 }
 
+/** Resolves all dynamic definition values for the current input and context. */
 export function resolveDefinition<Schema extends StandardSchema, Context>(
 	definition: FormDefinition<Schema>,
 	values: FormInput<Schema>,
 	context: Context,
-	options: { readonly disabled?: boolean; readonly readOnly?: boolean },
+	options: {
+		/** Disables all nodes in the resolved definition. */
+		readonly disabled?: boolean
+		/** Makes all nodes in the resolved definition read-only. */
+		readonly readOnly?: boolean
+	},
 ): ResolvedDefinition {
 	const resolvedNodes: ResolvedNode[] = []
 	const resolveNodes = (
@@ -179,9 +212,13 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 		pathPrefix: string,
 		idPrefix: string,
 		parent: {
+			/** Whether the parent is visible. */
 			readonly visible: boolean
+			/** Whether the parent is disabled. */
 			readonly disabled: boolean
+			/** Whether the parent is read-only. */
 			readonly readOnly: boolean
+			/** The parent grid column count, when it defines a grid. */
 			readonly columns?: number
 		},
 	): readonly ResolvedNode[] =>
@@ -293,8 +330,8 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 									arrayValue.map((_item, index) =>
 										resolveNodes(
 											node.children ?? [],
-											`${path}[${index}]`,
-											`${idPrefix}${idPrefix.length === 0 ? "" : "."}${path}[${index}]`,
+											`${path}.${index}`,
+											`${idPrefix}${idPrefix.length === 0 ? "" : "."}${path}.${index}`,
 											{ visible, disabled, readOnly },
 										),
 									),
@@ -337,6 +374,7 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 	return Object.freeze({ ui, nodes: Object.freeze(resolvedNodes) })
 }
 
+/** Resolves a value or uses its default when it is absent. */
 function resolveValue<Value, Context>(
 	value: unknown,
 	fallback: Value,
@@ -349,6 +387,7 @@ function resolveValue<Value, Context>(
 		: (resolveOptional(value, values, pathPrefix, context) as Value)
 }
 
+/** Resolves a synchronous UI value when it is a function. */
 function resolveOptional<Context>(
 	value: unknown,
 	values: unknown,
@@ -361,7 +400,10 @@ function resolveOptional<Context>(
 	const result = (
 		value as (
 			resolverValues: unknown,
-			details: { readonly context: Readonly<Context> },
+			details: {
+				/** The readonly runtime context for the resolver. */
+				readonly context: Readonly<Context>
+			},
 		) => unknown
 	)(values, { context })
 	if (
@@ -375,9 +417,10 @@ function resolveOptional<Context>(
 	return result
 }
 
+/** Reads a value from an object by a validated dot path. */
 function getPathValue(value: unknown, path: string): unknown {
 	let current = value
-	for (const segment of path.replaceAll(/\[(\d+)\]/g, ".$1").split(".")) {
+	for (const segment of path.split(".")) {
 		if (current === null || typeof current !== "object") {
 			return undefined
 		}
@@ -386,14 +429,15 @@ function getPathValue(value: unknown, path: string): unknown {
 	return current
 }
 
+/** Validates a relative field or array path. */
 function normalizePath(value: unknown): string {
 	if (typeof value !== "string" || value.length === 0) {
 		throw new TypeError("Field and array paths must be non-empty strings")
 	}
-	if (!/^[^.[\]]+(?:(?:\.[^.[\]]+)|(?:\[(?:0|[1-9]\d*)\]))*$/.test(value)) {
-		throw new TypeError(`Path "${value}" uses invalid TanStack path syntax`)
+	if (!/^[^.[\]]+(?:\.[^.[\]]+)*$/.test(value)) {
+		throw new TypeError(`Path "${value}" uses invalid React Hook Form syntax`)
 	}
-	const segments = value.replaceAll(/\[(\d+)\]/g, ".$1").split(".")
+	const segments = value.split(".")
 	for (const [index, segment] of segments.entries()) {
 		if (segment.length === 0 || reservedSegments.has(segment)) {
 			throw new TypeError(`Path "${value}" contains an invalid segment`)
@@ -405,6 +449,7 @@ function normalizePath(value: unknown): string {
 	return value
 }
 
+/** Validates a non-empty UI node ID. */
 function normalizeId(value: unknown): string {
 	if (typeof value !== "string" || value.length === 0) {
 		throw new TypeError("UI node ids must be non-empty strings")
@@ -412,13 +457,15 @@ function normalizeId(value: unknown): string {
 	return value
 }
 
+/** Joins a path scope and relative path. */
 function joinPath(prefix: string, path: string): string {
 	if (prefix.length === 0) {
 		return path
 	}
-	return path.startsWith("[") ? `${prefix}${path}` : `${prefix}.${path}`
+	return `${prefix}.${path}`
 }
 
+/** Validates a section column count against the kit grid. */
 function validateColumns(value: unknown, grid: readonly number[]): number {
 	if (typeof value !== "number" || !grid.includes(value)) {
 		throw new TypeError(`Section layout columns must use the kit grid`)
@@ -426,6 +473,7 @@ function validateColumns(value: unknown, grid: readonly number[]): number {
 	return value
 }
 
+/** Validates a node span against the kit grid and its parent grid. */
 function validateSpan(
 	value: unknown,
 	grid: readonly number[],
@@ -444,6 +492,7 @@ function validateSpan(
 	return value
 }
 
+/** Asserts that a value implements the Standard Schema validation contract. */
 function assertStandardSchema(value: unknown): asserts value is StandardSchema {
 	if (
 		!isRecord(value) ||
@@ -454,6 +503,7 @@ function assertStandardSchema(value: unknown): asserts value is StandardSchema {
 	}
 }
 
+/** Tests whether a value is a non-array object record. */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value)
 }

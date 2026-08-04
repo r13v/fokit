@@ -18,7 +18,7 @@ slot registry, and grid. It does not have a runtime extension API.
 
 ## Controls
 
-A control receives a field value from TanStack Form. It renders the interactive
+A control receives a field value from React Hook Form. It renders the interactive
 component and sends typed values back to the form.
 
 The control does not render the field label, description, or error messages.
@@ -44,7 +44,7 @@ Choose an empty value that matches the schema input type.
 | Property | Purpose |
 | --- | --- |
 | `path` | The field path in the schema input. |
-| `value` | The current TanStack Form value. |
+| `value` | The current React Hook Form value. |
 | `setValue(value)` | Store a new typed value. Do not pass a browser event. |
 | `blur()` | Mark the field as blurred. Call it from the component blur event. |
 | `input` | IDs, the field name, and the focus ref for the interactive element. |
@@ -73,7 +73,7 @@ The remaining metadata has these meanings:
 | --- | --- |
 | `dirty` | The user modified the field value. |
 | `touched` | The user interacted with the field. |
-| `validating` | TanStack Form is validating the field. |
+| `validating` | React Hook Form is validating the field. |
 | `errors` | All normalized field issues. |
 | `displayErrors` | Issues that the form currently shows. |
 | `invalid` | `displayErrors` contains at least one issue. |
@@ -147,7 +147,7 @@ and input ref.
 
 ### Value and submission rules
 
-Controls store schema input values in TanStack Form. They do not serialize
+Controls store schema input values in React Hook Form. They do not serialize
 values for submission. A field name or a browser `FormData` value does not
 change the submitted result.
 

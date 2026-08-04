@@ -1,3 +1,6 @@
+"use client"
+
+// [!region schema]
 import { nativeFormKit as kit } from "form-please/preset-native"
 import { z } from "zod"
 
@@ -10,7 +13,9 @@ const profileSchema = z
 		...input,
 		slug: input.name.trim().toLowerCase().replaceAll(" ", "-"),
 	}))
+// [!endregion schema]
 
+// [!region definition]
 const profileDefinition = kit.defineForm(profileSchema, {
 	ui: [
 		{
@@ -30,7 +35,9 @@ const profileDefinition = kit.defineForm(profileSchema, {
 		},
 	],
 })
+// [!endregion definition]
 
+// [!region component]
 export function ProfileForm() {
 	const form = kit.useForm(profileDefinition, {
 		defaultValues: { name: "", email: "" },
@@ -46,3 +53,4 @@ export function ProfileForm() {
 		</kit.AutoForm>
 	)
 }
+// [!endregion component]

@@ -8,14 +8,14 @@
 		"build": "vite build"
 	},
 	"dependencies": {
-		"@tanstack/react-form": "1.33.3",
 		"@emotion/react": "11.14.0",
 		"@emotion/styled": "11.14.1",
 		"@mui/material": "9.2.0",
 		"@vitejs/plugin-react": "6.0.4",
 		"vite": "8.1.5",
 		"react": "19.2.8",
-		"react-dom": "19.2.8"
+		"react-dom": "19.2.8",
+		"react-hook-form": "7.84.0"
 	},
 	"devDependencies": {
 		"@types/react": "19.2.17",

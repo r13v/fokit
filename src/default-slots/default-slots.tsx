@@ -12,26 +12,38 @@ import type {
 	SubmitSlotProps,
 } from "../types.js"
 
+/** A fixed message or a formatter that uses slot-specific data. */
 export type DefaultSlotI18nValue<Data> =
 	| string
 	| ((data: Readonly<Data>) => string)
 
+/** Data supplied to the default array-add message formatter. */
 export type DefaultArrayAddI18nData = {
+	/** The resolved array label, when the definition supplies one. */
 	readonly label?: ReactNode
 }
 
+/** Data supplied to default array-item action message formatters. */
 export type DefaultArrayItemI18nData = {
+	/** The zero-based item index. */
 	readonly index: number
+	/** The one-based item position for user-facing text. */
 	readonly position: number
 }
 
+/** Messages used by the default array action controls. */
 export type DefaultSlotsI18n = {
+	/** Labels the button that appends an array item. */
 	readonly arrayAdd: DefaultSlotI18nValue<DefaultArrayAddI18nData>
+	/** Labels the button that removes an array item. */
 	readonly arrayRemove: DefaultSlotI18nValue<DefaultArrayItemI18nData>
+	/** Labels the button that moves an array item toward the start. */
 	readonly arrayMoveUp: DefaultSlotI18nValue<DefaultArrayItemI18nData>
+	/** Labels the button that moves an array item toward the end. */
 	readonly arrayMoveDown: DefaultSlotI18nValue<DefaultArrayItemI18nData>
 }
 
+/** English messages used when no default-slot translations are supplied. */
 const englishDefaultSlotsI18n = /* @__PURE__ */ Object.freeze({
 	arrayAdd: "Add item",
 	arrayRemove: ({ position }) => `Remove item ${position}`,
@@ -39,7 +51,20 @@ const englishDefaultSlotsI18n = /* @__PURE__ */ Object.freeze({
 	arrayMoveDown: ({ position }) => `Move item ${position} down`,
 } satisfies DefaultSlotsI18n)
 
+/**
+ * Creates semantic, unstyled structural slots with optional translated actions.
+ *
+ * @example
+ * ```ts
+ * const slots = createDefaultSlots({
+ *   i18n: { arrayAdd: "Add another" },
+ * })
+ * ```
+ *
+ * @see https://r13v.github.io/form-please/styling
+ */
 export function createDefaultSlots(options?: {
+	/** Overrides one or more English array action messages. */
 	readonly i18n?: Partial<DefaultSlotsI18n>
 }): FormKitSlots {
 	const i18n = Object.freeze({
@@ -52,6 +77,7 @@ export function createDefaultSlots(options?: {
 			options?.i18n?.arrayMoveDown ?? englishDefaultSlotsI18n.arrayMoveDown,
 	})
 
+	/** Renders the default array wrapper and append action. */
 	function DefaultArraySlot({
 		rootProps,
 		label,
@@ -88,6 +114,7 @@ export function createDefaultSlots(options?: {
 		)
 	}
 
+	/** Renders the default array item wrapper and item actions. */
 	function DefaultArrayItemSlot({
 		rootProps,
 		index,
@@ -162,6 +189,7 @@ export function createDefaultSlots(options?: {
 	})
 }
 
+/** Renders the default field structure. */
 function DefaultFieldSlot({
 	rootProps,
 	label,
@@ -187,6 +215,7 @@ function DefaultFieldSlot({
 	)
 }
 
+/** Renders the default section and grid structure. */
 function DefaultSectionSlot({
 	rootProps,
 	layoutProps,
@@ -203,6 +232,7 @@ function DefaultSectionSlot({
 	)
 }
 
+/** Renders one default validation message with alert semantics. */
 function DefaultErrorMessageSlot({ rootProps, issue }: ErrorMessageSlotProps) {
 	return (
 		<p {...rootProps} role="alert">
@@ -211,10 +241,12 @@ function DefaultErrorMessageSlot({ rootProps, issue }: ErrorMessageSlotProps) {
 	)
 }
 
+/** Renders the default native submit button. */
 function DefaultSubmitSlot({ buttonProps }: SubmitSlotProps) {
 	return <button {...buttonProps} />
 }
 
+/** Resolves a fixed or data-driven localization message. */
 function resolveMessage<Data>(
 	message: DefaultSlotI18nValue<Data>,
 	data: Readonly<Data>,

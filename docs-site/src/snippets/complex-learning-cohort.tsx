@@ -616,6 +616,11 @@ function LearningCohortForm() {
 	if (saveCore.isPending || saveMedia.isPending || syncOffers.isPending) {
 		status = "Synchronizing three resources…"
 	}
+	const values = form.api.watch()
+	const capacity = values.sessionFormats.reduce(
+		(total, item) => total + item.cohortSize,
+		0,
+	)
 
 	return (
 		<section
@@ -629,16 +634,12 @@ function LearningCohortForm() {
 				end.
 			</p>
 			<kit.AutoForm className="form-please-complex__form" form={form}>
-				<form.api.Subscribe selector={(state) => state.values.identity.title}>
-					{(title) => (
-						<TitleSuggestions
-							title={title}
-							onSelect={(suggestion) =>
-								form.api.setFieldValue("identity.title", suggestion)
-							}
-						/>
-					)}
-				</form.api.Subscribe>
+				<TitleSuggestions
+					title={values.identity.title}
+					onSelect={(suggestion) =>
+						form.api.setValue("identity.title", suggestion)
+					}
+				/>
 				<div className="form-please-complex__actions">
 					<kit.Submit className="form-please-complex__primary">
 						Save cohort
@@ -646,26 +647,15 @@ function LearningCohortForm() {
 					<span aria-live="polite">{status}</span>
 				</div>
 			</kit.AutoForm>
-			<form.api.Subscribe selector={(state) => state.values}>
-				{(values) => {
-					const capacity = values.sessionFormats.reduce(
-						(total, item) => total + item.cohortSize,
-						0,
-					)
-					return (
-						<aside
-							aria-label="Cohort preview"
-							className="form-please-complex__preview"
-						>
-							<strong>{values.identity.title}</strong>
-							<span>
-								{values.sessionFormats.length} formats · {capacity} aggregate
-								seats
-							</span>
-						</aside>
-					)
-				}}
-			</form.api.Subscribe>
+			<aside
+				aria-label="Cohort preview"
+				className="form-please-complex__preview"
+			>
+				<strong>{values.identity.title}</strong>
+				<span>
+					{values.sessionFormats.length} formats · {capacity} aggregate seats
+				</span>
+			</aside>
 		</section>
 	)
 }

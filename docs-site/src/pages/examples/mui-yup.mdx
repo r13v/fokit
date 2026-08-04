@@ -14,7 +14,7 @@ and structural slots. Yup validates the form through Standard Schema.
 ## Install the preset peers
 
 ```bash
-npm install form-please @tanstack/react-form @mui/material @emotion/react @emotion/styled yup
+npm install form-please react-hook-form @mui/material @emotion/react @emotion/styled yup
 ```
 
 Create a kit in application code:
@@ -41,9 +41,8 @@ the submitted output.
 ## Runtime flow
 
 `kit.useForm` receives the definition, default values, and submit callback.
-`kit.AutoForm` renders the binding. TanStack Form performs the first schema
-parse. A successful submit performs the second parse and returns Yup's
-transformed output.
+`kit.AutoForm` renders the binding. The React Hook Form resolver parses the Yup
+schema once and returns its transformed output to a successful submit.
 
 ## Copy the example
 

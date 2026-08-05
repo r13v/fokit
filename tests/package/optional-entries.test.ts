@@ -32,7 +32,7 @@ describe("built package entries", () => {
 		}
 	})
 
-	it("omits TanStack-prefixed and retired names from declarations", async () => {
+	it("omits retired names and keeps canonical declarations", async () => {
 		for (const extension of ["d.ts", "d.cts"]) {
 			const declaration = await readFile(
 				new URL(`../../dist/index.${extension}`, import.meta.url),
@@ -43,7 +43,6 @@ describe("built package entries", () => {
 				"TanStackFormInstance",
 				"ControlFormData",
 				"ValuePolicy",
-				"FormMiddleware",
 			]) {
 				expect(declaration).not.toContain(name)
 			}
@@ -51,7 +50,9 @@ describe("built package entries", () => {
 				"FormBinding",
 				"FormDefinition",
 				"FormKit",
+				"FormMiddleware",
 				"UseFormOptions",
+				"ValueTransaction",
 			]) {
 				expect(declaration).toContain(name)
 			}

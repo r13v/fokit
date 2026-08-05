@@ -23,12 +23,71 @@ by one exact form kit.
 _Avoid_: Form binding, inferred schema UI
 
 **Form binding**: The thin integration returned by `kit.useForm` that contains
-`form.api`, the fixed definition, and runtime context.
+`form.api`, `form.update`, the fixed definition, and runtime context.
 _Avoid_: Form store, Form Please runtime instance
 
 **React Hook Form API**: The state-owning React Hook Form API exposed unchanged
-as `form.api`.
+as `form.api`. Its direct mutations bypass Form Please middleware.
 _Avoid_: Form Please command API
+
+**Managed value update**: A value update initiated by a generated control,
+generated array action, or `form.update`, and therefore processed before it
+reaches the React Hook Form API. Every managed update uses the coordinator even
+when the form has no configured middleware.
+_Avoid_: Every React Hook Form update, raw API update
+
+**Form update recipe**: A synchronous Immer recipe passed to `form.update`
+that derives the next complete schema input by either mutating a writable draft
+or returning a replacement, but not both. The produced input and its patches
+become one managed value update; an empty patch list produces no transaction.
+Its public return type is `unknown` because middleware controls the dispatch
+return value.
+_Avoid_: React state setter, partial object patch, raw React Hook Form update
+
+**Value transaction**: A deeply readonly TypeScript view of a proposed managed
+value update containing the previous and proposed schema input, Immer patches,
+runtime context, and a discriminated `control`, `array`, or `update` source. Its
+proposed input is derived from its patches rather than accepted as an independent
+source of truth. Transaction values are not frozen at runtime because React Hook
+Form requires mutable values.
+_Avoid_: React Hook Form notification, validation event, form event
+
+**Value patch**: An Immer patch with an `add`, `remove`, or `replace` operation
+and a segment-array path. Value patches are the authoritative change format
+forwarded to `next`; React Hook Form dot paths remain the public field-path
+format elsewhere.
+_Avoid_: JSON Patch pointer, React Hook Form dot path, custom diff record
+
+**Form middleware**: A synchronous Redux-shaped function configured for one
+form binding that forwards value patches with `next`, replaces or cancels a
+value transaction, and controls the dispatch return value. The ordered
+middleware list is fixed for the `kit.useForm` lifetime. A middleware can call
+`next` synchronously at most once; returning without calling `next` cancels the
+transaction. It may return a Promise after a synchronous commit. An exception
+after `next` does not roll back the committed values.
+_Avoid_: React Hook Form subscription, UI resolver, global middleware
+
+**Form middleware API**: The form-local `getValues` and `update` operations
+available while configuring middleware. `getValues` returns a deeply readonly
+view for synchronous use without cloning an archival snapshot. Calling `update`
+during an active transaction is prohibited; a later call starts an independent
+transaction.
+_Avoid_: React Hook Form API, nested dispatch, global store API
+
+**Terminal dispatch result**: The committed value transaction returned by the
+terminal `next`, including its final `nextValues`. Any middleware can replace
+that result according to Redux dispatch semantics.
+_Avoid_: Guaranteed `form.update` result, duplicate next-values wrapper
+
+**Render-level array transaction**: A generated structural array action and
+its dependent changes presented in one final React render. Raw React Hook Form
+subscriptions can observe intermediate state because the public React Hook Form
+API cannot preserve field-array identities and publish the complete transaction
+as one state change. Middleware can cancel the source operation and change row
+or dependent values, but cannot change the source array length or order beyond
+the source `append`, `remove`, or `move` operation. The transaction must not
+change another generated array's structure.
+_Avoid_: Atomic value commit, raw array update
 
 **UI resolver**: A synchronous function that receives the complete deeply
 readonly schema input and runtime context, then returns one derived UI property.

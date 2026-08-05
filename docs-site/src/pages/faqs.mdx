@@ -110,9 +110,11 @@ Use a schema transform when the submitted output must omit an inactive value:
 // [!include ~/snippets/conditional-fields-guide.tsx:conditional-schema]
 ```
 
-Use `form.api.setValue` when the editable value must be cleared as soon as
-the user changes another field. See [Conditional fields](/conditional-fields)
-for both cleanup strategies.
+Use value middleware when the editable value must be cleared atomically as the
+user changes another field. Use `form.update` for an application-owned managed
+action. A direct `form.api.setValue` bypasses middleware deliberately. See
+[Value middleware](/middleware) and [Conditional fields](/conditional-fields)
+for the boundaries.
 
 ### Does "Form, Please" fetch async options?
 
@@ -153,6 +155,10 @@ generated and manual UI inside the same `kit.Form`; it provides RHF
 You can also call React Hook Form methods such as `setValue` and `reset`
 through `form.api`. See [Compose generated and custom
 UI](/advanced#compose-generated-and-custom-ui) for a complete example.
+
+Generated controls and `form.update` pass through configured value middleware.
+Direct `form.api` calls, reset, and initial values do not. Use raw RHF methods
+as an explicit escape hatch rather than expecting middleware to intercept them.
 
 ### Should I create a second form for custom UI?
 

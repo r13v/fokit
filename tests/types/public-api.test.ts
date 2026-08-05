@@ -6,7 +6,10 @@ import {
 	type FieldPath,
 	type FormBinding,
 	type FormKitSlots,
+	type FormMiddleware,
+	type FormUpdateRecipe,
 	type PathValue,
+	type ValueTransaction,
 } from "../../src/index.js"
 
 declare const untypedBinding: FormBinding
@@ -107,6 +110,23 @@ const definition = kit.defineForm(schema, {
 	],
 })
 
+const middleware: FormMiddleware<Input, Context> =
+	(api) => (next) => (transaction) => {
+		transaction.nextValues.profile.country satisfies string
+		transaction.context.locale satisfies string
+		transaction.patches[0]?.path satisfies readonly (string | number)[]
+		api.getValues().speakers[0]?.name satisfies string | undefined
+		// @ts-expect-error Transaction values are readonly middleware views.
+		transaction.nextValues.profile.country = "FR"
+		// @ts-expect-error Middleware context is deeply readonly.
+		transaction.context.permissions.push("admin")
+		return next(transaction.patches)
+	}
+
+const replaceName: FormUpdateRecipe<Input> = (draft): void => {
+	draft.name = "Grace"
+}
+
 function useTypedBinding() {
 	const form = kit.useForm(definition, {
 		context: { locale: "en", permissions: [] },
@@ -123,8 +143,17 @@ function useTypedBinding() {
 			// @ts-expect-error Submit metadata is not part of Form Please.
 			value.meta
 		},
+		middleware: [middleware],
 	})
 	form.api.subscribe satisfies object
+	form.update(replaceName)
+	const updateResult = form.update((draft) => {
+		draft.profile.country = "FR"
+	})
+	updateResult satisfies unknown
+	// @ts-expect-error Redux middleware may replace the terminal result.
+	const transaction: ValueTransaction<Input, Context> = updateResult
+	void transaction
 	return form
 }
 

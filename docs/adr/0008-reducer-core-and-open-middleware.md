@@ -1,6 +1,6 @@
 # ADR 0008: Use a reducer core and open middleware chain
 
-- Status: Accepted
+- Status: Superseded by [ADR 0016](0016-coordinate-managed-value-updates-before-react-hook-form.md)
 - Date: 2026-08-01
 - Amended by: [ADR 0009](0009-explicit-react-form-lifetimes.md)
 

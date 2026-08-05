@@ -5,8 +5,10 @@
 import {
 	type ControlProps,
 	createFormKit,
+	type DeepReadonly,
 	defineControl,
 	type FormInput,
+	type FormMiddleware,
 	type FormOutput,
 	fromResource,
 	matchResource,
@@ -348,6 +350,28 @@ const defaultValues = {
 	speakers: [],
 } satisfies ProfileInput
 
+// [!region value-middleware]
+function recordManagedValues(_values: DeepReadonly<ProfileInput>) {}
+
+const keepPlanValuesConsistent: FormMiddleware<ProfileInput, ProfileContext> =
+	(api) => (next) => (transaction) => {
+		let patches = transaction.patches
+		if (
+			transaction.nextValues.plan === "solo" &&
+			transaction.nextValues.teamName !== undefined
+		) {
+			patches = [
+				...transaction.patches,
+				{ op: "replace", path: ["teamName"], value: undefined },
+			]
+		}
+		const result = next(patches)
+		// `next` commits synchronously, so this reads the complete final value.
+		recordManagedValues(api.getValues())
+		return result
+	}
+// [!endregion value-middleware]
+
 async function saveProfile(_value: FormOutput<typeof profileSchema>) {}
 
 // [!region use-form]
@@ -355,6 +379,7 @@ function ProfileEditor({ context }: { readonly context: ProfileContext }) {
 	const form = profileKit.useForm(profileDefinition, {
 		defaultValues,
 		context,
+		middleware: [keepPlanValuesConsistent],
 		onSubmit: async ({ value, input, form }) => {
 			// `input.yearsOfExperience` is a string from React Hook Form.
 			// `value.yearsOfExperience` is the transformed number.
@@ -365,6 +390,17 @@ function ProfileEditor({ context }: { readonly context: ProfileContext }) {
 
 	return (
 		<profileKit.AutoForm form={form}>
+			<button
+				onClick={() =>
+					form.update((draft) => {
+						draft.plan = "solo"
+						draft.teamName = undefined
+					})
+				}
+				type="button"
+			>
+				Use individual plan
+			</button>
 			<profileKit.Submit>Save profile</profileKit.Submit>
 		</profileKit.AutoForm>
 	)

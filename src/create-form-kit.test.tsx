@@ -1,6 +1,7 @@
 "use client"
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { Profiler } from "react"
 import {
 	Controller,
 	useFormContext,
@@ -18,10 +19,12 @@ import type {
 	FieldPath,
 	FieldSlotProps,
 	PathValue,
+	RenderNodeProps,
 	SectionSlotProps,
 	StandardSchema,
 	SubmitSlotProps,
 } from "./types.js"
+import type { FormMiddleware } from "./value-middleware.js"
 
 const schema = z
 	.object({
@@ -242,6 +245,930 @@ describe("form kit", () => {
 		})
 	})
 
+	it("commits dependent fields before middleware continues after next", () => {
+		const locationSchema = z.object({
+			city: z.string(),
+			country: z.string(),
+		})
+		const locationDefinition = kit.defineForm(locationSchema, {
+			ui: [
+				{
+					kind: "field",
+					path: "country",
+					control: "select",
+					label: "Country",
+					options: { options: ["US", "FR", "blocked"] },
+				},
+				{ kind: "field", path: "city", control: "text", label: "City" },
+			],
+		})
+		const afterNext = vi.fn()
+		const publications: { city: string; country: string }[] = []
+		let readValues = () => ({ city: "", country: "" })
+		let subscribe = (): (() => void) => () => undefined
+		let updateLocation = (_country: string, _city: string): unknown => undefined
+
+		function LocationState() {
+			const values = useWatch<{ city: string; country: string }>()
+			return <output aria-label="Location">{JSON.stringify(values)}</output>
+		}
+
+		function View() {
+			const form = kit.useForm(locationDefinition, {
+				defaultValues: { city: "New York", country: "US" },
+				middleware: [
+					(api) => (next) => (transaction) => {
+						if (
+							transaction.source.type === "control" &&
+							transaction.source.path === "country"
+						) {
+							if (transaction.nextValues.country === "blocked") {
+								return "cancelled"
+							}
+							const result = next([
+								...transaction.patches,
+								{ op: "replace", path: ["city"], value: "Paris" },
+							])
+							afterNext(api.getValues())
+							return result
+						}
+						return next(transaction.patches)
+					},
+				],
+			})
+			readValues = form.api.getValues
+			subscribe = () =>
+				form.api.subscribe({
+					callback: ({ values }) => publications.push({ ...values }),
+					formState: { values: true },
+				})
+			updateLocation = (country, city) =>
+				form.update((draft) => {
+					draft.city = city
+					draft.country = country
+				})
+			return (
+				<kit.Form form={form}>
+					<kit.Fields />
+					<LocationState />
+				</kit.Form>
+			)
+		}
+
+		render(<View />)
+		const unsubscribe = subscribe()
+		fireEvent.change(screen.getByLabelText("Country"), {
+			target: { value: "FR" },
+		})
+
+		expect(readValues()).toEqual({ city: "Paris", country: "FR" })
+		expect(afterNext).toHaveBeenCalledWith({ city: "Paris", country: "FR" })
+		expect(screen.getByLabelText("Location").textContent).toBe(
+			'{"city":"Paris","country":"FR"}',
+		)
+		expect(publications).toEqual([{ city: "Paris", country: "FR" }])
+
+		fireEvent.change(screen.getByLabelText("Country"), {
+			target: { value: "blocked" },
+		})
+		expect(readValues()).toEqual({ city: "Paris", country: "FR" })
+		expect(afterNext).toHaveBeenCalledTimes(1)
+		expect(publications).toHaveLength(1)
+
+		let updateResult: unknown
+		act(() => {
+			updateResult = updateLocation("US", "Boston")
+		})
+		expect(updateResult).toMatchObject({
+			nextValues: { city: "Boston", country: "US" },
+			source: { type: "update" },
+		})
+		expect(readValues()).toEqual({ city: "Boston", country: "US" })
+		expect(publications).toEqual([
+			{ city: "Paris", country: "FR" },
+			{ city: "Boston", country: "US" },
+		])
+		unsubscribe()
+	})
+
+	it("does not add React commits when pass-through middleware edits a large form", () => {
+		const fieldCount = 40
+		const largeSchema = z.object({
+			fields: z.record(z.string(), z.string()),
+		})
+		type LargeInput = z.input<typeof largeSchema>
+		const largeDefinition = kit.defineForm(largeSchema, {
+			ui: Array.from({ length: fieldCount }, (_, index) => ({
+				kind: "field" as const,
+				path: `fields.field${index}` as `fields.${string}`,
+				control: "text" as const,
+				label: `Performance field ${index + 1}`,
+			})),
+		})
+		const editValues = Array.from(
+			{ length: 20 },
+			(_, index) => `Edit ${index + 1}`,
+		)
+		const handled = vi.fn()
+		const passThrough: FormMiddleware<LargeInput> =
+			() => (next) => (transaction) => {
+				handled()
+				return next(transaction.patches)
+			}
+
+		function countUpdateCommits(
+			middleware?: readonly FormMiddleware<LargeInput>[],
+		): number {
+			let updateCommits = 0
+
+			function View() {
+				const form = kit.useForm(largeDefinition, {
+					defaultValues: {
+						fields: Object.fromEntries(
+							Array.from({ length: fieldCount }, (_, index) => [
+								`field${index}`,
+								`Value ${index + 1}`,
+							]),
+						),
+					},
+					...(middleware === undefined ? {} : { middleware }),
+				})
+
+				return (
+					<Profiler
+						id="large-form"
+						onRender={(_id, phase) => {
+							if (phase !== "mount") updateCommits += 1
+						}}
+					>
+						<kit.Form form={form}>
+							<kit.Fields />
+						</kit.Form>
+					</Profiler>
+				)
+			}
+
+			const view = render(<View />)
+			const input = view.getByLabelText("Performance field 20")
+			for (const value of editValues) {
+				fireEvent.change(input, { target: { value } })
+			}
+			expect((input as HTMLInputElement).value).toBe(editValues.at(-1))
+			view.unmount()
+			return updateCommits
+		}
+
+		const baselineCommits = countUpdateCommits()
+		const middlewareCommits = countUpdateCommits([passThrough])
+
+		expect(handled).toHaveBeenCalledTimes(editValues.length)
+		expect(middlewareCommits).toBe(baselineCommits)
+		expect(middlewareCommits).toBeGreaterThan(0)
+	})
+
+	it("does not re-render an unrelated generated branch when resolved UI changes", () => {
+		const arrayRenders = vi.fn()
+		const controlRenders = vi.fn<(path: string) => void>()
+		const sectionRenders = vi.fn<(title: string) => void>()
+		const isolatedKit = createFormKit({
+			controls: {
+				text: defineControl<
+					string,
+					{ readonly alternate?: string; readonly marker?: string }
+				>({
+					component: ({ value, setValue, blur, input, options, path }) => {
+						controlRenders(path)
+						return (
+							<input
+								data-option-key={
+									Object.hasOwn(options, "marker") ? "marker" : "alternate"
+								}
+								id={input.id}
+								name={input.name}
+								onBlur={blur}
+								onChange={(event) => setValue(event.currentTarget.value)}
+								ref={input.ref}
+								value={value}
+							/>
+						)
+					},
+				}),
+			},
+			slots: {
+				...kit.slots,
+				Array: ({ rootProps, label, children }: ArraySlotProps) => {
+					arrayRenders()
+					return (
+						<section {...rootProps}>
+							<h2>{label}</h2>
+							{children}
+						</section>
+					)
+				},
+				Section: ({ rootProps, title, children }: SectionSlotProps) => {
+					sectionRenders(String(title))
+					return (
+						<section {...rootProps}>
+							<h2>{title}</h2>
+							{children}
+						</section>
+					)
+				},
+			},
+		})
+		const isolatedSchema = z.object({
+			details: z.string(),
+			first: z.string(),
+			items: z.array(z.object({ name: z.string() })),
+			mode: z.string(),
+		})
+		const isolatedDefinition = isolatedKit.defineForm(isolatedSchema, {
+			ui: [
+				{
+					kind: "section",
+					id: "stable",
+					title: "Stable section",
+					children: [
+						{
+							kind: "field",
+							path: "first",
+							control: "text",
+							label: "First isolated field",
+						},
+					],
+				},
+				{
+					kind: "section",
+					id: "dynamic",
+					title: "Dynamic section",
+					children: [
+						{
+							kind: "field",
+							path: "mode",
+							control: "text",
+							label: "Mode",
+						},
+						{
+							kind: "field",
+							path: "details",
+							control: "text",
+							label: "Details",
+							options: (values) =>
+								values.mode === "show"
+									? { marker: undefined }
+									: { alternate: undefined },
+							visible: (values) => values.mode.startsWith("show"),
+						},
+					],
+				},
+				{
+					kind: "array",
+					path: "items",
+					label: "Stable items",
+					itemDefault: { name: "" },
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							label: "Stable item name",
+						},
+					],
+				},
+			],
+		})
+
+		function View() {
+			const form = isolatedKit.useForm(isolatedDefinition, {
+				defaultValues: {
+					details: "Secret",
+					first: "Ada",
+					items: [{ name: "Stable" }],
+					mode: "hide",
+				},
+			})
+			return (
+				<isolatedKit.Form form={form}>
+					<isolatedKit.Fields />
+					<button type="reset">Reset isolated form</button>
+				</isolatedKit.Form>
+			)
+		}
+
+		render(<View />)
+		arrayRenders.mockClear()
+		controlRenders.mockClear()
+		sectionRenders.mockClear()
+
+		fireEvent.change(screen.getByLabelText("Mode"), {
+			target: { value: "show" },
+		})
+		expect(screen.getByLabelText("Details")).toBeTruthy()
+		expect(
+			screen.getByLabelText("Details").getAttribute("data-option-key"),
+		).toBe("marker")
+		expect(arrayRenders).not.toHaveBeenCalled()
+		expect(sectionRenders).not.toHaveBeenCalledWith("Stable section")
+		expect(sectionRenders).toHaveBeenCalledWith("Dynamic section")
+		expect(controlRenders).not.toHaveBeenCalledWith("first")
+
+		controlRenders.mockClear()
+		fireEvent.change(screen.getByLabelText("Mode"), {
+			target: { value: "show-alt" },
+		})
+		expect(
+			screen.getByLabelText("Details").getAttribute("data-option-key"),
+		).toBe("alternate")
+		expect(controlRenders).toHaveBeenCalledWith("details")
+
+		controlRenders.mockClear()
+		sectionRenders.mockClear()
+		arrayRenders.mockClear()
+		fireEvent.change(screen.getByLabelText("First isolated field"), {
+			target: { value: "Grace" },
+		})
+		expect(controlRenders).toHaveBeenCalledWith("first")
+		expect(controlRenders).not.toHaveBeenCalledWith("mode")
+		expect(controlRenders).not.toHaveBeenCalledWith("details")
+		expect(controlRenders).not.toHaveBeenCalledWith("items.0.name")
+		expect(arrayRenders).not.toHaveBeenCalled()
+		expect(sectionRenders).not.toHaveBeenCalled()
+
+		arrayRenders.mockClear()
+		controlRenders.mockClear()
+		sectionRenders.mockClear()
+		fireEvent.change(screen.getByLabelText("Stable item name"), {
+			target: { value: "Updated" },
+		})
+		expect(controlRenders).toHaveBeenCalledWith("items.0.name")
+		expect(controlRenders).not.toHaveBeenCalledWith("first")
+		expect(controlRenders).not.toHaveBeenCalledWith("mode")
+		expect(controlRenders).not.toHaveBeenCalledWith("details")
+		expect(arrayRenders).toHaveBeenCalledTimes(1)
+		expect(sectionRenders).not.toHaveBeenCalled()
+
+		arrayRenders.mockClear()
+		controlRenders.mockClear()
+		fireEvent.change(screen.getByLabelText("Stable item name"), {
+			target: { value: "Updated again" },
+		})
+		expect(controlRenders).toHaveBeenCalledWith("items.0.name")
+		expect(arrayRenders).not.toHaveBeenCalled()
+		expect(sectionRenders).not.toHaveBeenCalled()
+
+		fireEvent.click(screen.getByRole("button", { name: "Reset isolated form" }))
+		expect(screen.queryByLabelText("Details")).toBeNull()
+		expect(
+			(screen.getByLabelText("First isolated field") as HTMLInputElement).value,
+		).toBe("Ada")
+		expect(
+			(screen.getByLabelText("Stable item name") as HTMLInputElement).value,
+		).toBe("Stable")
+	})
+
+	it("updates every resolvable UI property without retaining stale presentation", () => {
+		type ProbeOptions = { readonly token?: string }
+		type ProbeRootProps = FieldSlotProps["rootProps"] & {
+			readonly "data-disabled"?: string
+			readonly "data-fp-path"?: string
+			readonly "data-fp-span"?: string
+			readonly "data-readonly"?: string
+		}
+		const probeKit = createFormKit({
+			controls: {
+				text: defineControl<string, ProbeOptions>({
+					component: ({
+						value,
+						setValue,
+						blur,
+						input,
+						options,
+						path,
+						disabled,
+						readOnly,
+						required,
+					}) => (
+						<>
+							<output data-testid={`control-props-${path}`}>
+								{JSON.stringify({
+									disabled,
+									options: options.token,
+									readOnly,
+									required,
+								})}
+							</output>
+							<input
+								disabled={disabled}
+								id={input.id}
+								name={input.name}
+								onBlur={blur}
+								onChange={(event) => setValue(event.currentTarget.value)}
+								readOnly={readOnly}
+								ref={input.ref}
+								required={required}
+								value={value}
+							/>
+						</>
+					),
+				}),
+			},
+			slots: {
+				...kit.slots,
+				Field: ({
+					rootProps,
+					labelProps,
+					label,
+					description,
+					slotOptions,
+					control,
+					errors,
+					disabled,
+					readOnly,
+					required,
+				}: FieldSlotProps<ProbeOptions>) => {
+					const probeRoot = rootProps as ProbeRootProps
+					const path = String(probeRoot["data-fp-path"])
+					return (
+						<div {...rootProps}>
+							<output data-testid={`field-props-${path}`}>
+								{JSON.stringify({
+									className: probeRoot.className,
+									description,
+									disabled,
+									label,
+									readOnly,
+									required,
+									slotOptions: slotOptions?.token,
+									span: probeRoot["data-fp-span"],
+								})}
+							</output>
+							<label {...labelProps} htmlFor={labelProps.htmlFor}>
+								{label}
+							</label>
+							{description}
+							{control}
+							{errors}
+						</div>
+					)
+				},
+				Section: ({
+					rootProps,
+					layoutProps,
+					title,
+					description,
+					slotOptions,
+					children,
+				}: SectionSlotProps<ProbeOptions>) => {
+					const probeRoot = rootProps as ProbeRootProps
+					return (
+						<section {...rootProps}>
+							<output data-testid={`section-props-${String(rootProps.id)}`}>
+								{JSON.stringify({
+									className: probeRoot.className,
+									columns: layoutProps["data-fp-columns"],
+									description,
+									disabled: probeRoot["data-disabled"] === "",
+									readOnly: probeRoot["data-readonly"] === "",
+									slotOptions: slotOptions?.token,
+									span: probeRoot["data-fp-span"],
+									title,
+								})}
+							</output>
+							<h2>{title}</h2>
+							{description}
+							<div {...layoutProps}>{children}</div>
+						</section>
+					)
+				},
+				Array: ({
+					rootProps,
+					label,
+					description,
+					slotOptions,
+					canAdd,
+					children,
+				}: ArraySlotProps<ProbeOptions>) => {
+					const probeRoot = rootProps as ProbeRootProps
+					const path = String(probeRoot["data-fp-path"])
+					return (
+						<section {...rootProps}>
+							<output data-testid={`array-props-${path}`}>
+								{JSON.stringify({
+									canAdd,
+									className: probeRoot.className,
+									description,
+									disabled: probeRoot["data-disabled"] === "",
+									label,
+									readOnly: probeRoot["data-readonly"] === "",
+									slotOptions: slotOptions?.token,
+									span: probeRoot["data-fp-span"],
+								})}
+							</output>
+							<h2>{label}</h2>
+							{description}
+							{children}
+						</section>
+					)
+				},
+			},
+		})
+		const probeSchema = z.object({
+			driver: z.string(),
+			fieldVisibility: z.string(),
+			formFlags: z.string(),
+			items: z.array(z.object({ name: z.string() })),
+			sectionChild: z.string(),
+			subject: z.string(),
+			visibleItems: z.array(z.object({ name: z.string() })),
+		})
+		const RenderProbe = ({ disabled, readOnly }: RenderNodeProps) => (
+			<output data-testid="render-props">
+				{JSON.stringify({ disabled, readOnly })}
+			</output>
+		)
+		const VisibleRenderProbe = () => (
+			<output data-testid="visible-render">visible render</output>
+		)
+		const probeDefinition = probeKit.defineForm(probeSchema, {
+			ui: [
+				{
+					kind: "field",
+					path: "driver",
+					control: "text",
+					label: "Resolver driver",
+				},
+				{
+					kind: "field",
+					path: "subject",
+					control: "text",
+					label: (values) => `${values.driver} field label`,
+					description: (values) => `${values.driver} field description`,
+					slotOptions: (values) => ({ token: values.driver }),
+					required: (values) => values.driver === "after",
+					disabled: (values) => values.driver === "after",
+					readOnly: (values) => values.driver === "after",
+					className: (values) => `${values.driver}-field-class`,
+					span: (values) => (values.driver === "after" ? "full" : 1),
+					options: (values) => ({ token: values.driver }),
+				},
+				{
+					kind: "field",
+					path: "fieldVisibility",
+					control: "text",
+					label: "Visible field",
+					visible: (values) => values.driver === "before",
+				},
+				{
+					kind: "field",
+					path: "formFlags",
+					control: "text",
+					label: "Form flags",
+				},
+				{
+					kind: "section",
+					id: "subject-section",
+					title: (values) => `${values.driver} section title`,
+					description: (values) => `${values.driver} section description`,
+					slotOptions: (values) => ({ token: values.driver }),
+					disabled: (values) => values.driver === "after",
+					readOnly: (values) => values.driver === "after",
+					className: (values) => `${values.driver}-section-class`,
+					columns: (values) => (values.driver === "after" ? 2 : 1),
+					span: (values) => (values.driver === "after" ? 2 : 1),
+					children: [
+						{
+							kind: "field",
+							path: "sectionChild",
+							control: "text",
+							label: "Section child",
+						},
+					],
+				},
+				{
+					kind: "section",
+					id: "visible-section",
+					title: "Visible section",
+					visible: (values) => values.driver === "before",
+					children: [],
+				},
+				{
+					kind: "array",
+					path: "items",
+					label: (values) => `${values.driver} array label`,
+					description: (values) => `${values.driver} array description`,
+					slotOptions: (values) => ({ token: values.driver }),
+					disabled: (values) => values.driver === "after",
+					readOnly: (values) => values.driver === "after",
+					className: (values) => `${values.driver}-array-class`,
+					span: (values) => (values.driver === "after" ? "full" : 1),
+					itemDefault: { name: "" },
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							label: "Array child",
+						},
+					],
+				},
+				{
+					kind: "array",
+					path: "visibleItems",
+					label: "Visible array",
+					visible: (values) => values.driver === "before",
+					itemDefault: { name: "" },
+					children: [],
+				},
+				{
+					kind: "render",
+					id: "render-probe",
+					component: RenderProbe,
+					disabled: (values) => values.driver === "after",
+					readOnly: (values) => values.driver === "after",
+				},
+				{
+					kind: "render",
+					id: "visible-render-probe",
+					component: VisibleRenderProbe,
+					visible: (values) => values.driver === "before",
+				},
+			],
+		})
+		function View({
+			disabled = false,
+			readOnly = false,
+		}: {
+			readonly disabled?: boolean
+			readonly readOnly?: boolean
+		}) {
+			const form = probeKit.useForm(probeDefinition, {
+				defaultValues: {
+					driver: "before",
+					fieldVisibility: "visible",
+					formFlags: "form flags",
+					items: [{ name: "array child" }],
+					sectionChild: "section child",
+					subject: "subject",
+					visibleItems: [],
+				},
+				disabled,
+				readOnly,
+			})
+			return <probeKit.AutoForm form={form} />
+		}
+
+		const view = render(<View />)
+		const cases = [
+			{
+				id: "field-props-subject",
+				before: {
+					className: "before-field-class",
+					description: "before field description",
+					disabled: false,
+					label: "before field label",
+					readOnly: false,
+					required: false,
+					slotOptions: "before",
+					span: "1",
+				},
+				after: {
+					className: "after-field-class",
+					description: "after field description",
+					disabled: true,
+					label: "after field label",
+					readOnly: true,
+					required: true,
+					slotOptions: "after",
+					span: "full",
+				},
+			},
+			{
+				id: "control-props-subject",
+				before: {
+					disabled: false,
+					options: "before",
+					readOnly: false,
+					required: false,
+				},
+				after: {
+					disabled: true,
+					options: "after",
+					readOnly: true,
+					required: true,
+				},
+			},
+			{
+				id: "control-props-sectionChild",
+				before: { disabled: false, readOnly: false, required: false },
+				after: { disabled: true, readOnly: true, required: false },
+			},
+			{
+				id: "control-props-items.0.name",
+				before: { disabled: false, readOnly: false, required: false },
+				after: { disabled: true, readOnly: true, required: false },
+			},
+			{
+				id: "control-props-formFlags",
+				before: { disabled: false, readOnly: false, required: false },
+				after: { disabled: false, readOnly: false, required: false },
+			},
+			{
+				id: "section-props-subject-section",
+				before: {
+					className: "before-section-class",
+					columns: 1,
+					description: "before section description",
+					disabled: false,
+					readOnly: false,
+					slotOptions: "before",
+					span: "1",
+					title: "before section title",
+				},
+				after: {
+					className: "after-section-class",
+					columns: 2,
+					description: "after section description",
+					disabled: true,
+					readOnly: true,
+					slotOptions: "after",
+					span: "2",
+					title: "after section title",
+				},
+			},
+			{
+				id: "array-props-items",
+				before: {
+					canAdd: true,
+					className: "before-array-class",
+					description: "before array description",
+					disabled: false,
+					label: "before array label",
+					readOnly: false,
+					slotOptions: "before",
+					span: "1",
+				},
+				after: {
+					canAdd: false,
+					className: "after-array-class",
+					description: "after array description",
+					disabled: true,
+					label: "after array label",
+					readOnly: true,
+					slotOptions: "after",
+					span: "full",
+				},
+			},
+			{
+				id: "render-props",
+				before: { disabled: false, readOnly: false },
+				after: { disabled: true, readOnly: true },
+			},
+		] as const
+		const readSnapshot = (id: string): unknown =>
+			JSON.parse(screen.getByTestId(id).textContent ?? "null")
+		for (const testCase of cases) {
+			expect(readSnapshot(testCase.id), `${testCase.id} before`).toEqual(
+				testCase.before,
+			)
+		}
+		for (const id of [
+			"field-props-fieldVisibility",
+			"section-props-visible-section",
+			"array-props-visibleItems",
+			"visible-render",
+		]) {
+			expect(screen.getByTestId(id), `${id} before`).toBeTruthy()
+		}
+
+		fireEvent.change(screen.getByLabelText("Resolver driver"), {
+			target: { value: "after" },
+		})
+
+		for (const testCase of cases) {
+			expect(readSnapshot(testCase.id), `${testCase.id} after`).toEqual(
+				testCase.after,
+			)
+		}
+		for (const id of [
+			"field-props-fieldVisibility",
+			"section-props-visible-section",
+			"array-props-visibleItems",
+			"visible-render",
+		]) {
+			expect(screen.queryByTestId(id), `${id} after`).toBeNull()
+		}
+
+		view.rerender(<View disabled readOnly />)
+		expect(readSnapshot("control-props-formFlags")).toEqual({
+			disabled: true,
+			readOnly: true,
+			required: false,
+		})
+	})
+
+	it("commits nested deletion and whole-input replacement exactly", () => {
+		const profileSchema = z.object({
+			count: z.number(),
+			profile: z.object({ name: z.string(), note: z.string().optional() }),
+		})
+		type ProfileInput = z.input<typeof profileSchema>
+		const profileDefinition = kit.defineForm(profileSchema, { ui: [] })
+		let readValues = (): ProfileInput => ({
+			count: 0,
+			profile: { name: "" },
+		})
+		let removeNote = (): unknown => undefined
+		let replaceInput = (): unknown => undefined
+
+		function View() {
+			const form = kit.useForm(profileDefinition, {
+				defaultValues: {
+					count: 1,
+					profile: { name: "Ada", note: "remove me" },
+				},
+			})
+			readValues = form.api.getValues
+			removeNote = () =>
+				form.update((draft) => {
+					delete draft.profile.note
+				})
+			replaceInput = () =>
+				form.update(() => ({
+					count: 2,
+					profile: { name: "Grace", note: "replacement" },
+				}))
+			return <kit.Form form={form} />
+		}
+
+		render(<View />)
+		act(() => {
+			removeNote()
+		})
+		expect(readValues()).toEqual({ count: 1, profile: { name: "Ada" } })
+
+		act(() => {
+			replaceInput()
+		})
+		expect(readValues()).toEqual({
+			count: 2,
+			profile: { name: "Grace", note: "replacement" },
+		})
+	})
+
+	it("uses the touched source when middleware replaces its patches", async () => {
+		let validations = 0
+		const touchedSchema: StandardSchema<{
+			readonly mirror: string
+			readonly name: string
+		}> = {
+			"~standard": {
+				version: 1,
+				vendor: "managed-on-touched-test",
+				validate(value) {
+					validations += 1
+					return {
+						value: value as { readonly mirror: string; readonly name: string },
+					}
+				},
+			},
+		}
+		const touchedDefinition = kit.defineForm(touchedSchema, {
+			ui: [
+				{ kind: "field", path: "name", control: "text", label: "Touched name" },
+				{ kind: "field", path: "mirror", control: "text", label: "Mirror" },
+			],
+		})
+
+		function View() {
+			const form = kit.useForm(touchedDefinition, {
+				defaultValues: { mirror: "before", name: "Ada" },
+				middleware: [
+					() => (next) => (transaction) =>
+						transaction.source.type === "control" &&
+						transaction.source.path === "name"
+							? next([{ op: "replace", path: ["mirror"], value: "after" }])
+							: next(transaction.patches),
+				],
+				mode: "onTouched",
+			})
+			return <kit.AutoForm form={form} />
+		}
+
+		render(<View />)
+		const name = screen.getByLabelText("Touched name")
+		fireEvent.blur(name)
+		await waitFor(() => expect(validations).toBe(1))
+
+		fireEvent.change(name, { target: { value: "Grace" } })
+		await waitFor(() => expect(validations).toBe(2))
+		expect(
+			(screen.getByLabelText("Touched name") as HTMLInputElement).value,
+		).toBe("Ada")
+		expect((screen.getByLabelText("Mirror") as HTMLInputElement).value).toBe(
+			"after",
+		)
+	})
+
 	it("supports manual register and Controller fields in FormProvider", async () => {
 		const ecosystemSchema = z.object({
 			controlled: z.string().min(1),
@@ -424,6 +1351,21 @@ describe("form kit", () => {
 					room: "A-12",
 					speakers: [{ name: "Ada" }, { name: "Grace" }],
 				},
+				middleware: [
+					() => (next) => (transaction) => {
+						if (transaction.source.type !== "array") {
+							return next(transaction.patches)
+						}
+						if (transaction.source.action === "remove") return "cancelled"
+						if (transaction.source.action === "append") {
+							return next([
+								...transaction.patches,
+								{ op: "replace", path: ["room"], value: "B-20" },
+							])
+						}
+						return next(transaction.patches)
+					},
+				],
 			})
 			return (
 				<kit.Form form={form}>
@@ -438,10 +1380,20 @@ describe("form kit", () => {
 		expect(screen.queryByLabelText("Room")).toBeNull()
 		expect(screen.getByLabelText("Manual format").textContent).toBe("remote")
 
+		const firstSpeakerItem = screen
+			.getAllByLabelText("Speaker name")[0]
+			?.closest('[data-fp-node="array-item"]')
 		fireEvent.click(screen.getByRole("button", { name: "Move speaker 1 down" }))
 		expect(screen.getByLabelText("Speaker order").textContent).toBe("Grace,Ada")
+		expect(
+			screen
+				.getAllByLabelText("Speaker name")[1]
+				?.closest('[data-fp-node="array-item"]'),
+		).toBe(firstSpeakerItem)
 
 		fireEvent.click(screen.getByRole("button", { name: "Add speaker" }))
+		expect(screen.getAllByLabelText("Speaker name")).toHaveLength(3)
+		fireEvent.click(screen.getByRole("button", { name: "Remove speaker 1" }))
 		expect(screen.getAllByLabelText("Speaker name")).toHaveLength(3)
 		fireEvent.click(screen.getByRole("button", { name: "Save complex form" }))
 		expect(await screen.findByText("Enter the speaker name")).toBeTruthy()
@@ -473,7 +1425,7 @@ describe("form kit", () => {
 		})
 		expect(
 			((await screen.findByLabelText("Room")) as HTMLInputElement).value,
-		).toBe("A-12")
+		).toBe("B-20")
 	})
 
 	it("parses once and keeps raw handleSubmit independent from the wrapper", async () => {
@@ -871,5 +1823,72 @@ describe("form kit", () => {
 		expect(activeDefinition).toBe(first)
 		expect(screen.getByLabelText("First")).toBeTruthy()
 		expect(screen.queryByLabelText("Second")).toBeNull()
+	})
+
+	it("keeps the first middleware list and supplies current context", () => {
+		type Context = { readonly label: string }
+		type Input = { readonly name: string }
+		const contextualKit = kit.forContext<Context>()
+		const contextualDefinition = contextualKit.defineForm(
+			z.object({ name: z.string() }),
+			{
+				ui: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						label: (_values, { context }) => context.label,
+					},
+				],
+			},
+		)
+		const first = vi.fn()
+		const second = vi.fn()
+		const firstMiddleware: FormMiddleware<Input, Context> =
+			() => (next) => (transaction) => {
+				first(transaction.context.label)
+				return next(transaction.patches)
+			}
+		const secondMiddleware: FormMiddleware<Input, Context> =
+			() => (next) => (transaction) => {
+				second(transaction.context.label)
+				return next(transaction.patches)
+			}
+
+		function View({
+			context,
+			middleware,
+		}: {
+			readonly context: Context
+			readonly middleware: FormMiddleware<Input, Context>
+		}) {
+			const form = contextualKit.useForm(contextualDefinition, {
+				context,
+				defaultValues: { name: "Ada" },
+				middleware: [middleware],
+			})
+			return <contextualKit.AutoForm form={form} />
+		}
+
+		const view = render(
+			<View
+				context={{ label: "first context" }}
+				middleware={firstMiddleware}
+			/>,
+		)
+		expect(screen.getByLabelText("first context")).toBeTruthy()
+		view.rerender(
+			<View
+				context={{ label: "current context" }}
+				middleware={secondMiddleware}
+			/>,
+		)
+		expect(screen.getByLabelText("current context")).toBeTruthy()
+		fireEvent.change(screen.getByLabelText("current context"), {
+			target: { value: "Grace" },
+		})
+
+		expect(first).toHaveBeenCalledWith("current context")
+		expect(second).not.toHaveBeenCalled()
 	})
 })

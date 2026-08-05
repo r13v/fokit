@@ -244,7 +244,9 @@ current result through context.
 
 Form, Please resolves the complete UI tree after each form value change. It
 does not track resolver dependencies or cache resolver results. Keep resolvers
-small and free of side effects.
+small and free of side effects. Object and array results are compared shallowly
+when Form, Please reuses unchanged UI branches. Treat resolver results as
+immutable and replace nested values when their content changes.
 
 See [Conditional fields](/conditional-fields) for conditional validation and
 value cleanup.

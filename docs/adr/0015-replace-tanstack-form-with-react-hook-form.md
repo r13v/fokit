@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-04
+- Amended by: [ADR 0016](0016-coordinate-managed-value-updates-before-react-hook-form.md)
 - Supersedes: [ADR 0014](0014-add-experimental-tanstack-form-runtime.md)
 
 ## Context

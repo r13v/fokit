@@ -23,6 +23,12 @@ test.describe("Form, Please documentation", () => {
 			page.getByRole("heading", { level: 1, name: "Definitions" }),
 		).toBeVisible()
 
+		await sidebar.getByRole("link", { name: "Value middleware" }).click()
+		await expect(page).toHaveURL(/\/form-please\/middleware$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Value middleware" }),
+		).toBeVisible()
+
 		await sidebar.getByRole("link", { name: "API", exact: true }).click()
 		await expect(page).toHaveURL(/\/form-please\/api$/)
 		await expect(
@@ -37,6 +43,65 @@ test.describe("Form, Please documentation", () => {
 				name: "Compose generated and custom UI",
 			}),
 		).toBeVisible()
+		expect(errors).toEqual([])
+	})
+
+	test("runs the value middleware previews", async ({ page }) => {
+		const errors = pageErrors(page)
+		await page.goto("./middleware")
+
+		const derived = page.getByRole("region", {
+			name: "Derived total middleware preview",
+		})
+		await expect(
+			page.locator('[data-middleware-preview="derived-total"]'),
+		).toHaveAttribute("data-demo-client-ready", "true")
+		await derived.getByLabel("Quantity").fill("3")
+		await expect(derived.getByLabel("Total")).toHaveValue("45")
+		await expect(derived.getByText("Committed total: $45.00")).toBeVisible()
+		await derived.getByRole("button", { name: "Apply bulk order" }).click()
+		await expect(derived.getByLabel("Total")).toHaveValue("90")
+
+		const cancellation = page.getByRole("region", {
+			name: "Cancellation middleware preview",
+		})
+		await expect(
+			page.locator('[data-middleware-preview="cancellation"]'),
+		).toHaveAttribute("data-demo-client-ready", "true")
+		await cancellation
+			.getByRole("button", { name: "Try 40% as a managed change" })
+			.click()
+		await expect(cancellation.getByLabel("Discount percentage")).toHaveValue(
+			"10",
+		)
+		await expect(cancellation.getByText(/Cancelled 40% discount/)).toBeVisible()
+		await cancellation
+			.getByRole("button", { name: "Set 40% through raw RHF" })
+			.click()
+		await expect(cancellation.getByLabel("Discount percentage")).toHaveValue(
+			"40",
+		)
+		await expect(
+			cancellation.getByText(/form\.api\.setValue bypassed middleware/),
+		).toBeVisible()
+
+		const complexEditing = page.getByRole("region", {
+			name: "Complex middleware editing preview",
+		})
+		await expect(
+			page.locator('[data-middleware-preview="complex-editing"]'),
+		).toHaveAttribute("data-demo-client-ready", "true")
+		for (const [label, value] of [
+			["First name", "Responsive editor"],
+			["Organization name", "Northstar Studio"],
+			["Project title", "Partner workspace 2026"],
+		] as const) {
+			const input = complexEditing.getByLabel(label)
+			await input.fill("")
+			await input.pressSequentially(value)
+			await expect(input).toHaveValue(value)
+		}
+
 		expect(errors).toEqual([])
 	})
 

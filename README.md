@@ -70,6 +70,8 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
   output while the submit wrapper preserves the editable input snapshot.
 - UI resolvers receive the complete deeply readonly schema input and runtime
   context. They must be synchronous.
+- Use form-local value middleware and `form.update` when dependent value
+  changes must commit atomically. Direct `form.api` changes bypass middleware.
 - Hidden fields preserve their values.
 - Array paths use RHF dot notation and rows use stable RHF keys.
 - RHF focuses the first registered invalid field. A focusable error summary is
@@ -106,6 +108,7 @@ caching, cancellation, or retries.
 ## Documentation
 
 - [Get started](https://r13v.github.io/form-please/get-started)
+- [Value middleware](https://r13v.github.io/form-please/middleware)
 - [API reference](https://r13v.github.io/form-please/api)
 - [Shadcn registry adapter](https://r13v.github.io/form-please/examples/shadcn-valibot)
 - [Architecture map](docs/ARCHITECTURE.md)

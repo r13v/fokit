@@ -41,6 +41,7 @@ export default defineConfig({
 				{ text: "Validation & submission", link: "/validation" },
 				{ text: "Conditional fields", link: "/conditional-fields" },
 				{ text: "Arrays", link: "/arrays" },
+				{ text: "Value middleware", link: "/middleware" },
 				{ text: "Controls & slots", link: "/controls" },
 				{ text: "Resource state", link: "/resources" },
 				{ text: "Styling", link: "/styling" },

@@ -54,3 +54,12 @@ export type {
 	UiResolverDetails,
 	UiResolverValues,
 } from "./types.js"
+export type {
+	FormMiddleware,
+	FormMiddlewareApi,
+	FormMiddlewareNext,
+	FormUpdateRecipe,
+	ValuePatch,
+	ValueTransaction,
+	ValueTransactionSource,
+} from "./value-middleware.js"

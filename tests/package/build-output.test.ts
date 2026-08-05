@@ -63,8 +63,9 @@ describe("build output", () => {
 		}
 	})
 
-	it("uses React Hook Form in the main runtime graph", async () => {
+	it("uses React Hook Form and Immer in the main runtime graph", async () => {
 		const graph = await readEsmGraph("dist/index.js")
+		expect(graph).toContain("immer")
 		expect(graph).toContain("react-hook-form")
 		expect(graph).not.toContain("@tanstack/react-form")
 		expect(graph).not.toContain("layout.css")

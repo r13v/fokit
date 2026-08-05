@@ -12,6 +12,7 @@ const pages = [
 	["src/pages/validation.mdx", "Validation and submission"],
 	["src/pages/conditional-fields.mdx", "Conditional fields"],
 	["src/pages/arrays.mdx", "Arrays"],
+	["src/pages/middleware.mdx", "Value middleware"],
 	["src/pages/controls.mdx", "Controls and slots"],
 	["src/pages/resources.mdx", "Resource state"],
 	["src/pages/styling.mdx", "Styling"],
@@ -50,6 +51,7 @@ const referenceSnippets = [
 	"src/snippets/controls-and-slots-control.tsx",
 	"src/snippets/controls-and-slots.tsx",
 	"src/snippets/production-recipes.tsx",
+	"src/snippets/middleware-guide.tsx",
 	"src/snippets/validation-guide.tsx",
 ]
 
@@ -69,6 +71,7 @@ test("documents only the supported navigation surface", async () => {
 		"/validation",
 		"/conditional-fields",
 		"/arrays",
+		"/middleware",
 		"/controls",
 		"/resources",
 		"/styling",
@@ -248,6 +251,7 @@ test("keeps controls, API, and production guidance executable", async () => {
 		"render-node",
 		"context-kit",
 		"use-form",
+		"value-middleware",
 		"manual-composition",
 		"resource-resolver",
 		"resources",
@@ -283,7 +287,7 @@ test("keeps controls, API, and production guidance executable", async () => {
 	]) {
 		assert.match(advanced, new RegExp(`<${preview} />`))
 	}
-	for (const version of ["7.77.0", "7.74.0", "7.55.0"]) {
+	for (const version of ["7.77.0", "7.76.1"]) {
 		assert.match(advanced, new RegExp(`React Hook Form ${version}`))
 	}
 	assert.doesNotMatch(advanced, /parses once for validation and\s+again/)
@@ -328,6 +332,74 @@ test("keeps controls, API, and production guidance executable", async () => {
 	assert.match(definitions, /api-reference\.tsx:render-node/)
 	assert.match(arrays, /lab-profile-form\.tsx:array-node/)
 	assert.match(conditional, /lab-profile-form\.tsx:conditional-field/)
+})
+
+test("documents every managed value type on the TypeScript page", async () => {
+	const types = await readFile(new URL("src/pages/types.mdx", siteRoot), "utf8")
+
+	for (const name of [
+		"FormUpdateRecipe",
+		"FormMiddleware",
+		"FormMiddlewareApi",
+		"FormMiddlewareNext",
+		"ValueTransaction",
+		"ValueTransactionSource",
+		"ValuePatch",
+	]) {
+		assert.match(types, new RegExp(`\\b${name}\\b`))
+	}
+})
+
+test("documents middleware with copyable examples and live previews", async () => {
+	const middleware = await readFile(
+		new URL("src/pages/middleware.mdx", siteRoot),
+		"utf8",
+	)
+	const normalizedMiddleware = middleware.replace(/\s+/g, " ")
+
+	for (const region of [
+		"derived-value",
+		"derived-value-form",
+		"cancellation",
+		"async-after-next",
+	]) {
+		assert.match(middleware, new RegExp(`middleware-guide\\.tsx:${region}`))
+	}
+
+	for (const preview of [
+		"DerivedTotalMiddlewareDemo",
+		"CancellationMiddlewareDemo",
+		"ComplexMiddlewareEditingDemo",
+	]) {
+		assert.match(middleware, new RegExp(`<${preview} />`))
+	}
+
+	for (const phrase of [
+		"does not create another form store",
+		"Call `next` before the first `await`",
+		"Supply consistent derived values in `defaultValues`",
+		"Call `api.getValues()` after synchronous `next`",
+		"`FormMiddlewareNext` and `form.update` return `unknown`",
+		"application-owned `useFieldArray` operations",
+		"do not promise one raw RHF publication",
+		"not frozen or cloned as archival",
+		"18 text inputs",
+		"manual check, not a repeatable benchmark",
+	]) {
+		assert.match(normalizedMiddleware, new RegExp(escapeRegExp(phrase), "i"))
+	}
+
+	for (const path of [
+		"src/pages/advanced.mdx",
+		"src/pages/api.mdx",
+		"src/pages/arrays.mdx",
+		"src/pages/conditional-fields.mdx",
+		"src/pages/faqs.mdx",
+		"src/pages/types.mdx",
+	]) {
+		const relatedPage = await readFile(new URL(path, siteRoot), "utf8")
+		assert.match(relatedPage, /\[Value middleware\]\(\/middleware\)/)
+	}
 })
 
 test("does not present native FormData as the submission source", async () => {
@@ -436,7 +508,7 @@ test("the physical example uses only public package imports", async () => {
 	const rootPackage = JSON.parse(
 		await readFile(new URL("package.json", repositoryRoot), "utf8"),
 	)
-	assert.equal(rootPackage.peerDependencies["react-hook-form"], "^7.55.0")
+	assert.equal(rootPackage.peerDependencies["react-hook-form"], "^7.76.1")
 })
 
 function escapeRegExp(value) {

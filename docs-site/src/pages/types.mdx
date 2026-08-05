@@ -1,6 +1,6 @@
 ---
 title: TypeScript
-description: Public types for schema values, field paths, definitions, controls, form bindings, slots, and resources.
+description: Public types for schema values, paths, definitions, controls, form bindings, managed updates, slots, and resources.
 showAskAi: false
 ---
 
@@ -30,6 +30,7 @@ Start with these types in application code:
 | Accept a valid field name. | `FieldPath<Value>` |
 | Type shared form UI. | `UiNode<Input, Controls, ...>` |
 | Type a custom control component. | `ControlProps<Value, Options, Context>` |
+| Type form-local value middleware. | `FormMiddleware<Input, Context>` |
 
 Most calls to `defineForm`, `useForm`, and `createFormKit` infer the remaining
 types. Add an explicit type when you export reusable configuration or build a
@@ -179,17 +180,37 @@ component-local form instance.
 | --- | --- |
 | `FormKit<Controls, ...>` | Kit methods, components, controls, slots, grid, and context contract. |
 | `CreateFormKitOptions<Controls, ...>` | Options accepted by `createFormKit`. |
-| `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, and submit handler. |
-| `FormBinding<Schema, Context>` | Raw RHF API, fixed definition, and context shared by one rendered form. |
+| `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, value middleware, and submit handler. |
+| `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
 `AutoFormProps<Schema, Context>` is currently the same contract as
 `FormProps`. It is a separate public name for components that wrap
 `kit.AutoForm`.
 
-Use `form.api` from `FormBinding` for unchanged React Hook Form operations. The
-other public fields are the fixed `definition` and current `context`. Read
-[`FormBinding` on the API page](/api#formbinding) for their behavior.
+Use `form.api` from `FormBinding` for unchanged React Hook Form operations. Use
+`form.update` for a managed value transaction. The other public fields are the
+fixed `definition` and current `context`. Read [`FormBinding` on the API
+page](/api#formbinding) for their behavior.
+
+### Managed value types
+
+Use these types when you configure value middleware or create a reusable
+managed update:
+
+| Type | Purpose |
+| --- | --- |
+| `FormUpdateRecipe<Input>` | Synchronous Immer recipe accepted by `form.update` and middleware `api.update`. |
+| `FormMiddleware<Input, Context>` | Redux-shaped middleware for one form binding. |
+| `FormMiddlewareApi<Input>` | Read current values or start a later managed update. |
+| `FormMiddlewareNext` | Forward authoritative patches to the next middleware or terminal. |
+| `ValueTransaction<Input, Context>` | TypeScript-readonly proposal with previous values, next values, patches, source, and context. It is not a frozen snapshot. |
+| `ValueTransactionSource<Input>` | Discriminated source for a control, array action, or `form.update`. |
+| `ValuePatch` | Readonly Immer operation with a segment-array path. |
+
+Middleware can replace the terminal return value. Therefore, `form.update` and
+`FormMiddlewareNext` return `unknown`. Read [Value middleware](/middleware) for
+runtime rules and examples.
 
 ## Slot and structure types
 

@@ -25,6 +25,7 @@ test("Vocs emits every supported Markdown route and index artifact", async () =>
 		"assets/md/validation.md",
 		"assets/md/conditional-fields.md",
 		"assets/md/arrays.md",
+		"assets/md/middleware.md",
 		"assets/md/controls.md",
 		"assets/md/resources.md",
 		"assets/md/styling.md",
@@ -57,6 +58,8 @@ test("generated LLM documentation describes the current runtime", async () => {
 	assert.match(full, /useWatch/)
 	assert.match(full, /fromResource/)
 	assert.match(full, /parses once/i)
+	assert.match(full, /does not create another form store/i)
+	assert.match(full, /Call `next` before the first `await`/)
 	assert.doesNotMatch(full, /form-please\/core/)
 	assert.doesNotMatch(full, /valuePolicy/)
 })

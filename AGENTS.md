@@ -41,3 +41,7 @@ when useful.
 Log papercuts proactively when they occur, but do not interrupt the main task.
 Do not add duplicate entries. Papercuts are minor workflow friction, distinct
 from completed-work logs and real bugs or tracked issues.
+
+## Rules
+
+Do not edit CHANGELOG.md, it is managed by automation.

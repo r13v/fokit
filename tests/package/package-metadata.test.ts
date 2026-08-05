@@ -29,6 +29,7 @@ const javaScriptEntrypoints = {
 describe("package metadata", () => {
 	it("publishes only the supported package surface", () => {
 		expect(packageJson).toMatchObject({
+			dependencies: { immer: "11.1.15" },
 			engines: { node: ">=24" },
 			files: ["dist"],
 			license: "MIT",
@@ -36,7 +37,7 @@ describe("package metadata", () => {
 			peerDependencies: {
 				react: "^18.0.0 || ^19.0.0",
 				"react-dom": "^18.0.0 || ^19.0.0",
-				"react-hook-form": "^7.55.0",
+				"react-hook-form": "^7.76.1",
 			},
 			sideEffects: ["**/*.css"],
 			type: "module",
@@ -51,7 +52,6 @@ describe("package metadata", () => {
 			"./layout.css",
 			"./package.json",
 		])
-		expect(packageJson.version).toMatch(/^1\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$/)
 		expect(packageLock.version).toBe(packageJson.version)
 		expect(packageLock.packages[""].version).toBe(packageJson.version)
 	})
@@ -67,7 +67,7 @@ describe("package metadata", () => {
 		)
 	})
 
-	it("lets release automation own the 1.x version", () => {
+	it("lets release automation own the package version", () => {
 		expect(packageJson.scripts["package:check"]).toBe(
 			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./native-controls ./preset-native ./preset-mui",
 		)

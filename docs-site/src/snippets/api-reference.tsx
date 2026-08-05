@@ -372,6 +372,30 @@ const keepPlanValuesConsistent: FormMiddleware<ProfileInput, ProfileContext> =
 	}
 // [!endregion value-middleware]
 
+// [!region update-hooks]
+function ProfileUpdateHooks({ context }: { readonly context: ProfileContext }) {
+	const form = profileKit.useForm(profileDefinition, {
+		beforeUpdate(draft, transaction) {
+			if (
+				!context.canEditPlan &&
+				transaction.source.type === "control" &&
+				transaction.source.path === "plan"
+			) {
+				return false
+			}
+			if (draft.plan === "solo") draft.teamName = undefined
+		},
+		afterUpdate(transaction) {
+			recordManagedValues(transaction.nextValues)
+		},
+		context,
+		defaultValues,
+	})
+
+	return <profileKit.AutoForm form={form} />
+}
+// [!endregion update-hooks]
+
 async function saveProfile(_value: FormOutput<typeof profileSchema>) {}
 
 // [!region use-form]

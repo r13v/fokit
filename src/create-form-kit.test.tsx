@@ -1891,4 +1891,47 @@ describe("form kit", () => {
 		expect(first).toHaveBeenCalledWith("current context")
 		expect(second).not.toHaveBeenCalled()
 	})
+
+	it("uses the latest update hooks only for managed value changes", () => {
+		const definition = kit.defineForm(schema, {
+			ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+		})
+		const observed: string[] = []
+		let setRawName: (name: string) => void = () => undefined
+		let resetRawValues: () => void = () => undefined
+
+		function View({ label }: { readonly label: string }) {
+			const form = kit.useForm(definition, {
+				afterUpdate(transaction) {
+					observed.push(`${label}:after:${transaction.nextValues.name}`)
+				},
+				beforeUpdate(draft, transaction) {
+					observed.push(`${label}:before:${transaction.source.type}`)
+					draft.name = draft.name.toUpperCase()
+				},
+				defaultValues: { name: "Ada" },
+			})
+			setRawName = (name) => form.api.setValue("name", name)
+			resetRawValues = () => form.api.reset({ name: "Reset" })
+			return <kit.AutoForm form={form} />
+		}
+
+		const view = render(<View label="first" />)
+		view.rerender(<View label="current" />)
+		fireEvent.change(screen.getByLabelText("Name"), {
+			target: { value: "Grace" },
+		})
+
+		expect(observed).toEqual(["current:before:control", "current:after:GRACE"])
+		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+			"GRACE",
+		)
+
+		act(() => setRawName("Raw"))
+		act(() => resetRawValues())
+		expect(observed).toHaveLength(2)
+		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+			"Reset",
+		)
+	})
 })

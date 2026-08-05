@@ -134,6 +134,10 @@ Passing another definition or middleware list does not replace either one. A
 caller must change a React `key` to remount the component and create another
 form.
 
+The optional `beforeUpdate` and `afterUpdate` callbacks use their latest React
+render versions. They belong to the managed value-update lifecycle rather than
+the fixed middleware configuration.
+
 `kit.Form` provides the same API through RHF `FormProvider`. Manual composition
 uses ordinary RHF APIs such as `register`, `Controller`, `useController`,
 `useWatch`, `useFormState`, `useFieldArray`, and `useFormContext`.
@@ -152,11 +156,19 @@ calling it. One middleware can call `next` at most once. Nested managed updates
 and asynchronous `next` calls are errors; a later update after async
 post-commit work is allowed.
 
+`beforeUpdate` receives the initial transaction and an Immer draft of its
+proposed values before middleware. It can adjust the proposal or cancel by
+returning `false`. After a commit and the synchronous middleware unwind,
+`afterUpdate` receives the final effective transaction. Both hooks are
+synchronous, cannot start nested managed updates, and use readonly transaction
+views rather than archival snapshots. A post-commit error does not roll values
+back.
+
 Generated controls and `form.update` publish final values through one RHF
 `setValues` call. RHF remains the sole state owner. Direct calls through
-`form.api`, initial values, and reset bypass middleware deliberately. Removing
-a top-level key is rejected because `setValues` shallow-merges roots; assign
-`undefined` when the schema permits it.
+`form.api`, initial values, and reset bypass middleware and managed update hooks
+deliberately. Removing a top-level key is rejected because `setValues`
+shallow-merges roots; assign `undefined` when the schema permits it.
 
 Managed changes follow `mode` and `reValidateMode` through one public RHF
 `trigger` call after commit. `isDirty` remains a whole-value RHF comparison;

@@ -376,6 +376,8 @@ test("documents middleware with copyable examples and live previews", async () =
 
 	for (const phrase of [
 		"does not create another form store",
+		"`beforeUpdate` and `afterUpdate` provide one application callback",
+		"If both fail after commit, dispatch throws an `AggregateError`",
 		"Call `next` before the first `await`",
 		"Supply consistent derived values in `defaultValues`",
 		"Call `api.getValues()` after synchronous `next`",
@@ -388,6 +390,7 @@ test("documents middleware with copyable examples and live previews", async () =
 	]) {
 		assert.match(normalizedMiddleware, new RegExp(escapeRegExp(phrase), "i"))
 	}
+	assert.match(middleware, /api-reference\.tsx:update-hooks/)
 
 	for (const path of [
 		"src/pages/advanced.mdx",

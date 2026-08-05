@@ -67,6 +67,11 @@ transaction. It may return a Promise after a synchronous commit. An exception
 after `next` does not roll back the committed values.
 _Avoid_: React Hook Form subscription, UI resolver, global middleware
 
+**Managed update hooks**: The form-local `beforeUpdate` and `afterUpdate`
+callbacks for one managed value-update lifecycle. `beforeUpdate` can adjust or
+cancel proposed values, while `afterUpdate` observes the committed transaction.
+_Avoid_: React Hook Form lifecycle hooks, raw update hooks
+
 **Form middleware API**: The form-local `getValues` and `update` operations
 available while configuring middleware. `getValues` returns a deeply readonly
 view for synchronous use without cloning an archival snapshot. Calling `update`

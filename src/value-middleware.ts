@@ -62,7 +62,7 @@ export type ValueTransactionSource<Input extends FieldValues> =
 			readonly type: "update"
 	  }
 
-/** A proposed managed value update passed through form middleware. */
+/** A proposed or final managed value update used by hooks and middleware. */
 export type ValueTransaction<Input extends FieldValues, Context = unknown> = {
 	/** Values before the managed update began. */
 	readonly previousValues: DeepReadonly<Input>
@@ -75,6 +75,21 @@ export type ValueTransaction<Input extends FieldValues, Context = unknown> = {
 	/** Current application context for this form binding. */
 	readonly context: DeepReadonly<Context>
 }
+
+/** Accepts an adjusted proposal or cancels it before middleware. */
+// biome-ignore lint/suspicious/noConfusingVoidType: Accepting a mutating hook intentionally returns void.
+export type BeforeUpdateResult = false | void
+
+/** Adjusts or cancels one proposed managed value update. */
+type BeforeUpdate<Input extends FieldValues, Context> = (
+	draft: Draft<Input>,
+	transaction: ValueTransaction<Input, Context>,
+) => BeforeUpdateResult
+
+/** Observes one final managed value transaction after commit. */
+type AfterUpdate<Input extends FieldValues, Context> = (
+	transaction: ValueTransaction<Input, Context>,
+) => void
 
 /** Operations available while configuring middleware for one form. */
 export type FormMiddlewareApi<Input extends FieldValues> = {
@@ -103,6 +118,8 @@ type CoordinatorOptions<Input extends FieldValues, Context> = {
 	readonly middleware: readonly FormMiddleware<Input, Context>[]
 	readonly getValues: () => Input
 	readonly getContext: () => Context
+	readonly getBeforeUpdate?: () => BeforeUpdate<Input, Context> | undefined
+	readonly getAfterUpdate?: () => AfterUpdate<Input, Context> | undefined
 	readonly commit: ValueTransactionCommit<Input, Context>
 }
 
@@ -129,6 +146,7 @@ type TransactionDispatch<Input extends FieldValues, Context> = (
 
 type ActiveDispatch<Input extends FieldValues, Context> = {
 	readonly commit: ValueTransactionCommit<Input, Context>
+	committed?: ValueTransaction<Input, Context>
 	readonly arrayStructure?: {
 		readonly path: readonly (string | number)[]
 		readonly patches: readonly ValuePatch[]
@@ -156,6 +174,7 @@ export function createValueCoordinator<
 			throw new TypeError("Value middleware next called outside a transaction")
 		}
 		activeDispatch.commit(transaction)
+		activeDispatch.committed = transaction
 		return transaction
 	}
 
@@ -250,7 +269,50 @@ export function createValueCoordinator<
 			...(arrayStructure === undefined ? {} : { arrayStructure }),
 		}
 		try {
-			return pipeline(transaction)
+			const effectiveTransaction = applyBeforeUpdate(
+				transaction,
+				options.getBeforeUpdate?.(),
+			)
+			if (effectiveTransaction === undefined) return undefined
+			assertActiveArrayStructure(effectiveTransaction.patches, activeDispatch)
+
+			let result: unknown
+			let pipelineError: unknown
+			let pipelineFailed = false
+			try {
+				result = pipeline(effectiveTransaction)
+			} catch (error) {
+				pipelineError = error
+				pipelineFailed = true
+			}
+
+			const committed = activeDispatch.committed
+			let afterError: unknown
+			let afterFailed = false
+			if (committed !== undefined) {
+				try {
+					const afterResult = options.getAfterUpdate?.()?.(committed)
+					assertSynchronousHookResult(afterResult, "afterUpdate")
+				} catch (error) {
+					afterError = error
+					afterFailed = true
+				}
+			}
+
+			if (pipelineFailed) {
+				if (afterFailed) throw updateAggregateError(pipelineError, afterError)
+				throw pipelineError
+			}
+			if (!afterFailed) return result
+			if (!isPromiseLike(result)) throw afterError
+			return Promise.resolve(result).then(
+				() => {
+					throw afterError
+				},
+				(error: unknown) => {
+					throw updateAggregateError(error, afterError)
+				},
+			)
 		} finally {
 			activeDispatch = undefined
 		}
@@ -260,6 +322,166 @@ export function createValueCoordinator<
 		dispatch,
 		update: (recipe) => dispatch(recipe, { type: "update" }),
 	}
+}
+
+/** Applies the current before-update hook and rebuilds its effective patches. */
+function applyBeforeUpdate<Input extends FieldValues, Context>(
+	transaction: ValueTransaction<Input, Context>,
+	beforeUpdate: BeforeUpdate<Input, Context> | undefined,
+): ValueTransaction<Input, Context> | undefined {
+	if (beforeUpdate === undefined) return transaction
+
+	const hookState = { cancelled: false }
+	const [nextValues, adjustmentPatches] = valueImmer.produceWithPatches(
+		transaction.nextValues as Input,
+		(draft) => {
+			const hookResult = beforeUpdate(draft, transaction)
+			assertSynchronousHookResult(hookResult, "beforeUpdate")
+			hookState.cancelled = hookResult === false
+		},
+	)
+	if (hookState.cancelled) return undefined
+	if (adjustmentPatches.length === 0) return transaction
+
+	const combinedPatches = [
+		...transaction.patches,
+		...adjustmentPatches,
+	] as readonly ValuePatch[]
+	const patches =
+		transaction.source.type === "array"
+			? combinedPatches
+			: effectivePatches(
+					transaction.previousValues as Input,
+					nextValues,
+					combinedPatches,
+				)
+	if (patches.length === 0) return undefined
+	return createTransaction(
+		transaction.previousValues as Input,
+		patches,
+		transaction.source,
+		transaction.context as Context,
+	)
+}
+
+/** Removes superseded proposal operations and keeps only their final values. */
+function effectivePatches<Input extends FieldValues>(
+	previousValues: Input,
+	nextValues: Input,
+	patches: readonly ValuePatch[],
+): readonly ValuePatch[] {
+	const paths = patches.some((patch) => patch.path.length === 0)
+		? Array.from(
+				new Set([...Object.keys(previousValues), ...Object.keys(nextValues)]),
+				(key) => [key] as const,
+			)
+		: compactPatchPaths(patches.map((patch) => patch.path))
+	return paths.flatMap((path): readonly ValuePatch[] => {
+		const previous = readPatchTarget(previousValues, path)
+		const next = readPatchTarget(nextValues, path)
+		if (
+			previous.exists === next.exists &&
+			Object.is(previous.value, next.value)
+		) {
+			return []
+		}
+		if (!next.exists) return [{ op: "remove", path }]
+		return [
+			{
+				op: previous.exists ? "replace" : "add",
+				path,
+				value: next.value,
+			},
+		]
+	})
+}
+
+/** Selects the shallowest unique paths that contain every affected value. */
+function compactPatchPaths(
+	paths: readonly (readonly (string | number)[])[],
+): readonly (readonly (string | number)[])[] {
+	const compacted: (readonly (string | number)[])[] = []
+	for (const path of paths) {
+		if (compacted.some((candidate) => isPathPrefix(candidate, path))) continue
+		for (let index = compacted.length - 1; index >= 0; index -= 1) {
+			if (isPathPrefix(path, compacted[index] ?? [])) compacted.splice(index, 1)
+		}
+		if (!compacted.some((candidate) => samePath(candidate, path))) {
+			compacted.push(path)
+		}
+	}
+	return compacted
+}
+
+/** Reads whether one Immer path exists and the value currently stored there. */
+function readPatchTarget(
+	root: unknown,
+	path: readonly (string | number)[],
+): { readonly exists: boolean; readonly value: unknown } {
+	let current = root
+	for (const segment of path) {
+		if (current === null || typeof current !== "object") {
+			return { exists: false, value: undefined }
+		}
+		if (!Object.hasOwn(current, segment)) {
+			return { exists: false, value: undefined }
+		}
+		current = (current as Record<string | number, unknown>)[segment]
+	}
+	return { exists: true, value: current }
+}
+
+/** Reports whether the first Immer path contains the second path. */
+function isPathPrefix(
+	prefix: readonly (string | number)[],
+	path: readonly (string | number)[],
+): boolean {
+	return (
+		prefix.length < path.length &&
+		prefix.every((segment, index) => segment === path[index])
+	)
+}
+
+/** Compares two Immer segment paths. */
+function samePath(
+	left: readonly (string | number)[],
+	right: readonly (string | number)[],
+): boolean {
+	return (
+		left.length === right.length &&
+		left.every((segment, index) => segment === right[index])
+	)
+}
+
+/** Rejects a Promise-like value returned by a synchronous update hook. */
+function assertSynchronousHookResult(
+	result: unknown,
+	hook: "beforeUpdate" | "afterUpdate",
+): void {
+	if (!isPromiseLike(result)) return
+	void Promise.resolve(result).catch(() => undefined)
+	throw new TypeError(`${hook} must be synchronous`)
+}
+
+/** Detects Promise-like results without constraining their concrete class. */
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+	return (
+		value !== null &&
+		(typeof value === "object" || typeof value === "function") &&
+		"then" in value &&
+		typeof value.then === "function"
+	)
+}
+
+/** Preserves both failures when committed middleware and afterUpdate throw. */
+function updateAggregateError(
+	primary: unknown,
+	after: unknown,
+): AggregateError {
+	return new AggregateError(
+		[primary, after],
+		"Managed update failed after commit",
+	)
 }
 
 /** Creates a consistent immutable-view transaction from authoritative patches. */
@@ -342,10 +564,10 @@ function samePatch(left: ValuePatch, right: ValuePatch | undefined): boolean {
 	if (
 		right === undefined ||
 		left.op !== right.op ||
-		left.path.length !== right.path.length ||
-		!Object.is(left.value, right.value)
+		!Object.is(left.value, right.value) ||
+		!samePath(left.path, right.path)
 	) {
 		return false
 	}
-	return left.path.every((segment, index) => segment === right.path[index])
+	return true
 }

@@ -121,6 +121,14 @@ Configure value middleware when one generated change must update dependent
 fields before observers see the result. Call `form.update` when an application
 action needs the same managed boundary.
 
+For one form-local rule, use `beforeUpdate` to adjust or cancel the proposal and
+`afterUpdate` to observe its final committed transaction. Use middleware when
+independent policies must compose in an explicit order.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:update-hooks]
+```
+
 See [Value middleware](/middleware) for complete setup, live previews,
 cancellation, ordering, array constraints, and validation timing.
 

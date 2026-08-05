@@ -129,6 +129,20 @@ const replaceName: FormUpdateRecipe<Input> = (draft): void => {
 
 function useTypedBinding() {
 	const form = kit.useForm(definition, {
+		beforeUpdate(draft, transaction) {
+			draft.profile.country = "FR"
+			transaction.nextValues.profile.country satisfies string
+			transaction.context.locale satisfies string
+			// @ts-expect-error The original proposal remains readonly.
+			transaction.nextValues.profile.country = "DE"
+			if (transaction.source.type === "control") return false
+		},
+		afterUpdate(transaction) {
+			transaction.nextValues.profile.country satisfies string
+			transaction.context.permissions satisfies readonly string[]
+			// @ts-expect-error The committed transaction remains readonly.
+			transaction.context.permissions.push("admin")
+		},
 		context: { locale: "en", permissions: [] },
 		defaultValues: {
 			name: "Ada",

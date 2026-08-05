@@ -180,7 +180,7 @@ component-local form instance.
 | --- | --- |
 | `FormKit<Controls, ...>` | Kit methods, components, controls, slots, grid, and context contract. |
 | `CreateFormKitOptions<Controls, ...>` | Options accepted by `createFormKit`. |
-| `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, value middleware, and submit handler. |
+| `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, managed update hooks, value middleware, and submit handler. |
 | `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
@@ -204,7 +204,7 @@ managed update:
 | `FormMiddleware<Input, Context>` | Redux-shaped middleware for one form binding. |
 | `FormMiddlewareApi<Input>` | Read current values or start a later managed update. |
 | `FormMiddlewareNext` | Forward authoritative patches to the next middleware or terminal. |
-| `ValueTransaction<Input, Context>` | TypeScript-readonly proposal with previous values, next values, patches, source, and context. It is not a frozen snapshot. |
+| `ValueTransaction<Input, Context>` | TypeScript-readonly proposal or final committed update with previous values, next values, patches, source, and context. It is not a frozen snapshot. |
 | `ValueTransactionSource<Input>` | Discriminated source for a control, array action, or `form.update`. |
 | `ValuePatch` | Readonly Immer operation with a segment-array path. |
 

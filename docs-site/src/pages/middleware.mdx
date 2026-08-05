@@ -21,11 +21,35 @@ Form remains the owner of editable values and form state.
 
 | Need | Use |
 | --- | --- |
-| Change dependent values with the source value | Value middleware |
+| Adjust or cancel one form-local proposal | `beforeUpdate` |
+| Observe one final transaction with its source and patches | `afterUpdate` |
+| Compose independent value policies | Value middleware |
 | Run an application action through the same rules | `form.update(recipe)` |
 | Observe values after a commit | An RHF subscription |
 | Make an independent raw RHF change | `form.api` |
 | Validate or transform submitted output | The Standard Schema |
+
+## Use one managed update hook
+
+`beforeUpdate` and `afterUpdate` provide one application callback on either
+side of the middleware chain. The first callback can mutate the proposed Immer
+draft or return `false`; the second receives the final committed transaction.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:update-hooks]
+```
+
+The order is `beforeUpdate`, middleware before `next`, commit, middleware after
+`next`, and `afterUpdate`. Both hooks are synchronous. `afterUpdate` still runs
+when middleware throws after a commit, because the committed change remains
+observable. If both fail after commit, dispatch throws an `AggregateError`.
+
+The callbacks use their latest React render versions. Their transactions are
+readonly views rather than archival snapshots. Copy retained audit or save data.
+Use middleware when several rules must compose in a declared order.
+
+Generated array constraints still apply. Return `false` to cancel the proposed
+structural action; do not rewrite its length or order through the draft.
 
 ## Check editing in a larger form
 
@@ -103,7 +127,7 @@ Middleware handles these entry points:
 | Generated array add, remove, or move | `array` |
 | `form.update(recipe)` | `update` |
 
-These operations bypass middleware:
+These operations bypass middleware and managed update hooks:
 
 - initial `defaultValues`;
 - `form.api.reset` and native form reset;

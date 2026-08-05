@@ -70,8 +70,9 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
   output while the submit wrapper preserves the editable input snapshot.
 - UI resolvers receive the complete deeply readonly schema input and runtime
   context. They must be synchronous.
-- Use form-local value middleware and `form.update` when dependent value
-  changes must commit atomically. Direct `form.api` changes bypass middleware.
+- Use `beforeUpdate` and `afterUpdate` for one form-local managed update rule.
+  Use value middleware and `form.update` when independent policies or dependent
+  changes must compose atomically. Direct `form.api` changes bypass both.
 - Hidden fields preserve their values.
 - Array paths use RHF dot notation and rows use stable RHF keys.
 - RHF focuses the first registered invalid field. A focusable error summary is

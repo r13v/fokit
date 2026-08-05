@@ -1,5 +1,6 @@
 "use client"
 
+import type { Draft } from "immer"
 import {
 	type ComponentPropsWithoutRef,
 	type ComponentType,
@@ -64,6 +65,7 @@ import type {
 	StructuralRootProps,
 } from "./types.js"
 import {
+	type BeforeUpdateResult,
 	createValueCoordinator,
 	type FormMiddleware,
 	type FormUpdateRecipe,
@@ -105,6 +107,15 @@ export type UseFormOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
 > = ContextOption<Context> & {
+	/** Adjusts or cancels a proposed managed value update before middleware. */
+	readonly beforeUpdate?: (
+		draft: Draft<FormValues<Schema>>,
+		transaction: ValueTransaction<FormValues<Schema>, Context>,
+	) => BeforeUpdateResult
+	/** Observes the final transaction after commit and middleware unwind. */
+	readonly afterUpdate?: (
+		transaction: ValueTransaction<FormValues<Schema>, Context>,
+	) => void
 	/** Initial editable values, fixed for the hook lifetime. */
 	readonly defaultValues: FormInput<Schema>
 	/** Milliseconds to delay the display of validation errors. */
@@ -454,6 +465,10 @@ function assembleKit(
 				...(options.middleware ?? []),
 			])
 		}
+		const beforeUpdateRef = useRef(options.beforeUpdate)
+		beforeUpdateRef.current = options.beforeUpdate
+		const afterUpdateRef = useRef(options.afterUpdate)
+		afterUpdateRef.current = options.afterUpdate
 
 		const inputRefs = useRef(new Map<string, HTMLElement>())
 		const errorSummaryRef = useRef<HTMLElement | null>(null)
@@ -509,6 +524,8 @@ function assembleKit(
 		if (coordinatorRef.current === undefined) {
 			coordinatorRef.current = createValueCoordinator({
 				commit: commitRef.current,
+				getAfterUpdate: () => afterUpdateRef.current,
+				getBeforeUpdate: () => beforeUpdateRef.current,
 				getContext: () => contextRef.current,
 				getValues: () => apiRef.current.getValues(),
 				middleware: fixedMiddlewareRef.current,

@@ -29,6 +29,12 @@ test.describe("Form, Please documentation", () => {
 			page.getByRole("heading", { level: 1, name: "Value middleware" }),
 		).toBeVisible()
 
+		await sidebar.getByRole("link", { name: "Managed value history" }).click()
+		await expect(page).toHaveURL(/\/form-please\/history$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Managed value history" }),
+		).toBeVisible()
+
 		await sidebar.getByRole("link", { name: "API", exact: true }).click()
 		await expect(page).toHaveURL(/\/form-please\/api$/)
 		await expect(
@@ -43,6 +49,29 @@ test.describe("Form, Please documentation", () => {
 				name: "Compose generated and custom UI",
 			}),
 		).toBeVisible()
+		expect(errors).toEqual([])
+	})
+
+	test("runs the managed value history preview", async ({ page }) => {
+		const errors = pageErrors(page)
+		await page.goto("./examples/history")
+
+		const wrapper = page.locator('[data-history-preview="managed-values"]')
+		await expect(wrapper).toHaveAttribute("data-demo-client-ready", "true")
+		const preview = wrapper.getByRole("region", {
+			name: "Managed value history preview",
+		})
+		const name = preview.getByLabel("Name")
+		await expect(name).toHaveValue("Ada Lovelace")
+		await name.fill("Grace Hopper")
+		await expect(preview.getByRole("button", { name: "Undo" })).toBeEnabled()
+
+		await preview.getByRole("button", { name: "Undo" }).click()
+		await expect(name).toHaveValue("Ada Lovelace")
+		await preview.getByRole("button", { name: "Redo" }).click()
+		await expect(name).toHaveValue("Grace Hopper")
+		await expect(preview.getByText(/Redo: applied/)).toBeVisible()
+
 		expect(errors).toEqual([])
 	})
 

@@ -14,10 +14,11 @@ Form, Please is a React integration over React Hook Form.
 | Form, Please | Typed UI definitions, definition resolution, generated fields, managed value-update coordination, controls, slots, context, and accessibility wiring |
 | Application | Product workflow, requests, caches, authorization, storage, server transport, and visual design |
 
-There is no separate Form, Please form store, reducer, command model, history
-layer, persistence layer, server protocol, or validation cache. The narrow
-middleware coordinator proposes changes before committing them to RHF; it does
-not retain values.
+There is no separate Form, Please form store, reducer, command model,
+persistence layer, server protocol, or validation cache. The narrow middleware
+coordinator proposes changes before committing them to RHF; it does not retain
+values. Optional managed value history retains independent input snapshots for
+navigation without becoming the live form store.
 
 ## Package graph
 
@@ -25,6 +26,8 @@ not retain values.
 flowchart TD
     Root["form-please"] --> RHF["react-hook-form"]
     Root --> Immer["immer"]
+    History["form-please/history"] --> Coordinator["managed value coordinator"]
+    History --> Immer
     NativePreset["form-please/preset-native"] --> Root
     NativePreset --> NativeControls["form-please/native-controls"]
     NativePreset --> DefaultSlots["form-please/default-slots"]
@@ -36,15 +39,17 @@ Public JavaScript entries are limited to:
 
 - `form-please`;
 - `form-please/default-slots`;
+- `form-please/history`;
 - `form-please/native-controls`;
 - `form-please/preset-native`;
 - `form-please/preset-mui`.
 
 `form-please/layout.css` and `form-please/package.json` are explicit non-code
-exports. All JavaScript entries are React client modules. React Hook Form
-7.76.1 or newer within major version 7 is a required peer. Immer is a direct
-runtime dependency. Material UI and Emotion peers remain optional because only
-the Material UI preset uses them.
+exports. React UI entries are client modules; the optional history entry has no
+React component or hook dependency. React Hook Form 7.76.1 or newer within
+major version 7 is a required peer. Immer is a direct runtime dependency.
+Material UI and Emotion peers remain optional because only the Material UI
+preset uses them.
 
 ## Canonical modules
 
@@ -56,7 +61,9 @@ the Material UI preset uses them.
 | `src/standard-schema-resolver.ts` | Validate through Standard Schema once and translate all issues to and from RHF errors |
 | `src/create-form-kit.tsx` | Create kits, bind React Hook Form, render generated UI, submit, and focus errors |
 | `src/value-middleware.ts` | Produce Immer patches, run the fixed Redux-shaped middleware chain, and coordinate terminal value transactions |
+| `src/history/history.ts` | Retain managed input positions, navigate them through the coordinator, and import or export in-memory journals |
 | `src/resource.ts` | Pure `ResourceState`, `matchResource`, and `fromResource` helpers |
+| `src/use-snapshot.ts` | Adapt any external store with `subscribe` and `getSnapshot` to React |
 | `src/index.ts` | Canonical root exports |
 
 Default slots, native controls, and presets depend on these canonical modules.
@@ -175,6 +182,40 @@ Managed changes follow `mode` and `reValidateMode` through one public RHF
 `dirtyFields` is guaranteed only for mounted patched paths. Managed triggering
 does not preserve RHF's `delayError` timing.
 
+## Managed value history
+
+`form-please/history` is an optional middleware feature. It retains complete
+independent schema-input positions only after successful managed value updates.
+Initial values, reset, direct `form.api` mutations, and application-owned field
+array operations remain outside history. If raw values diverge, the next
+managed update or history operation replaces previous navigation branches with
+the current values as a non-undoable boundary.
+
+One feature can own separate state for several forms, but each form accepts only
+one history feature. `feature.handle(form)` resolves the state for that exact
+feature and binding through a package-private coordinator capability; optional
+history does not add a field to `FormBinding`.
+
+The root React entry exports the generic `useSnapshot(store)` adapter. History
+handles satisfy its structural external-store contract without adding React to
+the optional `form-please/history` runtime.
+
+Control transactions on one path can share a timed history group. Other
+managed sources create one group each. Retention compacts complete positions,
+and editing after undo truncates redo. The default limit is 100 groups.
+
+Undo, redo, seek, and import use a managed `history` source. They pass through
+the current `beforeUpdate`, middleware, and `afterUpdate` lifecycle, but commit
+complete values through RHF reset so generated array structure and optional
+top-level keys synchronize correctly. The reset preserves the original default
+baseline and current ephemeral form metadata. Dirty state is recalculated;
+RHF may regenerate private array row IDs and remount rows.
+
+`HistoryJournal` version 1 contains complete input entries and a numeric index.
+It is an in-memory navigation artifact rather than an event log or persistence
+protocol. Import validates the protocol and retention boundary, but editable
+entries need not pass Standard Schema validation.
+
 ## Validation and submission
 
 The definition Standard Schema is the only form-level validator. The internal
@@ -225,6 +266,10 @@ join the same final React render, although raw RHF subscribers may see the
 native array operation before the final value commit. Item defaults are cloned
 before insertion. Applications still need a schema-owned ID when row identity
 must survive serialization or a new form instance.
+
+History restore is a deliberate exception to the normal generated-array commit
+path. It resets the complete RHF value tree so every retained array structure is
+restored. The array values are exact, but RHF can generate new private row IDs.
 
 ## Error focus
 

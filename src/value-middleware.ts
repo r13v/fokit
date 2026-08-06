@@ -61,6 +61,10 @@ export type ValueTransactionSource<Input extends FieldValues> =
 	| {
 			readonly type: "update"
 	  }
+	| {
+			readonly type: "history"
+			readonly action: "undo" | "redo" | "seek" | "import"
+	  }
 
 /** A proposed or final managed value update used by hooks and middleware. */
 export type ValueTransaction<Input extends FieldValues, Context = unknown> = {
@@ -121,9 +125,11 @@ type CoordinatorOptions<Input extends FieldValues, Context> = {
 	readonly getBeforeUpdate?: () => BeforeUpdate<Input, Context> | undefined
 	readonly getAfterUpdate?: () => AfterUpdate<Input, Context> | undefined
 	readonly commit: ValueTransactionCommit<Input, Context>
+	readonly restore?: ValueTransactionCommit<Input, Context>
 }
 
 type ManagedDispatchOptions<Input extends FieldValues, Context> = {
+	readonly allowTopLevelRemoval?: boolean
 	readonly commit?: ValueTransactionCommit<Input, Context>
 	readonly arrayPath?: readonly (string | number)[]
 }
@@ -140,11 +146,56 @@ export type ValueCoordinator<Input extends FieldValues, Context> = {
 	): unknown
 }
 
+/** Package-private operations shared with optional managed-value features. */
+export type ValueCoordinatorCapability<Input extends FieldValues, Context> = {
+	/** Reads the current RHF-owned values. */
+	getValues(): DeepReadonly<Input>
+	/** Reads the terminal commit while a middleware frame is active. */
+	getCommittedTransaction(): ValueTransaction<Input, Context> | undefined
+	/** Dispatches a complete history restore through the managed pipeline. */
+	restore(
+		recipe: FormUpdateRecipe<Input>,
+		source: Extract<ValueTransactionSource<Input>, { type: "history" }>,
+	): unknown
+}
+
+const valueCoordinatorCapabilityKey = Symbol.for(
+	"form-please.value-coordinator-capability",
+)
+
+/** Reads the package-private coordinator capability from an integration host. */
+export function getValueCoordinatorCapability<
+	Input extends FieldValues,
+	Context = unknown,
+>(target: object): ValueCoordinatorCapability<Input, Context> {
+	const capability = (target as Record<PropertyKey, unknown>)[
+		valueCoordinatorCapabilityKey
+	]
+	if (capability === undefined) {
+		throw new TypeError(
+			"Managed value feature requires a current Form Please form binding",
+		)
+	}
+	return capability as ValueCoordinatorCapability<Input, Context>
+}
+
+/** Copies one package-private coordinator capability to another integration host. */
+export function attachValueCoordinatorCapability(
+	target: object,
+	source: object,
+): void {
+	const capability = getValueCoordinatorCapability(source)
+	Object.defineProperty(target, valueCoordinatorCapabilityKey, {
+		value: capability,
+	})
+}
+
 type TransactionDispatch<Input extends FieldValues, Context> = (
 	transaction: ValueTransaction<Input, Context>,
 ) => unknown
 
 type ActiveDispatch<Input extends FieldValues, Context> = {
+	readonly allowTopLevelRemoval: boolean
 	readonly commit: ValueTransactionCommit<Input, Context>
 	committed?: ValueTransaction<Input, Context>
 	readonly arrayStructure?: {
@@ -168,6 +219,22 @@ export function createValueCoordinator<
 		getValues: () => options.getValues() as DeepReadonly<Input>,
 		update: (recipe) => dispatch(recipe, { type: "update" }),
 	}
+	const capability: ValueCoordinatorCapability<Input, Context> = {
+		getCommittedTransaction: () => activeDispatch?.committed,
+		getValues: api.getValues,
+		restore: (recipe, source) => {
+			if (options.restore === undefined) {
+				throw new TypeError("This form binding does not support value restore")
+			}
+			return dispatch(recipe, source, {
+				allowTopLevelRemoval: true,
+				commit: options.restore,
+			})
+		},
+	}
+	Object.defineProperty(api, valueCoordinatorCapabilityKey, {
+		value: capability,
+	})
 
 	const terminal: TransactionDispatch<Input, Context> = (transaction) => {
 		if (activeDispatch === undefined) {
@@ -206,6 +273,7 @@ export function createValueCoordinator<
 				patches,
 				frame.transaction.source,
 				frame.transaction.context as Context,
+				activeDispatch?.allowTopLevelRemoval === true,
 			)
 			assertActiveArrayStructure(replacement.patches, activeDispatch)
 			return nextDispatch(replacement)
@@ -256,6 +324,7 @@ export function createValueCoordinator<
 			patches,
 			source,
 			options.getContext(),
+			dispatchOptions.allowTopLevelRemoval === true,
 		)
 		const arrayStructure =
 			dispatchOptions.arrayPath === undefined
@@ -265,6 +334,7 @@ export function createValueCoordinator<
 						patches: structuralArrayPatches(patches, dispatchOptions.arrayPath),
 					}
 		activeDispatch = {
+			allowTopLevelRemoval: dispatchOptions.allowTopLevelRemoval === true,
 			commit: dispatchOptions.commit ?? options.commit,
 			...(arrayStructure === undefined ? {} : { arrayStructure }),
 		}
@@ -272,6 +342,7 @@ export function createValueCoordinator<
 			const effectiveTransaction = applyBeforeUpdate(
 				transaction,
 				options.getBeforeUpdate?.(),
+				activeDispatch.allowTopLevelRemoval,
 			)
 			if (effectiveTransaction === undefined) return undefined
 			assertActiveArrayStructure(effectiveTransaction.patches, activeDispatch)
@@ -318,16 +389,21 @@ export function createValueCoordinator<
 		}
 	}
 
-	return {
+	const coordinator: ValueCoordinator<Input, Context> = {
 		dispatch,
 		update: (recipe) => dispatch(recipe, { type: "update" }),
 	}
+	Object.defineProperty(coordinator, valueCoordinatorCapabilityKey, {
+		value: capability,
+	})
+	return coordinator
 }
 
 /** Applies the current before-update hook and rebuilds its effective patches. */
 function applyBeforeUpdate<Input extends FieldValues, Context>(
 	transaction: ValueTransaction<Input, Context>,
 	beforeUpdate: BeforeUpdate<Input, Context> | undefined,
+	allowTopLevelRemoval: boolean,
 ): ValueTransaction<Input, Context> | undefined {
 	if (beforeUpdate === undefined) return transaction
 
@@ -361,6 +437,7 @@ function applyBeforeUpdate<Input extends FieldValues, Context>(
 		patches,
 		transaction.source,
 		transaction.context as Context,
+		allowTopLevelRemoval,
 	)
 }
 
@@ -490,12 +567,15 @@ function createTransaction<Input extends FieldValues, Context>(
 	patches: readonly ValuePatch[],
 	source: ValueTransactionSource<Input>,
 	context: Context,
+	allowTopLevelRemoval: boolean,
 ): ValueTransaction<Input, Context> {
 	const nextValues = valueImmer.applyPatches(
 		previousValues,
 		patches as readonly Patch[],
 	)
-	assertNoTopLevelRemoval(previousValues, nextValues, patches)
+	if (!allowTopLevelRemoval) {
+		assertNoTopLevelRemoval(previousValues, nextValues, patches)
+	}
 	return {
 		context: context as DeepReadonly<Context>,
 		nextValues: nextValues as DeepReadonly<Input>,

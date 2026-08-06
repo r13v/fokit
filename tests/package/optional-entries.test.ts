@@ -14,7 +14,9 @@ describe("built package entries", () => {
 			expect(modules.root.createFormKit).toBeTypeOf("function")
 			expect(modules.root.defineControl).toBeTypeOf("function")
 			expect(modules.root.fromResource).toBeTypeOf("function")
+			expect(modules.root.useSnapshot).toBeTypeOf("function")
 			expect(modules.defaultSlots.createDefaultSlots).toBeTypeOf("function")
+			expect(modules.history.createHistoryMiddleware).toBeTypeOf("function")
 			expect(modules.nativeControls.createNativeControls).toBeTypeOf("function")
 			expect(modules.presetNative.nativeFormKit.useForm).toBeTypeOf("function")
 			expect(modules.presetMui.createMuiFormKit).toBeTypeOf("function")
@@ -24,6 +26,7 @@ describe("built package entries", () => {
 	it("exports only canonical root runtime names", async () => {
 		for (const root of [(await loadEsm()).root, loadCommonJs().root]) {
 			expect(root).toHaveProperty("createFormKit")
+			expect(root).toHaveProperty("useSnapshot")
 			expect(root).not.toHaveProperty("createForm")
 			expect(root).not.toHaveProperty("createFormStore")
 			expect(root).not.toHaveProperty("useForm")
@@ -52,6 +55,7 @@ describe("built package entries", () => {
 				"FormKit",
 				"FormMiddleware",
 				"UseFormOptions",
+				"useSnapshot",
 				"ValueTransaction",
 			]) {
 				expect(declaration).toContain(name)
@@ -63,6 +67,7 @@ describe("built package entries", () => {
 type Modules = {
 	readonly root: Record<string, unknown>
 	readonly defaultSlots: Record<string, unknown>
+	readonly history: Record<string, unknown>
 	readonly nativeControls: Record<string, unknown>
 	readonly presetNative: {
 		readonly nativeFormKit: { readonly useForm: unknown }
@@ -74,6 +79,7 @@ async function loadEsm(): Promise<Modules> {
 	return {
 		root: await import("../../dist/index.js"),
 		defaultSlots: await import("../../dist/default-slots.js"),
+		history: await import("../../dist/history.js"),
 		nativeControls: await import("../../dist/native-controls.js"),
 		presetNative: await import("../../dist/preset-native.js"),
 		presetMui: await import("../../dist/preset-mui.js"),
@@ -84,6 +90,7 @@ function loadCommonJs(): Modules {
 	return {
 		root: require("../../dist/index.cjs"),
 		defaultSlots: require("../../dist/default-slots.cjs"),
+		history: require("../../dist/history.cjs"),
 		nativeControls: require("../../dist/native-controls.cjs"),
 		presetNative: require("../../dist/preset-native.cjs"),
 		presetMui: require("../../dist/preset-mui.cjs"),

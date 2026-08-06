@@ -1,0 +1,86 @@
+---
+title: Managed value history
+description: Add grouped undo, redo, seek, and in-memory journal transfer to managed form updates.
+showAskAi: false
+---
+
+# Managed value history
+
+Import `createHistoryMiddleware` from `form-please/history` when users need to
+navigate earlier editable values. History is optional and does not create
+another live form store. React Hook Form remains the owner of current values and
+form state.
+
+## Configure one history feature
+
+Create the feature outside the component, put that exact reference in the
+form's fixed middleware list, and retrieve the handle for the resulting form:
+
+```tsx
+// [!include ~/snippets/history-guide.tsx:setup]
+```
+
+`getSnapshot()` contains `canUndo`, `canRedo`, `index`, and `length`.
+`subscribe()` follows the external-store contract, so React can read it with
+the root `useSnapshot` helper.
+
+One feature can serve several forms. Each form can configure only one history
+feature, and `feature.handle(form)` rejects any form that does not use that
+exact feature.
+
+## Know what history records
+
+History records successful managed value updates from generated controls,
+generated array actions, and `form.update`. It retains complete independent
+schema-input snapshots rather than patches or events.
+
+Initial values, native reset, direct `form.api` mutations, and
+application-owned `useFieldArray` operations bypass history. When raw values
+diverge, the next managed update or history operation makes those current
+values a new non-undoable boundary and discards the older branches.
+
+History never retains errors, touched state, validation, submission, focus,
+context, or the default-value baseline. Restore keeps the current RHF metadata,
+recalculates dirty state against the original defaults, and may regenerate
+private field-array row IDs.
+
+## Group and retain positions
+
+Consecutive control edits to one path share a group for 750 milliseconds by
+default. Another source, another path, or an expired window starts a group. Set
+`groupWindow: 0` to make every managed update separately undoable.
+
+`limit` defaults to 100 retained groups. Set another non-negative integer or
+`Infinity`. A limit of zero retains only the current position.
+
+## Navigate through middleware
+
+`undo()`, `redo()`, `seek(index)`, and `import(value)` return promises. Their
+managed transaction source has `type: "history"` and an `undo`, `redo`, `seek`,
+or `import` action. `beforeUpdate` and middleware can cancel or transform the
+target, and `afterUpdate` observes the final commit.
+
+Operations report `"applied"`, `"unavailable"`, `"cancelled"`, or
+`"transformed"`. A transformed restore becomes a new group and removes its
+redo branch. A post-commit failure rejects the operation without rolling back
+the committed values or history position.
+
+## Export and import an in-memory journal
+
+Export from one handle and import into another handle:
+
+```ts
+// [!include ~/snippets/history-guide.tsx:journal]
+```
+
+`HistoryJournal<Input>` version 1 contains complete input entries and a numeric
+current index. Import validates its protocol, index, entry roots, and configured
+retention limit. It does not require Standard Schema success because editable
+history can contain temporarily invalid values.
+
+The journal is an in-memory navigation artifact, not a JSON persistence format
+or audit log. `Date` and `RegExp` leaves are detached. Browser-owned values such
+as `File` and `Blob` preserve their identity. Applications own transport,
+serialization, storage, and trust boundaries.
+
+Try the complete [History workflow](/examples/history).

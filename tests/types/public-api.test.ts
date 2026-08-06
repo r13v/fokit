@@ -9,6 +9,7 @@ import {
 	type FormMiddleware,
 	type FormUpdateRecipe,
 	type PathValue,
+	useSnapshot,
 	type ValueTransaction,
 } from "../../src/index.js"
 
@@ -34,6 +35,22 @@ type Context = {
 type FieldOptions = { readonly tone: "quiet" | "strong" }
 type SectionOptions = { readonly bordered: boolean }
 type ArrayOptions = { readonly dense: boolean }
+
+const externalSnapshot = { count: 1, status: "ready" as const }
+const externalStore = {
+	getSnapshot: () => externalSnapshot,
+	subscribe: (_listener: () => void) => () => undefined,
+}
+
+function useExternalSnapshot() {
+	const snapshot = useSnapshot(externalStore)
+	snapshot.count satisfies number
+	snapshot.status satisfies "ready"
+	// @ts-expect-error The snapshot type comes from the store getter.
+	snapshot.missing
+}
+
+void useExternalSnapshot
 
 const schema: StandardSchemaV1<Input, Output> = {
 	"~standard": {

@@ -26,6 +26,7 @@ test("Vocs emits every supported Markdown route and index artifact", async () =>
 		"assets/md/conditional-fields.md",
 		"assets/md/arrays.md",
 		"assets/md/middleware.md",
+		"assets/md/history.md",
 		"assets/md/controls.md",
 		"assets/md/resources.md",
 		"assets/md/styling.md",
@@ -34,6 +35,7 @@ test("Vocs emits every supported Markdown route and index artifact", async () =>
 		"assets/md/types.md",
 		"assets/md/faqs.md",
 		"assets/md/examples.md",
+		"assets/md/examples/history.md",
 		"assets/md/examples/mui-yup.md",
 		"assets/md/examples/shadcn-valibot.md",
 		"assets/md/examples/async-multiselect.md",
@@ -60,6 +62,8 @@ test("generated LLM documentation describes the current runtime", async () => {
 	assert.match(full, /parses once/i)
 	assert.match(full, /does not create another form store/i)
 	assert.match(full, /Call `next` before the first `await`/)
+	assert.match(full, /HistoryJournal<Input>` version 1/)
+	assert.match(full, /createHistoryMiddleware/)
 	assert.doesNotMatch(full, /form-please\/core/)
 	assert.doesNotMatch(full, /valuePolicy/)
 })

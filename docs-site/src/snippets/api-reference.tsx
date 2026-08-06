@@ -16,6 +16,7 @@ import {
 	type RenderNodeProps,
 	type ResourceState,
 	type UiResolver,
+	useSnapshot,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -24,6 +25,19 @@ import { nativeFormKit } from "form-please/preset-native"
 import { useId } from "react"
 import { useController, useFormState, useWatch } from "react-hook-form"
 import { z } from "zod"
+
+// [!region use-snapshot]
+const storeSnapshot = { status: "ready" as const }
+const store = {
+	getSnapshot: () => storeSnapshot,
+	subscribe: (_listener: () => void) => () => undefined,
+}
+
+function ExternalStoreStatus() {
+	const snapshot = useSnapshot(store)
+	return <output>{snapshot.status}</output>
+}
+// [!endregion use-snapshot]
 
 // [!region define-control]
 type UppercaseOptions = {

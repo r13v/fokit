@@ -34,14 +34,28 @@ import "form-please/layout.css"
 
 | Import | Runtime exports | Purpose |
 | --- | --- | --- |
-| `form-please` | `defineControl`, `createFormKit`, `fromResource`, `matchResource` | Build kits, controls, definitions, and resource resolvers. |
+| `form-please` | `defineControl`, `createFormKit`, `fromResource`, `matchResource`, `useSnapshot` | Build kits, controls, definitions, resource resolvers, and external-store adapters. |
 | `form-please/default-slots` | `createDefaultSlots` | Create accessible, unstyled structural slots. |
+| `form-please/history` | `createHistoryMiddleware` | Add optional managed value history and journal transfer. |
 | `form-please/native-controls` | `createNativeControls` | Create the native HTML control registry. |
 | `form-please/preset-native` | `nativeFormKit` | Use the ready-made native kit with English slots. |
 | `form-please/preset-mui` | `createMuiFormKit` | Create a Material UI 9 kit. |
 
 `form-please/layout.css` and `form-please/package.json` are non-JavaScript
-exports. Every JavaScript entry is a React client module.
+exports. React UI entries are client modules. The optional history entry has no
+React component or hook dependency.
+
+## `useSnapshot`
+
+`useSnapshot(store)` subscribes a component to any external store with stable
+`subscribe(listener)` and `getSnapshot()` functions. The snapshot type is
+inferred from `getSnapshot`. Its result must stay `Object.is`-equal until the
+store changes. The same getter supplies the server snapshot, so it must also be
+safe and consistent during server rendering.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:use-snapshot]
+```
 
 ## `defineControl`
 
@@ -421,6 +435,33 @@ Managed updates cannot remove a top-level value because RHF shallow-merges
 roots; assign `undefined` when the schema permits it. Validation follows `mode`
 and `reValidateMode` after commit, but managed validation does not preserve
 `delayError`. RHF owns dirty and touched metadata.
+
+## Managed value history
+
+`createHistoryMiddleware(options?)` is exported only from
+`form-please/history`. Configure the returned feature in a form's middleware
+list, then call `feature.handle(form)` for the exact form-specific handle.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `limit` | `100` | Maximum retained history groups; accepts a non-negative integer or `Infinity`. |
+| `groupWindow` | `750` | Milliseconds in which control changes on one path share a group; zero disables grouping. |
+
+The handle exposes `getSnapshot`, `subscribe`, `undo`, `redo`, `seek`, `clear`,
+`export`, and `import`. Navigation and import return
+`Promise<HistoryOperationResult>`. `clear()` retains current values as the only
+position without changing the form.
+
+History restore enters hooks and middleware with source `history`. The action
+is `undo`, `redo`, `seek`, or `import`. Restore can remove optional top-level
+keys because its RHF reset terminal replaces complete values. Ordinary
+`form.update` keeps its existing top-level-removal restriction.
+
+`HistoryJournal<Input>` version 1 contains complete input entries and a numeric
+current index. Import checks the protocol and configured limit but does not
+require every editable entry to pass Standard Schema validation. Read
+[Managed value history](/history) for state ownership, grouping, raw RHF
+boundaries, restoration, and journal leaf behavior.
 
 ## `Form`, `Fields`, `Submit`, and `AutoForm`
 

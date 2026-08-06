@@ -31,10 +31,29 @@ as `form.api`. Its direct mutations bypass Form Please middleware.
 _Avoid_: Form Please command API
 
 **Managed value update**: A value update initiated by a generated control,
-generated array action, or `form.update`, and therefore processed before it
-reaches the React Hook Form API. Every managed update uses the coordinator even
-when the form has no configured middleware.
+generated array action, `form.update`, or optional history restore, and
+therefore processed before it reaches the React Hook Form API. Every managed
+update uses the coordinator even when the form has no configured middleware.
 _Avoid_: Every React Hook Form update, raw API update
+
+**Managed value history**: Retained schema input versions produced by
+successful managed value updates and used for user-directed navigation. It
+excludes raw React Hook Form changes and ephemeral form state.
+_Avoid_: Form history, audit log, React Hook Form state history
+
+**History group**: One undoable position in managed value history. Consecutive
+control updates to the same schema input path can replace the group's retained
+value within the configured grouping window.
+_Avoid_: Event, transaction, audit record
+
+**History journal**: A versioned in-memory export of retained schema input
+positions and the current numeric position. It is a navigation artifact rather
+than an event log or persistence format.
+_Avoid_: Event journal, audit trail, serialized form
+
+**History restore**: A user-directed managed value update that moves a form to
+a retained history position while preserving the form's default-value baseline.
+_Avoid_: Reset, replay, runtime-state restore
 
 **Form update recipe**: A synchronous Immer recipe passed to `form.update`
 that derives the next complete schema input by either mutating a writable draft
@@ -46,10 +65,10 @@ _Avoid_: React state setter, partial object patch, raw React Hook Form update
 
 **Value transaction**: A deeply readonly TypeScript view of a proposed managed
 value update containing the previous and proposed schema input, Immer patches,
-runtime context, and a discriminated `control`, `array`, or `update` source. Its
-proposed input is derived from its patches rather than accepted as an independent
-source of truth. Transaction values are not frozen at runtime because React Hook
-Form requires mutable values.
+runtime context, and a discriminated `control`, `array`, `update`, or `history`
+source. Its proposed input is derived from its patches rather than accepted as
+an independent source of truth. Transaction values are not frozen at runtime
+because React Hook Form requires mutable values.
 _Avoid_: React Hook Form notification, validation event, form event
 
 **Value patch**: An Immer patch with an `add`, `remove`, or `replace` operation

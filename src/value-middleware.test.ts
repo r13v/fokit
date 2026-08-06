@@ -2,9 +2,11 @@ import type { Draft } from "immer"
 import { describe, expect, it, vi } from "vitest"
 
 import {
+	attachValueCoordinatorCapability,
 	type BeforeUpdateResult,
 	createValueCoordinator,
 	type FormMiddleware,
+	getValueCoordinatorCapability,
 	type ValueTransaction,
 } from "./value-middleware.js"
 
@@ -334,6 +336,48 @@ describe("value middleware coordinator", () => {
 		expect(harness.commit).not.toHaveBeenCalled()
 	})
 
+	it("restores complete history values through hooks and a distinct terminal", () => {
+		const sources: ValueTransaction<Values>["source"][] = []
+		const harness = createHarness(
+			[
+				() => (next) => (transaction) => {
+					sources.push(transaction.source)
+					return next(transaction.patches)
+				},
+			],
+			{
+				items: [],
+				note: "remove this optional key",
+				quantity: 1,
+				total: 2,
+			},
+			{
+				beforeUpdate(draft, transaction) {
+					expect(transaction.source).toEqual({
+						action: "undo",
+						type: "history",
+					})
+					draft.total = draft.quantity * 3
+				},
+			},
+		)
+		const host = {}
+		attachValueCoordinatorCapability(host, harness.coordinator)
+		const capability = getValueCoordinatorCapability<Values>(host)
+
+		const result = capability.restore(
+			() => ({ items: [], quantity: 4, total: 0 }),
+			{ action: "undo", type: "history" },
+		) as ValueTransaction<Values>
+
+		expect(result.source).toEqual({ action: "undo", type: "history" })
+		expect(result.nextValues).toEqual({ items: [], quantity: 4, total: 12 })
+		expect(sources).toEqual([{ action: "undo", type: "history" }])
+		expect(harness.getValues()).toEqual({ items: [], quantity: 4, total: 12 })
+		expect(harness.commit).not.toHaveBeenCalled()
+		expect(harness.restore).toHaveBeenCalledOnce()
+	})
+
 	it("forbids nested updates and a second next without rolling back a commit", () => {
 		const nestedError = vi.fn()
 		const harness = createHarness([
@@ -473,6 +517,9 @@ function createHarness(
 	const commit = vi.fn((transaction: ValueTransaction<Values>) => {
 		values = transaction.nextValues as Values
 	})
+	const restore = vi.fn((transaction: ValueTransaction<Values>) => {
+		values = transaction.nextValues as Values
+	})
 	const coordinator = createValueCoordinator({
 		commit,
 		getAfterUpdate: () => hooks.afterUpdate,
@@ -480,6 +527,7 @@ function createHarness(
 		getContext: () => undefined,
 		getValues: () => values,
 		middleware,
+		restore,
 	})
-	return { commit, coordinator, getValues: () => values }
+	return { commit, coordinator, getValues: () => values, restore }
 }

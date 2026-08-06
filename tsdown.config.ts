@@ -4,6 +4,7 @@ export default defineConfig({
 	entry: {
 		index: "src/index.ts",
 		"default-slots": "src/default-slots/index.ts",
+		history: "src/history/index.ts",
 		"native-controls": "src/native-controls/index.ts",
 		"preset-native": "src/preset-native/index.ts",
 		"preset-mui": "src/preset-mui/index.ts",

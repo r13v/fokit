@@ -54,6 +54,7 @@ export type {
 	UiResolverDetails,
 	UiResolverValues,
 } from "./types.js"
+export { useSnapshot } from "./use-snapshot.js"
 export type {
 	FormMiddleware,
 	FormMiddlewareApi,

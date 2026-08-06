@@ -13,6 +13,7 @@ const pages = [
 	["src/pages/conditional-fields.mdx", "Conditional fields"],
 	["src/pages/arrays.mdx", "Arrays"],
 	["src/pages/middleware.mdx", "Value middleware"],
+	["src/pages/history.mdx", "Managed value history"],
 	["src/pages/controls.mdx", "Controls and slots"],
 	["src/pages/resources.mdx", "Resource state"],
 	["src/pages/styling.mdx", "Styling"],
@@ -21,6 +22,7 @@ const pages = [
 	["src/pages/types.mdx", "TypeScript"],
 	["src/pages/faqs.mdx", "FAQs"],
 	["src/pages/examples/index.mdx", "Examples"],
+	["src/pages/examples/history.mdx", "History workflow"],
 	["src/pages/examples/mui-yup.mdx", "Material UI with Yup"],
 	["src/pages/examples/shadcn-valibot.mdx", "Shadcn with Valibot"],
 	["src/pages/examples/async-multiselect.mdx", "Async multiselect"],
@@ -44,6 +46,7 @@ const exampleSnippets = [
 	"src/snippets/lab-profile-form.tsx",
 	"src/snippets/async-multiselect.tsx",
 	"src/snippets/async-multiselect-request.ts",
+	"src/snippets/history-guide.tsx",
 ]
 
 const referenceSnippets = [
@@ -72,6 +75,7 @@ test("documents only the supported navigation surface", async () => {
 		"/conditional-fields",
 		"/arrays",
 		"/middleware",
+		"/history",
 		"/controls",
 		"/resources",
 		"/styling",
@@ -80,6 +84,7 @@ test("documents only the supported navigation surface", async () => {
 		"/types",
 		"/faqs",
 		"/examples",
+		"/examples/history",
 		"/examples/mui-yup",
 		"/examples/shadcn-valibot",
 		"/examples/async-multiselect",
@@ -140,7 +145,6 @@ test("does not teach retired runtime entries or APIs", async () => {
 		"form-please/tanstack",
 		"form-please/react19",
 		"form-please/server",
-		"form-please/history",
 		"form-please/persistence",
 		"form-please/devtools",
 		"useCreateForm",
@@ -242,6 +246,7 @@ test("keeps controls, API, and production guidance executable", async () => {
 	)
 
 	for (const region of [
+		"use-snapshot",
 		"define-control",
 		"create-form-kit",
 		"native-factories",
@@ -405,6 +410,33 @@ test("documents middleware with copyable examples and live previews", async () =
 	}
 })
 
+test("documents managed value history with a copyable live example", async () => {
+	const guide = await readFile(
+		new URL("src/pages/history.mdx", siteRoot),
+		"utf8",
+	)
+	const example = await readFile(
+		new URL("src/pages/examples/history.mdx", siteRoot),
+		"utf8",
+	)
+	const normalizedGuide = guide.replace(/\s+/g, " ")
+
+	for (const region of ["setup", "journal"]) {
+		assert.match(guide, new RegExp(`history-guide\\.tsx:${region}`))
+	}
+	for (const phrase of [
+		"HistoryJournal<Input>` version 1",
+		"non-undoable boundary",
+		"temporarily invalid values",
+		"does not create another live form store",
+	]) {
+		assert.match(normalizedGuide, new RegExp(escapeRegExp(phrase), "i"))
+	}
+	assert.match(example, /<HistoryDemo \/>/)
+	assert.match(example, /history-guide\.tsx/)
+	assert.match(example, /useSnapshot\(history\)/)
+})
+
 test("does not present native FormData as the submission source", async () => {
 	const sources = await Promise.all([
 		readFile(new URL("src/pages/get-started.mdx", siteRoot), "utf8"),
@@ -474,7 +506,6 @@ test("keeps the shadcn adapter installable and release-version agnostic", async 
 
 test("keeps only the supported example routes", async () => {
 	for (const path of [
-		"src/pages/examples/history.mdx",
 		"src/pages/examples/devtools.mdx",
 		"src/pages/examples/persistence.mdx",
 		"src/pages/examples/tanstack-form.mdx",
@@ -484,7 +515,6 @@ test("keeps only the supported example routes", async () => {
 
 	const config = await readFile(new URL("vocs.config.ts", siteRoot), "utf8")
 	for (const route of [
-		"/examples/history",
 		"/examples/devtools",
 		"/examples/persistence",
 		"/examples/tanstack-form",

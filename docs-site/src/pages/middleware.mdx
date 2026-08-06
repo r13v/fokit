@@ -25,6 +25,7 @@ Form remains the owner of editable values and form state.
 | Observe one final transaction with its source and patches | `afterUpdate` |
 | Compose independent value policies | Value middleware |
 | Run an application action through the same rules | `form.update(recipe)` |
+| Add grouped undo and redo | [Managed value history](/history) |
 | Observe values after a commit | An RHF subscription |
 | Make an independent raw RHF change | `form.api` |
 | Validate or transform submitted output | The Standard Schema |
@@ -126,6 +127,7 @@ Middleware handles these entry points:
 | Generated control change | `control` |
 | Generated array add, remove, or move | `array` |
 | `form.update(recipe)` | `update` |
+| History undo, redo, seek, or import | `history` |
 
 These operations bypass middleware and managed update hooks:
 
@@ -150,12 +152,13 @@ Each middleware receives one `ValueTransaction`.
 | `previousValues` | Values before the managed proposal. |
 | `nextValues` | Values produced by the current patches. |
 | `patches` | Authoritative Immer `add`, `remove`, and `replace` operations. |
-| `source` | The generated control, generated array action, or `form.update`. |
+| `source` | The generated control, generated array action, `form.update`, or optional history restore. |
 | `context` | Current deeply readonly runtime context for the form binding. |
 
 Control sources contain a typed `path`. Array sources contain a typed `path`,
 an action, and the affected index. Move sources contain `fromIndex` and
-`toIndex`.
+`toIndex`. Optional managed history restores contain an `undo`, `redo`, `seek`,
+or `import` action.
 
 Patch paths are segment arrays such as `["items", 0, "price"]`. They are not
 RHF dot paths such as `items.0.price`.

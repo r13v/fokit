@@ -42,6 +42,7 @@ export default defineConfig({
 				{ text: "Conditional fields", link: "/conditional-fields" },
 				{ text: "Arrays", link: "/arrays" },
 				{ text: "Value middleware", link: "/middleware" },
+				{ text: "Managed value history", link: "/history" },
 				{ text: "Controls & slots", link: "/controls" },
 				{ text: "Resource state", link: "/resources" },
 				{ text: "Styling", link: "/styling" },
@@ -52,6 +53,7 @@ export default defineConfig({
 			collapsed: false,
 			items: [
 				{ text: "Examples", link: "/examples" },
+				{ text: "History workflow", link: "/examples/history" },
 				{ text: "Material UI with Yup", link: "/examples/mui-yup" },
 				{ text: "Shadcn with Valibot", link: "/examples/shadcn-valibot" },
 				{

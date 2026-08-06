@@ -65,6 +65,7 @@ import type {
 	StructuralRootProps,
 } from "./types.js"
 import {
+	attachValueCoordinatorCapability,
 	type BeforeUpdateResult,
 	createValueCoordinator,
 	type FormMiddleware,
@@ -518,6 +519,14 @@ function assembleKit(
 				)
 			}
 		}
+		const restoreRef = useRef<
+			ValueTransactionCommit<FormValues<Schema>, unknown> | undefined
+		>(undefined)
+		if (restoreRef.current === undefined) {
+			restoreRef.current = (transaction) => {
+				commitManagedRestore(apiRef.current, transaction, validationRef.current)
+			}
+		}
 		const coordinatorRef = useRef<
 			ValueCoordinator<FormValues<Schema>, unknown> | undefined
 		>(undefined)
@@ -529,6 +538,7 @@ function assembleKit(
 				getContext: () => contextRef.current,
 				getValues: () => apiRef.current.getValues(),
 				middleware: fixedMiddlewareRef.current,
+				restore: restoreRef.current,
 			})
 		}
 		const commit = commitRef.current
@@ -541,6 +551,7 @@ function assembleKit(
 				context: options.context,
 				update: coordinator.update,
 			}
+			attachValueCoordinatorCapability(instance, coordinator)
 			return {
 				instance,
 				runtime: {
@@ -1305,6 +1316,25 @@ function commitManagedTransaction<Input extends FieldValues, Context, Output>(
 	)
 }
 
+/** Restores complete values while retaining RHF state outside value history. */
+function commitManagedRestore<Input extends FieldValues, Context, Output>(
+	api: UseFormReturn<Input, Context, Output>,
+	transaction: ValueTransaction<Input, Context>,
+	validation: ManagedValidationOptions,
+): void {
+	api.reset(cloneFormValue(transaction.nextValues) as Input, {
+		keepDefaultValues: true,
+		keepErrors: true,
+		keepIsSubmitted: true,
+		keepIsSubmitSuccessful: true,
+		keepIsValid: true,
+		keepSubmitCount: true,
+		keepTouched: true,
+	})
+	if (!shouldValidateManagedTransaction(api, transaction, validation)) return
+	void api.trigger()
+}
+
 /** Selects complete changed roots because RHF `setValues` shallow-merges them. */
 function topLevelUpdates<Input extends FieldValues, Context>(
 	transaction: ValueTransaction<Input, Context>,
@@ -1341,9 +1371,9 @@ function shouldValidateManagedTransaction<
 		return true
 	}
 	const sourcePath =
-		transaction.source.type === "update"
-			? undefined
-			: String(transaction.source.path)
+		transaction.source.type === "control" || transaction.source.type === "array"
+			? String(transaction.source.path)
+			: undefined
 	const touchedPaths = new Set(paths ?? [])
 	if (sourcePath !== undefined) touchedPaths.add(sourcePath)
 	return [...touchedPaths].some(

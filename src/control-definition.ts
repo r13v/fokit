@@ -41,7 +41,7 @@ export type DefineControlInput<Value, Options, Context> =
  * const rating = defineControl<number>({ component: RatingControl })
  * ```
  *
- * @see https://r13v.github.io/form-please/controls
+ * @see https://r13v.github.io/form-please/form-kits
  */
 export function defineControl<
 	Value,

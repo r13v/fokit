@@ -31,22 +31,24 @@ export default defineConfig({
 			items: [
 				{ text: "Overview", link: "/" },
 				{ text: "Get started", link: "/get-started" },
+				{ text: "AI agents", link: "/ai-agents" },
 			],
 		},
 		{
 			text: "Guides",
 			collapsed: false,
 			items: [
+				{ text: "Form kits", link: "/form-kits" },
 				{ text: "Definitions", link: "/definitions" },
 				{ text: "Validation & submission", link: "/validation" },
+				{ text: "Styling", link: "/styling" },
 				{ text: "Conditional fields", link: "/conditional-fields" },
 				{ text: "Arrays", link: "/arrays" },
-				{ text: "Value middleware", link: "/middleware" },
-				{ text: "Managed value history", link: "/history" },
-				{ text: "Form persistence", link: "/persistence" },
-				{ text: "Controls & slots", link: "/controls" },
-				{ text: "Resource state", link: "/resources" },
-				{ text: "Styling", link: "/styling" },
+				{ text: "Recipes", link: "/recipes" },
+				{ text: "Resources", link: "/resources" },
+				{ text: "Middleware", link: "/middleware" },
+				{ text: "Persistence", link: "/persistence" },
+				{ text: "History", link: "/history" },
 			],
 		},
 		{
@@ -78,7 +80,6 @@ export default defineConfig({
 			collapsed: false,
 			items: [
 				{ text: "API", link: "/api" },
-				{ text: "Production recipes", link: "/advanced" },
 				{ text: "TypeScript", link: "/types" },
 				{
 					text: "LLM documentation index",

@@ -8,6 +8,7 @@ const repositoryRoot = new URL("../", siteRoot)
 const pages = [
 	["src/pages/index.mdx", "Form, Please"],
 	["src/pages/get-started.mdx", "Get started"],
+	["src/pages/ai-agents.mdx", "Use with AI agents"],
 	["src/pages/definitions.mdx", "Definitions"],
 	["src/pages/validation.mdx", "Validation and submission"],
 	["src/pages/conditional-fields.mdx", "Conditional fields"],
@@ -15,11 +16,11 @@ const pages = [
 	["src/pages/middleware.mdx", "Value middleware"],
 	["src/pages/history.mdx", "Managed value history"],
 	["src/pages/persistence.mdx", "Form persistence"],
-	["src/pages/controls.mdx", "Controls and slots"],
+	["src/pages/form-kits.mdx", "Form kits"],
 	["src/pages/resources.mdx", "Resource state"],
 	["src/pages/styling.mdx", "Styling"],
 	["src/pages/api.mdx", "API"],
-	["src/pages/advanced.mdx", "Production recipes"],
+	["src/pages/recipes.mdx", "Production recipes"],
 	["src/pages/types.mdx", "TypeScript"],
 	["src/pages/faqs.mdx", "FAQs"],
 	["src/pages/examples/index.mdx", "Examples"],
@@ -57,8 +58,8 @@ const exampleSnippets = [
 
 const referenceSnippets = [
 	"src/snippets/api-reference.tsx",
-	"src/snippets/controls-and-slots-control.tsx",
-	"src/snippets/controls-and-slots.tsx",
+	"src/snippets/form-kits-control.tsx",
+	"src/snippets/form-kits.tsx",
 	"src/snippets/production-recipes.tsx",
 	"src/snippets/middleware-guide.tsx",
 	"src/snippets/validation-guide.tsx",
@@ -76,6 +77,7 @@ test("documents only the supported navigation surface", async () => {
 
 	for (const route of [
 		"/get-started",
+		"/ai-agents",
 		"/definitions",
 		"/validation",
 		"/conditional-fields",
@@ -83,11 +85,11 @@ test("documents only the supported navigation surface", async () => {
 		"/middleware",
 		"/history",
 		"/persistence",
-		"/controls",
+		"/form-kits",
 		"/resources",
 		"/styling",
 		"/api",
-		"/advanced",
+		"/recipes",
 		"/types",
 		"/faqs",
 		"/examples",
@@ -104,6 +106,54 @@ test("documents only the supported navigation surface", async () => {
 		"/examples/campaign-builder",
 	]) {
 		assert.match(config, new RegExp(`link: "${escapeRegExp(route)}"`))
+	}
+
+	const getStartedIndex = config.indexOf(
+		'{ text: "Get started", link: "/get-started" }',
+	)
+	const aiAgentsIndex = config.indexOf(
+		'{ text: "AI agents", link: "/ai-agents" }',
+	)
+	assert.ok(
+		aiAgentsIndex > getStartedIndex,
+		"AI agents follows Get started in the Start navigation",
+	)
+
+	let previousGuideIndex = -1
+	for (const [text, route] of [
+		["Form kits", "/form-kits"],
+		["Definitions", "/definitions"],
+		["Validation & submission", "/validation"],
+		["Styling", "/styling"],
+		["Conditional fields", "/conditional-fields"],
+		["Arrays", "/arrays"],
+		["Recipes", "/recipes"],
+		["Resources", "/resources"],
+		["Middleware", "/middleware"],
+		["Persistence", "/persistence"],
+		["History", "/history"],
+	]) {
+		const guideIndex = config.indexOf(`{ text: "${text}", link: "${route}" }`)
+		assert.ok(guideIndex > previousGuideIndex, `${text} is in guide order`)
+		previousGuideIndex = guideIndex
+	}
+})
+
+test("documents the complete agent skill lifecycle", async () => {
+	const page = await readFile(
+		new URL("src/pages/ai-agents.mdx", siteRoot),
+		"utf8",
+	)
+
+	for (const required of [
+		"npx skills add r13v/form-please --skill form-please",
+		"--global",
+		"Use the form-please skill.",
+		"npx skills list",
+		"npx skills update form-please",
+		"https://r13v.github.io/form-please/llms.txt",
+	]) {
+		assert.match(page, new RegExp(escapeRegExp(required)))
 	}
 })
 
@@ -238,14 +288,14 @@ test("keeps validation guidance executable and complete", async () => {
 	}
 })
 
-test("keeps controls, API, and production guidance executable", async () => {
+test("keeps form kits, API, and production guidance executable", async () => {
 	const api = await readFile(new URL("src/pages/api.mdx", siteRoot), "utf8")
-	const controls = await readFile(
-		new URL("src/pages/controls.mdx", siteRoot),
+	const formKits = await readFile(
+		new URL("src/pages/form-kits.mdx", siteRoot),
 		"utf8",
 	)
-	const advanced = await readFile(
-		new URL("src/pages/advanced.mdx", siteRoot),
+	const recipes = await readFile(
+		new URL("src/pages/recipes.mdx", siteRoot),
 		"utf8",
 	)
 	const styling = await readFile(
@@ -290,7 +340,7 @@ test("keeps controls, API, and production guidance executable", async () => {
 		"form-modes",
 		"accessible-control",
 	]) {
-		assert.match(advanced, new RegExp(`production-recipes\\.tsx:${region}`))
+		assert.match(recipes, new RegExp(`production-recipes\\.tsx:${region}`))
 	}
 	for (const preview of [
 		"SavedBaselineRecipePreview",
@@ -298,15 +348,15 @@ test("keeps controls, API, and production guidance executable", async () => {
 		"DraftSubscriptionRecipePreview",
 		"StepValidationRecipePreview",
 	]) {
-		assert.match(advanced, new RegExp(`<${preview} />`))
+		assert.match(recipes, new RegExp(`<${preview} />`))
 	}
 	for (const version of ["7.77.0", "7.76.1"]) {
-		assert.match(advanced, new RegExp(`React Hook Form ${version}`))
+		assert.match(recipes, new RegExp(`React Hook Form ${version}`))
 	}
-	assert.doesNotMatch(advanced, /parses once for validation and\s+again/)
+	assert.doesNotMatch(recipes, /parses once for validation and\s+again/)
 	assert.doesNotMatch(styling, /data-fp-path\^="contacts\["/)
 
-	assert.match(controls, /controls-and-slots-control\.tsx/)
+	assert.match(formKits, /form-kits-control\.tsx/)
 	for (const region of ["schema", "definition", "component"]) {
 		const getStarted = await readFile(
 			new URL("src/pages/get-started.mdx", siteRoot),
@@ -317,13 +367,14 @@ test("keeps controls, API, and production guidance executable", async () => {
 	for (const region of [
 		"register-control",
 		"control-options",
+		"project-form",
 		"field-slot",
 		"array-slot",
 		"submit-slot",
 		"slot-registry",
 		"slot-options",
 	]) {
-		assert.match(controls, new RegExp(`controls-and-slots\\.tsx:${region}`))
+		assert.match(formKits, new RegExp(`form-kits\\.tsx:${region}`))
 	}
 
 	for (const snippet of referenceSnippets) {
@@ -419,7 +470,7 @@ test("documents middleware with copyable examples and live previews", async () =
 	assert.match(middleware, /api-reference\.tsx:update-hooks/)
 
 	for (const path of [
-		"src/pages/advanced.mdx",
+		"src/pages/recipes.mdx",
 		"src/pages/api.mdx",
 		"src/pages/arrays.mdx",
 		"src/pages/conditional-fields.mdx",

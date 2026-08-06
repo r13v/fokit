@@ -42,7 +42,7 @@ editable shape. For example, a string input can produce a number output.
 
 The callback can return a promise. React Hook Form keeps `isSubmitting` true
 until that promise settles. See [Send schema output and reset with schema
-input](/advanced#send-schema-output-and-reset-with-schema-input) for a complete
+input](/recipes#send-schema-output-and-reset-with-schema-input) for a complete
 submission example.
 
 ### Does submission use native `FormData`?
@@ -82,9 +82,9 @@ If the server returns field-validation results, convert them deliberately with
 the applicable React Hook Form error APIs. Do not treat a transport failure as a
 schema result. The server must still validate every submission. See [Keep async
 submission in the
-application](/advanced#keep-async-submission-in-the-application) for a request
+application](/recipes#keep-async-submission-in-the-application) for a request
 error example. See [Apply server field
-errors](/advanced#apply-server-field-errors) for a typed `setError` example.
+errors](/recipes#apply-server-field-errors) for a typed `setError` example.
 
 ## Conditional UI and values
 
@@ -124,7 +124,7 @@ and caching. Pass the current request state through form context.
 Use `fromResource` to convert that state into a synchronous UI resolver. Use
 `matchResource` when you need one immediate value outside a definition. See
 [Pass request state through
-context](/advanced#pass-request-state-through-context) for the form pattern.
+context](/recipes#pass-request-state-through-context) for the form pattern.
 See [Resource state](/resources) for a TanStack Query adapter and error-state
 examples.
 
@@ -154,7 +154,7 @@ generated and manual UI inside the same `kit.Form`; it provides RHF
 
 You can also call React Hook Form methods such as `setValue` and `reset`
 through `form.api`. See [Compose generated and custom
-UI](/advanced#compose-generated-and-custom-ui) for a complete example.
+UI](/recipes#compose-generated-and-custom-ui) for a complete example.
 
 Generated controls and `form.update` pass through configured value middleware.
 Direct `form.api` calls, reset, and initial values do not. Use raw RHF methods
@@ -189,7 +189,7 @@ Define stable definitions at module scope when possible. To load another
 document or definition, remount the editor with a React `key`. Use
 `form.api.reset(nextInput)` when the definition stays the same and you want to
 install a new editable baseline deliberately. See [Load an edit-form
-baseline](/advanced#load-an-edit-form-baseline) for both operations.
+baseline](/recipes#load-an-edit-form-baseline) for both operations.
 
 ### Can a definition use a different form kit?
 

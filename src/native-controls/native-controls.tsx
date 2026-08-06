@@ -502,7 +502,7 @@ function NativeFileControl({
 /**
  * Creates the built-in registry of native HTML controls.
  *
- * @see https://r13v.github.io/form-please/controls
+ * @see https://r13v.github.io/form-please/form-kits
  */
 export function createNativeControls() {
 	const text = defineControl<string | undefined, NativeTextOptions>({

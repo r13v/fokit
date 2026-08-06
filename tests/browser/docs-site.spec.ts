@@ -17,25 +17,39 @@ test.describe("Form, Please documentation", () => {
 		).toBeVisible()
 
 		const sidebar = page.locator("nav[data-v-sidebar]")
+		await sidebar.getByRole("link", { name: "AI agents", exact: true }).click()
+		await expect(page).toHaveURL(/\/form-please\/ai-agents$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Use with AI agents" }),
+		).toBeVisible()
+
+		await sidebar.getByRole("link", { name: "Form kits", exact: true }).click()
+		await expect(page).toHaveURL(/\/form-please\/form-kits$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Form kits" }),
+		).toBeVisible()
+
 		await sidebar.getByRole("link", { name: "Definitions" }).click()
 		await expect(page).toHaveURL(/\/form-please\/definitions$/)
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Definitions" }),
 		).toBeVisible()
 
-		await sidebar.getByRole("link", { name: "Value middleware" }).click()
+		await sidebar.getByRole("link", { name: "Middleware", exact: true }).click()
 		await expect(page).toHaveURL(/\/form-please\/middleware$/)
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Value middleware" }),
 		).toBeVisible()
 
-		await sidebar.getByRole("link", { name: "Managed value history" }).click()
+		await sidebar.getByRole("link", { name: "History", exact: true }).click()
 		await expect(page).toHaveURL(/\/form-please\/history$/)
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Managed value history" }),
 		).toBeVisible()
 
-		await sidebar.getByRole("link", { name: "Form persistence" }).click()
+		await sidebar
+			.getByRole("link", { name: "Persistence", exact: true })
+			.click()
 		await expect(page).toHaveURL(/\/form-please\/persistence$/)
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Form persistence" }),
@@ -47,8 +61,8 @@ test.describe("Form, Please documentation", () => {
 			page.getByRole("heading", { level: 2, name: "createFormKit" }),
 		).toBeVisible()
 
-		await sidebar.getByRole("link", { name: "Production recipes" }).click()
-		await expect(page).toHaveURL(/\/form-please\/advanced$/)
+		await sidebar.getByRole("link", { name: "Recipes", exact: true }).click()
+		await expect(page).toHaveURL(/\/form-please\/recipes$/)
 		await expect(
 			page.getByRole("heading", {
 				level: 2,
@@ -282,7 +296,7 @@ test.describe("Form, Please documentation", () => {
 
 	test("runs the production recipe previews", async ({ page }) => {
 		const errors = pageErrors(page)
-		await page.goto("./advanced")
+		await page.goto("./recipes")
 
 		const baseline = page.getByRole("region", {
 			name: "Saved baseline recipe preview",

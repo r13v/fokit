@@ -43,6 +43,7 @@ export default defineConfig({
 				{ text: "Arrays", link: "/arrays" },
 				{ text: "Value middleware", link: "/middleware" },
 				{ text: "Managed value history", link: "/history" },
+				{ text: "Form persistence", link: "/persistence" },
 				{ text: "Controls & slots", link: "/controls" },
 				{ text: "Resource state", link: "/resources" },
 				{ text: "Styling", link: "/styling" },
@@ -54,6 +55,10 @@ export default defineConfig({
 			items: [
 				{ text: "Examples", link: "/examples" },
 				{ text: "History workflow", link: "/examples/history" },
+				{
+					text: "Query string persistence",
+					link: "/examples/persistence",
+				},
 				{ text: "Material UI with Yup", link: "/examples/mui-yup" },
 				{ text: "Shadcn with Valibot", link: "/examples/shadcn-valibot" },
 				{

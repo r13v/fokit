@@ -12,6 +12,7 @@ export default defineConfig({
 						"src/default-slots/**/*.test.{ts,tsx}",
 						"src/history/**/*.test.{ts,tsx}",
 						"src/native-controls/**/*.test.{ts,tsx}",
+						"src/persistence/**/*.test.{ts,tsx}",
 						"src/preset-native/**/*.test.{ts,tsx}",
 						"src/preset-mui/**/*.test.{ts,tsx}",
 					],

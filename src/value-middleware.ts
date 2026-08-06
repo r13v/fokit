@@ -65,6 +65,10 @@ export type ValueTransactionSource<Input extends FieldValues> =
 			readonly type: "history"
 			readonly action: "undo" | "redo" | "seek" | "import"
 	  }
+	| {
+			readonly type: "persistence"
+			readonly action: "restore"
+	  }
 
 /** A proposed or final managed value update used by hooks and middleware. */
 export type ValueTransaction<Input extends FieldValues, Context = unknown> = {
@@ -152,10 +156,13 @@ export type ValueCoordinatorCapability<Input extends FieldValues, Context> = {
 	getValues(): DeepReadonly<Input>
 	/** Reads the terminal commit while a middleware frame is active. */
 	getCommittedTransaction(): ValueTransaction<Input, Context> | undefined
-	/** Dispatches a complete history restore through the managed pipeline. */
+	/** Dispatches a complete feature restore through the managed pipeline. */
 	restore(
 		recipe: FormUpdateRecipe<Input>,
-		source: Extract<ValueTransactionSource<Input>, { type: "history" }>,
+		source: Extract<
+			ValueTransactionSource<Input>,
+			{ type: "history" | "persistence" }
+		>,
 	): unknown
 }
 

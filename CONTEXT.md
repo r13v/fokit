@@ -86,6 +86,45 @@ transaction. It may return a Promise after a synchronous commit. An exception
 after `next` does not roll back the committed values.
 _Avoid_: React Hook Form subscription, UI resolver, global middleware
 
+**Form persistence middleware**: An optional form middleware configured in a
+form binding's fixed middleware list to coordinate durable form drafts.
+_Avoid_: Persistence hook, `useForm` persistence option
+
+**Persisted form draft**: A durable representation of the current editable
+schema input for later restoration. It excludes managed history and React Hook
+Form metadata.
+_Avoid_: Form document, form state snapshot, history journal
+
+**Persistence restore**: A managed value update that applies a persisted form
+draft while preserving the form's original default-value baseline.
+_Avoid_: Raw reset, history restore, clean-baseline replacement
+
+**Persistence restore conflict**: A restore outcome in which live form values
+changed while the persisted form draft was loading, so the loaded draft is not
+applied.
+_Avoid_: Automatic merge, last-write-wins restore
+
+**Persistence handle**: The form-specific persistence operations and observable
+status exposed by the exact form persistence middleware configured for a form.
+_Avoid_: Global persistence controller, React hook result
+
+**Persistence adapter**: An application-owned asynchronous keyed transport that
+loads, saves, and removes persistence envelopes without interpreting them.
+_Avoid_: Serializer, form store, persistence middleware
+
+**Persistence envelope**: The versioned JSON-safe representation of a persisted
+form draft produced and understood by Form Please.
+_Avoid_: Raw form input, adapter-specific payload
+
+**Persistence codec**: A tagged conversion between one supported non-structural
+JavaScript value and its JSON representation inside a persistence envelope.
+_Avoid_: Storage adapter, whole-draft serializer
+
+**Persistence migration**: An application-owned transformation from a decoded,
+untrusted persisted value at an older application version to the current input
+shape.
+_Avoid_: Protocol migration, schema validation
+
 **Managed update hooks**: The form-local `beforeUpdate` and `afterUpdate`
 callbacks for one managed value-update lifecycle. `beforeUpdate` can adjust or
 cancel proposed values, while `afterUpdate` observes the committed transaction.

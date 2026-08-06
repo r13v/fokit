@@ -27,6 +27,7 @@ test("Vocs emits every supported Markdown route and index artifact", async () =>
 		"assets/md/arrays.md",
 		"assets/md/middleware.md",
 		"assets/md/history.md",
+		"assets/md/persistence.md",
 		"assets/md/controls.md",
 		"assets/md/resources.md",
 		"assets/md/styling.md",
@@ -36,6 +37,7 @@ test("Vocs emits every supported Markdown route and index artifact", async () =>
 		"assets/md/faqs.md",
 		"assets/md/examples.md",
 		"assets/md/examples/history.md",
+		"assets/md/examples/persistence.md",
 		"assets/md/examples/mui-yup.md",
 		"assets/md/examples/shadcn-valibot.md",
 		"assets/md/examples/async-multiselect.md",
@@ -64,6 +66,8 @@ test("generated LLM documentation describes the current runtime", async () => {
 	assert.match(full, /Call `next` before the first `await`/)
 	assert.match(full, /HistoryJournal<Input>` version 1/)
 	assert.match(full, /createHistoryMiddleware/)
+	assert.match(full, /createPersistenceMiddleware/)
+	assert.match(full, /Persistence restore \| `persistence`/)
 	assert.doesNotMatch(full, /form-please\/core/)
 	assert.doesNotMatch(full, /valuePolicy/)
 })

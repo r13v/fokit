@@ -23,6 +23,7 @@ const javaScriptEntrypoints = {
 	"./default-slots": "default-slots",
 	"./history": "history",
 	"./native-controls": "native-controls",
+	"./persistence": "persistence",
 	"./preset-native": "preset-native",
 	"./preset-mui": "preset-mui",
 } as const
@@ -49,6 +50,7 @@ describe("package metadata", () => {
 			"./default-slots",
 			"./history",
 			"./native-controls",
+			"./persistence",
 			"./preset-native",
 			"./preset-mui",
 			"./layout.css",
@@ -71,7 +73,7 @@ describe("package metadata", () => {
 
 	it("lets release automation own the package version", () => {
 		expect(packageJson.scripts["package:check"]).toBe(
-			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./history ./native-controls ./preset-native ./preset-mui",
+			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./history ./native-controls ./persistence ./preset-native ./preset-mui",
 		)
 		expect(packageJson.scripts).not.toHaveProperty("version")
 	})

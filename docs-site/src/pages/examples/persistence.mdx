@@ -1,0 +1,48 @@
+---
+title: Query string persistence
+description: Try restore, debounced autosave, flush, and clear with a nuqs query string adapter.
+showAskAi: false
+---
+
+import { PersistenceDemo } from "../../components/persistence-demo"
+
+# Query string persistence
+
+This example stores the editable form draft in the URL `draft` parameter. It
+uses the optional persistence middleware while React Hook Form continues to own
+live values, validation, defaults, and form metadata.
+
+## Try the workflow
+
+1. Edit **Name** or **Role** and watch the URL after 250 ms.
+2. Select **Save now** to flush without waiting.
+3. Reload the page to restore the query string draft.
+4. Select **Clear saved draft** to remove the parameter without changing the
+   current fields.
+
+<PersistenceDemo />
+
+The adapter uses `history: "replace"` and `shallow: true`. Autosave does not add
+a browser history entry for each edit and does not start a page navigation.
+
+## What this example shows
+
+- `createPersistenceMiddleware` as an optional `form-please/persistence`
+  feature;
+- `feature.handle(form)` for the exact configured form;
+- restore in an effect before normal autosave;
+- `useSnapshot(persistence)` for restore and save state;
+- a `nuqs` string state adapted to the keyed asynchronous transport.
+
+## Copy the source
+
+```tsx
+// [!include ~/snippets/persistence-basics.tsx]
+```
+
+```ts
+// [!include ~/snippets/persistence-nuqs.ts]
+```
+
+Read [Form persistence](/persistence) for conflicts, migrations, codecs,
+storage failures, and lifecycle boundaries.

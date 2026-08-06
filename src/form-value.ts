@@ -14,7 +14,7 @@ export function cloneFormValue<Value>(value: Value): Value {
 	if (Array.isArray(value)) {
 		return value.map((item) => cloneFormValue(item)) as Value
 	}
-	if (isPlainObject(value)) {
+	if (isFormValueObject(value)) {
 		return Object.fromEntries(
 			Object.entries(value).map(([key, item]) => [key, cloneFormValue(item)]),
 		) as Value
@@ -49,7 +49,7 @@ export function areFormValuesEqual(left: unknown, right: unknown): boolean {
 			left.every((item, index) => areFormValuesEqual(item, right[index]))
 		)
 	}
-	if (!isPlainObject(left) || !isPlainObject(right)) return false
+	if (!isFormValueObject(left) || !isFormValueObject(right)) return false
 	const leftKeys = Object.keys(left)
 	const rightKeys = Object.keys(right)
 	return (
@@ -61,8 +61,10 @@ export function areFormValuesEqual(left: unknown, right: unknown): boolean {
 	)
 }
 
-/** Tests whether a value is a plain object that can be cloned by entries. */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+/** Tests whether a form value is an object that can be cloned by entries. */
+export function isFormValueObject(
+	value: unknown,
+): value is Record<string, unknown> {
 	if (value === null || typeof value !== "object") return false
 	const prototype = Object.getPrototypeOf(value)
 	return prototype === null || prototype === Object.prototype

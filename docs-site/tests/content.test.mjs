@@ -14,6 +14,7 @@ const pages = [
 	["src/pages/arrays.mdx", "Arrays"],
 	["src/pages/middleware.mdx", "Value middleware"],
 	["src/pages/history.mdx", "Managed value history"],
+	["src/pages/persistence.mdx", "Form persistence"],
 	["src/pages/controls.mdx", "Controls and slots"],
 	["src/pages/resources.mdx", "Resource state"],
 	["src/pages/styling.mdx", "Styling"],
@@ -23,6 +24,7 @@ const pages = [
 	["src/pages/faqs.mdx", "FAQs"],
 	["src/pages/examples/index.mdx", "Examples"],
 	["src/pages/examples/history.mdx", "History workflow"],
+	["src/pages/examples/persistence.mdx", "Query string persistence"],
 	["src/pages/examples/mui-yup.mdx", "Material UI with Yup"],
 	["src/pages/examples/shadcn-valibot.mdx", "Shadcn with Valibot"],
 	["src/pages/examples/async-multiselect.mdx", "Async multiselect"],
@@ -47,6 +49,10 @@ const exampleSnippets = [
 	"src/snippets/async-multiselect.tsx",
 	"src/snippets/async-multiselect-request.ts",
 	"src/snippets/history-guide.tsx",
+	"src/snippets/persistence-basics.tsx",
+	"src/snippets/persistence-local-storage.tsx",
+	"src/snippets/persistence-nuqs.ts",
+	"src/snippets/persistence-tanstack-query.ts",
 ]
 
 const referenceSnippets = [
@@ -76,6 +82,7 @@ test("documents only the supported navigation surface", async () => {
 		"/arrays",
 		"/middleware",
 		"/history",
+		"/persistence",
 		"/controls",
 		"/resources",
 		"/styling",
@@ -85,6 +92,7 @@ test("documents only the supported navigation surface", async () => {
 		"/faqs",
 		"/examples",
 		"/examples/history",
+		"/examples/persistence",
 		"/examples/mui-yup",
 		"/examples/shadcn-valibot",
 		"/examples/async-multiselect",
@@ -145,7 +153,6 @@ test("does not teach retired runtime entries or APIs", async () => {
 		"form-please/tanstack",
 		"form-please/react19",
 		"form-please/server",
-		"form-please/persistence",
 		"form-please/devtools",
 		"useCreateForm",
 		"useBindForm",
@@ -168,6 +175,7 @@ test("keeps the supported live documentation demos", async () => {
 		["src/pages/styling.mdx", "<TailwindProfileDemo />"],
 		["src/pages/examples/async-multiselect.mdx", "<AsyncMultiSelectDemo />"],
 		["src/pages/validation.mdx", "~/snippets/zod-error-messages.ts"],
+		["src/pages/examples/persistence.mdx", "<PersistenceDemo />"],
 	]) {
 		const source = await readFile(new URL(path, siteRoot), "utf8")
 		assert.match(source, new RegExp(escapeRegExp(expected)))
@@ -353,6 +361,19 @@ test("documents every managed value type on the TypeScript page", async () => {
 	]) {
 		assert.match(types, new RegExp(`\\b${name}\\b`))
 	}
+	for (const name of [
+		"JsonValue",
+		"PersistenceCodec",
+		"PersistenceMigration",
+		"FormPersistenceAdapter",
+		"CreatePersistenceOptions",
+		"PersistenceFeature",
+		"PersistenceHandle",
+		"PersistenceSnapshot",
+		"PersistenceRestoreResult",
+	]) {
+		assert.match(types, new RegExp(`\\b${name}\\b`))
+	}
 })
 
 test("documents middleware with copyable examples and live previews", async () => {
@@ -437,6 +458,42 @@ test("documents managed value history with a copyable live example", async () =>
 	assert.match(example, /useSnapshot\(history\)/)
 })
 
+test("documents persistence with query string and storage adapters", async () => {
+	const guide = await readFile(
+		new URL("src/pages/persistence.mdx", siteRoot),
+		"utf8",
+	)
+	const example = await readFile(
+		new URL("src/pages/examples/persistence.mdx", siteRoot),
+		"utf8",
+	)
+
+	for (const snippet of [
+		"persistence-local-storage.tsx:local-storage",
+		"persistence-nuqs.ts",
+		"persistence-tanstack-query.ts:tanstack-query",
+	]) {
+		assert.match(guide, new RegExp(escapeRegExp(snippet)))
+	}
+	for (const phrase of [
+		"restore failure",
+		"does not run validation",
+		"trailing 500 ms",
+		"createDateCodec()",
+		"`replace` history",
+		"shallow URL updates",
+	]) {
+		assert.match(guide, new RegExp(escapeRegExp(phrase), "i"))
+	}
+	const middleware = await readFile(
+		new URL("src/pages/middleware.mdx", siteRoot),
+		"utf8",
+	)
+	assert.match(middleware, /\| Persistence restore \| `persistence` \|/)
+	assert.match(example, /<PersistenceDemo \/>/)
+	assert.match(example, /persistence-basics\.tsx/)
+})
+
 test("does not present native FormData as the submission source", async () => {
 	const sources = await Promise.all([
 		readFile(new URL("src/pages/get-started.mdx", siteRoot), "utf8"),
@@ -507,18 +564,13 @@ test("keeps the shadcn adapter installable and release-version agnostic", async 
 test("keeps only the supported example routes", async () => {
 	for (const path of [
 		"src/pages/examples/devtools.mdx",
-		"src/pages/examples/persistence.mdx",
 		"src/pages/examples/tanstack-form.mdx",
 	]) {
 		await assert.rejects(access(new URL(path, siteRoot)))
 	}
 
 	const config = await readFile(new URL("vocs.config.ts", siteRoot), "utf8")
-	for (const route of [
-		"/examples/devtools",
-		"/examples/persistence",
-		"/examples/tanstack-form",
-	]) {
+	for (const route of ["/examples/devtools", "/examples/tanstack-form"]) {
 		assert.doesNotMatch(config, new RegExp(escapeRegExp(route)))
 	}
 })

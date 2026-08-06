@@ -18,6 +18,9 @@ describe("built package entries", () => {
 			expect(modules.defaultSlots.createDefaultSlots).toBeTypeOf("function")
 			expect(modules.history.createHistoryMiddleware).toBeTypeOf("function")
 			expect(modules.nativeControls.createNativeControls).toBeTypeOf("function")
+			expect(modules.persistence.createPersistenceMiddleware).toBeTypeOf(
+				"function",
+			)
 			expect(modules.presetNative.nativeFormKit.useForm).toBeTypeOf("function")
 			expect(modules.presetMui.createMuiFormKit).toBeTypeOf("function")
 		}
@@ -69,6 +72,7 @@ type Modules = {
 	readonly defaultSlots: Record<string, unknown>
 	readonly history: Record<string, unknown>
 	readonly nativeControls: Record<string, unknown>
+	readonly persistence: Record<string, unknown>
 	readonly presetNative: {
 		readonly nativeFormKit: { readonly useForm: unknown }
 	}
@@ -81,6 +85,7 @@ async function loadEsm(): Promise<Modules> {
 		defaultSlots: await import("../../dist/default-slots.js"),
 		history: await import("../../dist/history.js"),
 		nativeControls: await import("../../dist/native-controls.js"),
+		persistence: await import("../../dist/persistence.js"),
 		presetNative: await import("../../dist/preset-native.js"),
 		presetMui: await import("../../dist/preset-mui.js"),
 	}
@@ -92,6 +97,7 @@ function loadCommonJs(): Modules {
 		defaultSlots: require("../../dist/default-slots.cjs"),
 		history: require("../../dist/history.cjs"),
 		nativeControls: require("../../dist/native-controls.cjs"),
+		persistence: require("../../dist/persistence.cjs"),
 		presetNative: require("../../dist/preset-native.cjs"),
 		presetMui: require("../../dist/preset-mui.cjs"),
 	}

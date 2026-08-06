@@ -1,0 +1,131 @@
+---
+title: Form persistence
+description: Restore and autosave editable form drafts through an application-owned storage adapter.
+showAskAi: false
+---
+
+# Form persistence
+
+Import `createPersistenceMiddleware` from `form-please/persistence` when a form
+needs a durable editable draft. React Hook Form still owns the live values and
+form state. Persistence stores only the complete schema input.
+
+## Configure and restore
+
+Create one feature, add that exact reference to `middleware`, and get its handle
+from the resulting form. Start `restore()` in an effect. It loads at most once
+after a successful or empty result.
+
+```tsx
+// [!include ~/snippets/persistence-local-storage.tsx:local-storage]
+```
+
+The lazy storage getter keeps `localStorage` access out of module evaluation.
+This is safe for client modules that can also render on a server.
+
+`restore()` returns one of these results:
+
+- `"applied"`: the stored input became the live input;
+- `"empty"`: no stored draft exists;
+- `"cancelled"`: middleware did not commit the restore;
+- `"transformed"`: middleware changed the restored input;
+- `"conflict"`: live input changed while the adapter was loading.
+
+An applied restore uses the managed update pipeline with a
+`{ type: "persistence", action: "restore" }` source. It preserves the original
+`defaultValues`, recalculates dirty state, and clears errors, touched state, and
+submission metadata. It does not run validation. A draft may contain temporary
+invalid input.
+
+## Resolve a restore conflict
+
+Persistence never overwrites a local edit made while `load()` is pending. The
+handle enters the `conflict` phase and returns `"conflict"`. Call `start()` to
+keep the current form and save it. Remount the form if the user must discard the
+local input and try the load again.
+
+Call `start()` instead of `restore()` when the application does not want an
+initial load. A normal start does not write the unchanged initial values. A
+start after a conflict or restore failure immediately saves the current input.
+
+## Observe and control saves
+
+After restore or start, persistence observes all RHF value publications. This
+includes generated controls, `form.update`, and direct `form.api` changes.
+Autosave uses a trailing 500 ms delay by default. Set `saveDelay` to another
+finite non-negative number.
+
+The handle provides these operations:
+
+- `flush()` cancels the delay and waits for the latest active input to save;
+- `clear()` removes stored data without changing live input;
+- `getSnapshot()` returns the restore phase and save status;
+- `subscribe()` implements the external-store contract for `useSnapshot`.
+
+Writes are sequential and coalesced. If input changes during a save, the latest
+input is saved afterward. Clearing an active draft suppresses an immediate
+rewrite. The next edit creates the draft again.
+
+Storage errors never roll back form values. A failed save reports
+`save.status === "failed"` with `operation: "save"` or `"clear"`. The next edit
+or `flush()` retries. A restore failure uses the top-level `failed` phase and can
+be retried with `restore()`.
+
+## Own the adapter
+
+An adapter is a keyed asynchronous transport:
+
+```ts
+type FormPersistenceAdapter = {
+  load(key: string): Promise<JsonValue | undefined>
+  save(key: string, value: JsonValue): Promise<void>
+  remove(key: string): Promise<void>
+}
+```
+
+Form Please owns the JSON-safe envelope. The application owns storage,
+authentication, authorization, request cancellation, and retention.
+
+### Query string with nuqs
+
+Use `replace` history and shallow URL updates so autosave does not create a
+browser history entry or navigation for each edit.
+
+```ts
+// [!include ~/snippets/persistence-nuqs.ts]
+```
+
+The live [Query string persistence example](/examples/persistence) shows the
+adapter with `useQueryState` and `NuqsAdapter`.
+
+### TanStack Query
+
+TanStack Query can coordinate a remote draft request and its client cache. The
+request functions remain application-owned.
+
+```ts
+// [!include ~/snippets/persistence-tanstack-query.ts:tanstack-query]
+```
+
+## Version and encode drafts
+
+Each stored envelope contains the persistence protocol version, the application
+`version`, and the encoded payload. Increase `version` when the editable input
+shape changes. Supply `migrate(value, fromVersion, toVersion)` to convert the
+decoded old value. A successful migration is immediately rewritten in the
+current envelope.
+
+Plain values support `null`, booleans, strings, finite numbers, `undefined`,
+arrays, and plain objects. Unsupported values fail with their input path. Add
+`createDateCodec()` for `Date`. Add another explicit `PersistenceCodec` for any
+other opaque value that must cross the storage boundary.
+
+Do not treat a persisted draft as trusted input. Standard Schema still validates
+on submit, and a server must validate every submitted value again.
+
+## Boundaries
+
+One form accepts one persistence feature. The feature does not synchronize
+multiple tabs or forms, save on page unload, retain RHF metadata, or persist
+managed history. The adapter can add cross-client coordination when the product
+requires it.

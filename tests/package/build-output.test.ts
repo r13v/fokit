@@ -10,6 +10,7 @@ const entrypoints = [
 	"default-slots",
 	"history",
 	"native-controls",
+	"persistence",
 	"preset-native",
 	"preset-mui",
 ] as const
@@ -27,7 +28,7 @@ describe("build output", () => {
 
 	it("marks every React entry as a client module", async () => {
 		for (const entrypoint of entrypoints.filter(
-			(entrypoint) => entrypoint !== "history",
+			(entrypoint) => entrypoint !== "history" && entrypoint !== "persistence",
 		)) {
 			for (const extension of ["js", "cjs"]) {
 				const source = await readFile(
@@ -43,7 +44,6 @@ describe("build output", () => {
 		for (const entrypoint of [
 			"core",
 			"devtools",
-			"persistence",
 			"react19",
 			"server",
 			"tanstack",
@@ -73,14 +73,19 @@ describe("build output", () => {
 		expect(graph).not.toContain("layout.css")
 	})
 
-	it("keeps optional history outside the React runtime graph", async () => {
+	it("keeps optional managed-value features outside the React runtime graph", async () => {
 		const rootGraph = await readEsmGraph("dist/index.js")
 		const historyGraph = await readEsmGraph("dist/history.js")
+		const persistenceGraph = await readEsmGraph("dist/persistence.js")
 
 		expect(rootGraph).not.toContain("createHistoryMiddleware")
+		expect(rootGraph).not.toContain("createPersistenceMiddleware")
 		expect(historyGraph).toContain("createHistoryMiddleware")
 		expect(historyGraph).not.toContain('from "react"')
 		expect(historyGraph).not.toContain('from "react-hook-form"')
+		expect(persistenceGraph).toContain("createPersistenceMiddleware")
+		expect(persistenceGraph).not.toContain('from "react"')
+		expect(persistenceGraph).not.toContain('from "react-hook-form"')
 	})
 })
 

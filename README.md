@@ -88,6 +88,7 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
 | `form-please/default-slots` | Accessible structural slots and localization types |
 | `form-please/history` | Optional managed value history, navigation, and journal transfer |
 | `form-please/native-controls` | Native HTML controls and option types |
+| `form-please/persistence` | Optional draft restore, autosave, migration, and storage adapters |
 | `form-please/preset-native` | Ready-to-use native form kit |
 | `form-please/preset-mui` | Material UI 9 form-kit factory |
 | `form-please/layout.css` | Optional structural grid and spacing CSS |
@@ -112,6 +113,7 @@ caching, cancellation, or retries.
 - [Get started](https://r13v.github.io/form-please/get-started)
 - [Value middleware](https://r13v.github.io/form-please/middleware)
 - [Managed value history](https://r13v.github.io/form-please/history)
+- [Form persistence](https://r13v.github.io/form-please/persistence)
 - [API reference](https://r13v.github.io/form-please/api)
 - [Shadcn registry adapter](https://r13v.github.io/form-please/examples/shadcn-valibot)
 - [Architecture map](docs/ARCHITECTURE.md)

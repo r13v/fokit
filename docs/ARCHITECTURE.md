@@ -14,11 +14,12 @@ Form, Please is a React integration over React Hook Form.
 | Form, Please | Typed UI definitions, definition resolution, generated fields, managed value-update coordination, controls, slots, context, and accessibility wiring |
 | Application | Product workflow, requests, caches, authorization, storage, server transport, and visual design |
 
-There is no separate Form, Please form store, reducer, command model,
-persistence layer, server protocol, or validation cache. The narrow middleware
-coordinator proposes changes before committing them to RHF; it does not retain
-values. Optional managed value history retains independent input snapshots for
-navigation without becoming the live form store.
+There is no separate Form, Please form store, reducer, command model, server
+protocol, or validation cache. The narrow middleware coordinator proposes
+changes before committing them to RHF; it does not retain live values. Optional
+managed value history retains independent input snapshots for navigation.
+Optional form persistence encodes and transports the current editable input.
+Neither feature becomes the live form store.
 
 ## Package graph
 
@@ -28,6 +29,8 @@ flowchart TD
     Root --> Immer["immer"]
     History["form-please/history"] --> Coordinator["managed value coordinator"]
     History --> Immer
+    Persistence["form-please/persistence"] --> Coordinator
+    Persistence --> Immer
     NativePreset["form-please/preset-native"] --> Root
     NativePreset --> NativeControls["form-please/native-controls"]
     NativePreset --> DefaultSlots["form-please/default-slots"]
@@ -41,15 +44,16 @@ Public JavaScript entries are limited to:
 - `form-please/default-slots`;
 - `form-please/history`;
 - `form-please/native-controls`;
+- `form-please/persistence`;
 - `form-please/preset-native`;
 - `form-please/preset-mui`.
 
 `form-please/layout.css` and `form-please/package.json` are explicit non-code
-exports. React UI entries are client modules; the optional history entry has no
-React component or hook dependency. React Hook Form 7.76.1 or newer within
-major version 7 is a required peer. Immer is a direct runtime dependency.
-Material UI and Emotion peers remain optional because only the Material UI
-preset uses them.
+exports. React UI entries are client modules; the optional history and
+persistence entries have no React component or hook dependency. React Hook Form
+7.76.1 or newer within major version 7 is a required peer. Immer is a direct
+runtime dependency. Material UI and Emotion peers remain optional because only
+the Material UI preset uses them.
 
 ## Canonical modules
 
@@ -62,6 +66,8 @@ preset uses them.
 | `src/create-form-kit.tsx` | Create kits, bind React Hook Form, render generated UI, submit, and focus errors |
 | `src/value-middleware.ts` | Produce Immer patches, run the fixed Redux-shaped middleware chain, and coordinate terminal value transactions |
 | `src/history/history.ts` | Retain managed input positions, navigate them through the coordinator, and import or export in-memory journals |
+| `src/persistence/persistence.ts` | Restore and autosave complete editable input through the coordinator and an application adapter |
+| `src/persistence/encoding.ts` | Encode, decode, version, migrate, and validate the persistence envelope |
 | `src/resource.ts` | Pure `ResourceState`, `matchResource`, and `fromResource` helpers |
 | `src/use-snapshot.ts` | Adapt any external store with `subscribe` and `getSnapshot` to React |
 | `src/index.ts` | Canonical root exports |
@@ -216,6 +222,36 @@ It is an in-memory navigation artifact rather than an event log or persistence
 protocol. Import validates the protocol and retention boundary, but editable
 entries need not pass Standard Schema validation.
 
+## Form persistence
+
+`form-please/persistence` is an optional middleware feature. It retains only the
+complete editable schema input in a package-owned JSON-safe envelope. It does
+not retain RHF metadata, runtime context, default values, or managed history.
+One feature can own separate state for several forms, but each form accepts one
+persistence feature. `feature.handle(form)` resolves the exact configured form.
+
+`restore()` loads once through an application-owned keyed asynchronous adapter.
+The restore enters hooks and middleware with a `persistence` source and
+`restore` action. Middleware can cancel or transform the input. A successful
+commit resets complete RHF values, preserves the original default baseline,
+recalculates dirty state, clears interaction and submission metadata, and does
+not trigger validation. Editable drafts do not need to pass Standard Schema
+validation. If live input changes while load is pending, persistence reports a
+conflict without applying stored input.
+
+After restore or explicit `start()`, an RHF subscription observes every value
+publication, including raw `form.api` changes. Autosave uses a trailing delay,
+coalesces the latest input, and serializes writes. `flush()` writes the current
+active input. `clear()` removes storage without changing live input. Storage
+failures do not roll values back and retry only after another edit or explicit
+operation.
+
+The envelope has its own protocol version and an application version. Migration
+runs on decoded older values. Tagged asynchronous codecs support explicit
+opaque values; `Date` has an opt-in first-party codec. Applications own storage,
+authorization, cross-client coordination, and retention. The feature does not
+provide tab synchronization, unload guarantees, or background retry.
+
 ## Validation and submission
 
 The definition Standard Schema is the only form-level validator. The internal
@@ -267,9 +303,10 @@ native array operation before the final value commit. Item defaults are cloned
 before insertion. Applications still need a schema-owned ID when row identity
 must survive serialization or a new form instance.
 
-History restore is a deliberate exception to the normal generated-array commit
-path. It resets the complete RHF value tree so every retained array structure is
-restored. The array values are exact, but RHF can generate new private row IDs.
+History and persistence restore are deliberate exceptions to the normal
+generated-array commit path. They reset the complete RHF value tree so every
+restored array structure synchronizes. The array values are exact, but RHF can
+generate new private row IDs.
 
 ## Error focus
 

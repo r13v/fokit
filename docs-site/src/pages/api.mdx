@@ -38,12 +38,13 @@ import "form-please/layout.css"
 | `form-please/default-slots` | `createDefaultSlots` | Create accessible, unstyled structural slots. |
 | `form-please/history` | `createHistoryMiddleware` | Add optional managed value history and journal transfer. |
 | `form-please/native-controls` | `createNativeControls` | Create the native HTML control registry. |
+| `form-please/persistence` | `createPersistenceMiddleware`, `createLocalStorageAdapter`, `createDateCodec` | Restore and autosave editable drafts through application storage. |
 | `form-please/preset-native` | `nativeFormKit` | Use the ready-made native kit with English slots. |
 | `form-please/preset-mui` | `createMuiFormKit` | Create a Material UI 9 kit. |
 
 `form-please/layout.css` and `form-please/package.json` are non-JavaScript
-exports. React UI entries are client modules. The optional history entry has no
-React component or hook dependency.
+exports. React UI entries are client modules. The optional history and
+persistence entries have no React component or hook dependency.
 
 ## `useSnapshot`
 
@@ -462,6 +463,27 @@ current index. Import checks the protocol and configured limit but does not
 require every editable entry to pass Standard Schema validation. Read
 [Managed value history](/history) for state ownership, grouping, raw RHF
 boundaries, restoration, and journal leaf behavior.
+
+## Form persistence
+
+`createPersistenceMiddleware(options)` is exported only from
+`form-please/persistence`. Configure its feature in the fixed middleware list,
+then call `feature.handle(form)`.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `adapter` | Required | Keyed asynchronous `load`, `save`, and `remove` transport. |
+| `key` | Required | Application storage key. |
+| `version` | Required | Non-negative application data version. |
+| `saveDelay` | `500` | Trailing autosave delay in milliseconds. |
+| `codecs` | `[]` | Tagged encoders and decoders for explicit opaque values. |
+| `migrate` | None | Converts decoded data from another application version. |
+| `onError` | None | Observes `restore`, `save`, or `clear` failures. |
+
+The handle exposes `restore`, `start`, `flush`, `clear`, `getSnapshot`, and
+`subscribe`. Restore reports `"applied"`, `"empty"`, `"cancelled"`,
+`"transformed"`, or `"conflict"`. Read [Form persistence](/persistence) for
+lifecycle rules, envelope encoding, migrations, conflicts, and adapters.
 
 ## `Form`, `Fields`, `Submit`, and `AutoForm`
 

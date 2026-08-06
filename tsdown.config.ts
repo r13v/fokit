@@ -6,6 +6,7 @@ export default defineConfig({
 		"default-slots": "src/default-slots/index.ts",
 		history: "src/history/index.ts",
 		"native-controls": "src/native-controls/index.ts",
+		persistence: "src/persistence/index.ts",
 		"preset-native": "src/preset-native/index.ts",
 		"preset-mui": "src/preset-mui/index.ts",
 	},

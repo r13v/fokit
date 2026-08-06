@@ -205,7 +205,7 @@ managed update:
 | `FormMiddlewareApi<Input>` | Read current values or start a later managed update. |
 | `FormMiddlewareNext` | Forward authoritative patches to the next middleware or terminal. |
 | `ValueTransaction<Input, Context>` | TypeScript-readonly proposal or final committed update with previous values, next values, patches, source, and context. It is not a frozen snapshot. |
-| `ValueTransactionSource<Input>` | Discriminated source for a control, array action, `form.update`, or optional history restore. |
+| `ValueTransactionSource<Input>` | Discriminated source for a control, array action, `form.update`, or optional feature restore. |
 | `ValuePatch` | Readonly Immer operation with a segment-array path. |
 
 Middleware can replace the terminal return value. Therefore, `form.update` and
@@ -226,6 +226,24 @@ Import history types from `form-please/history`:
 | `HistoryJournal<Input>` | Version 1 in-memory input positions and current index. |
 
 Read [Managed value history](/history) for the complete runtime contract.
+
+### Form persistence types
+
+Import persistence types from `form-please/persistence`:
+
+| Type | Purpose |
+| --- | --- |
+| `JsonValue` | Value accepted by an adapter across its JSON boundary. |
+| `PersistenceCodec<Value>` | Tagged conversion for one explicit opaque value type. |
+| `PersistenceMigration` | Convert decoded input between application versions. |
+| `FormPersistenceAdapter` | Keyed asynchronous load, save, and remove transport. |
+| `CreatePersistenceOptions` | Configure the adapter, key, version, save delay, codecs, migration, and error observer. |
+| `PersistenceFeature` | Reusable middleware plus exact-form handle lookup. |
+| `PersistenceHandle` | Restore, start, flush, clear, and observe one form's draft. |
+| `PersistenceSnapshot` | Current restore phase and save state. |
+| `PersistenceRestoreResult` | `applied`, `empty`, `cancelled`, `transformed`, or `conflict`. |
+
+Read [Form persistence](/persistence) for the complete runtime contract.
 
 ## Slot and structure types
 

@@ -35,6 +35,12 @@ test.describe("Form, Please documentation", () => {
 			page.getByRole("heading", { level: 1, name: "Managed value history" }),
 		).toBeVisible()
 
+		await sidebar.getByRole("link", { name: "Form persistence" }).click()
+		await expect(page).toHaveURL(/\/form-please\/persistence$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Form persistence" }),
+		).toBeVisible()
+
 		await sidebar.getByRole("link", { name: "API", exact: true }).click()
 		await expect(page).toHaveURL(/\/form-please\/api$/)
 		await expect(
@@ -49,6 +55,44 @@ test.describe("Form, Please documentation", () => {
 				name: "Compose generated and custom UI",
 			}),
 		).toBeVisible()
+		expect(errors).toEqual([])
+	})
+
+	test("runs query string persistence through reload and clear", async ({
+		page,
+	}) => {
+		const errors = pageErrors(page)
+		await page.goto("./examples/persistence")
+
+		const wrapper = page.locator('[data-persistence-preview="query-string"]')
+		await expect(wrapper).toHaveAttribute("data-demo-client-ready", "true")
+		const preview = wrapper.getByRole("region", {
+			name: "Query string persistence preview",
+		})
+		const name = preview.getByLabel("Name")
+		await expect(preview.getByText(/Restore: active/)).toBeVisible()
+		await expect(name).toHaveValue("Ada Lovelace")
+
+		await name.fill("Grace Hopper")
+		await preview.getByRole("button", { name: "Save now" }).click()
+		await expect
+			.poll(() => new URL(page.url()).searchParams.has("draft"))
+			.toBe(true)
+
+		await page.reload()
+		await expect
+			.poll(() => new URL(page.url()).searchParams.has("draft"))
+			.toBe(true)
+		await expect(preview.getByText(/Restore: active/)).toBeVisible()
+		await expect(name).toHaveValue("Grace Hopper")
+		await preview.getByRole("button", { name: "Clear saved draft" }).click()
+		await expect
+			.poll(() => new URL(page.url()).searchParams.has("draft"))
+			.toBe(false)
+		await expect(name).toHaveValue("Grace Hopper")
+
+		await page.reload()
+		await expect(name).toHaveValue("Ada Lovelace")
 		expect(errors).toEqual([])
 	})
 

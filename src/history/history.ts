@@ -1,7 +1,11 @@
 import type { FieldValues } from "react-hook-form"
 
 import type { FormBinding } from "../create-form-kit.js"
-import { areFormValuesEqual, cloneFormValue } from "../form-value.js"
+import {
+	areFormValuesEqual,
+	cloneFormValue,
+	isFormValueObject,
+} from "../form-value.js"
 import type { FormInput, StandardSchema } from "../types.js"
 import {
 	type FormMiddlewareApi,
@@ -467,14 +471,6 @@ function normalizeJournal<Input extends FieldValues>(
 		entries: source.entries.map((entry) => cloneFormValue(entry as Input)),
 		index: source.index as number,
 	}
-}
-
-function isFormValueObject(value: unknown): value is Record<string, unknown> {
-	if (value === null || typeof value !== "object" || Array.isArray(value)) {
-		return false
-	}
-	const prototype = Object.getPrototypeOf(value)
-	return prototype === null || prototype === Object.prototype
 }
 
 function normalizeLimit(limit = 100): number {

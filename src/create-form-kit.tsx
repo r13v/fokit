@@ -1322,6 +1322,12 @@ function commitManagedRestore<Input extends FieldValues, Context, Output>(
 	transaction: ValueTransaction<Input, Context>,
 	validation: ManagedValidationOptions,
 ): void {
+	if (transaction.source.type === "persistence") {
+		api.reset(cloneFormValue(transaction.nextValues) as Input, {
+			keepDefaultValues: true,
+		})
+		return
+	}
 	api.reset(cloneFormValue(transaction.nextValues) as Input, {
 		keepDefaultValues: true,
 		keepErrors: true,

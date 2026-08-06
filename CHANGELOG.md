@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/r13v/form-please/compare/v1.2.0...v1.3.0) (2026-08-06)
+
+
+### Features
+
+* add middlewares support ([#12](https://github.com/r13v/form-please/issues/12)) ([8e4a30e](https://github.com/r13v/form-please/commit/8e4a30e1ecc03985c35db42a33c4a1b1d206cfd9))
+
 ## [1.2.0](https://github.com/r13v/form-please/compare/v1.1.0...v1.2.0) (2026-08-04)
 
 

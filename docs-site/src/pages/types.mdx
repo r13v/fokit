@@ -1,6 +1,6 @@
 ---
 title: TypeScript
-description: Public types for schema values, field paths, definitions, controls, form bindings, slots, and resources.
+description: Public types for schema values, paths, definitions, controls, form bindings, managed updates, slots, and resources.
 showAskAi: false
 ---
 
@@ -30,6 +30,7 @@ Start with these types in application code:
 | Accept a valid field name. | `FieldPath<Value>` |
 | Type shared form UI. | `UiNode<Input, Controls, ...>` |
 | Type a custom control component. | `ControlProps<Value, Options, Context>` |
+| Type form-local value middleware. | `FormMiddleware<Input, Context>` |
 
 Most calls to `defineForm`, `useForm`, and `createFormKit` infer the remaining
 types. Add an explicit type when you export reusable configuration or build a
@@ -179,17 +180,70 @@ component-local form instance.
 | --- | --- |
 | `FormKit<Controls, ...>` | Kit methods, components, controls, slots, grid, and context contract. |
 | `CreateFormKitOptions<Controls, ...>` | Options accepted by `createFormKit`. |
-| `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, and submit handler. |
-| `FormBinding<Schema, Context>` | Raw RHF API, fixed definition, and context shared by one rendered form. |
+| `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, managed update hooks, value middleware, and submit handler. |
+| `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
 `AutoFormProps<Schema, Context>` is currently the same contract as
 `FormProps`. It is a separate public name for components that wrap
 `kit.AutoForm`.
 
-Use `form.api` from `FormBinding` for unchanged React Hook Form operations. The
-other public fields are the fixed `definition` and current `context`. Read
-[`FormBinding` on the API page](/api#formbinding) for their behavior.
+Use `form.api` from `FormBinding` for unchanged React Hook Form operations. Use
+`form.update` for a managed value transaction. The other public fields are the
+fixed `definition` and current `context`. Read [`FormBinding` on the API
+page](/api#formbinding) for their behavior.
+
+### Managed value types
+
+Use these types when you configure value middleware or create a reusable
+managed update:
+
+| Type | Purpose |
+| --- | --- |
+| `FormUpdateRecipe<Input>` | Synchronous Immer recipe accepted by `form.update` and middleware `api.update`. |
+| `FormMiddleware<Input, Context>` | Redux-shaped middleware for one form binding. |
+| `FormMiddlewareApi<Input>` | Read current values or start a later managed update. |
+| `FormMiddlewareNext` | Forward authoritative patches to the next middleware or terminal. |
+| `ValueTransaction<Input, Context>` | TypeScript-readonly proposal or final committed update with previous values, next values, patches, source, and context. It is not a frozen snapshot. |
+| `ValueTransactionSource<Input>` | Discriminated source for a control, array action, `form.update`, or optional feature restore. |
+| `ValuePatch` | Readonly Immer operation with a segment-array path. |
+
+Middleware can replace the terminal return value. Therefore, `form.update` and
+`FormMiddlewareNext` return `unknown`. Read [Value middleware](/middleware) for
+runtime rules and examples.
+
+### Managed value history types
+
+Import history types from `form-please/history`:
+
+| Type | Purpose |
+| --- | --- |
+| `CreateHistoryOptions` | Configure retention and control grouping. |
+| `HistoryFeature` | Reusable middleware plus exact-form handle lookup. |
+| `HistoryHandle<Input>` | Navigate, subscribe, clear, export, and import one form's history. |
+| `HistorySnapshot` | Current `canUndo`, `canRedo`, `index`, and `length`. |
+| `HistoryOperationResult` | `applied`, `unavailable`, `cancelled`, or `transformed`. |
+| `HistoryJournal<Input>` | Version 1 in-memory input positions and current index. |
+
+Read [Managed value history](/history) for the complete runtime contract.
+
+### Form persistence types
+
+Import persistence types from `form-please/persistence`:
+
+| Type | Purpose |
+| --- | --- |
+| `JsonValue` | Value accepted by an adapter across its JSON boundary. |
+| `PersistenceCodec<Value>` | Tagged conversion for one explicit opaque value type. |
+| `PersistenceMigration` | Convert decoded input between application versions. |
+| `FormPersistenceAdapter` | Keyed asynchronous load, save, and remove transport. |
+| `CreatePersistenceOptions` | Configure the adapter, key, version, save delay, codecs, migration, and error observer. |
+| `PersistenceFeature` | Reusable middleware plus exact-form handle lookup. |
+| `PersistenceHandle` | Restore, start, flush, clear, and observe one form's draft. |
+| `PersistenceSnapshot` | Current restore phase and save state. |
+| `PersistenceRestoreResult` | `applied`, `empty`, `cancelled`, `transformed`, or `conflict`. |
+
+Read [Form persistence](/persistence) for the complete runtime contract.
 
 ## Slot and structure types
 
@@ -222,7 +276,7 @@ input `values`, and `isSubmitting`.
 | `FormIssue` | Normalized validation issue with `message` and optional `path`. |
 
 Spread `rootProps` on the slot's root element. Do not replace its generated
-attributes or ref. Read [Controls and slots](/controls) for every slot prop.
+attributes or ref. Read [Form kits](/form-kits) for every slot prop.
 
 ## Resource state
 

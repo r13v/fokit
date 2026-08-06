@@ -6,7 +6,11 @@ import {
 	type FieldPath,
 	type FormBinding,
 	type FormKitSlots,
+	type FormMiddleware,
+	type FormUpdateRecipe,
 	type PathValue,
+	useSnapshot,
+	type ValueTransaction,
 } from "../../src/index.js"
 
 declare const untypedBinding: FormBinding
@@ -31,6 +35,22 @@ type Context = {
 type FieldOptions = { readonly tone: "quiet" | "strong" }
 type SectionOptions = { readonly bordered: boolean }
 type ArrayOptions = { readonly dense: boolean }
+
+const externalSnapshot = { count: 1, status: "ready" as const }
+const externalStore = {
+	getSnapshot: () => externalSnapshot,
+	subscribe: (_listener: () => void) => () => undefined,
+}
+
+function useExternalSnapshot() {
+	const snapshot = useSnapshot(externalStore)
+	snapshot.count satisfies number
+	snapshot.status satisfies "ready"
+	// @ts-expect-error The snapshot type comes from the store getter.
+	snapshot.missing
+}
+
+void useExternalSnapshot
 
 const schema: StandardSchemaV1<Input, Output> = {
 	"~standard": {
@@ -107,8 +127,39 @@ const definition = kit.defineForm(schema, {
 	],
 })
 
+const middleware: FormMiddleware<Input, Context> =
+	(api) => (next) => (transaction) => {
+		transaction.nextValues.profile.country satisfies string
+		transaction.context.locale satisfies string
+		transaction.patches[0]?.path satisfies readonly (string | number)[]
+		api.getValues().speakers[0]?.name satisfies string | undefined
+		// @ts-expect-error Transaction values are readonly middleware views.
+		transaction.nextValues.profile.country = "FR"
+		// @ts-expect-error Middleware context is deeply readonly.
+		transaction.context.permissions.push("admin")
+		return next(transaction.patches)
+	}
+
+const replaceName: FormUpdateRecipe<Input> = (draft): void => {
+	draft.name = "Grace"
+}
+
 function useTypedBinding() {
 	const form = kit.useForm(definition, {
+		beforeUpdate(draft, transaction) {
+			draft.profile.country = "FR"
+			transaction.nextValues.profile.country satisfies string
+			transaction.context.locale satisfies string
+			// @ts-expect-error The original proposal remains readonly.
+			transaction.nextValues.profile.country = "DE"
+			if (transaction.source.type === "control") return false
+		},
+		afterUpdate(transaction) {
+			transaction.nextValues.profile.country satisfies string
+			transaction.context.permissions satisfies readonly string[]
+			// @ts-expect-error The committed transaction remains readonly.
+			transaction.context.permissions.push("admin")
+		},
 		context: { locale: "en", permissions: [] },
 		defaultValues: {
 			name: "Ada",
@@ -123,8 +174,17 @@ function useTypedBinding() {
 			// @ts-expect-error Submit metadata is not part of Form Please.
 			value.meta
 		},
+		middleware: [middleware],
 	})
 	form.api.subscribe satisfies object
+	form.update(replaceName)
+	const updateResult = form.update((draft) => {
+		draft.profile.country = "FR"
+	})
+	updateResult satisfies unknown
+	// @ts-expect-error Redux middleware may replace the terminal result.
+	const transaction: ValueTransaction<Input, Context> = updateResult
+	void transaction
 	return form
 }
 

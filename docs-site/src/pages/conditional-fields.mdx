@@ -121,6 +121,7 @@ Express the same condition in the Standard Schema:
 This schema requires `companyName` only for a company account. Its transform
 also removes a stale `companyName` from personal-account output.
 
-Use a schema transform when cleanup is part of the submission contract. Use an
-application-owned event handler and `form.api` when the UI must clear the value
-immediately.
+Use a schema transform when cleanup is part of the submission contract. Use
+value middleware when the source and cleared value must commit atomically. Use
+`form.update` for the same managed boundary in an application action. See
+[Value middleware](/middleware).

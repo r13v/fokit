@@ -1,41 +1,108 @@
 ---
-title: Controls and slots
-description: Build typed inputs and accessible form structure.
+title: Form kits
+description: Create a project form kit with typed controls and accessible structural slots.
 showAskAi: false
 ---
 
-# Controls and slots
+# Form kits
 
-Controls and slots divide form rendering into two responsibilities.
+A form kit is the rendering contract between Form, Please and your project's UI.
+Create one kit for the controls, structure, and grid that forms in the project
+share.
 
 | Part | Responsibility | Example |
 | --- | --- | --- |
 | Control | Connect one typed value to one interactive component. | An email input, checkbox, or date picker. |
 | Slot | Render structure around controls and groups. | A field wrapper, section grid, or submit button. |
 
-Build one complete kit with `createFormKit`. The kit freezes its control registry,
-slot registry, and grid. It does not have a runtime extension API.
+## Choose a starting point
 
-## Controls
+Do not build a custom kit when a shipped preset already matches the project.
+Choose the smallest starting point that covers the UI:
 
-A control receives a field value from React Hook Form. It renders the interactive
-component and sends typed values back to the form.
+| Project need | Start with | What you own |
+| --- | --- | --- |
+| Semantic HTML with project CSS | `nativeFormKit` from `form-please/preset-native` | Styles only. |
+| Native controls with some project components | `createNativeControls()` and `createDefaultSlots()` | Only the controls or slots that you replace. |
+| A project design system | `defineControl()` and `FormKitSlots` | The interactive components and form structure. |
+| Material UI 9 | `createMuiFormKit()` from `form-please/preset-mui` | The Material UI theme and field definitions. |
 
-The control does not render the field label, description, or error messages.
-The `Field` and `ErrorMessage` slots render that content.
+The following walkthrough uses the second path. It keeps the accessible default
+structure, adds one project control, and produces a kit that can render a form.
 
-### Create a custom control
+## Build a project kit
+
+### 1. Define one project control
 
 Use `defineControl<Value, Options, Context>()` to define the control contract.
 `Value` must match the schema input type for each field that uses the control.
 `Options` configures one field. `Context` supplies shared runtime data.
 
 ```tsx
-// [!include ~/snippets/controls-and-slots-control.tsx]
+// [!include ~/snippets/form-kits-control.tsx]
 ```
 
 The example uses `undefined` for an empty value. This is a control decision.
 Choose an empty value that matches the schema input type.
+
+### 2. Assemble and export the kit
+
+Start with the shipped controls and slots. Add project controls to the registry
+before calling `createFormKit`:
+
+```tsx
+// [!include ~/snippets/form-kits.tsx:register-control]
+```
+
+Create the kit once at module scope and import that instance wherever forms are
+defined or rendered. `createFormKit` freezes snapshots of the registries and
+grid; a finished kit does not have a runtime extension API.
+
+### 3. Define fields with the kit
+
+The control registry keys become the allowed `control` values. TypeScript checks
+the schema path, control value type, and options together:
+
+```tsx
+// [!include ~/snippets/form-kits.tsx:control-options]
+```
+
+This definition uses the project `uppercase` control together with the shipped
+`number`, `select`, and `checkbox` controls.
+
+### 4. Bind and render a form
+
+Use the same kit to create the form binding and render its generated UI:
+
+```tsx
+// [!include ~/snippets/form-kits.tsx:project-form]
+```
+
+`projectKit.AutoForm` renders the form and generated fields. `projectKit.Submit`
+uses the kit's submit slot. After validation succeeds, `onSubmit` receives the
+schema output in `value`.
+
+All JavaScript package entries are React client modules. In a Next.js App Router
+project, keep the kit and the component that calls `useForm` behind a
+`"use client"` boundary.
+
+## Check the kit before adopting it
+
+1. Put the shared kit in one project module and import the same instance in forms.
+2. Confirm that TypeScript rejects a control whose value type does not match its schema path.
+3. Submit an invalid form and confirm that the first invalid control receives focus.
+4. Confirm that labels, descriptions, and visible errors are announced by a screen reader.
+5. Test disabled and readonly fields, plus add, move, and remove actions when the kit supports arrays.
+
+The project kit is now usable. The remaining sections document the complete
+control and slot contracts for replacing more of the baseline.
+
+## Controls
+
+A control receives a field value from React Hook Form. It renders the interactive
+component and sends typed values back to the form. It does not render the field
+label, description, or errors; the `Field` and `ErrorMessage` slots render that
+content.
 
 ### Control props
 
@@ -81,22 +148,6 @@ The remaining metadata has these meanings:
 Native text inputs support a `readOnly` property. Some components do not.
 A custom select, checkbox, or file control must prevent changes when `readOnly`
 is `true`.
-
-### Register and use a control
-
-Add the control before you call `createFormKit`. The registry key becomes the
-`control` value in field definitions.
-
-```tsx
-// [!include ~/snippets/controls-and-slots.tsx:register-control]
-```
-
-TypeScript checks the field path, control value type, and control options.
-The following definition uses custom and native controls:
-
-```tsx
-// [!include ~/snippets/controls-and-slots.tsx:control-options]
-```
 
 ### Shipped native controls
 
@@ -205,7 +256,7 @@ Spread generated props on the matching elements. These props preserve labels,
 descriptions, focus behavior, CSS hooks, and resolved state.
 
 ```tsx
-// [!include ~/snippets/controls-and-slots.tsx:field-slot]
+// [!include ~/snippets/form-kits.tsx:field-slot]
 ```
 
 Render `control` exactly once. Render each item in `errors` so users can read
@@ -218,7 +269,7 @@ Call `add()` from a button with `type="button"`. Disable the action when
 arrays.
 
 ```tsx
-// [!include ~/snippets/controls-and-slots.tsx:array-slot]
+// [!include ~/snippets/form-kits.tsx:array-slot]
 ```
 
 The `ArrayItem` slot owns move and remove controls. Use `canMoveUp` and
@@ -231,7 +282,7 @@ Spread `buttonProps` on the button. These props contain `type="submit"` and the
 resolved disabled state.
 
 ```tsx
-// [!include ~/snippets/controls-and-slots.tsx:submit-slot]
+// [!include ~/snippets/form-kits.tsx:submit-slot]
 ```
 
 Use `isSubmitting` for pending content. Use `values` only when the button UI
@@ -243,7 +294,7 @@ depends on the current form input.
 you only need to replace some slots.
 
 ```tsx
-// [!include ~/snippets/controls-and-slots.tsx:slot-registry]
+// [!include ~/snippets/form-kits.tsx:slot-registry]
 ```
 
 The generic parameters of `FormKitSlots` define options for `Field`, `Section`,
@@ -252,7 +303,7 @@ and `Array`, in that order. Use `never` when a slot does not accept options.
 Pass the typed options through `slotOptions` in the form definition:
 
 ```tsx
-// [!include ~/snippets/controls-and-slots.tsx:slot-options]
+// [!include ~/snippets/form-kits.tsx:slot-options]
 ```
 
 ### Generated structural props

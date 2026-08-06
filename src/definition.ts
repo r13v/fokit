@@ -205,6 +205,7 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 		/** Makes all nodes in the resolved definition read-only. */
 		readonly readOnly?: boolean
 	},
+	previous?: ResolvedDefinition,
 ): ResolvedDefinition {
 	const resolvedNodes: ResolvedNode[] = []
 	const resolveNodes = (
@@ -221,157 +222,226 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 			/** The parent grid column count, when it defines a grid. */
 			readonly columns?: number
 		},
-	): readonly ResolvedNode[] =>
-		Object.freeze(
-			nodes.map((node) => {
-				const { children: _templateChildren, ...nodeShell } = node
-				const id = idPrefix.length === 0 ? node.id : `${idPrefix}.${node.id}`
-				const visible =
-					parent.visible &&
-					resolveValue(node.visible, true, values, pathPrefix, context)
-				const disabled =
-					parent.disabled ||
-					resolveValue(node.disabled, false, values, pathPrefix, context)
-				const readOnly =
-					parent.readOnly ||
-					resolveValue(node.readOnly, false, values, pathPrefix, context)
-				const common = {
-					...nodeShell,
-					id,
-					visible,
-					disabled,
-					readOnly,
-					context,
-					className: resolveOptional(
-						node.className,
-						values,
-						pathPrefix,
-						context,
-					),
-					span: validateSpan(
-						resolveOptional(node.span, values, pathPrefix, context),
-						definition.grid,
-						parent.columns,
-					),
-				}
+		previousNodes?: readonly ResolvedNode[],
+	): readonly ResolvedNode[] => {
+		const nextNodes = nodes.map((node, index) => {
+			const { children: _templateChildren, ...nodeShell } = node
+			const id = idPrefix.length === 0 ? node.id : `${idPrefix}.${node.id}`
+			const previousCandidate = previousNodes?.[index]
+			const previousNode =
+				previousCandidate?.id === id && previousCandidate.kind === node.kind
+					? previousCandidate
+					: undefined
+			const visible =
+				parent.visible &&
+				resolveValue(node.visible, true, values, pathPrefix, context)
+			const disabled =
+				parent.disabled ||
+				resolveValue(node.disabled, false, values, pathPrefix, context)
+			const readOnly =
+				parent.readOnly ||
+				resolveValue(node.readOnly, false, values, pathPrefix, context)
+			const common = {
+				...nodeShell,
+				id,
+				visible,
+				disabled,
+				readOnly,
+				context,
+				className: resolveOptional(node.className, values, pathPrefix, context),
+				span: validateSpan(
+					resolveOptional(node.span, values, pathPrefix, context),
+					definition.grid,
+					parent.columns,
+				),
+			}
 
-				let resolved: ResolvedNode
-				switch (node.kind) {
-					case "field": {
-						const path = joinPath(pathPrefix, String(node.path))
-						resolved = Object.freeze({
-							...common,
-							path,
-							label: resolveOptional(node.label, values, pathPrefix, context),
-							description: resolveOptional(
-								node.description,
-								values,
-								pathPrefix,
-								context,
-							),
-							slotOptions: resolveOptional(
-								node.slotOptions,
-								values,
-								pathPrefix,
-								context,
-							),
-							required: resolveValue(
-								node.required,
-								false,
-								values,
-								pathPrefix,
-								context,
-							),
-							options: resolveOptional(
-								node.options,
-								values,
-								pathPrefix,
-								context,
-							),
-						})
-						break
-					}
-					case "section": {
-						const columns = validateColumns(
-							resolveValue(node.columns, 1, values, pathPrefix, context),
-							definition.grid,
-						)
-						const children = resolveNodes(
-							node.children ?? [],
+			let resolved: ResolvedNode
+			switch (node.kind) {
+				case "field": {
+					const path = joinPath(pathPrefix, String(node.path))
+					resolved = Object.freeze({
+						...common,
+						path,
+						label: resolveOptional(node.label, values, pathPrefix, context),
+						description: resolveOptional(
+							node.description,
+							values,
 							pathPrefix,
-							idPrefix,
-							{ visible, disabled, readOnly, columns },
-						)
-						resolved = Object.freeze({
-							...common,
-							columns,
-							title: resolveOptional(node.title, values, pathPrefix, context),
-							description: resolveOptional(
-								node.description,
-								values,
-								pathPrefix,
-								context,
-							),
-							slotOptions: resolveOptional(
-								node.slotOptions,
-								values,
-								pathPrefix,
-								context,
-							),
-							children,
-						})
-						break
-					}
-					case "array": {
-						const path = joinPath(pathPrefix, String(node.path))
-						const arrayValue = getPathValue(values, path)
-						const itemChildren = Array.isArray(arrayValue)
-							? Object.freeze(
-									arrayValue.map((_item, index) =>
-										resolveNodes(
-											node.children ?? [],
-											`${path}.${index}`,
-											`${idPrefix}${idPrefix.length === 0 ? "" : "."}${path}.${index}`,
-											{ visible, disabled, readOnly },
-										),
-									),
-								)
-							: Object.freeze([])
-						resolved = Object.freeze({
-							...common,
-							path,
-							label: resolveOptional(node.label, values, pathPrefix, context),
-							description: resolveOptional(
-								node.description,
-								values,
-								pathPrefix,
-								context,
-							),
-							slotOptions: resolveOptional(
-								node.slotOptions,
-								values,
-								pathPrefix,
-								context,
-							),
-							itemChildren,
-						})
-						break
-					}
-					case "render":
-						resolved = Object.freeze(common)
-						break
+							context,
+						),
+						slotOptions: resolveOptional(
+							node.slotOptions,
+							values,
+							pathPrefix,
+							context,
+						),
+						required: resolveValue(
+							node.required,
+							false,
+							values,
+							pathPrefix,
+							context,
+						),
+						options: resolveOptional(node.options, values, pathPrefix, context),
+					})
+					break
 				}
-				resolvedNodes.push(resolved)
-				return resolved
-			}),
-		)
+				case "section": {
+					const columns = validateColumns(
+						resolveValue(node.columns, 1, values, pathPrefix, context),
+						definition.grid,
+					)
+					const children = resolveNodes(
+						node.children ?? [],
+						pathPrefix,
+						idPrefix,
+						{ visible, disabled, readOnly, columns },
+						previousNode?.children,
+					)
+					resolved = Object.freeze({
+						...common,
+						columns,
+						title: resolveOptional(node.title, values, pathPrefix, context),
+						description: resolveOptional(
+							node.description,
+							values,
+							pathPrefix,
+							context,
+						),
+						slotOptions: resolveOptional(
+							node.slotOptions,
+							values,
+							pathPrefix,
+							context,
+						),
+						children,
+					})
+					break
+				}
+				case "array": {
+					const path = joinPath(pathPrefix, String(node.path))
+					const arrayValue = getPathValue(values, path)
+					const itemChildren = Array.isArray(arrayValue)
+						? reuseResolvedItems(
+								previousNode?.itemChildren,
+								arrayValue.map((_item, index) =>
+									resolveNodes(
+										node.children ?? [],
+										`${path}.${index}`,
+										`${idPrefix}${idPrefix.length === 0 ? "" : "."}${path}.${index}`,
+										{ visible, disabled, readOnly },
+										previousNode?.itemChildren?.[index],
+									),
+								),
+							)
+						: reuseResolvedItems(previousNode?.itemChildren, [])
+					resolved = Object.freeze({
+						...common,
+						path,
+						label: resolveOptional(node.label, values, pathPrefix, context),
+						description: resolveOptional(
+							node.description,
+							values,
+							pathPrefix,
+							context,
+						),
+						slotOptions: resolveOptional(
+							node.slotOptions,
+							values,
+							pathPrefix,
+							context,
+						),
+						itemChildren,
+					})
+					break
+				}
+				case "render":
+					resolved = Object.freeze(common)
+					break
+			}
+			if (
+				previousNode !== undefined &&
+				hasEqualResolvedProperties(previousNode, resolved)
+			) {
+				resolved = previousNode
+			}
+			resolvedNodes.push(resolved)
+			return resolved
+		})
+		return reuseResolvedItems(previousNodes, nextNodes)
+	}
 
-	const ui = resolveNodes(definition.ui as readonly RuntimeNode[], "", "", {
-		visible: true,
-		disabled: options.disabled === true,
-		readOnly: options.readOnly === true,
-	})
-	return Object.freeze({ ui, nodes: Object.freeze(resolvedNodes) })
+	const ui = resolveNodes(
+		definition.ui as readonly RuntimeNode[],
+		"",
+		"",
+		{
+			visible: true,
+			disabled: options.disabled === true,
+			readOnly: options.readOnly === true,
+		},
+		previous?.ui,
+	)
+	const nodes = reuseResolvedItems(previous?.nodes, resolvedNodes)
+	return previous !== undefined &&
+		ui === previous.ui &&
+		nodes === previous.nodes
+		? previous
+		: Object.freeze({ ui, nodes })
+}
+
+/** Reuses a frozen resolved list when each item retains its reference. */
+function reuseResolvedItems<Value>(
+	previous: readonly Value[] | undefined,
+	next: Value[],
+): readonly Value[] {
+	return previous !== undefined &&
+		previous.length === next.length &&
+		next.every((item, index) => Object.is(item, previous[index]))
+		? previous
+		: Object.freeze(next)
+}
+
+/** Compares one resolved node after its child lists have been reconciled. */
+function hasEqualResolvedProperties(
+	previous: ResolvedNode,
+	next: ResolvedNode,
+): boolean {
+	const keys = Object.keys(next)
+	return (
+		Object.keys(previous).length === keys.length &&
+		keys.every((key) => hasEqualResolvedValue(previous[key], next[key]))
+	)
+}
+
+/** Compares opaque resolved values without traversing nested configuration. */
+function hasEqualResolvedValue(previous: unknown, next: unknown): boolean {
+	if (Object.is(previous, next)) return true
+	if (previous === null || next === null) return false
+	if (typeof previous !== "object" || typeof next !== "object") return false
+
+	const prototype = Object.getPrototypeOf(next)
+	if (
+		prototype !== Object.getPrototypeOf(previous) ||
+		(prototype !== null &&
+			prototype !== Object.prototype &&
+			prototype !== Array.prototype)
+	) {
+		return false
+	}
+	const keys = Reflect.ownKeys(next)
+	return (
+		Reflect.ownKeys(previous).length === keys.length &&
+		keys.every(
+			(key) =>
+				Object.hasOwn(previous, key) &&
+				Object.is(
+					(previous as Record<PropertyKey, unknown>)[key],
+					(next as Record<PropertyKey, unknown>)[key],
+				),
+		)
+	)
 }
 
 /** Resolves a value or uses its default when it is absent. */

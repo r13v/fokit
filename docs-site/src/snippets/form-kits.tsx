@@ -13,7 +13,7 @@ import { createNativeControls } from "form-please/native-controls"
 import type { ReactNode } from "react"
 import { z } from "zod"
 
-import { uppercase } from "./controls-and-slots-control.js"
+import { uppercase } from "./form-kits-control.js"
 
 // [!region register-control]
 const controls = {
@@ -21,7 +21,7 @@ const controls = {
 	uppercase,
 }
 
-const basicKit = createFormKit({
+export const projectKit = createFormKit({
 	controls,
 	slots: createDefaultSlots(),
 })
@@ -36,7 +36,7 @@ const profileSchema = z.object({
 })
 
 // [!region control-options]
-const basicDefinition = basicKit.defineForm(profileSchema, {
+const projectDefinition = projectKit.defineForm(profileSchema, {
 	ui: [
 		{
 			kind: "field",
@@ -74,6 +74,29 @@ const basicDefinition = basicKit.defineForm(profileSchema, {
 	],
 })
 // [!endregion control-options]
+
+// [!region project-form]
+export function ProjectProfileForm() {
+	const form = projectKit.useForm(projectDefinition, {
+		defaultValues: {
+			displayName: "",
+			age: undefined,
+			role: undefined,
+			active: false,
+			members: [],
+		},
+		onSubmit({ value }) {
+			console.log(value)
+		},
+	})
+
+	return (
+		<projectKit.AutoForm form={form}>
+			<projectKit.Submit>Save profile</projectKit.Submit>
+		</projectKit.AutoForm>
+	)
+}
+// [!endregion project-form]
 
 type CardFieldOptions = {
 	readonly tone?: "default" | "emphasis"

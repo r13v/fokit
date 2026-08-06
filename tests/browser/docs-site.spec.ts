@@ -17,10 +17,42 @@ test.describe("Form, Please documentation", () => {
 		).toBeVisible()
 
 		const sidebar = page.locator("nav[data-v-sidebar]")
+		await sidebar.getByRole("link", { name: "AI agents", exact: true }).click()
+		await expect(page).toHaveURL(/\/form-please\/ai-agents$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Use with AI agents" }),
+		).toBeVisible()
+
+		await sidebar.getByRole("link", { name: "Form kits", exact: true }).click()
+		await expect(page).toHaveURL(/\/form-please\/form-kits$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Form kits" }),
+		).toBeVisible()
+
 		await sidebar.getByRole("link", { name: "Definitions" }).click()
 		await expect(page).toHaveURL(/\/form-please\/definitions$/)
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Definitions" }),
+		).toBeVisible()
+
+		await sidebar.getByRole("link", { name: "Middleware", exact: true }).click()
+		await expect(page).toHaveURL(/\/form-please\/middleware$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Value middleware" }),
+		).toBeVisible()
+
+		await sidebar.getByRole("link", { name: "History", exact: true }).click()
+		await expect(page).toHaveURL(/\/form-please\/history$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Managed value history" }),
+		).toBeVisible()
+
+		await sidebar
+			.getByRole("link", { name: "Persistence", exact: true })
+			.click()
+		await expect(page).toHaveURL(/\/form-please\/persistence$/)
+		await expect(
+			page.getByRole("heading", { level: 1, name: "Form persistence" }),
 		).toBeVisible()
 
 		await sidebar.getByRole("link", { name: "API", exact: true }).click()
@@ -29,14 +61,134 @@ test.describe("Form, Please documentation", () => {
 			page.getByRole("heading", { level: 2, name: "createFormKit" }),
 		).toBeVisible()
 
-		await sidebar.getByRole("link", { name: "Production recipes" }).click()
-		await expect(page).toHaveURL(/\/form-please\/advanced$/)
+		await sidebar.getByRole("link", { name: "Recipes", exact: true }).click()
+		await expect(page).toHaveURL(/\/form-please\/recipes$/)
 		await expect(
 			page.getByRole("heading", {
 				level: 2,
 				name: "Compose generated and custom UI",
 			}),
 		).toBeVisible()
+		expect(errors).toEqual([])
+	})
+
+	test("runs query string persistence through reload and clear", async ({
+		page,
+	}) => {
+		const errors = pageErrors(page)
+		await page.goto("./examples/persistence")
+
+		const wrapper = page.locator('[data-persistence-preview="query-string"]')
+		await expect(wrapper).toHaveAttribute("data-demo-client-ready", "true")
+		const preview = wrapper.getByRole("region", {
+			name: "Query string persistence preview",
+		})
+		const name = preview.getByLabel("Name")
+		await expect(preview.getByText(/Restore: active/)).toBeVisible()
+		await expect(name).toHaveValue("Ada Lovelace")
+
+		await name.fill("Grace Hopper")
+		await preview.getByRole("button", { name: "Save now" }).click()
+		await expect
+			.poll(() => new URL(page.url()).searchParams.has("draft"))
+			.toBe(true)
+
+		await page.reload()
+		await expect
+			.poll(() => new URL(page.url()).searchParams.has("draft"))
+			.toBe(true)
+		await expect(preview.getByText(/Restore: active/)).toBeVisible()
+		await expect(name).toHaveValue("Grace Hopper")
+		await preview.getByRole("button", { name: "Clear saved draft" }).click()
+		await expect
+			.poll(() => new URL(page.url()).searchParams.has("draft"))
+			.toBe(false)
+		await expect(name).toHaveValue("Grace Hopper")
+
+		await page.reload()
+		await expect(name).toHaveValue("Ada Lovelace")
+		expect(errors).toEqual([])
+	})
+
+	test("runs the managed value history preview", async ({ page }) => {
+		const errors = pageErrors(page)
+		await page.goto("./examples/history")
+
+		const wrapper = page.locator('[data-history-preview="managed-values"]')
+		await expect(wrapper).toHaveAttribute("data-demo-client-ready", "true")
+		const preview = wrapper.getByRole("region", {
+			name: "Managed value history preview",
+		})
+		const name = preview.getByLabel("Name")
+		await expect(name).toHaveValue("Ada Lovelace")
+		await name.fill("Grace Hopper")
+		await expect(preview.getByRole("button", { name: "Undo" })).toBeEnabled()
+
+		await preview.getByRole("button", { name: "Undo" }).click()
+		await expect(name).toHaveValue("Ada Lovelace")
+		await preview.getByRole("button", { name: "Redo" }).click()
+		await expect(name).toHaveValue("Grace Hopper")
+		await expect(preview.getByText(/Redo: applied/)).toBeVisible()
+
+		expect(errors).toEqual([])
+	})
+
+	test("runs the value middleware previews", async ({ page }) => {
+		const errors = pageErrors(page)
+		await page.goto("./middleware")
+
+		const derived = page.getByRole("region", {
+			name: "Derived total middleware preview",
+		})
+		await expect(
+			page.locator('[data-middleware-preview="derived-total"]'),
+		).toHaveAttribute("data-demo-client-ready", "true")
+		await derived.getByLabel("Quantity").fill("3")
+		await expect(derived.getByLabel("Total")).toHaveValue("45")
+		await expect(derived.getByText("Committed total: $45.00")).toBeVisible()
+		await derived.getByRole("button", { name: "Apply bulk order" }).click()
+		await expect(derived.getByLabel("Total")).toHaveValue("90")
+
+		const cancellation = page.getByRole("region", {
+			name: "Cancellation middleware preview",
+		})
+		await expect(
+			page.locator('[data-middleware-preview="cancellation"]'),
+		).toHaveAttribute("data-demo-client-ready", "true")
+		await cancellation
+			.getByRole("button", { name: "Try 40% as a managed change" })
+			.click()
+		await expect(cancellation.getByLabel("Discount percentage")).toHaveValue(
+			"10",
+		)
+		await expect(cancellation.getByText(/Cancelled 40% discount/)).toBeVisible()
+		await cancellation
+			.getByRole("button", { name: "Set 40% through raw RHF" })
+			.click()
+		await expect(cancellation.getByLabel("Discount percentage")).toHaveValue(
+			"40",
+		)
+		await expect(
+			cancellation.getByText(/form\.api\.setValue bypassed middleware/),
+		).toBeVisible()
+
+		const complexEditing = page.getByRole("region", {
+			name: "Complex middleware editing preview",
+		})
+		await expect(
+			page.locator('[data-middleware-preview="complex-editing"]'),
+		).toHaveAttribute("data-demo-client-ready", "true")
+		for (const [label, value] of [
+			["First name", "Responsive editor"],
+			["Organization name", "Northstar Studio"],
+			["Project title", "Partner workspace 2026"],
+		] as const) {
+			const input = complexEditing.getByLabel(label)
+			await input.fill("")
+			await input.pressSequentially(value)
+			await expect(input).toHaveValue(value)
+		}
+
 		expect(errors).toEqual([])
 	})
 
@@ -144,7 +296,7 @@ test.describe("Form, Please documentation", () => {
 
 	test("runs the production recipe previews", async ({ page }) => {
 		const errors = pageErrors(page)
-		await page.goto("./advanced")
+		await page.goto("./recipes")
 
 		const baseline = page.getByRole("region", {
 			name: "Saved baseline recipe preview",

@@ -1,0 +1,42 @@
+---
+title: History workflow
+description: Try grouped undo, redo, seek, journal export and import, and clearing history on a live form.
+showAskAi: false
+---
+
+import { HistoryDemo } from "../../components/history-demo"
+
+# History workflow
+
+This example adds managed value history to a generated profile form while React
+Hook Form continues to own live values, validation, dirty state, and arrays.
+
+## Try the workflow
+
+1. Change **Name** several times.
+2. Add or edit a project.
+3. Select **Undo**, then **Redo**.
+4. Select **Export**, make another change, then select **Import**.
+5. Select **Clear history** to retain only the current position.
+
+<HistoryDemo />
+
+The position output follows retained groups. Operations leave the live form
+active when no target is available or middleware cancels a restore.
+
+## What this example shows
+
+- `createHistoryMiddleware` as an optional `form-please/history` feature.
+- `feature.handle(form)` for the exact configured form.
+- `useSnapshot(history)` for navigation state.
+- Managed restore through hooks and ordered middleware.
+- Full input snapshots in `HistoryJournal` version 1.
+
+## Copy the source
+
+```tsx
+// [!include ~/snippets/history-guide.tsx]
+```
+
+Read [Managed value history](/history) for grouping, retention, raw RHF
+boundaries, operation results, and journal limits.

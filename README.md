@@ -70,6 +70,9 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
   output while the submit wrapper preserves the editable input snapshot.
 - UI resolvers receive the complete deeply readonly schema input and runtime
   context. They must be synchronous.
+- Use `beforeUpdate` and `afterUpdate` for one form-local managed update rule.
+  Use value middleware and `form.update` when independent policies or dependent
+  changes must compose atomically. Direct `form.api` changes bypass both.
 - Hidden fields preserve their values.
 - Array paths use RHF dot notation and rows use stable RHF keys.
 - RHF focuses the first registered invalid field. A focusable error summary is
@@ -83,7 +86,9 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
 | --- | --- |
 | `form-please` | Form-kit construction, controls, resources, and shared types |
 | `form-please/default-slots` | Accessible structural slots and localization types |
+| `form-please/history` | Optional managed value history, navigation, and journal transfer |
 | `form-please/native-controls` | Native HTML controls and option types |
+| `form-please/persistence` | Optional draft restore, autosave, migration, and storage adapters |
 | `form-please/preset-native` | Ready-to-use native form kit |
 | `form-please/preset-mui` | Material UI 9 form-kit factory |
 | `form-please/layout.css` | Optional structural grid and spacing CSS |
@@ -106,6 +111,9 @@ caching, cancellation, or retries.
 ## Documentation
 
 - [Get started](https://r13v.github.io/form-please/get-started)
+- [Value middleware](https://r13v.github.io/form-please/middleware)
+- [Managed value history](https://r13v.github.io/form-please/history)
+- [Form persistence](https://r13v.github.io/form-please/persistence)
 - [API reference](https://r13v.github.io/form-please/api)
 - [Shadcn registry adapter](https://r13v.github.io/form-please/examples/shadcn-valibot)
 - [Architecture map](docs/ARCHITECTURE.md)

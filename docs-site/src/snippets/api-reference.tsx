@@ -5,8 +5,10 @@
 import {
 	type ControlProps,
 	createFormKit,
+	type DeepReadonly,
 	defineControl,
 	type FormInput,
+	type FormMiddleware,
 	type FormOutput,
 	fromResource,
 	matchResource,
@@ -14,6 +16,7 @@ import {
 	type RenderNodeProps,
 	type ResourceState,
 	type UiResolver,
+	useSnapshot,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -22,6 +25,19 @@ import { nativeFormKit } from "form-please/preset-native"
 import { useId } from "react"
 import { useController, useFormState, useWatch } from "react-hook-form"
 import { z } from "zod"
+
+// [!region use-snapshot]
+const storeSnapshot = { status: "ready" as const }
+const store = {
+	getSnapshot: () => storeSnapshot,
+	subscribe: (_listener: () => void) => () => undefined,
+}
+
+function ExternalStoreStatus() {
+	const snapshot = useSnapshot(store)
+	return <output>{snapshot.status}</output>
+}
+// [!endregion use-snapshot]
 
 // [!region define-control]
 type UppercaseOptions = {
@@ -348,6 +364,52 @@ const defaultValues = {
 	speakers: [],
 } satisfies ProfileInput
 
+// [!region value-middleware]
+function recordManagedValues(_values: DeepReadonly<ProfileInput>) {}
+
+const keepPlanValuesConsistent: FormMiddleware<ProfileInput, ProfileContext> =
+	(api) => (next) => (transaction) => {
+		let patches = transaction.patches
+		if (
+			transaction.nextValues.plan === "solo" &&
+			transaction.nextValues.teamName !== undefined
+		) {
+			patches = [
+				...transaction.patches,
+				{ op: "replace", path: ["teamName"], value: undefined },
+			]
+		}
+		const result = next(patches)
+		// `next` commits synchronously, so this reads the complete final value.
+		recordManagedValues(api.getValues())
+		return result
+	}
+// [!endregion value-middleware]
+
+// [!region update-hooks]
+function ProfileUpdateHooks({ context }: { readonly context: ProfileContext }) {
+	const form = profileKit.useForm(profileDefinition, {
+		beforeUpdate(draft, transaction) {
+			if (
+				!context.canEditPlan &&
+				transaction.source.type === "control" &&
+				transaction.source.path === "plan"
+			) {
+				return false
+			}
+			if (draft.plan === "solo") draft.teamName = undefined
+		},
+		afterUpdate(transaction) {
+			recordManagedValues(transaction.nextValues)
+		},
+		context,
+		defaultValues,
+	})
+
+	return <profileKit.AutoForm form={form} />
+}
+// [!endregion update-hooks]
+
 async function saveProfile(_value: FormOutput<typeof profileSchema>) {}
 
 // [!region use-form]
@@ -355,6 +417,7 @@ function ProfileEditor({ context }: { readonly context: ProfileContext }) {
 	const form = profileKit.useForm(profileDefinition, {
 		defaultValues,
 		context,
+		middleware: [keepPlanValuesConsistent],
 		onSubmit: async ({ value, input, form }) => {
 			// `input.yearsOfExperience` is a string from React Hook Form.
 			// `value.yearsOfExperience` is the transformed number.
@@ -365,6 +428,17 @@ function ProfileEditor({ context }: { readonly context: ProfileContext }) {
 
 	return (
 		<profileKit.AutoForm form={form}>
+			<button
+				onClick={() =>
+					form.update((draft) => {
+						draft.plan = "solo"
+						draft.teamName = undefined
+					})
+				}
+				type="button"
+			>
+				Use individual plan
+			</button>
 			<profileKit.Submit>Save profile</profileKit.Submit>
 		</profileKit.AutoForm>
 	)

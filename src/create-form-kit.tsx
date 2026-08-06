@@ -1,10 +1,12 @@
 "use client"
 
+import type { Draft } from "immer"
 import {
 	type ComponentPropsWithoutRef,
 	type ComponentType,
 	createContext,
 	createElement,
+	memo,
 	type ReactElement,
 	type ReactNode,
 	type RefObject,
@@ -15,10 +17,13 @@ import {
 } from "react"
 import {
 	type DefaultValues,
+	type FieldError,
 	type FieldErrors,
 	type FieldValues,
 	FormProvider,
+	get,
 	type Mode,
+	set,
 	type UseFormReturn,
 	useController,
 	useFieldArray,
@@ -30,6 +35,7 @@ import {
 import {
 	normalizeDefinition,
 	normalizeGrid,
+	type ResolvedDefinition,
 	type ResolvedNode,
 	resolveDefinition,
 } from "./definition.js"
@@ -58,6 +64,18 @@ import type {
 	StructuralNodeName,
 	StructuralRootProps,
 } from "./types.js"
+import {
+	attachValueCoordinatorCapability,
+	type BeforeUpdateResult,
+	createValueCoordinator,
+	type FormMiddleware,
+	type FormUpdateRecipe,
+	type ValueCoordinator,
+	type ValuePatch,
+	type ValueTransaction,
+	type ValueTransactionCommit,
+	type ValueTransactionSource,
+} from "./value-middleware.js"
 
 /** Narrows schema input to the object shape required by React Hook Form. */
 type FormValues<Schema extends StandardSchema> = Extract<
@@ -90,6 +108,15 @@ export type UseFormOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
 > = ContextOption<Context> & {
+	/** Adjusts or cancels a proposed managed value update before middleware. */
+	readonly beforeUpdate?: (
+		draft: Draft<FormValues<Schema>>,
+		transaction: ValueTransaction<FormValues<Schema>, Context>,
+	) => BeforeUpdateResult
+	/** Observes the final transaction after commit and middleware unwind. */
+	readonly afterUpdate?: (
+		transaction: ValueTransaction<FormValues<Schema>, Context>,
+	) => void
 	/** Initial editable values, fixed for the hook lifetime. */
 	readonly defaultValues: FormInput<Schema>
 	/** Milliseconds to delay the display of validation errors. */
@@ -98,6 +125,8 @@ export type UseFormOptions<
 	readonly disabled?: boolean
 	/** The React Hook Form validation mode. */
 	readonly mode?: Mode
+	/** Ordered value middleware, fixed for the hook lifetime. */
+	readonly middleware?: readonly FormMiddleware<FormValues<Schema>, Context>[]
 	/** Whether all generated controls prevent value changes. */
 	readonly readOnly?: boolean
 	/** The validation mode used after the first submit attempt. */
@@ -124,6 +153,8 @@ export type FormBinding<
 	readonly definition: FormDefinition<Schema>
 	/** Application data available to resolvers and controls. */
 	readonly context: Context
+	/** Atomically applies one managed value recipe through middleware. */
+	update(recipe: FormUpdateRecipe<FormValues<Schema>>): unknown
 }
 
 /** Native form props that remain under application control. */
@@ -160,6 +191,10 @@ type RuntimeForm = {
 	readonly context: unknown
 	/** The normalized definition fixed for this form. */
 	readonly definition: FormDefinition
+	/** Dispatches a generated managed update through middleware. */
+	readonly dispatch: ValueCoordinator<FieldValues, unknown>["dispatch"]
+	/** Commits one terminal transaction to React Hook Form. */
+	readonly commit: ValueTransactionCommit<FieldValues, unknown>
 	/** Whether all generated controls are disabled. */
 	readonly disabled: boolean
 	/** Whether all generated controls are read-only. */
@@ -177,6 +212,12 @@ type RuntimeForm = {
 		/** The public form binding. */
 		readonly form: FormBinding
 	}) => unknown | Promise<unknown>
+}
+/** Validation policy used after one managed value commit. */
+type ManagedValidationOptions = {
+	readonly isSubmitted: boolean
+	readonly mode: Mode
+	readonly reValidateMode: Exclude<Mode, "all" | "onTouched">
 }
 /** Erased slot options used by runtime renderers. */
 type RuntimeSlotOptions = Record<string, unknown>
@@ -417,6 +458,18 @@ function assembleKit(
 		if (!isFieldValues(fixedDefaultValues)) {
 			throw new TypeError("Form defaultValues must be an object")
 		}
+		const fixedMiddlewareRef = useRef<
+			readonly FormMiddleware<FormValues<Schema>, unknown>[] | undefined
+		>(undefined)
+		if (fixedMiddlewareRef.current === undefined) {
+			fixedMiddlewareRef.current = Object.freeze([
+				...(options.middleware ?? []),
+			])
+		}
+		const beforeUpdateRef = useRef(options.beforeUpdate)
+		beforeUpdateRef.current = options.beforeUpdate
+		const afterUpdateRef = useRef(options.afterUpdate)
+		afterUpdateRef.current = options.afterUpdate
 
 		const inputRefs = useRef(new Map<string, HTMLElement>())
 		const errorSummaryRef = useRef<HTMLElement | null>(null)
@@ -440,18 +493,72 @@ function assembleKit(
 			shouldFocusError: true,
 			shouldUnregister: false,
 		})
+		const apiRef = useRef(api)
+		apiRef.current = api
+		const contextRef = useRef(options.context)
+		contextRef.current = options.context
+		const validationRef = useRef<ManagedValidationOptions>({
+			isSubmitted: api.formState.isSubmitted,
+			mode: options.mode ?? "onSubmit",
+			reValidateMode: options.reValidateMode ?? "onChange",
+		})
+		validationRef.current = {
+			isSubmitted: api.formState.isSubmitted,
+			mode: options.mode ?? "onSubmit",
+			reValidateMode: options.reValidateMode ?? "onChange",
+		}
+		const commitRef = useRef<
+			ValueTransactionCommit<FormValues<Schema>, unknown> | undefined
+		>(undefined)
+		if (commitRef.current === undefined) {
+			commitRef.current = (transaction) => {
+				commitManagedTransaction(
+					apiRef.current,
+					transaction,
+					validationRef.current,
+				)
+			}
+		}
+		const restoreRef = useRef<
+			ValueTransactionCommit<FormValues<Schema>, unknown> | undefined
+		>(undefined)
+		if (restoreRef.current === undefined) {
+			restoreRef.current = (transaction) => {
+				commitManagedRestore(apiRef.current, transaction, validationRef.current)
+			}
+		}
+		const coordinatorRef = useRef<
+			ValueCoordinator<FormValues<Schema>, unknown> | undefined
+		>(undefined)
+		if (coordinatorRef.current === undefined) {
+			coordinatorRef.current = createValueCoordinator({
+				commit: commitRef.current,
+				getAfterUpdate: () => afterUpdateRef.current,
+				getBeforeUpdate: () => beforeUpdateRef.current,
+				getContext: () => contextRef.current,
+				getValues: () => apiRef.current.getValues(),
+				middleware: fixedMiddlewareRef.current,
+				restore: restoreRef.current,
+			})
+		}
+		const commit = commitRef.current
+		const coordinator = coordinatorRef.current
 
 		const binding = useMemo(() => {
 			const instance: FormBinding<Schema, unknown> = {
 				api,
 				definition: fixedDefinition,
 				context: options.context,
+				update: coordinator.update,
 			}
+			attachValueCoordinatorCapability(instance, coordinator)
 			return {
 				instance,
 				runtime: {
 					...instance,
+					commit,
 					disabled: options.disabled === true,
+					dispatch: coordinator.dispatch,
 					errorSummaryRef,
 					inputRefs: inputRefs.current,
 					onSubmit: options.onSubmit as RuntimeForm["onSubmit"],
@@ -460,6 +567,8 @@ function assembleKit(
 			}
 		}, [
 			api,
+			commit,
+			coordinator,
 			fixedDefinition,
 			options.context,
 			options.disabled,
@@ -642,20 +751,22 @@ function ResolvedFields({
 	/** Content rendered after the generated fields. */
 	readonly children?: ReactNode
 }) {
-	const resolved = useMemo(
-		() =>
-			resolveDefinition(
-				form.definition,
-				values as FormInput<StandardSchema>,
-				form.context,
-				{ disabled: form.disabled, readOnly: form.readOnly },
-			),
-		[form, values],
-	)
+	const previous = useRef<ResolvedDefinition | undefined>(undefined)
+	const resolved = useMemo(() => {
+		const next = resolveDefinition(
+			form.definition,
+			values as FormInput<StandardSchema>,
+			form.context,
+			{ disabled: form.disabled, readOnly: form.readOnly },
+			previous.current,
+		)
+		previous.current = next
+		return next
+	}, [form, values])
 	return (
 		<>
 			{resolved.ui.map((node) => (
-				<GeneratedNode
+				<MemoizedGeneratedNode
 					controls={controls}
 					form={form}
 					key={node.id}
@@ -711,7 +822,7 @@ function GeneratedNode({
 					title={node.title as ReactNode}
 				>
 					{node.children?.map((child) => (
-						<GeneratedNode
+						<MemoizedGeneratedNode
 							controls={controls}
 							form={form}
 							key={child.id}
@@ -739,6 +850,8 @@ function GeneratedNode({
 	}
 }
 
+const MemoizedGeneratedNode = memo(GeneratedNode)
+
 /** Connects one resolved field node to its control and structural slot. */
 function GeneratedField({
 	form,
@@ -764,12 +877,23 @@ function GeneratedField({
 		control: form.api.control,
 		name: path,
 	})
-	const errors = fieldErrorToIssues(fieldState.error, path)
+	const dirty = fieldState.isDirty
 	const touched = fieldState.isTouched
-	const displayErrors = touched || formState.submitCount > 0 ? errors : []
-	const errorIds = displayErrors.map(
-		(_issue, index) => `${inputId}-error-${index}`,
+	const validating = fieldState.isValidating
+	const showErrors = touched || formState.submitCount > 0
+	const { displayErrors, errorIds, errors } = useGeneratedIssues(
+		fieldState.error,
+		path,
+		inputId,
+		showErrors,
 	)
+	const describedBy = useMemo(
+		() => joinIds([descriptionId, ...errorIds]),
+		[descriptionId, errorIds],
+	)
+	const blurRef = useRef(field.onBlur)
+	blurRef.current = field.onBlur
+	const blur = useRef(() => blurRef.current()).current
 	const control = controls[String(node.control)]
 	if (control === undefined || typeof control.component !== "function") {
 		throw new TypeError(`Unknown control "${String(node.control)}"`)
@@ -777,67 +901,93 @@ function GeneratedField({
 	const Control = control.component as ComponentType<
 		ControlProps<unknown, unknown, unknown>
 	>
+	const { ref: fieldRef, value } = field
 
-	return (
-		<Slot
-			control={
-				<Control
-					context={form.context}
-					disabled={node.disabled}
-					input={{
-						id: inputId,
-						name: path,
-						ref(element) {
-							field.ref(element)
-							if (element === null) {
-								form.inputRefs.delete(path)
-							} else {
-								form.inputRefs.set(path, element)
-							}
-						},
-						...(joinIds([descriptionId, ...errorIds]) === undefined
-							? {}
-							: {
-									"aria-describedby": joinIds([descriptionId, ...errorIds]),
-								}),
-					}}
-					meta={{
-						dirty: fieldState.isDirty,
-						touched,
-						validating: fieldState.isValidating,
-						errors,
-						displayErrors,
-						invalid: displayErrors.length > 0,
-					}}
-					options={(node.options ?? {}) as Readonly<unknown>}
-					path={path}
-					readOnly={node.readOnly}
-					required={node.required === true}
-					value={field.value}
-					blur={field.onBlur}
-					setValue={field.onChange}
-				/>
-			}
-			description={node.description as ReactNode}
-			descriptionProps={
-				descriptionId === undefined ? {} : { id: descriptionId }
-			}
-			disabled={node.disabled}
-			errors={renderErrors(displayErrors, errorIds, slots, path)}
-			label={node.label as ReactNode}
-			labelProps={{ htmlFor: inputId, id: `${inputId}-label` }}
-			readOnly={node.readOnly}
-			required={node.required === true}
-			rootProps={structuralProps("field", {
-				...node,
-				path,
-				invalid: displayErrors.length > 0,
-				dirty: fieldState.isDirty,
-				touched,
-				validating: fieldState.isValidating,
-			})}
-			slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
-		/>
+	return useMemo(
+		() => (
+			<Slot
+				control={
+					<Control
+						context={form.context}
+						disabled={node.disabled}
+						input={{
+							id: inputId,
+							name: path,
+							ref(element) {
+								fieldRef(element)
+								if (element === null) {
+									form.inputRefs.delete(path)
+								} else {
+									form.inputRefs.set(path, element)
+								}
+							},
+							...(describedBy === undefined
+								? {}
+								: { "aria-describedby": describedBy }),
+						}}
+						meta={{
+							dirty,
+							touched,
+							validating,
+							errors,
+							displayErrors,
+							invalid: displayErrors.length > 0,
+						}}
+						options={(node.options ?? {}) as Readonly<unknown>}
+						path={path}
+						readOnly={node.readOnly}
+						required={node.required === true}
+						value={value}
+						blur={blur}
+						setValue={(nextValue) =>
+							form.dispatch((draft) => set(draft, path, nextValue), {
+								path,
+								type: "control",
+							})
+						}
+					/>
+				}
+				description={node.description as ReactNode}
+				descriptionProps={
+					descriptionId === undefined ? {} : { id: descriptionId }
+				}
+				disabled={node.disabled}
+				errors={renderErrors(displayErrors, errorIds, slots, path)}
+				label={node.label as ReactNode}
+				labelProps={{ htmlFor: inputId, id: `${inputId}-label` }}
+				readOnly={node.readOnly}
+				required={node.required === true}
+				rootProps={structuralProps("field", {
+					...node,
+					path,
+					invalid: displayErrors.length > 0,
+					dirty,
+					touched,
+					validating,
+				})}
+				slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
+			/>
+		),
+		[
+			Control,
+			Slot,
+			blur,
+			describedBy,
+			descriptionId,
+			dirty,
+			displayErrors,
+			errorIds,
+			errors,
+			fieldRef,
+			form,
+			inputId,
+			node,
+			path,
+			slots,
+			touched,
+			validating,
+			value,
+		],
 	)
 }
 
@@ -865,78 +1015,177 @@ function GeneratedArray({
 		control: form.api.control,
 		name: path,
 	})
+	const previousFieldIds = useRef<readonly string[] | undefined>(undefined)
+	const fieldIds = useMemo(() => {
+		const next = fields.map((field) => field.id)
+		const previous = previousFieldIds.current
+		const result =
+			previous !== undefined &&
+			previous.length === next.length &&
+			next.every((id, index) => id === previous[index])
+				? previous
+				: next
+		previousFieldIds.current = result
+		return result
+	}, [fields])
 	const formState = useFormState({ control: form.api.control, name: path })
 	const fieldState = form.api.getFieldState(path, formState)
-	const errors = fieldErrorToIssues(fieldState.error, path)
-	const displayErrors =
-		fieldState.isTouched || formState.submitCount > 0 ? errors : []
-	const errorIds = displayErrors.map(
-		(_issue, index) => `${arrayId}-error-${index}`,
+	const dirty = fieldState.isDirty
+	const touched = fieldState.isTouched
+	const validating = fieldState.isValidating
+	const showErrors = touched || formState.submitCount > 0
+	const { displayErrors, errorIds } = useGeneratedIssues(
+		fieldState.error,
+		path,
+		arrayId,
+		showErrors,
 	)
 	const canAdd = !node.disabled && !node.readOnly
-	return (
-		<Slot
-			add={() => {
-				if (canAdd) append(cloneItemDefault(node.itemDefault))
-			}}
-			canAdd={canAdd}
-			description={node.description as ReactNode}
-			descriptionProps={{ id: `${arrayId}-description` }}
-			errors={renderErrors(displayErrors, errorIds, slots, path)}
-			invalid={displayErrors.length > 0}
-			label={node.label as ReactNode}
-			labelProps={{ id: `${arrayId}-label` }}
-			rootProps={structuralProps("array", {
-				...node,
-				id: arrayId,
-				path,
-				invalid: displayErrors.length > 0,
-				dirty: fieldState.isDirty,
-				touched: fieldState.isTouched,
-				validating: fieldState.isValidating,
-			})}
-			slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
-		>
-			{fields.map((field, index) => (
-				<Item
-					canMoveDown={canAdd && index < fields.length - 1}
-					canMoveUp={canAdd && index > 0}
-					disabled={node.disabled}
-					index={index}
-					key={field.id}
-					move={(toIndex) => {
-						if (
-							canAdd &&
-							Number.isSafeInteger(toIndex) &&
-							toIndex >= 0 &&
-							toIndex < fields.length
-						) {
-							move(index, toIndex)
-						}
-					}}
-					readOnly={node.readOnly}
-					remove={() => {
-						if (canAdd) remove(index)
-					}}
-					rootProps={structuralProps("array-item", {
-						path: `${path}.${index}`,
-						disabled: node.disabled,
-						readOnly: node.readOnly,
-					})}
-				>
-					{node.itemChildren?.[index]?.map((child) => (
-						<GeneratedNode
-							controls={controls}
-							form={form}
-							key={child.id}
-							node={child}
-							slots={slots}
-						/>
-					))}
-				</Item>
-			))}
-		</Slot>
+	return useMemo(
+		() => (
+			<Slot
+				add={() => {
+					if (!canAdd) return
+					const item = cloneItemDefault(node.itemDefault)
+					const index = fieldIds.length
+					dispatchArrayAction(
+						form,
+						path,
+						(draftItems) => {
+							draftItems.push(item)
+						},
+						{ action: "append", index, path, type: "array" },
+						(transaction) => {
+							append(getMutableArrayValue(transaction.nextValues, path)[index])
+						},
+					)
+				}}
+				canAdd={canAdd}
+				description={node.description as ReactNode}
+				descriptionProps={{ id: `${arrayId}-description` }}
+				errors={renderErrors(displayErrors, errorIds, slots, path)}
+				invalid={displayErrors.length > 0}
+				label={node.label as ReactNode}
+				labelProps={{ id: `${arrayId}-label` }}
+				rootProps={structuralProps("array", {
+					...node,
+					id: arrayId,
+					path,
+					invalid: displayErrors.length > 0,
+					dirty,
+					touched,
+					validating,
+				})}
+				slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
+			>
+				{fieldIds.map((fieldId, index) => (
+					<Item
+						canMoveDown={canAdd && index < fieldIds.length - 1}
+						canMoveUp={canAdd && index > 0}
+						disabled={node.disabled}
+						index={index}
+						key={fieldId}
+						move={(toIndex) => {
+							if (
+								canAdd &&
+								Number.isSafeInteger(toIndex) &&
+								toIndex >= 0 &&
+								toIndex < fieldIds.length
+							) {
+								dispatchArrayAction(
+									form,
+									path,
+									(draftItems) => {
+										const [item] = draftItems.splice(index, 1)
+										draftItems.splice(toIndex, 0, item)
+									},
+									{
+										action: "move",
+										fromIndex: index,
+										path,
+										toIndex,
+										type: "array",
+									},
+									() => move(index, toIndex),
+								)
+							}
+						}}
+						readOnly={node.readOnly}
+						remove={() => {
+							if (!canAdd) return
+							dispatchArrayAction(
+								form,
+								path,
+								(draftItems) => {
+									draftItems.splice(index, 1)
+								},
+								{ action: "remove", index, path, type: "array" },
+								() => remove(index),
+							)
+						}}
+						rootProps={structuralProps("array-item", {
+							path: `${path}.${index}`,
+							disabled: node.disabled,
+							readOnly: node.readOnly,
+						})}
+					>
+						{node.itemChildren?.[index]?.map((child) => (
+							<MemoizedGeneratedNode
+								controls={controls}
+								form={form}
+								key={child.id}
+								node={child}
+								slots={slots}
+							/>
+						))}
+					</Item>
+				))}
+			</Slot>
+		),
+		[
+			Item,
+			Slot,
+			append,
+			arrayId,
+			canAdd,
+			controls,
+			dirty,
+			displayErrors,
+			errorIds,
+			fieldIds,
+			form,
+			move,
+			node,
+			path,
+			remove,
+			slots,
+			touched,
+			validating,
+		],
 	)
+}
+
+/** Keeps generated issue props stable while their field state is unchanged. */
+function useGeneratedIssues(
+	error: FieldError | undefined,
+	path: string,
+	id: string,
+	showErrors: boolean,
+): {
+	readonly errors: readonly FormIssue[]
+	readonly displayErrors: readonly FormIssue[]
+	readonly errorIds: readonly string[]
+} {
+	const errors = useMemo(() => fieldErrorToIssues(error, path), [error, path])
+	const displayErrors = useMemo(
+		() => (showErrors ? errors : []),
+		[errors, showErrors],
+	)
+	const errorIds = useMemo(
+		() => displayErrors.map((_issue, index) => `${id}-error-${index}`),
+		[displayErrors, id],
+	)
+	return { errors, displayErrors, errorIds }
 }
 
 /** Renders issues that cannot be focused through a generated enabled input. */
@@ -998,6 +1247,167 @@ function renderErrors(
 function cloneItemDefault(value: unknown): unknown {
 	const candidate = typeof value === "function" ? value() : value
 	return cloneFormValue(candidate)
+}
+
+/** Runs a generated array proposal before preserving its native row operation. */
+function dispatchArrayAction(
+	form: RuntimeForm,
+	path: string,
+	recipe: (items: unknown[]) => void,
+	source: Extract<ValueTransactionSource<FieldValues>, { type: "array" }>,
+	commitArray: (transaction: ValueTransaction<FieldValues, unknown>) => void,
+): unknown {
+	const arrayPath = fieldPathSegments(form.api.getValues(), path)
+	return form.dispatch(
+		(draft) => recipe(getMutableArrayValue(draft, path)),
+		source,
+		{
+			arrayPath,
+			commit: (transaction) => {
+				commitArray(transaction)
+				form.commit(transaction)
+			},
+		},
+	)
+}
+
+/** Reads an array value at an RHF path or reports a malformed form value. */
+function getMutableArrayValue(values: unknown, path: string): unknown[] {
+	const value = get(values, path)
+	if (!Array.isArray(value)) {
+		throw new TypeError(`Managed array path "${path}" must contain an array`)
+	}
+	return value
+}
+
+/** Converts an RHF dot path to Immer segments using numeric array indices. */
+function fieldPathSegments(
+	values: unknown,
+	path: string,
+): readonly (string | number)[] {
+	let current = values
+	return path.split(".").map((segment) => {
+		const key =
+			Array.isArray(current) && /^(0|[1-9]\d*)$/.test(segment)
+				? Number(segment)
+				: segment
+		current =
+			current !== null && typeof current === "object"
+				? (current as Record<string | number, unknown>)[key]
+				: undefined
+		return key
+	})
+}
+
+/** Publishes one managed value transaction and schedules change validation. */
+function commitManagedTransaction<Input extends FieldValues, Context, Output>(
+	api: UseFormReturn<Input, Context, Output>,
+	transaction: ValueTransaction<Input, Context>,
+	validation: ManagedValidationOptions,
+): void {
+	if (transaction.patches.length === 0) return
+	api.setValues(topLevelUpdates(transaction), { shouldDirty: true })
+	if (!shouldValidateManagedTransaction(api, transaction, validation)) return
+	const paths = patchedFieldPaths(transaction.patches)
+	void api.trigger(
+		paths === undefined || paths.length === 0
+			? undefined
+			: (paths as Parameters<typeof api.trigger>[0]),
+	)
+}
+
+/** Restores complete values while retaining RHF state outside value history. */
+function commitManagedRestore<Input extends FieldValues, Context, Output>(
+	api: UseFormReturn<Input, Context, Output>,
+	transaction: ValueTransaction<Input, Context>,
+	validation: ManagedValidationOptions,
+): void {
+	if (transaction.source.type === "persistence") {
+		api.reset(cloneFormValue(transaction.nextValues) as Input, {
+			keepDefaultValues: true,
+		})
+		return
+	}
+	api.reset(cloneFormValue(transaction.nextValues) as Input, {
+		keepDefaultValues: true,
+		keepErrors: true,
+		keepIsSubmitted: true,
+		keepIsSubmitSuccessful: true,
+		keepIsValid: true,
+		keepSubmitCount: true,
+		keepTouched: true,
+	})
+	if (!shouldValidateManagedTransaction(api, transaction, validation)) return
+	void api.trigger()
+}
+
+/** Selects complete changed roots because RHF `setValues` shallow-merges them. */
+function topLevelUpdates<Input extends FieldValues, Context>(
+	transaction: ValueTransaction<Input, Context>,
+): Partial<Input> {
+	if (transaction.patches.some((patch) => patch.path.length === 0)) {
+		return transaction.nextValues as Partial<Input>
+	}
+	const updates: FieldValues = {}
+	const nextValues = transaction.nextValues as FieldValues
+	for (const patch of transaction.patches) {
+		const root = patch.path[0]
+		if (root !== undefined) updates[String(root)] = nextValues[String(root)]
+	}
+	return updates as Partial<Input>
+}
+
+/** Mirrors RHF change validation modes for managed value proposals. */
+function shouldValidateManagedTransaction<
+	Input extends FieldValues,
+	Context,
+	Output,
+>(
+	api: UseFormReturn<Input, Context, Output>,
+	transaction: ValueTransaction<Input, Context>,
+	validation: ManagedValidationOptions,
+): boolean {
+	if (validation.isSubmitted) {
+		return validation.reValidateMode === "onChange"
+	}
+	if (validation.mode === "all" || validation.mode === "onChange") return true
+	if (validation.mode !== "onTouched") return false
+	const paths = patchedFieldPaths(transaction.patches)
+	if (paths === undefined && hasTouchedField(api.formState.touchedFields)) {
+		return true
+	}
+	const sourcePath =
+		transaction.source.type === "control" || transaction.source.type === "array"
+			? String(transaction.source.path)
+			: undefined
+	const touchedPaths = new Set(paths ?? [])
+	if (sourcePath !== undefined) touchedPaths.add(sourcePath)
+	return [...touchedPaths].some(
+		(path) =>
+			api.getFieldState(path as Parameters<typeof api.getFieldState>[0])
+				.isTouched,
+	)
+}
+
+/** Tests whether an RHF touched-field tree contains one touched leaf. */
+function hasTouchedField(value: unknown): boolean {
+	if (value === true) return true
+	if (value === null || typeof value !== "object") return false
+	return Object.values(value).some(hasTouchedField)
+}
+
+/** Converts Immer patch paths to deduplicated RHF paths for one trigger call. */
+function patchedFieldPaths(
+	patches: readonly ValuePatch[],
+): readonly string[] | undefined {
+	if (patches.some((patch) => patch.path.length === 0)) return undefined
+	return [
+		...new Set(
+			patches.map((patch) =>
+				patch.path.map((segment) => String(segment)).join("."),
+			),
+		),
+	]
 }
 
 /** Focuses the summary when React Hook Form did not focus an invalid input. */

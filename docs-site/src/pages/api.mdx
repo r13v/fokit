@@ -34,14 +34,29 @@ import "form-please/layout.css"
 
 | Import | Runtime exports | Purpose |
 | --- | --- | --- |
-| `form-please` | `defineControl`, `createFormKit`, `fromResource`, `matchResource` | Build kits, controls, definitions, and resource resolvers. |
+| `form-please` | `defineControl`, `createFormKit`, `fromResource`, `matchResource`, `useSnapshot` | Build kits, controls, definitions, resource resolvers, and external-store adapters. |
 | `form-please/default-slots` | `createDefaultSlots` | Create accessible, unstyled structural slots. |
+| `form-please/history` | `createHistoryMiddleware` | Add optional managed value history and journal transfer. |
 | `form-please/native-controls` | `createNativeControls` | Create the native HTML control registry. |
+| `form-please/persistence` | `createPersistenceMiddleware`, `createLocalStorageAdapter`, `createDateCodec` | Restore and autosave editable drafts through application storage. |
 | `form-please/preset-native` | `nativeFormKit` | Use the ready-made native kit with English slots. |
 | `form-please/preset-mui` | `createMuiFormKit` | Create a Material UI 9 kit. |
 
 `form-please/layout.css` and `form-please/package.json` are non-JavaScript
-exports. Every JavaScript entry is a React client module.
+exports. React UI entries are client modules. The optional history and
+persistence entries have no React component or hook dependency.
+
+## `useSnapshot`
+
+`useSnapshot(store)` subscribes a component to any external store with stable
+`subscribe(listener)` and `getSnapshot()` functions. The snapshot type is
+inferred from `getSnapshot`. Its result must stay `Object.is`-equal until the
+store changes. The same getter supplies the server snapshot, so it must also be
+safe and consistent during server rendering.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:use-snapshot]
+```
 
 ## `defineControl`
 
@@ -291,6 +306,9 @@ the current kit context.
 | `mode` | Optional RHF validation mode. Defaults to `onSubmit`. |
 | `reValidateMode` | Optional RHF revalidation mode. Defaults to `onChange`. |
 | `delayError` | Optional RHF error-display delay in milliseconds. |
+| `beforeUpdate` | Adjust or cancel one managed value proposal before middleware. |
+| `afterUpdate` | Observe the final committed transaction after middleware unwinds. |
+| `middleware` | Ordered Redux-shaped value middleware, fixed for the hook lifetime. |
 | `onSubmit` | Receives parsed output, editable input, and the current binding. |
 
 ```tsx
@@ -323,9 +341,149 @@ A binding contains these public fields:
 | `api` | Unchanged typed RHF `UseFormReturn` for values, fields, validation, reset, and subscriptions. |
 | `definition` | Fixed definition captured during the first hook render. |
 | `context` | Current runtime context. |
+| `update(recipe)` | Apply one managed Immer recipe through value middleware. |
 
 Form-wide interaction and focus bookkeeping remain private. Use `form.api` for
-raw RHF operations.
+raw RHF operations that deliberately bypass managed middleware.
+
+## Managed update hooks
+
+Use `beforeUpdate` for one form-local rule that adjusts or cancels a managed
+proposal. Its Immer draft starts with the proposed `nextValues`. Mutate the
+draft and return nothing to continue, or return `false` to cancel the complete
+transaction.
+
+Use `afterUpdate` to observe the final `ValueTransaction` after commit and the
+synchronous middleware unwind. Its patches and `nextValues` include downstream
+middleware changes.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:update-hooks]
+```
+
+The callbacks use their latest React render versions. Both must return
+synchronously and cannot start another managed update. An error from
+`beforeUpdate` prevents commit. An error from `afterUpdate` propagates without
+rolling committed values back. `afterUpdate` does not mean that React rendering
+or asynchronous validation has finished.
+
+Initial values, reset, direct `form.api` mutations, and application-owned
+`useFieldArray` operations bypass both hooks. Use middleware instead when
+several independent policies need explicit composition. Cancellation and
+effective no-op proposals do not call `afterUpdate`.
+
+## Managed value middleware
+
+Use middleware when a generated change and its dependent values must commit as
+one proposal, or when work must run only after that proposal commits.
+
+Read [Value middleware](/middleware) for runnable examples, live previews,
+ordering, cancellation, bypasses, array constraints, and validation timing.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:value-middleware]
+```
+
+Middleware has the Redux shape `api => next => transaction`. The public types
+are `FormMiddleware`, `FormMiddlewareApi`, `FormMiddlewareNext`,
+`ValueTransaction`, `ValueTransactionSource`, `ValuePatch`, and
+`FormUpdateRecipe`.
+
+A transaction contains deeply readonly TypeScript views of `previousValues`
+and derived `nextValues`. These views are not frozen or cloned as archival
+snapshots. The transaction also contains Immer `patches`, current `context`,
+and a discriminated `source`. Patch paths are segment arrays such as
+`["speakers", 0, "name"]`; they are not RHF dot paths.
+`next(patches)` reapplies those authoritative patches to `previousValues`,
+commits the resulting values synchronously, and returns the terminal
+transaction unless another middleware replaces that return value.
+
+Middleware can:
+
+- append or replace patches before calling `next`;
+- cancel the complete proposal by returning without `next`;
+- read final committed values and run post-change work after `next` returns;
+- return a promise after calling `next` synchronously.
+
+One middleware can call `next` synchronously at most once. It cannot start a
+nested `api.update` during an active transaction. A later update after awaited
+post-commit work is allowed. An exception before `next` prevents the commit; an
+exception after `next` does not roll it back.
+
+`form.update(recipe)` creates a managed transaction with source `update`. Its
+synchronous Immer recipe can mutate the draft or return a replacement, but not
+both. A no-op recipe creates no transaction. Redux middleware may replace the
+terminal return value, so `form.update` returns `unknown`.
+
+Generated controls and `form.update` publish final values with one RHF
+`setValues` call. Generated `append`, `remove`, and `move` preserve native
+`useFieldArray` row IDs; their dependent patches join the same final React
+render, although raw RHF subscribers can observe an intermediate array state.
+Array middleware cannot change the source array length or order beyond the
+source action. It must not change another generated array's structure.
+
+Only the proposed generated array action can change generated array length or
+order. `setValues` cannot synchronize the private row IDs in `useFieldArray`.
+Use each array's generated action for a managed structural change. Use a raw
+`useFieldArray` method only when the application deliberately bypasses
+middleware.
+
+Do not change generated array length or order from a generated control or
+`form.update`. These entry points cannot synchronize `useFieldArray` row IDs.
+
+Initial values, reset, and every direct `form.api` mutation bypass middleware.
+Managed updates cannot remove a top-level value because RHF shallow-merges
+roots; assign `undefined` when the schema permits it. Validation follows `mode`
+and `reValidateMode` after commit, but managed validation does not preserve
+`delayError`. RHF owns dirty and touched metadata.
+
+## Managed value history
+
+`createHistoryMiddleware(options?)` is exported only from
+`form-please/history`. Configure the returned feature in a form's middleware
+list, then call `feature.handle(form)` for the exact form-specific handle.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `limit` | `100` | Maximum retained history groups; accepts a non-negative integer or `Infinity`. |
+| `groupWindow` | `750` | Milliseconds in which control changes on one path share a group; zero disables grouping. |
+
+The handle exposes `getSnapshot`, `subscribe`, `undo`, `redo`, `seek`, `clear`,
+`export`, and `import`. Navigation and import return
+`Promise<HistoryOperationResult>`. `clear()` retains current values as the only
+position without changing the form.
+
+History restore enters hooks and middleware with source `history`. The action
+is `undo`, `redo`, `seek`, or `import`. Restore can remove optional top-level
+keys because its RHF reset terminal replaces complete values. Ordinary
+`form.update` keeps its existing top-level-removal restriction.
+
+`HistoryJournal<Input>` version 1 contains complete input entries and a numeric
+current index. Import checks the protocol and configured limit but does not
+require every editable entry to pass Standard Schema validation. Read
+[Managed value history](/history) for state ownership, grouping, raw RHF
+boundaries, restoration, and journal leaf behavior.
+
+## Form persistence
+
+`createPersistenceMiddleware(options)` is exported only from
+`form-please/persistence`. Configure its feature in the fixed middleware list,
+then call `feature.handle(form)`.
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `adapter` | Required | Keyed asynchronous `load`, `save`, and `remove` transport. |
+| `key` | Required | Application storage key. |
+| `version` | Required | Non-negative application data version. |
+| `saveDelay` | `500` | Trailing autosave delay in milliseconds. |
+| `codecs` | `[]` | Tagged encoders and decoders for explicit opaque values. |
+| `migrate` | None | Converts decoded data from another application version. |
+| `onError` | None | Observes `restore`, `save`, or `clear` failures. |
+
+The handle exposes `restore`, `start`, `flush`, `clear`, `getSnapshot`, and
+`subscribe`. Restore reports `"applied"`, `"empty"`, `"cancelled"`,
+`"transformed"`, or `"conflict"`. Read [Form persistence](/persistence) for
+lifecycle rules, envelope encoding, migrations, conflicts, and adapters.
 
 ## `Form`, `Fields`, `Submit`, and `AutoForm`
 
@@ -392,5 +550,5 @@ Both helpers require `pending`, `success`, and `error` branches. Neither helper
 fetches, caches, retries, cancels, or retains data. Read [Resource
 state](/resources) for a TanStack Query adapter.
 
-Read [Production recipes](/advanced) for complete composition and submission
+Read [Production recipes](/recipes) for complete composition and submission
 patterns.

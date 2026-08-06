@@ -22,7 +22,8 @@ matches the problem in your application.
 | Replace the document being edited | A React `key` or `form.api.reset(nextInput)` |
 | Discard edits | A `type="reset"` button |
 | Save a new baseline without replacing later edits | `form.api.resetDefaultValues(input)` |
-| Apply one update to multiple fields | `form.api.setValues(values)` |
+| Keep dependent values atomic | `middleware` and `form.update(recipe)` |
+| Apply a raw RHF update to multiple fields | `form.api.setValues(values)` |
 | Observe values without a form render subscription | `form.api.subscribe` |
 | Validate one wizard step | `form.api.trigger` and `form.api.setFocus` |
 | Save parsed data | The `value` argument in `onSubmit` |
@@ -114,12 +115,54 @@ Use the submitted `input` when the server accepts that exact input. Use the
 server's canonical schema input when the server returns different editable
 values.
 
+## Keep dependent values atomic
+
+Configure value middleware when one generated change must update dependent
+fields before observers see the result. Call `form.update` when an application
+action needs the same managed boundary.
+
+For one form-local rule, use `beforeUpdate` to adjust or cancel the proposal and
+`afterUpdate` to observe its final committed transaction. Use middleware when
+independent policies must compose in an explicit order.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:update-hooks]
+```
+
+See [Value middleware](/middleware) for complete setup, live previews,
+cancellation, ordering, array constraints, and validation timing.
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:value-middleware]
+```
+
+Middleware receives Immer patches and a `nextValues` value derived from them.
+Forward the original patches, append dependent patches, or return without
+`next` to cancel the complete proposal. Code after synchronous `next` reads the
+committed final value.
+
+Generated controls and `form.update` make one RHF value publication. Generated
+array actions retain native `useFieldArray` row identity and promise one final
+React render, not one raw RHF publication. Direct `form.api` operations bypass
+middleware, so keep invariant-preserving application actions on `form.update`.
+
+Only the proposed generated array action can change generated array length or
+order. Do not change another generated array's structure in the same
+transaction. Use that array's generated action to keep row IDs synchronized.
+Use raw `useFieldArray` methods only when bypassing middleware is intentional.
+
+Do not call `next` after `await`, call it twice, or start another managed update
+inside an active transaction. Use an RHF subscription when you only need to
+observe values; subscriptions run after commit and cannot make dependent
+changes atomic.
+
 ## Apply one update to multiple fields
 
-Requires React Hook Form 7.74.0 or newer.
+Form, Please requires React Hook Form 7.76.1 or newer.
 
-Use `setValues` when one action changes multiple fields. One call updates the
-fields and applies the same dirty, touch, and validation options to each value.
+Use raw `setValues` when one application action changes multiple fields but
+must deliberately bypass Form, Please middleware. One call updates the fields
+and applies the same dirty, touch, and validation options to each value.
 
 ```tsx
 // [!include ~/snippets/production-recipes.tsx:atomic-values]
@@ -130,11 +173,12 @@ The preview applies one profile template to three fields.
 <AtomicValuesRecipePreview />
 
 Pass only the fields that the action owns. Do not use `setValues` to install a
-new document baseline. Use `reset(nextInput)` for that operation.
+new document baseline. Use `reset(nextInput)` for that operation. Use
+`form.update` instead when application middleware must enforce invariants.
 
 ## Save a draft with a subscription
 
-Requires React Hook Form 7.55.0 or newer.
+Requires React Hook Form 7.76.1 or newer, which is the package peer minimum.
 
 Use `subscribe` when an external process needs current form values. The
 subscription does not rerender the form when values change. This preview
@@ -153,8 +197,7 @@ mutation methods from the subscription callback.
 
 ## Validate one wizard step
 
-Requires React Hook Form 7.55.0 or newer. This version is the minimum version
-that Form, Please supports.
+Requires React Hook Form 7.76.1 or newer, which is the package peer minimum.
 
 Use `trigger` with the paths for the current step. Use `setFocus` when the step
 contains an invalid field. Hidden fields keep their values when the next step
@@ -336,4 +379,4 @@ custom control once against `ControlProps`. Test each product form as a user
 operates it.
 
 Read the [API reference](/api) for individual contracts. Read [Controls and
-slots](/controls) for design-system integration.
+slots](/form-kits) for design-system integration.

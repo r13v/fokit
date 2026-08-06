@@ -1,0 +1,97 @@
+---
+title: Use with AI agents
+description: Install the Form, Please skill and give compatible coding agents current project guidance.
+showAskAi: false
+---
+
+# Use with AI agents
+
+Install the Form, Please skill in a project that uses the library. The skill
+tells a compatible coding agent to read the current documentation before it
+implements, reviews, debugs, or explains Form, Please code.
+
+The skill follows the open [Agent Skills](https://agentskills.io/) format. It
+provides instructions to your agent. It does not install the Form, Please npm
+package or change your application.
+
+## Install the skill
+
+Run this command from your project directory:
+
+```sh
+npx skills add r13v/form-please --skill form-please
+```
+
+Follow the CLI prompts to select your agent and installation method. Keep the
+default project scope when only this project uses Form, Please.
+
+Add `--global` to make the skill available in all your projects:
+
+```sh
+npx skills add r13v/form-please --skill form-please --global
+```
+
+The command downloads the skill from the public
+[Form, Please repository](https://github.com/r13v/form-please/tree/main/skills/form-please).
+Review `SKILL.md` before you install or update it because your agent follows
+the instructions in that file.
+
+### Install without the CLI
+
+Copy the complete `skills/form-please` directory from the repository to a
+skill directory that your agent supports. For agents that support the shared
+project convention, use this path:
+
+```text
+.agents/skills/form-please/SKILL.md
+```
+
+Check your agent documentation if it uses a different skill directory.
+
+## Use the skill
+
+A compatible agent can load the skill when your request concerns Form, Please.
+Name the skill in your request when you want to activate it explicitly. You do
+not need a product-specific slash command.
+
+For an implementation task, use a request such as:
+
+```text
+Use the form-please skill. Build a profile form with Zod and the native preset.
+Keep the existing design system.
+```
+
+For a review task, use a request such as:
+
+```text
+Use the form-please skill. Review this form definition for invalid schema paths,
+validation mistakes, and submission errors.
+```
+
+When the skill activates, it tells the agent to read the current
+[LLM documentation index](https://r13v.github.io/form-please/llms.txt) and use
+that documentation as its source of truth. This prevents the agent from relying
+only on information from its training data.
+
+## Verify the installation
+
+List the installed skills:
+
+```sh
+npx skills list
+```
+
+Confirm that `form-please` appears for the agent that you selected. Start a new
+agent session if the current session does not discover the new skill. Then send
+one of the example requests. If your agent shows its activity, confirm that it
+reads `SKILL.md` and the LLM documentation before it changes code.
+
+## Update the skill
+
+Update a project installation with this command:
+
+```sh
+npx skills update form-please
+```
+
+Add `--global` if you installed the skill globally.

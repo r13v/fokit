@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/r13v/form-please/compare/v1.4.0...v1.5.0) (2026-08-07)
+
+
+### Features
+
+* support form fragments ([55b8719](https://github.com/r13v/form-please/commit/55b871935753fdd3a2c2f39817e6c2841439a257))
+
 ## [1.4.0](https://github.com/r13v/form-please/compare/v1.3.0...v1.4.0) (2026-08-07)
 
 

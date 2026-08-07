@@ -99,6 +99,50 @@ control instance. A control can require options or make them optional.
 The `required` property describes the UI state. It does not add a validation
 rule. Put all data rules in the schema.
 
+### Choice values
+
+A choice control can mark the value it writes with `ChoiceValue<Value>`. The
+field definition then narrows each choice to the Standard Schema input type at
+its `path`; the form does not need a separate value generic.
+
+```tsx
+const roleSchema = z.object({
+	role: z.enum(["admin", "member"]),
+})
+
+const roleChoices = [
+	{ value: "admin", label: "Administrator" },
+] as const
+
+nativeFormKit.defineForm(roleSchema, {
+	ui: [
+		{
+			kind: "field",
+			path: "role",
+			control: "select",
+			options: {
+				options: [
+					...roleChoices,
+					{ value: "owner", label: "Owner" },
+					//       ^^^^^^^ TypeScript rejects this value.
+				],
+			},
+		},
+	],
+})
+```
+
+The list may contain any subset of the field union; it does not have to be
+exhaustive. A `Role | undefined` field still accepts only `Role` as a normal
+choice, while the native `emptyOption` represents `undefined`. A
+`readonly Role[]` field narrows choices to the element union. A plain `string`
+field continues to accept arbitrary strings.
+
+The same restriction applies when `options` is a resolver. Preserve literal
+types in context or resource data with `as const`, `satisfies`, or another
+explicit union type. A widened `string[]` cannot supply choices for a literal
+schema union.
+
 ## Sections
 
 A section groups related nodes. It can contain fields, arrays, render nodes,

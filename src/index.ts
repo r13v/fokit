@@ -8,6 +8,7 @@ export type {
 	FormBinding,
 	FormKit,
 	FormProps,
+	FormSubmitDetails,
 	UseFormOptions,
 } from "./create-form-kit.js"
 export { createFormKit } from "./create-form-kit.js"
@@ -19,6 +20,7 @@ export type {
 	ArrayItemSlotProps,
 	ArrayNode,
 	ArraySlotProps,
+	ChoiceValue,
 	ControlContextOf,
 	ControlDefinition,
 	ControlDefinitionRegistry,

@@ -53,16 +53,24 @@ describe("built package entries", () => {
 				expect(declaration).not.toContain(name)
 			}
 			for (const name of [
+				"ChoiceValue",
 				"FormBinding",
 				"FormDefinition",
 				"FormKit",
 				"FormMiddleware",
+				"FormSubmitDetails",
 				"UseFormOptions",
 				"useSnapshot",
 				"ValueTransaction",
 			]) {
 				expect(declaration).toContain(name)
 			}
+
+			const persistenceDeclaration = await readFile(
+				new URL(`../../dist/persistence.${extension}`, import.meta.url),
+				"utf8",
+			)
+			expect(persistenceDeclaration).toContain("PersistenceErrorDetails")
 		}
 	})
 })

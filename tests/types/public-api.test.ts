@@ -7,6 +7,7 @@ import {
 	type FormBinding,
 	type FormKitSlots,
 	type FormMiddleware,
+	type FormSubmitDetails,
 	type FormUpdateRecipe,
 	type PathValue,
 	useSnapshot,
@@ -60,6 +61,16 @@ const schema: StandardSchemaV1<Input, Output> = {
 			return { value: { ...(value as Input), accepted: true } }
 		},
 	},
+}
+
+const handleSubmit = ({
+	value,
+	input,
+	form,
+}: FormSubmitDetails<typeof schema, Context>) => {
+	value.accepted satisfies true
+	input.name satisfies string
+	form.context.locale satisfies string
 }
 
 const slots = {} as FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>
@@ -189,6 +200,7 @@ function useTypedBinding() {
 }
 
 void useTypedBinding
+void handleSubmit
 
 function useMissingContext() {
 	// @ts-expect-error Concrete form context is required.

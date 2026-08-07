@@ -160,6 +160,10 @@ _Avoid_: Computed field, async resolver
 interactive React component.
 _Avoid_: Field definition, serializer
 
+**Choice value**: One value offered by a choice control and constrained in a
+form definition to the schema input value union at its path.
+_Avoid_: Option value, control value
+
 **Slot**: An application- or preset-owned component that renders structural
 field, section, array, error, or submit markup.
 _Avoid_: Control, inferred layout

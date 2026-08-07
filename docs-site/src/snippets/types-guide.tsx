@@ -4,6 +4,7 @@
 
 import {
 	type ArrayFieldPath,
+	type ChoiceValue,
 	type ControlContextOf,
 	type ControlOptionsOf,
 	type ControlProps,
@@ -176,6 +177,56 @@ type MoneyValue = ControlValueOf<typeof money> // number | undefined
 type MoneyControlOptions = ControlOptionsOf<typeof money> // MoneyOptions
 type RequiredContext = ControlContextOf<typeof money> // MoneyContext
 // [!endregion control-types]
+
+// [!region choice-control]
+type RoleChoiceOptions = {
+	readonly items: readonly {
+		readonly id: ChoiceValue<string>
+		readonly label: string
+	}[]
+}
+
+function RoleChoiceControl({
+	value,
+	setValue,
+	blur,
+	input,
+	meta,
+	options,
+	disabled,
+	readOnly,
+	required,
+}: ControlProps<string | undefined, RoleChoiceOptions>) {
+	return (
+		<select
+			aria-describedby={input["aria-describedby"]}
+			aria-invalid={meta.invalid || undefined}
+			aria-readonly={readOnly || undefined}
+			disabled={disabled}
+			id={input.id}
+			name={input.name}
+			onBlur={blur}
+			onChange={(event) => {
+				if (!readOnly) setValue(event.currentTarget.value || undefined)
+			}}
+			ref={input.ref}
+			required={required}
+			value={value ?? ""}
+		>
+			<option value="">Choose a role</option>
+			{options.items.map((item) => (
+				<option key={item.id} value={item.id}>
+					{item.label}
+				</option>
+			))}
+		</select>
+	)
+}
+
+const roleChoice = defineControl<string | undefined, RoleChoiceOptions>({
+	component: RoleChoiceControl,
+})
+// [!endregion choice-control]
 
 // [!region form-types]
 const formOptions = {

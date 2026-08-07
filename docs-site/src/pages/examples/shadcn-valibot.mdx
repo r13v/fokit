@@ -44,7 +44,9 @@ receive transformed output.
 The local adapter defines native-shaped controls, Base UI choice controls,
 sliders, date pickers, comboboxes, an OTP control, and structural slots. Each
 control uses the public `ControlProps` contract. The kit uses the public
-`createFormKit` and `defineControl` functions.
+`createFormKit` and `defineControl` functions. Its radio and combobox option
+types mark their IDs with `ChoiceValue<string>`, so Valibot `picklist` fields
+reject option values outside their inferred unions.
 
 ## Copy the example
 

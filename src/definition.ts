@@ -3,6 +3,8 @@ import type {
 	FormDefinition,
 	FormInput,
 	NormalizedNode,
+	ReactUiContent,
+	RenderNodeComponent,
 	StandardSchema,
 } from "./types.js"
 
@@ -17,17 +19,18 @@ type RuntimeNode = NormalizedNode & {
 	/** Normalized child templates for sections and arrays. */
 	readonly children?: readonly RuntimeNode[]
 }
-
-/** A normalized UI node with all dynamic properties resolved. */
-export type ResolvedNode = {
-	/** Preserves resolved node properties for runtime renderers. */
+/** Properties shared by every normalized UI node after resolution. */
+type ResolvedNodeBase<Kind extends NodeKind> = {
+	/** Preserves non-renderer properties from the normalized definition. */
 	readonly [key: string]: unknown
 	/** The unique runtime ID, including any array item prefix. */
 	readonly id: string
 	/** The node category used by the renderer. */
-	readonly kind: NodeKind
-	/** The absolute input path for a field or array node. */
-	readonly path?: string
+	readonly kind: Kind
+	/** The containing section or array node ID, when one exists. */
+	readonly parentId?: string
+	/** The array path that contains relative field paths for this node. */
+	readonly scopePath: string
 	/** Whether the renderer includes this node. */
 	readonly visible: boolean
 	/** Whether user interaction with this node is disabled. */
@@ -36,11 +39,72 @@ export type ResolvedNode = {
 	readonly readOnly: boolean
 	/** The runtime context supplied to controls and render nodes. */
 	readonly context: unknown
-	/** Resolved section children. */
-	readonly children?: readonly ResolvedNode[]
-	/** Resolved child nodes for each current array item. */
-	readonly itemChildren?: readonly (readonly ResolvedNode[])[]
+	/** The resolved class name, when the definition supplies one. */
+	readonly className: unknown
+	/** The validated span in the parent grid. */
+	readonly span: number | "full" | undefined
 }
+
+/** A resolved field node ready for control and field-slot rendering. */
+export type ResolvedFieldNode = ResolvedNodeBase<"field"> & {
+	/** The absolute React Hook Form path for the field. */
+	readonly path: string
+	/** The registered control name. */
+	readonly control: string
+	/** The resolved field label. */
+	readonly label: ReactUiContent | undefined
+	/** The resolved field description. */
+	readonly description: ReactUiContent | undefined
+	/** The resolved field-slot configuration. */
+	readonly slotOptions: unknown
+	/** The resolved control configuration. */
+	readonly options: unknown
+	/** Whether the definition marks the field as required. */
+	readonly required: boolean
+}
+
+/** A resolved section node ready for structural rendering. */
+type ResolvedSectionNode = ResolvedNodeBase<"section"> & {
+	/** The validated number of grid columns. */
+	readonly columns: number
+	/** The resolved section title. */
+	readonly title: ReactUiContent | undefined
+	/** The resolved section description. */
+	readonly description: ReactUiContent | undefined
+	/** The resolved section-slot configuration. */
+	readonly slotOptions: unknown
+	/** The resolved child nodes. */
+	readonly children: readonly ResolvedNode[]
+}
+
+/** A resolved array node ready for field-array rendering. */
+export type ResolvedArrayNode = ResolvedNodeBase<"array"> & {
+	/** The absolute React Hook Form path for the array. */
+	readonly path: string
+	/** The item value or factory used by append actions. */
+	readonly itemDefault: unknown
+	/** The resolved array label. */
+	readonly label: ReactUiContent | undefined
+	/** The resolved array description. */
+	readonly description: ReactUiContent | undefined
+	/** The resolved array-slot configuration. */
+	readonly slotOptions: unknown
+	/** Resolved child nodes for each current array item. */
+	readonly itemChildren: readonly (readonly ResolvedNode[])[]
+}
+
+/** A resolved custom render node ready for component rendering. */
+type ResolvedRenderNode = ResolvedNodeBase<"render"> & {
+	/** The React component inserted into the generated form tree. */
+	readonly component: RenderNodeComponent
+}
+
+/** A normalized UI node with all dynamic properties resolved. */
+export type ResolvedNode =
+	| ResolvedArrayNode
+	| ResolvedFieldNode
+	| ResolvedRenderNode
+	| ResolvedSectionNode
 
 /** The root UI tree and flat index produced by definition resolution. */
 export type ResolvedDefinition = {
@@ -262,9 +326,16 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 					const path = joinPath(pathPrefix, String(node.path))
 					resolved = Object.freeze({
 						...common,
+						kind: "field",
 						path,
-						label: resolveOptional(node.label, values, pathPrefix, context),
-						description: resolveOptional(
+						control: String(node.control),
+						label: resolveOptional<ReactUiContent | undefined>(
+							node.label,
+							values,
+							pathPrefix,
+							context,
+						),
+						description: resolveOptional<ReactUiContent | undefined>(
 							node.description,
 							values,
 							pathPrefix,
@@ -288,6 +359,8 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 					break
 				}
 				case "section": {
+					const previousSection =
+						previousNode?.kind === "section" ? previousNode : undefined
 					const columns = validateColumns(
 						resolveValue(node.columns, 1, values, pathPrefix, context),
 						definition.grid,
@@ -297,13 +370,19 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 						pathPrefix,
 						idPrefix,
 						{ visible, disabled, readOnly, columns },
-						previousNode?.children,
+						previousSection?.children,
 					)
 					resolved = Object.freeze({
 						...common,
+						kind: "section",
 						columns,
-						title: resolveOptional(node.title, values, pathPrefix, context),
-						description: resolveOptional(
+						title: resolveOptional<ReactUiContent | undefined>(
+							node.title,
+							values,
+							pathPrefix,
+							context,
+						),
+						description: resolveOptional<ReactUiContent | undefined>(
 							node.description,
 							values,
 							pathPrefix,
@@ -320,27 +399,36 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 					break
 				}
 				case "array": {
+					const previousArray =
+						previousNode?.kind === "array" ? previousNode : undefined
 					const path = joinPath(pathPrefix, String(node.path))
 					const arrayValue = getPathValue(values, path)
 					const itemChildren = Array.isArray(arrayValue)
 						? reuseResolvedItems(
-								previousNode?.itemChildren,
+								previousArray?.itemChildren,
 								arrayValue.map((_item, index) =>
 									resolveNodes(
 										node.children ?? [],
 										`${path}.${index}`,
 										`${idPrefix}${idPrefix.length === 0 ? "" : "."}${path}.${index}`,
 										{ visible, disabled, readOnly },
-										previousNode?.itemChildren?.[index],
+										previousArray?.itemChildren[index],
 									),
 								),
 							)
-						: reuseResolvedItems(previousNode?.itemChildren, [])
+						: reuseResolvedItems(previousArray?.itemChildren, [])
 					resolved = Object.freeze({
 						...common,
+						kind: "array",
 						path,
-						label: resolveOptional(node.label, values, pathPrefix, context),
-						description: resolveOptional(
+						itemDefault: node.itemDefault,
+						label: resolveOptional<ReactUiContent | undefined>(
+							node.label,
+							values,
+							pathPrefix,
+							context,
+						),
+						description: resolveOptional<ReactUiContent | undefined>(
 							node.description,
 							values,
 							pathPrefix,
@@ -357,7 +445,11 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 					break
 				}
 				case "render":
-					resolved = Object.freeze(common)
+					resolved = Object.freeze({
+						...common,
+						kind: "render",
+						component: node.component as RenderNodeComponent,
+					})
 					break
 			}
 			if (
@@ -454,18 +546,18 @@ function resolveValue<Value, Context>(
 ): Value {
 	return value === undefined
 		? fallback
-		: (resolveOptional(value, values, pathPrefix, context) as Value)
+		: resolveOptional<Value>(value, values, pathPrefix, context)
 }
 
 /** Resolves a synchronous UI value when it is a function. */
-function resolveOptional<Context>(
+function resolveOptional<Value = unknown, Context = unknown>(
 	value: unknown,
 	values: unknown,
 	_pathPrefix: string,
 	context: Context,
-): unknown {
+): Value {
 	if (typeof value !== "function") {
-		return value
+		return value as Value
 	}
 	const result = (
 		value as (
@@ -484,7 +576,7 @@ function resolveOptional<Context>(
 	) {
 		throw new TypeError("UI resolvers must be synchronous")
 	}
-	return result
+	return result as Value
 }
 
 /** Reads a value from an object by a validated dot path. */

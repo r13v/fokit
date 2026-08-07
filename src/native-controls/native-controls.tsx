@@ -9,7 +9,7 @@ import {
 } from "react"
 
 import { defineControl } from "../control-definition.js"
-import type { ControlProps } from "../types.js"
+import type { ChoiceValue, ControlProps } from "../types.js"
 
 /** A supported HTML input type for the native text control. */
 export type NativeTextType =
@@ -73,7 +73,7 @@ export type NativeTimeOptions = {
 /** One selectable value in a native select control. */
 export type NativeSelectOption<Value extends string | undefined = string> = {
 	/** The non-undefined field value represented by this option. */
-	readonly value: Exclude<Value, undefined>
+	readonly value: ChoiceValue<Exclude<Value, undefined>>
 	/** The text shown to the user. */
 	readonly label: string
 	/** Whether the user cannot select this option. */

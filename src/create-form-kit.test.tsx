@@ -12,6 +12,7 @@ import { describe, expect, expectTypeOf, it, vi } from "vitest"
 import { z } from "zod"
 import { defineControl } from "./control-definition.js"
 import { createFormKit } from "./create-form-kit.js"
+import type { ResolvedFieldNode, ResolvedNode } from "./definition.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -19,12 +20,38 @@ import type {
 	FieldPath,
 	FieldSlotProps,
 	PathValue,
+	RenderNodeComponent,
 	RenderNodeProps,
 	SectionSlotProps,
 	StandardSchema,
 	SubmitSlotProps,
 } from "./types.js"
 import type { FormMiddleware } from "./value-middleware.js"
+
+function assertResolvedNodeContract(node: ResolvedNode) {
+	switch (node.kind) {
+		case "field":
+			node.path satisfies string
+			node.control satisfies string
+			node.required satisfies boolean
+			break
+		case "section":
+			node.columns satisfies number
+			node.children satisfies readonly ResolvedNode[]
+			break
+		case "array":
+			node.path satisfies string
+			node.itemChildren satisfies readonly (readonly ResolvedNode[])[]
+			break
+		case "render":
+			node.component satisfies RenderNodeComponent
+			break
+		default:
+			node satisfies never
+	}
+}
+
+void assertResolvedNodeContract
 
 const schema = z
 	.object({
@@ -151,6 +178,10 @@ const definition = kit.defineForm(schema, {
 })
 
 describe("form kit", () => {
+	it("keeps erased resolved slot options honest", () => {
+		expectTypeOf<ResolvedFieldNode["slotOptions"]>().toEqualTypeOf<unknown>()
+	})
+
 	it("rejects a form binding owned by another form kit", () => {
 		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
 

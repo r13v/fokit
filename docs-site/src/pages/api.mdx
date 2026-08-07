@@ -221,6 +221,11 @@ The registry contains these controls:
 | `number` | `slider` | `MuiSliderOptions` |
 | `readonly number[]` | `range-slider` | `MuiRangeSliderOptions` |
 
+Select and radio `choices`, plus autocomplete `options`, narrow to the schema
+input union at the selected path. Multiple controls use the array element
+union. Custom select children and autocomplete `freeSolo` values remain outside
+that inference contract.
+
 ```tsx
 // [!include ~/snippets/api-reference.tsx:mui-fields]
 ```
@@ -310,6 +315,9 @@ the current kit context.
 | `afterUpdate` | Observe the final committed transaction after middleware unwinds. |
 | `middleware` | Ordered Redux-shaped value middleware, fixed for the hook lifetime. |
 | `onSubmit` | Receives parsed output, editable input, and the current binding. |
+
+Use `FormSubmitDetails<Schema, Context>` from `form-please` when a reusable
+submit handler needs the exact `{ value, input, form }` parameter type.
 
 ```tsx
 // [!include ~/snippets/api-reference.tsx:use-form]
@@ -478,7 +486,7 @@ then call `feature.handle(form)`.
 | `saveDelay` | `500` | Trailing autosave delay in milliseconds. |
 | `codecs` | `[]` | Tagged encoders and decoders for explicit opaque values. |
 | `migrate` | None | Converts decoded data from another application version. |
-| `onError` | None | Observes `restore`, `save`, or `clear` failures. |
+| `onError` | None | Observes failures with `PersistenceErrorDetails`, whose operation is `restore`, `save`, or `clear`. |
 
 The handle exposes `restore`, `start`, `flush`, `clear`, `getSnapshot`, and
 `subscribe`. Restore reports `"applied"`, `"empty"`, `"cancelled"`,

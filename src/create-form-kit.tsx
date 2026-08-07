@@ -35,7 +35,9 @@ import {
 import {
 	normalizeDefinition,
 	normalizeGrid,
+	type ResolvedArrayNode,
 	type ResolvedDefinition,
+	type ResolvedFieldNode,
 	type ResolvedNode,
 	resolveDefinition,
 } from "./definition.js"
@@ -58,7 +60,6 @@ import type {
 	FormKitSlots,
 	FormOutput,
 	FormPleaseStyle,
-	RenderNodeComponent,
 	SectionSlotProps,
 	StandardSchema,
 	StructuralNodeName,
@@ -103,6 +104,19 @@ type ContextOption<Context> = unknown extends Context
 			readonly context: Context
 		}
 
+/** Values supplied to a successful Form Please submit handler. */
+export type FormSubmitDetails<
+	Schema extends StandardSchema,
+	Context = unknown,
+> = {
+	/** The validated and possibly transformed schema output. */
+	readonly value: FormOutput<Schema>
+	/** The editable input snapshot used for this submission. */
+	readonly input: FormInput<Schema>
+	/** The binding that submitted the form. */
+	readonly form: FormBinding<Schema, Context>
+}
+
 /** Configuration used to bind a definition to React Hook Form. */
 export type UseFormOptions<
 	Schema extends StandardSchema,
@@ -132,14 +146,9 @@ export type UseFormOptions<
 	/** The validation mode used after the first submit attempt. */
 	readonly reValidateMode?: Exclude<Mode, "all" | "onTouched">
 	/** Handles successful validation with output and matching input values. */
-	readonly onSubmit?: (details: {
-		/** The validated and possibly transformed schema output. */
-		readonly value: FormOutput<Schema>
-		/** The editable input snapshot used for this submission. */
-		readonly input: FormInput<Schema>
-		/** The binding that submitted the form. */
-		readonly form: FormBinding<Schema, Context>
-	}) => unknown | Promise<unknown>
+	readonly onSubmit?: (
+		details: FormSubmitDetails<Schema, Context>,
+	) => unknown | Promise<unknown>
 }
 
 /** A form definition bound to a React Hook Form instance and runtime context. */
@@ -204,14 +213,9 @@ type RuntimeForm = {
 	/** The first summary issue used as a focus fallback. */
 	readonly errorSummaryRef: RefObject<HTMLElement | null>
 	/** The configured successful-submit handler. */
-	readonly onSubmit?: (details: {
-		/** The validated schema output. */
-		readonly value: unknown
-		/** The editable input snapshot. */
-		readonly input: FieldValues
-		/** The public form binding. */
-		readonly form: FormBinding
-	}) => unknown | Promise<unknown>
+	readonly onSubmit?: (
+		details: FormSubmitDetails<AnyFormSchema>,
+	) => unknown | Promise<unknown>
 }
 /** Validation policy used after one managed value commit. */
 type ManagedValidationOptions = {
@@ -219,13 +223,13 @@ type ManagedValidationOptions = {
 	readonly mode: Mode
 	readonly reValidateMode: Exclude<Mode, "all" | "onTouched">
 }
-/** Erased slot options used by runtime renderers. */
-type RuntimeSlotOptions = Record<string, unknown>
+/** Slot options after their concrete form-kit type is erased. */
+type RuntimeSlotOptions = Readonly<unknown> | undefined
 /** Form kit slots with erased application option types. */
 type RuntimeSlots = FormKitSlots<
-	RuntimeSlotOptions,
-	RuntimeSlotOptions,
-	RuntimeSlotOptions
+	Record<string, unknown>,
+	Record<string, unknown>,
+	Record<string, unknown>
 >
 
 /** The typed `defineForm` method exposed by a form kit. */
@@ -812,16 +816,16 @@ function GeneratedNode({
 			const Slot = slots.Section as ComponentType<SectionSlotProps<unknown>>
 			return (
 				<Slot
-					description={node.description as ReactNode}
+					description={node.description}
 					layoutProps={{
 						"data-fp-layout": "grid",
-						"data-fp-columns": node.columns as number,
+						"data-fp-columns": node.columns,
 					}}
 					rootProps={structuralProps("section", node)}
-					slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
-					title={node.title as ReactNode}
+					slotOptions={node.slotOptions as RuntimeSlotOptions}
+					title={node.title}
 				>
-					{node.children?.map((child) => (
+					{node.children.map((child) => (
 						<MemoizedGeneratedNode
 							controls={controls}
 							form={form}
@@ -843,7 +847,7 @@ function GeneratedNode({
 				/>
 			)
 		case "render":
-			return createElement(node.component as RenderNodeComponent, {
+			return createElement(node.component, {
 				disabled: node.disabled,
 				readOnly: node.readOnly,
 			})
@@ -866,9 +870,9 @@ function GeneratedField({
 	/** Structural components used by the field. */
 	readonly slots: RuntimeSlots
 	/** The resolved field node. */
-	readonly node: ResolvedNode
+	readonly node: ResolvedFieldNode
 }) {
-	const path = String(node.path)
+	const path = node.path
 	const inputId = createDomId(useFormId(), path)
 	const descriptionId =
 		node.description === undefined ? undefined : `${inputId}-description`
@@ -933,7 +937,7 @@ function GeneratedField({
 							displayErrors,
 							invalid: displayErrors.length > 0,
 						}}
-						options={(node.options ?? {}) as Readonly<unknown>}
+						options={node.options ?? {}}
 						path={path}
 						readOnly={node.readOnly}
 						required={node.required === true}
@@ -947,13 +951,13 @@ function GeneratedField({
 						}
 					/>
 				}
-				description={node.description as ReactNode}
+				description={node.description}
 				descriptionProps={
 					descriptionId === undefined ? {} : { id: descriptionId }
 				}
 				disabled={node.disabled}
 				errors={renderErrors(displayErrors, errorIds, slots, path)}
-				label={node.label as ReactNode}
+				label={node.label}
 				labelProps={{ htmlFor: inputId, id: `${inputId}-label` }}
 				readOnly={node.readOnly}
 				required={node.required === true}
@@ -965,7 +969,7 @@ function GeneratedField({
 					touched,
 					validating,
 				})}
-				slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
+				slotOptions={node.slotOptions as RuntimeSlotOptions}
 			/>
 		),
 		[
@@ -1005,9 +1009,9 @@ function GeneratedArray({
 	/** Structural components used by the array. */
 	readonly slots: RuntimeSlots
 	/** The resolved array node. */
-	readonly node: ResolvedNode
+	readonly node: ResolvedArrayNode
 }) {
-	const path = String(node.path)
+	const path = node.path
 	const arrayId = createDomId(useFormId(), path)
 	const Slot = slots.Array as ComponentType<ArraySlotProps<unknown>>
 	const Item = slots.ArrayItem
@@ -1061,11 +1065,11 @@ function GeneratedArray({
 					)
 				}}
 				canAdd={canAdd}
-				description={node.description as ReactNode}
+				description={node.description}
 				descriptionProps={{ id: `${arrayId}-description` }}
 				errors={renderErrors(displayErrors, errorIds, slots, path)}
 				invalid={displayErrors.length > 0}
-				label={node.label as ReactNode}
+				label={node.label}
 				labelProps={{ id: `${arrayId}-label` }}
 				rootProps={structuralProps("array", {
 					...node,
@@ -1076,7 +1080,7 @@ function GeneratedArray({
 					touched,
 					validating,
 				})}
-				slotOptions={node.slotOptions as RuntimeSlotOptions | undefined}
+				slotOptions={node.slotOptions as RuntimeSlotOptions}
 			>
 				{fieldIds.map((fieldId, index) => (
 					<Item
@@ -1129,7 +1133,7 @@ function GeneratedArray({
 							readOnly: node.readOnly,
 						})}
 					>
-						{node.itemChildren?.[index]?.map((child) => (
+						{node.itemChildren[index]?.map((child) => (
 							<MemoizedGeneratedNode
 								controls={controls}
 								form={form}

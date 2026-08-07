@@ -153,8 +153,17 @@ control. The context type controls which form kits can use it.
 | `ControlProps<Value, Options, Context>` | Props passed to a custom control component. |
 | `ControlDefinition<Value, Options, Context>` | Typed control returned by `defineControl`. |
 | `DefineControlInput<Value, Options, Context>` | Input object accepted by `defineControl`. |
+| `ChoiceValue<Value>` | Marks a control option value for narrowing to the selected schema input path. |
 | `ControlDefinitionRegistry` | Readonly record of named control definitions. |
 | `AnyControlDefinition` | Non-specific control type used in registries. |
+
+Put `ChoiceValue<Value>` on the scalar item of an immediate options collection,
+or on one property of each structured item. A field definition replaces the
+marker with the compatible schema input union at its `path`. The control still
+receives its declared broad `Options` through `ControlProps`.
+
+See [Choice controls](/form-kits#choice-controls) for a custom control and
+[Choice values](/definitions#choice-values) for definition-side inference.
 
 The extraction types read the hidden contract from a control definition:
 
@@ -181,6 +190,7 @@ component-local form instance.
 | `FormKit<Controls, ...>` | Kit methods, components, controls, slots, grid, and context contract. |
 | `CreateFormKitOptions<Controls, ...>` | Options accepted by `createFormKit`. |
 | `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, managed update hooks, value middleware, and submit handler. |
+| `FormSubmitDetails<Schema, Context>` | Parsed output, editable input, and form binding passed to a submit handler. |
 | `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
@@ -238,6 +248,7 @@ Import persistence types from `form-please/persistence`:
 | `PersistenceMigration` | Convert decoded input between application versions. |
 | `FormPersistenceAdapter` | Keyed asynchronous load, save, and remove transport. |
 | `CreatePersistenceOptions` | Configure the adapter, key, version, save delay, codecs, migration, and error observer. |
+| `PersistenceErrorDetails` | Identifies the failed `restore`, `save`, or `clear` operation. |
 | `PersistenceFeature` | Reusable middleware plus exact-form handle lookup. |
 | `PersistenceHandle` | Restore, start, flush, clear, and observe one form's draft. |
 | `PersistenceSnapshot` | Current restore phase and save state. |

@@ -149,6 +149,25 @@ Native text inputs support a `readOnly` property. Some components do not.
 A custom select, checkbox, or file control must prevent changes when `readOnly`
 is `true`.
 
+### Choice controls
+
+Mark the value written by a reusable choice control with `ChoiceValue<Value>`.
+The marker can be a scalar item or one property of a structured item in any
+immediate array inside the control's options. It has no runtime representation.
+
+```tsx
+// [!include ~/snippets/types-guide.tsx:choice-control]
+```
+
+The control keeps the broad `string` contract. When a form binds it to a schema
+path such as `"admin" | "member"`, the field definition accepts only those IDs.
+For an array field, it uses the array element union. Nested option objects are
+not searched for choice collections.
+
+Use `as const` or `satisfies` when choices are declared outside the field node.
+Otherwise, TypeScript can widen a literal ID such as `"admin"` to `string`.
+Read [Choice values](/definitions#choice-values) for definition examples.
+
 ### Shipped native controls
 
 `createNativeControls()` returns a fresh, frozen registry.
@@ -195,6 +214,12 @@ from `form-please/preset-native` when you need the complete native baseline.
 Import these option types from `form-please/preset-mui`. The option types omit
 props that the kit owns, such as the current value, field name, disabled state,
 and input ref.
+
+The structured `choices` accepted by select and radio controls, and the
+`options` arrays accepted by autocomplete controls, narrow to the selected
+schema path. This rule also applies to their multiple-value variants. Custom
+select children and autocomplete `freeSolo` values are application-owned and
+do not participate in choice-value inference.
 
 ### Value and submission rules
 

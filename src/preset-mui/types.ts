@@ -13,6 +13,8 @@ import type {
 import type { SxProps, Theme } from "@mui/material/styles"
 import type { ComponentPropsWithoutRef, ReactNode } from "react"
 
+import type { ChoiceValue } from "../types.js"
+
 /** Removes owned properties from each member of a MUI prop union. */
 type DistributiveOmit<Value, Keys extends PropertyKey> = Value extends unknown
 	? Omit<Value, Keys>
@@ -45,7 +47,7 @@ export type MuiTextFieldOptions = DistributiveOmit<
 /** One choice rendered by a MUI select control. */
 export type MuiSelectChoice = {
 	/** The string field value represented by this choice. */
-	readonly value: string
+	readonly value: ChoiceValue<string>
 	/** The content shown to the user. */
 	readonly label: ReactNode
 	/** Whether the user cannot select this choice. */
@@ -87,7 +89,7 @@ export type MuiSelectMultipleOptions = DistributiveOmit<
 /** One value and its presentation in a MUI radio group. */
 export type MuiRadioChoice = {
 	/** The string field value represented by this radio. */
-	readonly value: string
+	readonly value: ChoiceValue<string>
 	/** The content shown beside the radio. */
 	readonly label: ReactNode
 	/** Whether the user cannot select this radio. */
@@ -167,8 +169,10 @@ export type MuiAutocompleteTextFieldProps = DistributiveOmit<
 /** Application-owned props for the MUI single-value autocomplete control. */
 export type MuiAutocompleteOptions = Omit<
 	AutocompleteProps<string, false, boolean, boolean>,
-	AutocompleteOwnedProps
+	AutocompleteOwnedProps | "options"
 > & {
+	/** Values offered by the autocomplete control. */
+	readonly options: readonly ChoiceValue<string>[]
 	/** Props for the TextField rendered by the autocomplete. */
 	readonly textFieldProps?: MuiAutocompleteTextFieldProps
 }
@@ -176,8 +180,10 @@ export type MuiAutocompleteOptions = Omit<
 /** Application-owned props for the MUI multi-value autocomplete control. */
 export type MuiAutocompleteMultipleOptions = Omit<
 	AutocompleteProps<string, true, boolean, boolean>,
-	AutocompleteOwnedProps
+	AutocompleteOwnedProps | "options"
 > & {
+	/** Values offered by the autocomplete control. */
+	readonly options: readonly ChoiceValue<string>[]
 	/** Props for the TextField rendered by the autocomplete. */
 	readonly textFieldProps?: MuiAutocompleteTextFieldProps
 }

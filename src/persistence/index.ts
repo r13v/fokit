@@ -9,6 +9,7 @@ export {
 	type CreatePersistenceOptions,
 	createPersistenceMiddleware,
 	type FormPersistenceAdapter,
+	type PersistenceErrorDetails,
 	type PersistenceFeature,
 	type PersistenceHandle,
 	type PersistenceRestoreResult,

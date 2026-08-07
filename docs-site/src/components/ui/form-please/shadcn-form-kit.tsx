@@ -3,6 +3,7 @@
 import {
 	type ArrayItemSlotProps,
 	type ArraySlotProps,
+	type ChoiceValue,
 	type ControlProps,
 	createFormKit,
 	defineControl,
@@ -77,7 +78,7 @@ import { Switch } from "../switch"
 import { Textarea } from "../textarea"
 
 type ShadcnChoiceOption = {
-	readonly value: string
+	readonly value: ChoiceValue<string>
 	readonly label: string
 	readonly description?: string
 	readonly disabled?: boolean

@@ -71,6 +71,11 @@ Storage errors never roll back form values. A failed save reports
 or `flush()` retries. A restore failure uses the top-level `failed` phase and can
 be retried with `restore()`.
 
+The optional `onError` callback receives the error and a
+`PersistenceErrorDetails` object. Import that type from
+`form-please/persistence` when the observer is declared separately; its
+`operation` is `"restore"`, `"save"`, or `"clear"`.
+
 ## Own the adapter
 
 An adapter is a keyed asynchronous transport:

@@ -12,6 +12,7 @@ import {
 	type FormPersistenceAdapter,
 	type JsonValue,
 	type PersistenceCodec,
+	type PersistenceErrorDetails,
 	type PersistenceMigration,
 	type PersistenceRestoreResult,
 } from "../../src/persistence/index.js"
@@ -50,11 +51,18 @@ const migration: PersistenceMigration = (value, fromVersion, toVersion) => {
 	return value
 }
 const dateCodec: PersistenceCodec<Date> = createDateCodec()
+const onPersistenceError = (
+	_error: unknown,
+	details: PersistenceErrorDetails,
+) => {
+	details.operation satisfies "restore" | "save" | "clear"
+}
 const feature = createPersistenceMiddleware({
 	adapter,
 	codecs: [dateCodec],
 	key: "profile",
 	migrate: migration,
+	onError: onPersistenceError,
 	version: 2,
 })
 const middleware: FormMiddleware<Input, Context> = feature
@@ -110,4 +118,5 @@ const invalidJson: JsonValue = undefined
 void invalidJson
 void json
 void middleware
+void onPersistenceError
 void usePersistenceForm

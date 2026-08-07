@@ -55,6 +55,12 @@ export type PathValue<
 > = Value extends FieldValues
 	? FieldPathValue<Value, Extract<Path, RhfFieldPath<Value>>>
 	: never
+
+/** Marks one control option value for narrowing to a field's schema input union. */
+declare const choiceValue: unique symbol
+export type ChoiceValue<Value> = Value & {
+	readonly [choiceValue]?: Value
+}
 /** A React Hook Form dot path that selects an object array in `Value`. */
 export type ArrayFieldPath<Value> = Value extends FieldValues
 	? RhfFieldArrayPath<Value>
@@ -130,6 +136,8 @@ type ControlTypes<Value, Options, Context> = {
 	readonly options: Options
 	/** The runtime context required by the control. */
 	readonly context: Context
+	/** Field-dependent choice options derived from the declared options type. */
+	readonly choiceOptions: ChoiceOptionsTypeFor<Options>
 }
 
 /** A registered control component and its inferred type contract. */
@@ -148,7 +156,12 @@ export type AnyControlDefinition = {
 	/** The registered control component. */
 	readonly component: unknown
 	/** Phantom type data used to infer the control contract. */
-	readonly [controlTypes]?: ControlTypes<unknown, unknown, unknown>
+	readonly [controlTypes]?: {
+		readonly value: unknown
+		readonly options: unknown
+		readonly context: unknown
+		readonly choiceOptions: unknown
+	}
 }
 /** A readonly registry of named control definitions. */
 export type ControlDefinitionRegistry = Readonly<
@@ -157,21 +170,137 @@ export type ControlDefinitionRegistry = Readonly<
 /** Extracts the field value accepted by a control definition. */
 export type ControlValueOf<Control> = Control extends {
 	/** Phantom type data retained by a control definition. */
-	readonly [controlTypes]?: ControlTypes<infer Value, unknown, unknown>
+	readonly [controlTypes]?: { readonly value: infer Value }
 }
 	? Value
 	: never
 /** Extracts the configuration accepted by a control definition. */
 export type ControlOptionsOf<Control> = Control extends {
 	/** Phantom type data retained by a control definition. */
-	readonly [controlTypes]?: ControlTypes<unknown, infer Options, unknown>
+	readonly [controlTypes]?: { readonly options: infer Options }
 }
 	? Options
 	: never
+
+/** Extracts the selectable member type from a scalar or array field value. */
+type FieldChoiceValue<Value> = Value extends readonly (infer Item)[]
+	? Item
+	: Exclude<Value, undefined>
+
+/** Replaces one marked choice value with its compatible field member union. */
+type ResolveChoiceValue<Value, FieldValue> =
+	IsChoiceValue<Value> extends true
+		? Value extends { readonly [choiceValue]?: infer Allowed }
+			? Extract<FieldChoiceValue<FieldValue>, Allowed>
+			: never
+		: Value
+
+/** Resolves a scalar choice or marked properties on one structured choice. */
+type ResolveChoiceItem<Item, FieldValue> =
+	IsChoiceValue<Item> extends true
+		? ResolveChoiceValue<Item, FieldValue>
+		: Item extends object
+			? {
+					readonly [Key in keyof Item]: ResolveChoiceValue<
+						Item[Key],
+						FieldValue
+					>
+				}
+			: Item
+
+/** Resolves marked items in one immediate control-options collection. */
+type ResolveChoiceCollection<Value, FieldValue> =
+	Value extends readonly (infer Item)[]
+		? readonly ResolveChoiceItem<Item, FieldValue>[]
+		: Value
+
+/** Tests whether one value carries the choice marker. */
+type IsChoiceValue<Value> =
+	IsAny<Value> extends true
+		? false
+		: IsNever<Value> extends true
+			? false
+			: typeof choiceValue extends keyof Value
+				? true
+				: false
+
+/** Tests whether a collection item contains a marked choice value. */
+type IsChoiceItem<Item> =
+	IsChoiceValue<Item> extends true
+		? true
+		: Item extends object
+			? true extends {
+					[Key in keyof Item]: IsChoiceValue<Item[Key]>
+				}[keyof Item]
+				? true
+				: false
+			: false
+
+/** Tests whether one options property is a marked choice collection. */
+type IsChoiceCollection<Value> = Value extends readonly (infer Item)[]
+	? IsChoiceItem<Item>
+	: false
+
+/** Finds immediate options properties that contain marked choices. */
+type ChoiceCollectionKeyOf<Options> = {
+	[Key in keyof Options]-?: true extends IsChoiceCollection<Options[Key]>
+		? Key
+		: never
+}[keyof Options]
+type ChoiceCollectionKey<Options> = Options extends unknown
+	? ChoiceCollectionKeyOf<Options>
+	: never
+
+/** Applies marked choice collections to a field value supplied later. */
+interface ChoiceOptionsType {
+	readonly fieldValue: unknown
+	readonly type: object
+}
+
+/** Replaces marked collections without collapsing an options union. */
+type ResolveChoiceOptions<
+	Options,
+	Keys extends PropertyKey,
+	FieldValue,
+> = Options extends unknown
+	? Omit<Options, Extract<Keys, keyof Options>> & {
+			readonly [Key in Extract<Keys, keyof Options>]: ResolveChoiceCollection<
+				Options[Key],
+				FieldValue
+			>
+		}
+	: never
+
+/** Retains one options type for later field specialization. */
+interface ResolveChoiceOptionsType<Options, Keys extends PropertyKey>
+	extends ChoiceOptionsType {
+	readonly type: ResolveChoiceOptions<Options, Keys, this["fieldValue"]>
+}
+
+/** Derives an optional specialization contract once per control options type. */
+type ChoiceOptionsTypeFor<Options> = [ChoiceCollectionKey<Options>] extends [
+	never,
+]
+	? undefined
+	: ResolveChoiceOptionsType<Options, ChoiceCollectionKey<Options>>
+
+/** Reads the cached specialization contract from a control definition. */
+type ChoiceOptionsTypeOf<Control> = Control extends {
+	readonly [controlTypes]?: { readonly choiceOptions: infer OptionsType }
+}
+	? OptionsType
+	: undefined
+
+/** Specializes the declared control options for one schema field path. */
+type ControlOptionsFor<Control, FieldValue> =
+	ChoiceOptionsTypeOf<Control> extends infer OptionsType extends
+		ChoiceOptionsType
+		? (OptionsType & { readonly fieldValue: FieldValue })["type"]
+		: ControlOptionsOf<Control>
 /** Extracts the runtime context required by a control definition. */
 export type ControlContextOf<Control> = Control extends {
 	/** Phantom type data retained by a control definition. */
-	readonly [controlTypes]?: ControlTypes<unknown, unknown, infer Context>
+	readonly [controlTypes]?: { readonly context: infer Context }
 }
 	? Context
 	: never
@@ -295,11 +424,11 @@ type FieldNodeForPath<
 			/** The registered control used to edit this field. */
 			readonly control: Name
 			// biome-ignore lint/complexity/noBannedTypes: This conditional detects whether the options type has required properties.
-		} & ({} extends ControlOptionsOf<Controls[Name]>
+		} & ({} extends ControlOptionsFor<Controls[Name], PathValue<Scope, Path>>
 			? {
 					/** Configures the selected control. */
 					readonly options?: Resolvable<
-						ControlOptionsOf<Controls[Name]>,
+						ControlOptionsFor<Controls[Name], PathValue<Scope, Path>>,
 						Root,
 						Context
 					>
@@ -307,7 +436,7 @@ type FieldNodeForPath<
 			: {
 					/** Configures the selected control. */
 					readonly options: Resolvable<
-						ControlOptionsOf<Controls[Name]>,
+						ControlOptionsFor<Controls[Name], PathValue<Scope, Path>>,
 						Root,
 						Context
 					>

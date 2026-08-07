@@ -124,6 +124,9 @@ baseline with `input` after a successful request.
 `form.api.formState.isSubmitting` remains true until the promise settles.
 `kit.Submit` is disabled while the form validates or submits.
 
+Use `FormSubmitDetails<Schema, Context>` from `form-please` to type an extracted
+submit handler without repeating the `{ value, input, form }` object shape.
+
 Server validation is still required. A request failure is not a Standard Schema
 issue and does not appear in the form summary. Store and render request failures
 in application state, as the example does.

@@ -72,7 +72,13 @@ export type PersistenceHandle = Readonly<{
 	subscribe(listener: () => void): () => void
 }>
 
-type PersistenceOperation = "restore" | "save" | "clear"
+/** Additional context supplied when a persistence operation fails. */
+export type PersistenceErrorDetails = Readonly<{
+	/** The persistence operation that reported the error. */
+	operation: "restore" | "save" | "clear"
+}>
+
+type PersistenceOperation = PersistenceErrorDetails["operation"]
 
 /** Configuration for one reusable persistence middleware feature. */
 export type CreatePersistenceOptions = Readonly<{
@@ -82,10 +88,7 @@ export type CreatePersistenceOptions = Readonly<{
 	codecs?: readonly PersistenceCodec[]
 	migrate?: PersistenceMigration
 	saveDelay?: number
-	onError?: (
-		error: unknown,
-		details: Readonly<{ operation: PersistenceOperation }>,
-	) => void
+	onError?: (error: unknown, details: PersistenceErrorDetails) => void
 }>
 
 /** Reusable middleware with exact-form persistence handle lookup. */

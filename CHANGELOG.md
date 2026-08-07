@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/r13v/form-please/compare/v1.3.0...v1.4.0) (2026-08-07)
+
+
+### Features
+
+* check schema enum-like options in definition ([3cc4389](https://github.com/r13v/form-please/commit/3cc43896618fd44f0e4a51c7988686cc361a7971))
+
 ## [1.3.0](https://github.com/r13v/form-please/compare/v1.2.0...v1.3.0) (2026-08-06)
 
 

@@ -29,6 +29,7 @@ Start with these types in application code:
 | Type a successful submit result. | `FormOutput<Schema>` |
 | Accept a valid field name. | `FieldPath<Value>` |
 | Type shared form UI. | `UiNode<Input, Controls, ...>` |
+| Type a reusable form fragment. | `FormFragment<Schema, Controls, ...>` |
 | Type a custom control component. | `ControlProps<Value, Options, Context>` |
 | Type form-local value middleware. | `FormMiddleware<Input, Context>` |
 
@@ -96,11 +97,12 @@ options, and grid values through the complete tree.
 
 | Type | Purpose |
 | --- | --- |
-| `UiNode<Input, Controls, ...>` | Union of all supported source nodes. |
+| `UiNode<Input, Controls, ...>` | Union of ordinary field, section, array, and render source nodes. |
 | `FieldNode<Input, Controls, ...>` | Field node with compatible paths, controls, and options. |
 | `SectionNode<Input, Controls, ...>` | Section node with typed child nodes. |
 | `ArrayNode<Input, Controls, ...>` | Array node whose child paths are relative to one item. |
 | `RenderNode<Input, Context>` | React component node with resolved interaction state. |
+| `FormFragment<Schema, Controls, ...>` | Schema-owned UI fragment created by `defineFragment`. |
 
 `FormDefinition<Schema, Controls, ...>` is the normalized, readonly result of
 `defineForm`. It contains the schema, grid, and normalized nodes. Do not create
@@ -109,7 +111,8 @@ this object manually. Its generic parameters preserve the kit contracts.
 ### Resolver types
 
 A resolvable UI property accepts a static value or a synchronous resolver.
-Resolvers receive the complete schema input and `{ context }`.
+Ordinary form resolvers receive the complete schema input and `{ context }`.
+Fragment-authored resolvers receive the local fragment input instead.
 
 ```ts
 type Visibility = UiResolver<boolean, ProfileInput, ProfileContext>

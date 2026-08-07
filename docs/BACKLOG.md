@@ -1,28 +1,9 @@
-# Product IDEAS
+# Product backlog
 
 This document records product directions that are worth investigating. It is
 not a release commitment or an implementation plan. Any change to public entry
 points, form state, submission, serialization, or module boundaries must first
 be reconciled with [ARCHITECTURE.md](ARCHITECTURE.md).
-
-## Typed reusable form fragments
-
-**Status:** Planned for design.
-
-Let an application define a typed group of UI nodes once and place it at
-different schema input paths, including inside generated arrays. Typical
-examples are addresses, contact details, money ranges, and date ranges.
-
-- [ ] Design the smallest API that preserves schema paths, control options,
-      form-kit ownership, context, slots, and grid types.
-- [ ] Support an explicit path prefix or field mapping without runtime schema
-      introspection.
-- [ ] Verify nested fragments and fragments inside object-array items.
-- [ ] Compare the API with plain typed functions and ship a helper only when it
-      removes meaningful application code.
-
-Success means a fragment remains ordinary application-owned form structure,
-with no independent state, validation, or lifecycle.
 
 ## Product workflow recipes
 

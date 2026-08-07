@@ -6,7 +6,24 @@ import { nativeFormKit as kit } from "form-please/preset-native"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
-type Input = { readonly name?: string }
+type AddressInput = { readonly street?: string }
+const addressSchema: StandardSchema<AddressInput> = {
+	"~standard": {
+		version: 1,
+		vendor: "form-please-smoke",
+		validate(value) {
+			return { value: value as AddressInput }
+		},
+	},
+}
+const addressFragment = kit.defineFragment(addressSchema, {
+	ui: [{ kind: "field", path: "street", control: "text", label: "Street" }],
+})
+
+type Input = {
+	readonly address: AddressInput
+	readonly name?: string
+}
 const schema: StandardSchema<Input> = {
 	"~standard": {
 		version: 1,
@@ -17,7 +34,10 @@ const schema: StandardSchema<Input> = {
 	},
 }
 const definition = kit.defineForm(schema, {
-	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+	ui: [
+		{ kind: "field", path: "name", control: "text", label: "Name" },
+		addressFragment.fields({ at: "address" }),
+	],
 })
 const muiKit = createMuiFormKit()
 if (!muiKit.controls.slider || muiKit.grid.at(-1) !== 12) {
@@ -25,7 +45,12 @@ if (!muiKit.controls.slider || muiKit.grid.at(-1) !== 12) {
 }
 
 function App() {
-	const form = kit.useForm(definition, { defaultValues: { name: "Ada" } })
+	const form = kit.useForm(definition, {
+		defaultValues: {
+			address: { street: "Analytical Engine Way" },
+			name: "Ada",
+		},
+	})
 	return (
 		<kit.AutoForm form={form}>
 			<kit.Submit>Save</kit.Submit>

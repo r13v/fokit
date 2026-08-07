@@ -91,6 +91,51 @@ const kit = createFormKit({
 })
 // [!endregion create-form-kit]
 
+// [!region form-fragment]
+type AddressContext = {
+	readonly locale: string
+}
+
+const addressSchema = z.object({
+	city: z.string(),
+	street: z.string(),
+})
+
+const addressFragment = nativeFormKit
+	.forContext<AddressContext>()
+	.defineFragment(addressSchema, {
+		ui: [
+			{
+				kind: "field",
+				path: "street",
+				control: "text",
+				label: (_address, { context }) => `${context.locale}: Street`,
+			},
+			{ kind: "field", path: "city", control: "text", label: "City" },
+		],
+	})
+
+const checkoutSchema = z.object({
+	billingAddress: addressFragment.schema,
+	recipients: z.array(z.object({ address: addressFragment.schema })),
+	shippingAddress: addressFragment.schema,
+})
+
+const checkoutKit = nativeFormKit.forContext<AddressContext>()
+const checkoutDefinition = checkoutKit.defineForm(checkoutSchema, {
+	ui: [
+		addressFragment.fields({ at: "shippingAddress" }),
+		addressFragment.fields({ at: "billingAddress" }),
+		{
+			kind: "array",
+			path: "recipients",
+			itemDefault: { address: { city: "", street: "" } },
+			children: [addressFragment.fields({ at: "address" })],
+		},
+	],
+})
+// [!endregion form-fragment]
+
 // [!region native-factories]
 const nativeControls = createNativeControls()
 const localizedDefaultSlots = createDefaultSlots({

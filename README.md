@@ -58,6 +58,37 @@ export function ContactForm() {
 }
 ```
 
+Reuse a schema-owned group of fields at compatible object paths:
+
+```tsx
+const addressSchema = z.object({
+	street: z.string(),
+	city: z.string(),
+})
+
+const addressFragment = kit.defineFragment(addressSchema, {
+	ui: [
+		{ kind: "field", path: "street", control: "text", label: "Street" },
+		{ kind: "field", path: "city", control: "text", label: "City" },
+	],
+})
+
+const checkoutSchema = z.object({
+	shippingAddress: addressFragment.schema,
+	billingAddress: addressFragment.schema,
+})
+
+const checkoutForm = kit.defineForm(checkoutSchema, {
+	ui: [
+		addressFragment.fields({ at: "shippingAddress" }),
+		addressFragment.fields({ at: "billingAddress" }),
+	],
+})
+```
+
+Fragment resolvers receive the local fragment input. The host form still owns
+all state, validation, context, and lifecycle.
+
 Use RHF `register`, `Controller`, `useWatch`, `useFormState`, `useFieldArray`,
 and the unchanged `form.api` for direct composition. `kit.Form` supplies
 `FormProvider`.
@@ -68,8 +99,10 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
   submit.
 - The RHF resolver parses the Standard Schema once and returns transformed
   output while the submit wrapper preserves the editable input snapshot.
-- UI resolvers receive the complete deeply readonly schema input and runtime
-  context. They must be synchronous.
+- Ordinary UI resolvers receive the complete deeply readonly schema input and
+  runtime context. They must be synchronous.
+- Fragment resolvers receive their local deeply readonly fragment input and
+  minimum context.
 - Use `beforeUpdate` and `afterUpdate` for one form-local managed update rule.
   Use value middleware and `form.update` when independent policies or dependent
   changes must compose atomically. Direct `form.api` changes bypass both.

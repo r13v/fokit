@@ -37,7 +37,9 @@ Field properties can use the same form values:
 // [!include ~/snippets/conditional-fields-guide.tsx:derived-field]
 ```
 
-The first resolver argument is the complete, deeply readonly schema input.
+On an ordinary definition node, the first resolver argument is the complete,
+deeply readonly schema input. A resolver authored inside a reusable fragment
+receives that fragment's local input instead.
 It is not only the value at the field path.
 
 These field properties accept a static value or a synchronous resolver:

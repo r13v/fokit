@@ -77,12 +77,15 @@ They do not define another runtime.
 
 ## Form-kit ownership
 
-`createFormKit` freezes one controls, slots, and grid snapshot. `defineForm`
-normalizes a definition and records exact kit ownership. `useForm` accepts only
-a definition from that kit.
+`createFormKit` freezes one controls, slots, and grid snapshot. `defineFragment`
+validates and snapshots reusable schema-owned UI, while `defineForm` normalizes
+a complete definition. Fragment placements and form bindings are accepted only
+by their exact runtime kit.
 
 `forContext<Context>()` is a type-only view. It returns the same runtime kit.
-When `Context` is concrete, `useForm` requires a context value.
+When `Context` is concrete, `useForm` requires a context value. A fragment can
+use a narrower view to declare its minimum context requirement; a host context
+may structurally provide additional properties.
 
 The kit does not support runtime extension. Build one complete controls and
 slots registry before calling `createFormKit`.
@@ -97,6 +100,8 @@ A definition contains a Standard Schema and a recursive UI tree.
   nodes relative to an item.
 - A render node inserts a component that receives inherited `disabled` and
   `readOnly` state.
+- A fragment placement inserts one schema-owned UI template at a compatible
+  object path or at the current scope.
 
 Sections and arrays can nest recursively. Paths use RHF dot notation, including
 numeric array segments such as `speakers.0.name`. `FieldPath`, `PathValue`, and
@@ -105,6 +110,15 @@ items; primitive arrays can use an application-owned control.
 
 The type system aligns field paths with control values, control options,
 control context, slot options, array item defaults, and grid values.
+
+`defineFragment` retains the exact supplied Standard Schema as
+`fragment.schema`. `fragment.fields({ at })` creates an opaque authoring
+placement; omitting `at` selects the current form or array-item scope. The
+selected object may contain additional properties but must structurally satisfy
+the fragment schema input. Normalization expands nested placements, prefixes
+paths, namespaces explicit IDs by `at` when present, and leaves only field,
+section, array, and render nodes in the normalized definition. A fragment has
+no independent validation pass, state, or lifecycle.
 
 ## Resolution
 
@@ -115,10 +129,15 @@ maintain a resolver dependency graph; every dynamic resolver still runs after
 each value change. Plain object and array results are compared shallowly; treat
 resolved configuration as immutable and replace nested values when they change.
 
-A resolver receives:
+A resolver on an ordinary form node receives:
 
 1. the complete deeply readonly schema input;
 2. the deeply readonly runtime context.
+
+A resolver authored inside a fragment instead receives the deeply readonly
+value at that fragment placement and the fragment's minimum context. This local
+value remains the fragment root inside its nested arrays. Host-wide conditions
+belong on ordinary nodes around the placement.
 
 Resolvers must return synchronously. Promise-like results cause an explicit
 error. Readonly is a TypeScript contract; the runtime does not deep-clone or

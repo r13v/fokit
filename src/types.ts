@@ -482,6 +482,7 @@ type SectionNodeInScope<
 	SectionOptions,
 	ArrayOptions,
 	Grid extends number,
+	AllowFragments extends boolean = false,
 > = {
 	/** Identifies this node as a section. */
 	readonly kind: "section"
@@ -506,16 +507,27 @@ type SectionNodeInScope<
 	/** Sets the section span in its parent grid. */
 	readonly span?: Resolvable<Grid | "full", Root, Context>
 	/** Nodes rendered inside the section. */
-	readonly children: readonly UiNodeInScope<
-		Root,
-		Scope,
-		Controls,
-		Context,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Grid
-	>[]
+	readonly children: readonly (AllowFragments extends true
+		? UiSourceNodeInScope<
+				Root,
+				Scope,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid
+			>
+		: UiNodeInScope<
+				Root,
+				Scope,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid
+			>)[]
 }
 
 /** A typed section node at the form root. */
@@ -559,6 +571,7 @@ type ArrayNodeInScope<
 	SectionOptions,
 	ArrayOptions,
 	Grid extends number,
+	AllowFragments extends boolean = false,
 > = {
 	[Path in ArrayFieldPath<Scope>]: {
 		/** Identifies this node as an array. */
@@ -588,16 +601,27 @@ type ArrayNodeInScope<
 			| ArrayItem<Scope, Path>
 			| (() => ArrayItem<Scope, Path>)
 		/** Nodes rendered for each array item. */
-		readonly children: readonly UiNodeInScope<
-			Root,
-			ArrayItem<Scope, Path>,
-			Controls,
-			Context,
-			FieldOptions,
-			SectionOptions,
-			ArrayOptions,
-			Grid
-		>[]
+		readonly children: readonly (AllowFragments extends true
+			? UiSourceNodeInScope<
+					Root,
+					ArrayItem<Scope, Path>,
+					Controls,
+					Context,
+					FieldOptions,
+					SectionOptions,
+					ArrayOptions,
+					Grid
+				>
+			: UiNodeInScope<
+					Root,
+					ArrayItem<Scope, Path>,
+					Controls,
+					Context,
+					FieldOptions,
+					SectionOptions,
+					ArrayOptions,
+					Grid
+				>)[]
 	}
 }[ArrayFieldPath<Scope>]
 
@@ -637,6 +661,85 @@ export type RenderNode<Input, Context = unknown> = {
 	readonly readOnly?: Resolvable<boolean, Input, Context>
 }
 
+/** A private key that carries fragment placement type information. */
+declare const fragmentPlacementTypes: unique symbol
+/** An opaque fragment placement accepted only in a compatible path scope. */
+type FormFragmentPlacement<
+	Input,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid extends number,
+	At extends string | undefined,
+> = {
+	/** Keeps ordinary node discriminants contextually typed and diagnostic. */
+	readonly kind?: never
+	readonly [fragmentPlacementTypes]: {
+		/** The relative object path selected by this placement. */
+		readonly at: At
+		/** Makes a fragment input contravariant for structural host compatibility. */
+		readonly acceptsInput: (input: Input) => void
+		/** Makes a required context contravariant so hosts may provide more data. */
+		readonly acceptsContext: (context: Context) => void
+		/** Retains the owning form-kit control contract. */
+		readonly controls: Controls
+		/** Retains the owning form-kit field-slot contract. */
+		readonly fieldOptions: FieldOptions
+		/** Retains the owning form-kit section-slot contract. */
+		readonly sectionOptions: SectionOptions
+		/** Retains the owning form-kit array-slot contract. */
+		readonly arrayOptions: ArrayOptions
+		/** Retains the owning form-kit grid contract. */
+		readonly grid: Grid
+	}
+}
+
+/** Paths whose values are non-array objects that can host a fragment. */
+type FragmentObjectPath<Scope> = {
+	[Path in FieldPath<Scope>]: IsAny<PathValue<Scope, Path>> extends true
+		? never
+		: PathValue<Scope, Path> extends readonly unknown[]
+			? never
+			: PathValue<Scope, Path> extends FieldValues
+				? Path
+				: never
+}[FieldPath<Scope>]
+
+/** Fragment placements compatible with the current form or array-item scope. */
+type FragmentPlacementInScope<
+	Scope,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid extends number,
+> =
+	| FormFragmentPlacement<
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid,
+			undefined
+	  >
+	| {
+			[Path in FragmentObjectPath<Scope>]: FormFragmentPlacement<
+				PathValue<Scope, Path>,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid,
+				Path
+			>
+	  }[FragmentObjectPath<Scope>]
+
 /** A valid UI node in a form or nested array scope. */
 type UiNodeInScope<
 	Root,
@@ -671,6 +774,51 @@ type UiNodeInScope<
 			Grid
 	  >
 
+/** An ordinary UI node or opaque fragment placement accepted while authoring. */
+type UiSourceNodeInScope<
+	Root,
+	Scope,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid extends number,
+> =
+	| FragmentPlacementInScope<
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid
+	  >
+	| ArrayNodeInScope<
+			Root,
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid,
+			true
+	  >
+	| FieldNodeInScope<Root, Scope, Controls, Context, FieldOptions, Grid>
+	| RenderNode<Root, Context>
+	| SectionNodeInScope<
+			Root,
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid,
+			true
+	  >
+
 /** Any typed node that a form definition can contain at its root. */
 export type UiNode<
 	Input,
@@ -691,7 +839,7 @@ export type UiNode<
 	Grid
 >
 
-/** User-authored UI content accepted by `defineForm`. */
+/** User-authored UI content accepted by `defineForm` and `defineFragment`. */
 export type FormDefinitionSource<
 	Schema extends StandardSchema,
 	Controls extends ControlDefinitionRegistry,
@@ -702,7 +850,8 @@ export type FormDefinitionSource<
 	Grid extends number,
 > = {
 	/** The ordered nodes rendered by `Fields` and `AutoForm`. */
-	readonly ui: readonly UiNode<
+	readonly ui: readonly UiSourceNodeInScope<
+		FormInput<Schema>,
 		FormInput<Schema>,
 		Controls,
 		Context,
@@ -711,6 +860,46 @@ export type FormDefinitionSource<
 		ArrayOptions,
 		Grid
 	>[]
+}
+
+/** A reusable schema-owned UI tree created by one exact form kit. */
+export type FormFragment<
+	Schema extends StandardSchema = StandardSchema,
+	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
+	Context = unknown,
+	FieldOptions = unknown,
+	SectionOptions = unknown,
+	ArrayOptions = unknown,
+	Grid extends number = number,
+> = {
+	/** The original concrete schema used to type and compose this fragment. */
+	readonly schema: Schema
+	/** Creates an opaque placement in the current scope or at one object path. */
+	readonly fields: {
+		(): FormFragmentPlacement<
+			FormInput<Schema>,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid,
+			undefined
+		>
+		<const At extends string>(options: {
+			/** The object path relative to the current form or array-item scope. */
+			readonly at: At
+		}): FormFragmentPlacement<
+			FormInput<Schema>,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid,
+			At
+		>
+	}
 }
 
 /** A validated UI node with stable ownership and scope metadata. */

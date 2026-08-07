@@ -34,6 +34,7 @@ export type {
 	FieldPath,
 	FieldSlotProps,
 	FormDefinition,
+	FormFragment,
 	FormInput,
 	FormIssue,
 	FormKitSlots,

@@ -1,6 +1,6 @@
 ---
 title: Definitions
-description: Describe fields, sections, arrays, and synchronous derived UI in one typed tree.
+description: Describe fields, sections, arrays, reusable fragments, and synchronous derived UI in one typed tree.
 showAskAi: false
 ---
 
@@ -187,6 +187,33 @@ all parent columns.
 Import `form-please/layout.css` to use the optional responsive grid. Custom
 slots can implement the same layout contract. See [Styling](/styling).
 
+## Reusable fragments
+
+`kit.defineFragment(schema, { ui })` defines one schema-owned UI subtree and
+keeps the concrete schema available as `fragment.schema`. Compose that schema
+into a form schema, then place the fragment at each compatible object path:
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:form-fragment]
+```
+
+`fragment.fields({ at })` creates one opaque authoring placement. `defineForm`
+expands it into ordinary fields, sections, arrays, and render nodes. The
+fragment does not add runtime state, a validation pass, or a lifecycle. It must
+come from the same runtime kit as the host definition.
+
+The `at` path is relative to the current form or array-item scope. Its value
+must structurally satisfy the fragment schema input; additional object
+properties are allowed, while optional or incompatible objects are rejected.
+Call `fragment.fields()` without `at` when the current scope itself satisfies
+the fragment input, such as an array whose items are addresses.
+
+Use `kit.forContext<FragmentContext>()` before `defineFragment` to declare the
+minimum context required by the fragment. A host context may provide additional
+properties. Resolvers inside the fragment receive the local deeply readonly
+fragment input and its required context. Put conditions that need the complete
+host input on a section or another ordinary node around the placement.
+
 ## Arrays
 
 An array node connects an array path to the definition for one item. Paths in
@@ -278,9 +305,11 @@ const accountDefinition = accountKit.defineForm(accountSchema, {
 })
 ```
 
-The first argument is the complete, deeply readonly schema input. This rule
-also applies to resolvers inside array items. The second argument contains the
-deeply readonly runtime `context` from `kit.useForm`.
+For ordinary definition nodes, the first argument is the complete, deeply
+readonly schema input. This rule also applies inside array items. Resolvers
+authored by a reusable fragment receive that fragment's local input instead.
+The second argument contains the deeply readonly runtime `context` from
+`kit.useForm`.
 
 Resolvers must return immediately. A resolver that returns a promise causes a
 runtime error. Keep requests and cache state in the application. Pass their

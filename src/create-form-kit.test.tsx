@@ -217,6 +217,251 @@ describe("form kit", () => {
 		).toThrow("invalid React Hook Form syntax")
 	})
 
+	it("expands reusable fragments with local resolvers in every object scope", () => {
+		type AddressContext = { readonly prefix: string }
+		const addressKit = kit.forContext<AddressContext>()
+		const cityFragment = addressKit.defineFragment(
+			z.object({ city: z.string() }),
+			{
+				ui: [
+					{
+						kind: "field",
+						path: "city",
+						control: "text",
+						label: (location) => `City ${location.city}`,
+					},
+				],
+			},
+		)
+		const phoneFragment = addressKit.defineFragment(
+			z.object({ number: z.string() }),
+			{
+				ui: [
+					{
+						kind: "field",
+						path: "number",
+						control: "text",
+						label: (phone) => `Phone ${phone.number}`,
+					},
+				],
+			},
+		)
+		const addressSchema = cityFragment.schema.extend({
+			phoneGroups: z.array(
+				z.object({
+					phones: z.array(
+						phoneFragment.schema.extend({ extension: z.string() }),
+					),
+					type: z.string(),
+				}),
+			),
+			street: z.string(),
+		})
+		const addressFragment = addressKit.defineFragment(addressSchema, {
+			ui: [
+				{
+					kind: "section",
+					id: "details",
+					children: [
+						{
+							kind: "field",
+							path: "street",
+							control: "text",
+							label: (address, { context }) =>
+								`${context.prefix} ${address.street}`,
+						},
+						cityFragment.fields(),
+						{
+							kind: "array",
+							path: "phoneGroups",
+							itemDefault: { phones: [], type: "" },
+							children: [
+								{
+									kind: "field",
+									path: "type",
+									control: "text",
+									label: (address) => `Group ${address.city}`,
+								},
+								{
+									kind: "array",
+									path: "phones",
+									itemDefault: { extension: "", number: "" },
+									children: [
+										phoneFragment.fields(),
+										{
+											kind: "field",
+											path: "extension",
+											control: "text",
+											label: (address) => `Extension ${address.city}`,
+										},
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		})
+		const hostKit = kit.forContext<
+			AddressContext & { readonly canEdit: boolean }
+		>()
+		const hostSchema = z.object({
+			addresses: z.array(addressFragment.schema),
+			billing: addressFragment.schema,
+			recipients: z.array(
+				z.object({ address: addressFragment.schema, name: z.string() }),
+			),
+			shipping: addressFragment.schema.extend({ id: z.string() }),
+		})
+		const hostDefinition = hostKit.defineForm(hostSchema, {
+			ui: [
+				addressFragment.fields({ at: "shipping" }),
+				addressFragment.fields({ at: "billing" }),
+				{
+					kind: "array",
+					path: "recipients",
+					itemDefault: {
+						address: { city: "", phoneGroups: [], street: "" },
+						name: "",
+					},
+					children: [addressFragment.fields({ at: "address" })],
+				},
+				{
+					kind: "array",
+					path: "addresses",
+					itemDefault: { city: "", phoneGroups: [], street: "" },
+					children: [addressFragment.fields()],
+				},
+			],
+		})
+
+		expect(hostDefinition.ui.map((node) => node.id)).toEqual([
+			"shipping:details",
+			"billing:details",
+			"array:recipients",
+			"array:addresses",
+		])
+		expect(
+			hostDefinition.nodes.every((node) =>
+				["array", "field", "render", "section"].includes(node.kind),
+			),
+		).toBe(true)
+
+		const makeAddress = (street: string, city: string) => ({
+			city,
+			phoneGroups: [
+				{
+					phones: [{ extension: "42", number: `${street}-123` }],
+					type: "mobile",
+				},
+			],
+			street,
+		})
+
+		function View() {
+			const form = hostKit.useForm(hostDefinition, {
+				context: { canEdit: true, prefix: "Address" },
+				defaultValues: {
+					addresses: [makeAddress("Direct", "Direct City")],
+					billing: makeAddress("Billing", "Billing City"),
+					recipients: [
+						{
+							address: makeAddress("Recipient", "Recipient City"),
+							name: "Ada",
+						},
+					],
+					shipping: {
+						...makeAddress("Shipping", "Shipping City"),
+						id: "shipping-id",
+					},
+				},
+			})
+			return <hostKit.AutoForm form={form} />
+		}
+
+		render(<View />)
+		expect(screen.getByLabelText("Address Shipping").getAttribute("name")).toBe(
+			"shipping.street",
+		)
+		expect(screen.getByLabelText("Address Billing").getAttribute("name")).toBe(
+			"billing.street",
+		)
+		expect(
+			screen.getByLabelText("Address Recipient").getAttribute("name"),
+		).toBe("recipients.0.address.street")
+		expect(
+			screen.getByLabelText("City Recipient City").getAttribute("name"),
+		).toBe("recipients.0.address.city")
+		expect(screen.getByLabelText("Address Direct").getAttribute("name")).toBe(
+			"addresses.0.street",
+		)
+		expect(
+			screen.getByLabelText("Phone Recipient-123").getAttribute("name"),
+		).toBe("recipients.0.address.phoneGroups.0.phones.0.number")
+		expect(
+			screen.getByLabelText("Extension Recipient City").getAttribute("name"),
+		).toBe("recipients.0.address.phoneGroups.0.phones.0.extension")
+	})
+
+	it("rejects fragment placements owned by another form kit", () => {
+		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
+		const foreignFragment = otherKit.defineFragment(
+			z.object({ street: z.string() }),
+			{ ui: [{ kind: "field", path: "street", control: "text" }] },
+		)
+		const hostSchema = z.object({ address: foreignFragment.schema })
+
+		expect(() =>
+			kit.defineFragment(hostSchema, {
+				ui: [foreignFragment.fields({ at: "address" })],
+			}),
+		).toThrow("Fragment placement must come from this exact form kit")
+
+		expect(() =>
+			kit.defineForm(hostSchema, {
+				ui: [foreignFragment.fields({ at: "address" })],
+			}),
+		).toThrow("Fragment placement must come from this exact form kit")
+	})
+
+	it("snapshots fragment sources and validates placement paths", () => {
+		const schema = z.object({ street: z.string() })
+		const ui = [
+			{
+				kind: "field" as const,
+				path: "street" as const,
+				control: "text" as const,
+				label: "Original street",
+			},
+		]
+		const fragment = kit.defineFragment(schema, { ui })
+		expect(() =>
+			kit.defineFragment(schema, {
+				ui: [
+					{
+						kind: "field",
+						path: "street",
+						control: "missing" as never,
+					},
+				],
+			}),
+		).toThrow('Unknown control "missing"')
+
+		ui[0].label = "Mutated street"
+		const placement = fragment.fields({ at: "address" })
+		const placed = kit.defineForm(z.object({ address: fragment.schema }), {
+			ui: [placement],
+		})
+
+		expect(fragment.schema).toBe(schema)
+		expect(Object.isFrozen(fragment)).toBe(true)
+		expect(Object.isFrozen(placement)).toBe(true)
+		expect(placed.ui[0]?.label).toBe("Original street")
+		expect(() => fragment.fields({ at: "address[0]" as never })).toThrow(
+			"invalid React Hook Form syntax",
+		)
+	})
+
 	it("provides raw RHF context and submits parsed output", async () => {
 		const onSubmit = vi.fn()
 

@@ -5,11 +5,13 @@ import {
 	defineControl,
 	type FieldPath,
 	type FormBinding,
+	type FormFragment,
 	type FormKitSlots,
 	type FormMiddleware,
 	type FormSubmitDetails,
 	type FormUpdateRecipe,
 	type PathValue,
+	type UiNode,
 	useSnapshot,
 	type ValueTransaction,
 } from "../../src/index.js"
@@ -88,6 +90,149 @@ const baseKit = createFormKit({
 	slots,
 })
 const kit = baseKit.forContext<Context>()
+
+type AddressInput = {
+	readonly city: string
+	readonly street: string
+}
+type AddressContext = {
+	readonly locale: string
+}
+const addressSchema: StandardSchemaV1<AddressInput> & {
+	readonly marker: "address"
+} = {
+	marker: "address",
+	"~standard": {
+		version: 1 as const,
+		vendor: "type-test",
+		validate(value: unknown) {
+			return { value: value as AddressInput }
+		},
+	},
+}
+const addressKit = baseKit.forContext<AddressContext>()
+const addressFragment = addressKit.defineFragment(addressSchema, {
+	ui: [
+		{
+			kind: "section",
+			id: "address",
+			columns: 2,
+			slotOptions: { bordered: true },
+			children: [
+				{
+					kind: "field",
+					path: "street",
+					control: "text",
+					slotOptions: { tone: "quiet" },
+					label: (address, { context }) =>
+						`${context.locale}: ${address.street}`,
+				},
+				{
+					kind: "field",
+					path: "city",
+					control: "select",
+					options: { choices: ["Paris"] },
+				},
+			],
+		},
+	],
+})
+addressFragment.schema.marker satisfies "address"
+addressFragment satisfies FormFragment<
+	typeof addressSchema,
+	typeof baseKit.controls,
+	AddressContext,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions
+>
+
+type FragmentHostInput = {
+	readonly addresses: readonly AddressInput[]
+	readonly incompatibleAddress: {
+		readonly city: string
+		readonly street: number
+	}
+	readonly optionalAddress?: AddressInput
+	readonly recipients: readonly {
+		readonly address: AddressInput
+		readonly name: string
+	}[]
+	readonly shippingAddress: AddressInput & { readonly id: string }
+}
+
+function assertOrdinaryNodeKinds(
+	node: UiNode<FragmentHostInput, typeof baseKit.controls, Context>,
+) {
+	node.kind satisfies "array" | "field" | "render" | "section"
+	if (node.kind === "array" || node.kind === "section") {
+		node.children[0]?.kind satisfies "array" | "field" | "render" | "section"
+	}
+}
+void assertOrdinaryNodeKinds
+
+const fragmentHostSchema: StandardSchemaV1<FragmentHostInput> = {
+	"~standard": {
+		version: 1,
+		vendor: "type-test",
+		validate(value) {
+			return { value: value as FragmentHostInput }
+		},
+	},
+}
+
+kit.defineForm(fragmentHostSchema, {
+	ui: [
+		addressFragment.fields({ at: "shippingAddress" }),
+		{
+			kind: "array",
+			path: "addresses",
+			itemDefault: { city: "", street: "" },
+			children: [addressFragment.fields()],
+		},
+		{
+			kind: "array",
+			path: "recipients",
+			itemDefault: { address: { city: "", street: "" }, name: "" },
+			children: [
+				{ kind: "field", path: "name", control: "text" },
+				addressFragment.fields({ at: "address" }),
+			],
+		},
+	],
+})
+
+kit.defineForm(fragmentHostSchema, {
+	ui: [
+		// @ts-expect-error A fragment path must exist in the current scope.
+		addressFragment.fields({ at: "missingAddress" }),
+	],
+})
+
+kit.defineForm(fragmentHostSchema, {
+	ui: [
+		// @ts-expect-error Optional objects cannot satisfy a required fragment input.
+		addressFragment.fields({ at: "optionalAddress" }),
+	],
+})
+
+kit.defineForm(fragmentHostSchema, {
+	ui: [
+		// @ts-expect-error Every fragment field must be structurally compatible.
+		addressFragment.fields({ at: "incompatibleAddress" }),
+	],
+})
+
+const privilegedFragment = baseKit
+	.forContext<Context & { readonly tenant: string }>()
+	.defineFragment(addressSchema, { ui: [] })
+
+kit.defineForm(fragmentHostSchema, {
+	ui: [
+		// @ts-expect-error The host context must satisfy the fragment context.
+		privilegedFragment.fields({ at: "shippingAddress" }),
+	],
+})
 
 const definition = kit.defineForm(schema, {
 	ui: [
@@ -273,3 +418,5 @@ type _BracketValue = PathValue<Input, "speakers[0].name">
 const primitiveSchema = {} as StandardSchemaV1<string>
 // @ts-expect-error RHF form roots must be objects.
 kit.defineForm(primitiveSchema, { ui: [] })
+// @ts-expect-error Fragment schema inputs must also be objects.
+kit.defineFragment(primitiveSchema, { ui: [] })

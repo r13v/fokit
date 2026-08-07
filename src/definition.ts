@@ -19,6 +19,57 @@ type RuntimeNode = NormalizedNode & {
 	/** Normalized child templates for sections and arrays. */
 	readonly children?: readonly RuntimeNode[]
 }
+/** Private symbol that stores a fragment's immutable authoring template. */
+const fragmentSource = Symbol("form-please.fragment-source")
+/** Private symbol that identifies an opaque fragment placement. */
+const fragmentPlacement = Symbol("form-please.fragment-placement")
+/** Tests whether one fragment belongs to the form kit doing normalization. */
+type OwnsFragment = (fragment: object) => boolean
+/** Private source data retained by a reusable fragment. */
+type RuntimeFragment = {
+	/** The exact Standard Schema exposed by the fragment. */
+	readonly schema: StandardSchema
+	/** Creates one opaque source placement for this fragment. */
+	readonly fields: (options?: unknown) => object
+	/** The immutable application-authored UI template. */
+	readonly [fragmentSource]: readonly unknown[]
+}
+/** Runtime data stored inside one opaque fragment placement. */
+type RuntimeFragmentPlacement = {
+	/** The fragment whose source nodes must be expanded. */
+	readonly fragment: RuntimeFragment
+	/** The relative object path, or the current scope when absent. */
+	readonly at?: string
+}
+/** Locates the local value passed to resolvers authored by one fragment. */
+type ResolverScope = {
+	/** The path appended after leaving fragment-local array scopes. */
+	readonly appendPath: string
+	/** The number of path segments contributed by local arrays and indexes. */
+	readonly trimSegments: number
+}
+/** Additional normalization state for fragment expansion. */
+type NormalizeOptions = {
+	/** Prefix added to field and array paths before the next array boundary. */
+	readonly pathPrefix: string
+	/** Namespace added to explicit IDs from placed fragments. */
+	readonly idPrefix: string
+	/** Local resolver scope inherited by ordinary fragment nodes. */
+	readonly resolverScope?: ResolverScope
+}
+/** Shared state for one form or fragment normalization pass. */
+type NormalizeState = {
+	/** Controls available to field nodes. */
+	readonly controls: ControlDefinitionRegistry
+	/** Scoped IDs already claimed by normalized nodes. */
+	readonly ids: Set<string>
+	/** Tests exact runtime form-kit ownership for nested fragments. */
+	readonly ownsFragment: OwnsFragment
+	/** Flat destination for normalized nodes. */
+	readonly nodes: RuntimeNode[]
+}
+/** Fragment-local resolver scopes without observable normalized-node metadata. */
+const resolverScopes = new WeakMap<RuntimeNode, ResolverScope>()
 /** Properties shared by every normalized UI node after resolution. */
 type ResolvedNodeBase<Kind extends NodeKind> = {
 	/** Preserves non-renderer properties from the normalized definition. */
@@ -148,14 +199,62 @@ export function normalizeGrid(
 	return Object.freeze([...unique].sort((left, right) => left - right))
 }
 
+/** Validates and freezes one reusable schema-owned UI fragment. */
+export function createFormFragment(
+	schema: StandardSchema,
+	source: unknown,
+	controls: ControlDefinitionRegistry,
+	ownsFragment: OwnsFragment,
+): object {
+	assertStandardSchema(schema, "Fragment")
+	if (!isRecord(source) || !Array.isArray(source.ui)) {
+		throw new TypeError("Fragment definition must contain a ui array")
+	}
+
+	const ui = snapshotSourceNodes(source.ui)
+	normalizeNodes(
+		ui,
+		{
+			controls,
+			ids: new Set<string>(),
+			nodes: [],
+			ownsFragment,
+		},
+		"",
+		undefined,
+		{
+			idPrefix: "",
+			pathPrefix: "",
+			resolverScope: { appendPath: "", trimSegments: 0 },
+		},
+	)
+
+	let fragment: RuntimeFragment
+	const fields = (options?: unknown): object => {
+		const at = normalizeFragmentPlacementOptions(options)
+		const placement = Object.freeze({
+			fragment,
+			...(at === undefined ? {} : { at }),
+		})
+		return Object.freeze({ [fragmentPlacement]: placement })
+	}
+	fragment = Object.freeze({
+		fields,
+		schema,
+		[fragmentSource]: ui,
+	})
+	return fragment
+}
+
 /** Validates and freezes a user-authored form definition. */
 export function normalizeDefinition<Schema extends StandardSchema>(
 	schema: Schema,
 	source: unknown,
 	controls: ControlDefinitionRegistry,
 	grid: readonly number[],
+	ownsFragment: OwnsFragment = () => false,
 ): FormDefinition<Schema> {
-	assertStandardSchema(schema)
+	assertStandardSchema(schema, "Form")
 	if (!isRecord(source) || !Array.isArray(source.ui)) {
 		throw new TypeError("Form definition must contain a ui array")
 	}
@@ -163,9 +262,13 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 	const state = {
 		controls,
 		ids: new Set<string>(),
+		ownsFragment,
 		nodes: [] as RuntimeNode[],
 	}
-	const ui = normalizeNodes(source.ui, state, "", undefined)
+	const ui = normalizeNodes(source.ui, state, "", undefined, {
+		idPrefix: "",
+		pathPrefix: "",
+	})
 
 	return Object.freeze({
 		schema,
@@ -178,84 +281,180 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 /** Validates and normalizes one nested list of UI nodes. */
 function normalizeNodes(
 	source: readonly unknown[],
-	state: {
-		/** Controls available to field nodes. */
-		readonly controls: ControlDefinitionRegistry
-		/** Scoped IDs already claimed by normalized nodes. */
-		readonly ids: Set<string>
-		/** Flat destination for normalized nodes. */
-		readonly nodes: RuntimeNode[]
-	},
+	state: NormalizeState,
 	scopePath: string,
 	parentId: string | undefined,
+	options: NormalizeOptions,
 ): readonly RuntimeNode[] {
+	const normalized: RuntimeNode[] = []
+	for (const candidate of source) {
+		if (!isRecord(candidate)) {
+			throw new TypeError("UI nodes must be objects")
+		}
+
+		const placement = readFragmentPlacement(candidate)
+		if (placement !== undefined) {
+			if (!state.ownsFragment(placement.fragment)) {
+				throw new TypeError(
+					"Fragment placement must come from this exact form kit",
+				)
+			}
+			const at = placement.at ?? ""
+			const pathPrefix = joinPath(options.pathPrefix, at)
+			const idPrefix =
+				placement.at === undefined
+					? options.idPrefix
+					: joinId(options.idPrefix, placement.at)
+			normalized.push(
+				...normalizeNodes(
+					placement.fragment[fragmentSource],
+					state,
+					scopePath,
+					parentId,
+					{
+						idPrefix,
+						pathPrefix,
+						resolverScope: { appendPath: pathPrefix, trimSegments: 0 },
+					},
+				),
+			)
+			continue
+		}
+
+		const kind = candidate.kind
+		if (
+			kind !== "array" &&
+			kind !== "field" &&
+			kind !== "render" &&
+			kind !== "section"
+		) {
+			throw new TypeError(`Unknown UI node kind "${String(kind)}"`)
+		}
+
+		const path =
+			kind === "field" || kind === "array"
+				? joinPath(options.pathPrefix, normalizePath(candidate.path))
+				: undefined
+		if (kind === "field") {
+			if (
+				typeof candidate.control !== "string" ||
+				!Object.hasOwn(state.controls, candidate.control)
+			) {
+				throw new TypeError(`Unknown control "${String(candidate.control)}"`)
+			}
+		}
+		if (kind === "array" && !("itemDefault" in candidate)) {
+			throw new TypeError(`Array "${path}" requires itemDefault`)
+		}
+
+		const fallbackId =
+			path === undefined ? `${kind}:${state.nodes.length}` : `${kind}:${path}`
+		const localId = normalizeId(candidate.id ?? fallbackId)
+		const id =
+			candidate.id === undefined ? localId : joinId(options.idPrefix, localId)
+		const scopedId = scopePath.length === 0 ? id : `${scopePath}:${id}`
+		if (state.ids.has(scopedId)) {
+			throw new TypeError(`Duplicate UI node id "${id}"`)
+		}
+		state.ids.add(scopedId)
+
+		const rawChildren = candidate.children
+		if (
+			(kind === "array" || kind === "section") &&
+			!Array.isArray(rawChildren)
+		) {
+			throw new TypeError(`${kind} node "${id}" requires children`)
+		}
+		const childScope =
+			kind === "array" && path !== undefined
+				? joinPath(scopePath, path)
+				: scopePath
+		const childOptions =
+			kind === "array" && path !== undefined
+				? {
+						idPrefix: options.idPrefix,
+						pathPrefix: "",
+						...(options.resolverScope === undefined
+							? {}
+							: {
+									resolverScope: {
+										appendPath: options.resolverScope.appendPath,
+										trimSegments:
+											options.resolverScope.trimSegments +
+											path.split(".").length +
+											1,
+									},
+								}),
+					}
+				: options
+		const children = Array.isArray(rawChildren)
+			? normalizeNodes(rawChildren, state, childScope, id, childOptions)
+			: undefined
+		const node = Object.freeze({
+			...candidate,
+			id,
+			kind,
+			...(path === undefined ? {} : { path }),
+			...(parentId === undefined ? {} : { parentId }),
+			scopePath,
+			...(children === undefined ? {} : { children }),
+		}) as RuntimeNode
+		if (options.resolverScope !== undefined) {
+			resolverScopes.set(node, options.resolverScope)
+		}
+		state.nodes.push(node)
+		normalized.push(node)
+	}
+	return Object.freeze(normalized)
+}
+
+/** Retains one immutable shallow snapshot of fragment-authored source nodes. */
+function snapshotSourceNodes(source: readonly unknown[]): readonly unknown[] {
 	return Object.freeze(
 		source.map((candidate) => {
-			if (!isRecord(candidate)) {
-				throw new TypeError("UI nodes must be objects")
-			}
-			const kind = candidate.kind
 			if (
-				kind !== "array" &&
-				kind !== "field" &&
-				kind !== "render" &&
-				kind !== "section"
+				!isRecord(candidate) ||
+				readFragmentPlacement(candidate) !== undefined
 			) {
-				throw new TypeError(`Unknown UI node kind "${String(kind)}"`)
+				return candidate
 			}
-
-			const path =
-				kind === "field" || kind === "array"
-					? normalizePath(candidate.path)
-					: undefined
-			if (kind === "field") {
-				if (
-					typeof candidate.control !== "string" ||
-					!Object.hasOwn(state.controls, candidate.control)
-				) {
-					throw new TypeError(`Unknown control "${String(candidate.control)}"`)
-				}
-			}
-			if (kind === "array" && !("itemDefault" in candidate)) {
-				throw new TypeError(`Array "${path}" requires itemDefault`)
-			}
-
-			const fallbackId =
-				path === undefined ? `${kind}:${state.nodes.length}` : `${kind}:${path}`
-			const id = normalizeId(candidate.id ?? fallbackId)
-			const scopedId = scopePath.length === 0 ? id : `${scopePath}:${id}`
-			if (state.ids.has(scopedId)) {
-				throw new TypeError(`Duplicate UI node id "${id}"`)
-			}
-			state.ids.add(scopedId)
-
-			const rawChildren = candidate.children
-			if (
-				(kind === "array" || kind === "section") &&
-				!Array.isArray(rawChildren)
-			) {
-				throw new TypeError(`${kind} node "${id}" requires children`)
-			}
-			const childScope =
-				kind === "array" && path !== undefined
-					? joinPath(scopePath, path)
-					: scopePath
-			const children = Array.isArray(rawChildren)
-				? normalizeNodes(rawChildren, state, childScope, id)
-				: undefined
-			const node = Object.freeze({
+			return Object.freeze({
 				...candidate,
-				id,
-				kind,
-				...(path === undefined ? {} : { path }),
-				...(parentId === undefined ? {} : { parentId }),
-				scopePath,
-				...(children === undefined ? {} : { children }),
-			}) as RuntimeNode
-			state.nodes.push(node)
-			return node
+				...(Array.isArray(candidate.children)
+					? { children: snapshotSourceNodes(candidate.children) }
+					: {}),
+			})
 		}),
 	)
+}
+
+/** Reads private runtime data from an opaque fragment placement. */
+function readFragmentPlacement(
+	candidate: Record<string, unknown>,
+): RuntimeFragmentPlacement | undefined {
+	const placement = (candidate as Record<PropertyKey, unknown>)[
+		fragmentPlacement
+	]
+	if (placement === undefined) {
+		return undefined
+	}
+	if (!isRecord(placement) || !isRecord(placement.fragment)) {
+		throw new TypeError("Fragment placement is invalid")
+	}
+	return placement as RuntimeFragmentPlacement
+}
+
+/** Validates the optional object path supplied to `fragment.fields`. */
+function normalizeFragmentPlacementOptions(
+	options: unknown,
+): string | undefined {
+	if (options === undefined) {
+		return undefined
+	}
+	if (!isRecord(options) || !("at" in options)) {
+		throw new TypeError("Fragment placement options must contain an at path")
+	}
+	return normalizePath(options.at)
 }
 
 /** Resolves all dynamic definition values for the current input and context. */
@@ -290,6 +489,7 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 	): readonly ResolvedNode[] => {
 		const nextNodes = nodes.map((node, index) => {
 			const { children: _templateChildren, ...nodeShell } = node
+			const resolverValues = getResolverValues(node, values, pathPrefix)
 			const id = idPrefix.length === 0 ? node.id : `${idPrefix}.${node.id}`
 			const previousCandidate = previousNodes?.[index]
 			const previousNode =
@@ -298,13 +498,13 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 					: undefined
 			const visible =
 				parent.visible &&
-				resolveValue(node.visible, true, values, pathPrefix, context)
+				resolveValue(node.visible, true, resolverValues, pathPrefix, context)
 			const disabled =
 				parent.disabled ||
-				resolveValue(node.disabled, false, values, pathPrefix, context)
+				resolveValue(node.disabled, false, resolverValues, pathPrefix, context)
 			const readOnly =
 				parent.readOnly ||
-				resolveValue(node.readOnly, false, values, pathPrefix, context)
+				resolveValue(node.readOnly, false, resolverValues, pathPrefix, context)
 			const common = {
 				...nodeShell,
 				id,
@@ -312,9 +512,14 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 				disabled,
 				readOnly,
 				context,
-				className: resolveOptional(node.className, values, pathPrefix, context),
+				className: resolveOptional(
+					node.className,
+					resolverValues,
+					pathPrefix,
+					context,
+				),
 				span: validateSpan(
-					resolveOptional(node.span, values, pathPrefix, context),
+					resolveOptional(node.span, resolverValues, pathPrefix, context),
 					definition.grid,
 					parent.columns,
 				),
@@ -331,30 +536,35 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 						control: String(node.control),
 						label: resolveOptional<ReactUiContent | undefined>(
 							node.label,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
 						description: resolveOptional<ReactUiContent | undefined>(
 							node.description,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
 						slotOptions: resolveOptional(
 							node.slotOptions,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
 						required: resolveValue(
 							node.required,
 							false,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
-						options: resolveOptional(node.options, values, pathPrefix, context),
+						options: resolveOptional(
+							node.options,
+							resolverValues,
+							pathPrefix,
+							context,
+						),
 					})
 					break
 				}
@@ -362,7 +572,7 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 					const previousSection =
 						previousNode?.kind === "section" ? previousNode : undefined
 					const columns = validateColumns(
-						resolveValue(node.columns, 1, values, pathPrefix, context),
+						resolveValue(node.columns, 1, resolverValues, pathPrefix, context),
 						definition.grid,
 					)
 					const children = resolveNodes(
@@ -378,19 +588,19 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 						columns,
 						title: resolveOptional<ReactUiContent | undefined>(
 							node.title,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
 						description: resolveOptional<ReactUiContent | undefined>(
 							node.description,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
 						slotOptions: resolveOptional(
 							node.slotOptions,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
@@ -424,19 +634,19 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 						itemDefault: node.itemDefault,
 						label: resolveOptional<ReactUiContent | undefined>(
 							node.label,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
 						description: resolveOptional<ReactUiContent | undefined>(
 							node.description,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
 						slotOptions: resolveOptional(
 							node.slotOptions,
-							values,
+							resolverValues,
 							pathPrefix,
 							context,
 						),
@@ -536,6 +746,27 @@ function hasEqualResolvedValue(previous: unknown, next: unknown): boolean {
 	)
 }
 
+/** Selects the local value for fragment resolvers or the complete form input. */
+function getResolverValues(
+	node: RuntimeNode,
+	values: unknown,
+	pathPrefix: string,
+): unknown {
+	const scope = resolverScopes.get(node)
+	if (scope === undefined) {
+		return values
+	}
+	const prefixSegments = pathPrefix.length === 0 ? [] : pathPrefix.split(".")
+	if (scope.trimSegments > prefixSegments.length) {
+		throw new TypeError("Fragment resolver scope is invalid")
+	}
+	const basePath = prefixSegments
+		.slice(0, prefixSegments.length - scope.trimSegments)
+		.join(".")
+	const localPath = joinPath(basePath, scope.appendPath)
+	return localPath.length === 0 ? values : getPathValue(values, localPath)
+}
+
 /** Resolves a value or uses its default when it is absent. */
 function resolveValue<Value, Context>(
 	value: unknown,
@@ -581,6 +812,9 @@ function resolveOptional<Value = unknown, Context = unknown>(
 
 /** Reads a value from an object by a validated dot path. */
 function getPathValue(value: unknown, path: string): unknown {
+	if (path.length === 0) {
+		return value
+	}
 	let current = value
 	for (const segment of path.split(".")) {
 		if (current === null || typeof current !== "object") {
@@ -624,7 +858,21 @@ function joinPath(prefix: string, path: string): string {
 	if (prefix.length === 0) {
 		return path
 	}
+	if (path.length === 0) {
+		return prefix
+	}
 	return `${prefix}.${path}`
+}
+
+/** Joins deterministic fragment placement and explicit node ID namespaces. */
+function joinId(prefix: string, id: string): string {
+	if (prefix.length === 0) {
+		return id
+	}
+	if (id.length === 0) {
+		return prefix
+	}
+	return `${prefix}:${id}`
 }
 
 /** Validates a section column count against the kit grid. */
@@ -655,13 +903,18 @@ function validateSpan(
 }
 
 /** Asserts that a value implements the Standard Schema validation contract. */
-function assertStandardSchema(value: unknown): asserts value is StandardSchema {
+function assertStandardSchema(
+	value: unknown,
+	owner: "Form" | "Fragment",
+): asserts value is StandardSchema {
 	if (
 		!isRecord(value) ||
 		!isRecord(value["~standard"]) ||
 		typeof value["~standard"].validate !== "function"
 	) {
-		throw new TypeError("Form schema must implement Standard Schema validate")
+		throw new TypeError(
+			`${owner} schema must implement Standard Schema validate`,
+		)
 	}
 }
 

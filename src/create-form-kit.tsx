@@ -33,6 +33,7 @@ import {
 } from "react-hook-form"
 
 import {
+	createFormFragment,
 	normalizeDefinition,
 	normalizeGrid,
 	type ResolvedArrayNode,
@@ -55,6 +56,7 @@ import type {
 	FieldSlotProps,
 	FormDefinition,
 	FormDefinitionSource,
+	FormFragment,
 	FormInput,
 	FormIssue,
 	FormKitSlots,
@@ -232,6 +234,35 @@ type RuntimeSlots = FormKitSlots<
 	Record<string, unknown>
 >
 
+/** The typed `defineFragment` method exposed by a form kit. */
+type DefineFragment<
+	Controls extends ControlDefinitionRegistry,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Context,
+	Grid extends number,
+> = <Schema extends StandardSchema>(
+	schema: FormInput<Schema> extends FieldValues ? Schema : never,
+	source: FormDefinitionSource<
+		Schema,
+		Controls,
+		Context,
+		FieldOptions,
+		SectionOptions,
+		ArrayOptions,
+		Grid
+	>,
+) => FormFragment<
+	Schema,
+	Controls,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid
+>
+
 /** The typed `defineForm` method exposed by a form kit. */
 type DefineForm<
 	Controls extends ControlDefinitionRegistry,
@@ -297,6 +328,15 @@ export interface FormKit<
 	readonly slots: FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>
 	/** The allowed grid column counts and node spans. */
 	readonly grid: readonly Grid[]
+	/** Validates and binds one reusable schema-owned UI fragment to this kit. */
+	readonly defineFragment: DefineFragment<
+		Controls,
+		FieldOptions,
+		SectionOptions,
+		ArrayOptions,
+		Context,
+		Grid
+	>
 	/** Validates and binds a typed definition to this kit. */
 	readonly defineForm: DefineForm<
 		Controls,
@@ -433,10 +473,30 @@ function assembleKit(
 	unknown,
 	number
 > {
+	const fragments = new WeakSet<object>()
 	const definitions = new WeakSet<object>()
 	const runtimeForms = new WeakMap<object, RuntimeForm>()
+	const ownsFragment = (fragment: object) => fragments.has(fragment)
+	const defineFragment = ((schema: StandardSchema, source: unknown) => {
+		const fragment = createFormFragment(schema, source, controls, ownsFragment)
+		fragments.add(fragment)
+		return fragment
+	}) as DefineFragment<
+		ControlDefinitionRegistry,
+		unknown,
+		unknown,
+		unknown,
+		unknown,
+		number
+	>
 	const defineForm = ((schema: StandardSchema, source: unknown) => {
-		const definition = normalizeDefinition(schema, source, controls, grid)
+		const definition = normalizeDefinition(
+			schema,
+			source,
+			controls,
+			grid,
+			ownsFragment,
+		)
 		definitions.add(definition)
 		return definition
 	}) as DefineForm<
@@ -717,6 +777,7 @@ function assembleKit(
 		controls,
 		slots,
 		grid,
+		defineFragment,
 		defineForm,
 		useForm,
 		Form,
